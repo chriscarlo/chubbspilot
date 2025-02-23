@@ -1,0 +1,26 @@
+* text=auto
+
+# Binary files
+*.bin binary
+*.o binary
+*.so binary
+*.so.* binary
+*.a binary
+*.dll binary
+*.dylib binary
+*.pyc binary
+
+# Media files
+*.onnx binary
+*.svg binary
+*.png binary
+*.gif binary
+*.ttf binary
+*.wav binary
+
+# Project specific binary files
+selfdrive/car/tests/test_models_segs.txt binary
+system/hardware/tici/updater binary
+selfdrive/ui/qt/spinner_larch64 binary
+selfdrive/ui/qt/text_larch64 binary
+selfdrive/ui/ui binary

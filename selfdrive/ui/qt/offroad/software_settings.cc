@@ -21,17 +21,19 @@ void SoftwarePanel::checkForUpdates() {
 }
 
 SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
+  // Create the label but keep it invisible
   onroadLbl = new QLabel(tr("Updates are only downloaded while the car is off or in park."));
   onroadLbl->setStyleSheet("font-size: 50px; font-weight: 400; text-align: left; padding-top: 30px; padding-bottom: 30px;");
+  onroadLbl->setVisible(false);
   addItem(onroadLbl);
 
   // current version
   versionLbl = new LabelControl(tr("Current Version"), "");
   addItem(versionLbl);
 
-  // automatic updates toggle
+  // automatic updates toggle - removed offroad reference from the text
   ParamControl *automaticUpdatesToggle = new ParamControl("AutomaticUpdates", tr("Automatically Update FrogPilot"),
-                                                       tr("FrogPilot will automatically update itself and it's assets when you're offroad and connected to Wi-Fi."), "");
+                                                       tr("FrogPilot will automatically update itself and it's assets when connected to Wi-Fi."), "");
   connect(automaticUpdatesToggle, &ToggleControl::toggleFlipped, this, &updateFrogPilotToggles);
   addItem(automaticUpdatesToggle);
 
@@ -112,10 +114,9 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
     updateLabels();
   });
 
-  connect(uiState(), &UIState::offroadTransition, [=](bool offroad) {
-    is_onroad = !offroad;
-    updateLabels();
-  });
+  // Remove the onroad/offroad transition handler
+  // Always treat the system as if it's offroad for UI purposes
+  is_onroad = false;
 
   updateLabels();
 }
@@ -142,11 +143,9 @@ void SoftwarePanel::updateLabels() {
     return;
   }
 
-  // updater only runs offroad or when parked
-  bool parked = scene.parked || scene.frogs_go_moo;
-
-  onroadLbl->setVisible(is_onroad && !parked);
-  downloadBtn->setVisible(!is_onroad || parked);
+  // Always allow access to all menu items regardless of driving status
+  onroadLbl->setVisible(false);
+  downloadBtn->setVisible(true);
 
   // download update
   QString updater_state = QString::fromStdString(params.get("UpdaterState"));
@@ -180,7 +179,8 @@ void SoftwarePanel::updateLabels() {
   versionLbl->setText(QString::fromStdString(params.get("UpdaterCurrentDescription")));
   versionLbl->setDescription(QString::fromStdString(params.get("UpdaterCurrentReleaseNotes")));
 
-  installBtn->setVisible((!is_onroad || parked) && params.getBool("UpdateAvailable"));
+  // Always show install button if update is available, regardless of driving status
+  installBtn->setVisible(params.getBool("UpdateAvailable"));
   installBtn->setValue(QString::fromStdString(params.get("UpdaterNewDescription")));
   installBtn->setDescription(QString::fromStdString(params.get("UpdaterNewReleaseNotes")));
 
