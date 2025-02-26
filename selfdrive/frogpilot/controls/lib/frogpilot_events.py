@@ -40,7 +40,7 @@ class FrogPilotEvents:
     self.random_event_timer = 0
     self.tracking_lead_distance = 0
 
-  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, lead_distance, modelData, v_lead, frogpilot_toggles):
+  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, lead_distance, modelData, v_lead, frogpilot_toggles, sm):
     self.events.clear()
 
     if self.random_event_played:
@@ -192,3 +192,5 @@ class FrogPilotEvents:
       self.events.add(EventName.turningRight)
 
     self.frame += DT_MDL
+
+    return self.events

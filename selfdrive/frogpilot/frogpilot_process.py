@@ -131,7 +131,7 @@ def frogpilot_thread():
 
     if started and sm.updated["modelV2"]:
       frogpilot_planner.update(sm["carControl"], sm["carState"], sm["controlsState"], sm["frogpilotCarControl"], sm["frogpilotCarState"],
-                               sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles)
+                               sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles, sm)
       frogpilot_planner.publish(sm, pm, toggles_updated)
 
       frogpilot_tracking.update(sm["carState"], sm["controlsState"], sm["frogpilotCarControl"])

@@ -12,15 +12,17 @@ CRUISING_SPEED = 5.0  # m/s
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
     """
     Compute lateral acceleration limit based on speed and an aggressiveness factor.
+    Modified to increase target speeds at all curvatures by 7-8%.
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-    base = 1.5
-    span = 2.2
+    base = 1.62  # was 1.5
+    span = 2.38
     center = 35.0
+    # Kept steepness factor the same
     k = 0.10
 
     lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-    lat_acc = min(lat_acc, 2.8)
+    lat_acc = min(lat_acc, 3.02)
     return lat_acc * turn_aggressiveness
 
 
@@ -144,6 +146,15 @@ class VisionTurnSpeedController:
             self.prev_v_cruise_cluster = v_cruise_cluster
             return v_ego
 
+        # Detect resume event (when cruise speed increases or is first activated)
+        is_resume_event = (v_cruise_cluster > self.prev_v_cruise_cluster) or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
+
+        # For resume events, immediately return v_cruise_cluster without any speed planning or smoothing
+        if is_resume_event:
+            self.reset(v_cruise_cluster)  # Reset with the cruise speed to avoid any "memory" effect
+            self.prev_v_cruise_cluster = v_cruise_cluster
+            return v_cruise_cluster
+
         orientation_rate_raw = modelData.orientationRate.z
         velocity_pred_raw = modelData.velocity.x
 
@@ -177,17 +188,13 @@ class VisionTurnSpeedController:
             curvature_33 = orientation_rate_33 / np.clip(velocity_pred_33, eps, None)
 
             # Always use advanced planning (with fixed parameters)
-            is_bump_up = (
-                (v_cruise_cluster > self.prev_v_cruise_cluster)
-                or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
-            )
             self.planned_speeds = self._plan_speed_trajectory(
                 orientation_rate_33,
                 velocity_pred_33,
                 times_33,
                 init_speed=self.prev_target_speed,
                 turn_aggressiveness=turn_aggressiveness,
-                skip_accel_limit=is_bump_up
+                skip_accel_limit=False
             )
             raw_target = self.planned_speeds[0]
 
@@ -195,50 +202,45 @@ class VisionTurnSpeedController:
         raw_target = min(raw_target, v_cruise_cluster)
         dt = 0.05  # ~20Hz
 
-        # Resume events: when ACC is resumed (or target speed changes), skip smoothing.
-        if (v_cruise_cluster > self.prev_v_cruise_cluster) or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0):
-            final_target_speed = v_cruise_cluster
-            self.current_accel = 0.0  # reset current acceleration
+        scale_decel = dynamic_decel_scale(v_ego)
+        scale_jerk = dynamic_jerk_scale(v_ego)
+
+        # Compute acceleration command
+        accel_cmd = (raw_target - self.prev_target_speed) / dt
+
+        # Additional "boost" if we see a big difference to planned max
+        planned_max = np.max(self.planned_speeds)
+        if v_cruise_cluster > self.prev_target_speed:
+            ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
+            ratio = clip(ratio, 0.0, 1.0)
+            boost_factor = 1.0 + ratio
         else:
-            scale_decel = dynamic_decel_scale(v_ego)
-            scale_jerk = dynamic_jerk_scale(v_ego)
+            boost_factor = 1.0
 
-            # Compute acceleration command
-            accel_cmd = (raw_target - self.prev_target_speed) / dt
+        pos_limit = self.MAX_ACCEL * scale_decel * boost_factor
+        neg_limit = self.MAX_DECEL * scale_decel
+        accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
 
-            # Additional "boost" if we see a big difference to planned max
-            planned_max = np.max(self.planned_speeds)
-            if v_cruise_cluster > self.prev_target_speed:
-                ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
-                ratio = clip(ratio, 0.0, 1.0)
-                boost_factor = 1.0 + ratio
-            else:
-                boost_factor = 1.0
+        # Jerk-limit the change in acceleration
+        jerk_mult = 1.0  # or dynamic if needed
+        accel_diff = accel_cmd - self.current_accel
 
-            pos_limit = self.MAX_ACCEL * scale_decel * boost_factor
-            neg_limit = self.MAX_DECEL * scale_decel
-            accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
-
-            # Jerk-limit the change in acceleration
-            jerk_mult = 1.0  # or dynamic if needed
-            accel_diff = accel_cmd - self.current_accel
-
-            if accel_diff > 0:
-                max_delta = (self.MAX_JERK_ACCEL * scale_jerk * boost_factor * jerk_mult) * dt
-                if accel_diff > max_delta:
-                    self.current_accel += max_delta
-                else:
-                    self.current_accel = accel_cmd
-            elif accel_diff < 0:
-                max_delta = (self.MAX_JERK * scale_jerk * boost_factor * jerk_mult) * dt
-                if accel_diff < -max_delta:
-                    self.current_accel -= max_delta
-                else:
-                    self.current_accel = accel_cmd
+        if accel_diff > 0:
+            max_delta = (self.MAX_JERK_ACCEL * scale_jerk * boost_factor * jerk_mult) * dt
+            if accel_diff > max_delta:
+                self.current_accel += max_delta
             else:
                 self.current_accel = accel_cmd
+        elif accel_diff < 0:
+            max_delta = (self.MAX_JERK * scale_jerk * boost_factor * jerk_mult) * dt
+            if accel_diff < -max_delta:
+                self.current_accel -= max_delta
+            else:
+                self.current_accel = accel_cmd
+        else:
+            self.current_accel = accel_cmd
 
-            final_target_speed = self.prev_target_speed + self.current_accel * dt
+        final_target_speed = self.prev_target_speed + self.current_accel * dt
 
         # Always clamp final target speed to the cruise set speed
         final_target_speed = min(final_target_speed, v_cruise_cluster)
@@ -280,17 +282,18 @@ class VisionTurnSpeedController:
             c = max(curvature[i], 1e-9)
             s = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
             s = clip(s, 0.0, 70.0)
-            # Mild tweak around ~30-45 mph range
-            if 13.4 <= s <= 20.1:
-                s *= 0.93
+            # Removed the speed reduction in the 30-45 mph range to further increase target speeds
+            # This was reducing speeds by 7% in that range
             safe_speeds[i] = s
 
         # (3) Apex-based shaping pass (using fixed parameters)
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 2.0      # increased to slow earlier
+        # Reduced margin factor to allow for later braking, complementing the higher target speeds
+        margin_factor = 1.85      # was 2.0
         decel_mult = 1.0
         accel_mult = 1.0
-        apex_decel_factor = 0.15
+        # Reduced apex deceleration factor for later braking into turns
+        apex_decel_factor = 0.14  # was 0.15
         apex_spool_factor = 0.08
 
         planned = safe_speeds.copy()
@@ -380,8 +383,9 @@ class VisionTurnSpeedController:
             planned[i] = min(planned[i], feasible_speed)
 
         # (7) "Emergency" decel override (final pass)
+        # Increased the emergency tolerance to complement higher target speeds
         EMERGENCY_DECEL_THRESHOLD = 6.0   # [m/s^2]
-        EMERGENCY_SPEED_TOLERANCE = 3.0   # [m/s] over safe speed triggers emergency
+        EMERGENCY_SPEED_TOLERANCE = 3.25   # was 3.0 [m/s] over safe speed triggers emergency
         EMERGENCY_LOOKAHEAD_FRAMES = 8    # how far to check
 
         emergency_braking = False

@@ -38,8 +38,8 @@ def get_max_accel_eco(v_ego):
       x=v_mph,
       lower=0.2,     # final taper
       upper=2.0,     # initial maximum
-      midpoint=20.0, # center of transition
-      scale=0.15     # steeper or gentler slope
+      midpoint=15.0, # shifted earlier to make the transition happen sooner
+      scale=0.35     # increased for more immediate response
   )
 
 
@@ -53,8 +53,8 @@ def get_max_accel_sport(v_ego):
       x=v_mph,
       lower=0.8,     # a bit higher final taper than ECO
       upper=3.0,     # initial maximum
-      midpoint=20.0,
-      scale=0.15
+      midpoint=15.0, # shifted earlier for quicker response
+      scale=0.40     # increased for more immediate response
   )
 
 
@@ -68,8 +68,8 @@ def get_max_accel_sport_plus(v_ego):
       x=v_mph,
       lower=1.0,
       upper=4.0,
-      midpoint=20.0,
-      scale=0.15
+      midpoint=15.0, # shifted earlier for quicker response
+      scale=0.45     # highest scale for most immediate response
   )
 
 
@@ -88,16 +88,16 @@ def get_max_accel_low_speeds(max_accel, v_cruise):
     return max_accel  # fallback if city speed limit is zero or invalid
 
   fraction = clip(v_cruise / CITY_SPEED_LIMIT, 0.0, 1.0)
-  lower = max_accel / 4.0
+  lower = max_accel / 3.0  # Increased from /4.0 for more responsive initial acceleration
   upper = max_accel
 
-  # We'll center the logistic around fraction=0.5
+  # We'll center the logistic around fraction=0.4 instead of 0.5 to speed up initial response
   return logistic(
       x=fraction,
       lower=lower,
       upper=upper,
-      midpoint=0.5,
-      scale=6.0  # tweak for how quickly we want to ramp up
+      midpoint=0.4,  # shifted earlier for faster roll-on
+      scale=8.0      # increased from 6.0 for more immediate response
   )
 
 
@@ -118,8 +118,8 @@ def get_max_accel_ramp_off(max_accel, v_cruise, v_ego):
       x=diff,
       lower=0.0,
       upper=1.0,
-      midpoint=5.0,  # center of transition
-      scale=0.6
+      midpoint=4.0,  # shifted earlier from 5.0 for faster initial response
+      scale=1.2      # doubled from 0.6 for more defined transition
   )
   return fraction * max_accel
 
@@ -144,8 +144,8 @@ def get_max_allowed_accel(v_ego):
       x=v_mph,
       lower=2.0,
       upper=4.0,
-      midpoint=12.5,  # pick midpoint between 5 and 20
-      scale=0.3
+      midpoint=12.0,  # slightly earlier from 12.5
+      scale=0.5      # increased from 0.3 for more immediate drop-off
   )
   # Then clamp so that at very low speeds it doesn't dip below 4.0
   return max(base_val, 4.0 if v_mph <= 5 else 2.0)
@@ -207,7 +207,7 @@ class FrogPilotAcceleration:
         get_max_accel_low_speeds(self.max_accel, self.frogpilot_planner.v_cruise),
         self.max_accel
       )
-      # Ramp off if we’re close to the setpoint
+      # Ramp off if we're close to the setpoint
       self.max_accel = min(
         get_max_accel_ramp_off(self.max_accel, self.frogpilot_planner.v_cruise, v_ego),
         self.max_accel

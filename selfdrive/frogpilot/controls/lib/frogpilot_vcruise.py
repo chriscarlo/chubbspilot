@@ -73,7 +73,7 @@ class FrogPilotVCruise:
                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
                v_cruise, v_ego, frogpilot_toggles):
 
-        # Safely fetch toggles so we don’t crash if any attribute is missing
+        # Safely fetch toggles so we don't crash if any attribute is missing
         force_stops = getattr(frogpilot_toggles, 'force_stops', False)
         force_standstill = getattr(frogpilot_toggles, 'force_standstill', False)
         map_turn_speed_controller = getattr(frogpilot_toggles, 'map_turn_speed_controller', False)
@@ -105,9 +105,9 @@ class FrogPilotVCruise:
 
         self.override_force_stop |= (
             (not force_standstill
-             and carState.standstill
+             and self._get_attr(carState, 'standstill', False)
              and self.frogpilot_planner.tracking_lead)
-            or carState.gasPressed
+            or self._get_attr(carState, 'gasPressed', False)
             or frogpilotCarControl.accelPressed
         )
         self.override_force_stop &= force_stop_enabled
@@ -121,7 +121,7 @@ class FrogPilotVCruise:
         v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
         v_cruise_diff = v_cruise_cluster - v_cruise
 
-        v_ego_cluster = max(carState.vEgoCluster, v_ego)
+        v_ego_cluster = max(self._get_attr(carState, 'vEgoCluster', v_ego), v_ego)
         v_ego_diff = v_ego_cluster - v_ego
 
         # -------------------------------------------------------------
@@ -130,7 +130,7 @@ class FrogPilotVCruise:
         if map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             mtsc_active = self.mtsc_target < v_cruise
             self.mtsc_target = clip(
-                self.mtsc.target_speed(v_ego, carState.aEgo, frogpilot_toggles),
+                self.mtsc.target_speed(v_ego, self._get_attr(carState, 'aEgo', 0.0), frogpilot_toggles),
                 CRUISING_SPEED, v_cruise
             )
 
@@ -190,12 +190,12 @@ class FrogPilotVCruise:
 
             if speed_limit_controller:
                 self.override_slc = self.overridden_speed > self.slc_target + self.slc_offset
-                self.override_slc |= (carState.gasPressed and v_ego > self.slc_target + self.slc_offset)
+                self.override_slc |= (self._get_attr(carState, 'gasPressed', False) and v_ego > self.slc_target + self.slc_offset)
                 self.override_slc &= controlsState.enabled
 
                 if self.override_slc:
                     if speed_limit_controller_override_manual:
-                        if carState.gasPressed:
+                        if self._get_attr(carState, 'gasPressed', False):
                             self.overridden_speed = v_ego_cluster
                         self.overridden_speed = np.clip(
                             self.overridden_speed,
@@ -232,14 +232,14 @@ class FrogPilotVCruise:
         # Force Standstill / Stop
         # -------------------------------------------------------------
         if (force_standstill
-            and carState.standstill
+            and self._get_attr(carState, 'standstill', False)
             and not self.override_force_stop
             and controlsState.enabled):
             # Hard standstill override
             self.forcing_stop = True
             v_cruise = -1
         elif force_stop_enabled and not self.override_force_stop:
-            self.forcing_stop |= not carState.standstill
+            self.forcing_stop |= not self._get_attr(carState, 'standstill', False)
             self.tracked_model_length = max(self.tracked_model_length - v_ego * DT_MDL, 0)
             v_cruise = min((self.tracked_model_length // PLANNER_TIME), v_cruise)
         else:
@@ -258,7 +258,7 @@ class FrogPilotVCruise:
             else:
                 targets = [self.mtsc_target, self.vtsc_target]
 
-            # Don’t drop below CRUISING_SPEED unless needed
+            # Don't drop below CRUISING_SPEED unless needed
             v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets]))
 
         # Keep everything in sync w/ cluster differences
@@ -266,3 +266,11 @@ class FrogPilotVCruise:
         self.vtsc_target += v_cruise_diff
 
         return v_cruise
+
+    # Add a helper method to handle attribute access
+    def _get_attr(self, obj, attr, default=None):
+        """Helper to get attribute from an object with fallback to 'out' property"""
+        value = getattr(obj, attr, None)
+        if value is None and hasattr(obj, 'out'):
+            value = getattr(obj.out, attr, default)
+        return value if value is not None else default

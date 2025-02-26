@@ -96,9 +96,6 @@ def lead_kf(v_lead: float, dt: float = 0.05):
   assert dt > .01 and dt < .2, "Radar time step must be between .01s and 0.2s"
   A = [[1.0, dt], [0.0, 1.0]]
   C = [1.0, 0.0]
-  #Q = np.matrix([[10., 0.0], [0.0, 100.]])
-  #R = 1e3
-  #K = np.matrix([[ 0.05705578], [ 0.03073241]])
   dts = [dt * 0.01 for dt in range(1, 21)]
   K0 = [0.12287673, 0.14556536, 0.16522756, 0.18281627, 0.1988689,  0.21372394,
         0.22761098, 0.24069424, 0.253096,   0.26491023, 0.27621103, 0.28705801,
@@ -192,9 +189,24 @@ class LongitudinalPlanner:
       j = np.zeros(len(T_IDXS_MPC))
 
     if taco_tune:
-      max_lat_accel = interp(v_ego, [5, 10, 20], [1.5, 2.0, 3.0])
-      curvatures = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.orientationRate.z) / np.clip(v, 0.3, 100.0)
-      max_v = np.sqrt(max_lat_accel / (np.abs(curvatures) + 1e-3)) - 2.0
+      # Enhanced curve speed control with continuous lateral acceleration model
+      # Finer-grained speed-based lateral acceleration limits
+      lat_accel_bp = [0.0, 5.0, 10.0, 15.0, 20.0, 30.0]
+      lat_accel_v = [1.3, 1.5, 2.0, 2.5, 3.0, 3.5]  # More points for smoother transition
+
+      # Calculate max lateral acceleration with continuous function
+      max_lat_accel = interp(v_ego, lat_accel_bp, lat_accel_v)
+
+      # Handle very low speeds gracefully
+      v_for_curvature = np.maximum(v, 0.3)  # Avoid division by zero
+      curvatures = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.orientationRate.z) / v_for_curvature
+
+      # Calculate max velocity with smooth safety margin
+      # The safety margin increases with curvature (sharper turns get more margin)
+      curve_factor = np.clip(np.abs(curvatures) * 10.0, 0.5, 3.0)
+      safety_margin = 1.0 + 1.0 * (curve_factor - 0.5) / 2.5  # From 1.0 to 2.0
+
+      max_v = np.sqrt(max_lat_accel / (np.abs(curvatures) + 1e-3)) / safety_margin
       v = np.minimum(max_v, v)
 
     if len(model_msg.meta.disengagePredictions.gasPressProbs) > 1:
@@ -229,7 +241,6 @@ class LongitudinalPlanner:
 
     if self.mpc.mode == 'acc':
       accel_limits = [sm['frogpilotPlan'].minAcceleration, sm['frogpilotPlan'].maxAcceleration]
-      # Removed special handling for turns. Use standard acceleration limits.
       accel_limits_turns = accel_limits
     else:
       accel_limits = [ACCEL_MIN, ACCEL_MAX]
@@ -245,13 +256,29 @@ class LongitudinalPlanner:
     # Compute model v_ego error
     self.v_model_error = get_speed_error(sm['modelV2'], v_ego)
     x, v, a, j, throttle_prob = self.parse_model(sm['modelV2'], self.v_model_error, v_ego, frogpilot_toggles.taco_tune)
-    # Don't clip at low speeds since throttle_prob doesn't account for creep
-    self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
 
-    if not self.allow_throttle:
+    # Calculate allow_throttle as a continuous function of probability and speed
+    # This creates a smooth transition from not allowing to allowing throttle
+    throttle_weight = np.clip((throttle_prob - (ALLOW_THROTTLE_THRESHOLD - 0.1)) / 0.2, 0.0, 1.0)
+    speed_weight = np.clip((MIN_ALLOW_THROTTLE_SPEED + 1.0 - v_ego) / 1.0, 0.0, 1.0)
+    allow_factor = np.clip(throttle_weight + speed_weight, 0.0, 1.0)
+
+    # Instead of a hard flag, use a continuous factor for throttle allowance
+    self.allow_throttle = allow_factor > 0.1  # Still need this for flag value
+
+    # When throttle isn't fully allowed, smoothly limit acceleration
+    if allow_factor < 0.99:
+      # Blend between limits based on the allow_factor
       clipped_accel_coast = max(accel_coast, accel_limits_turns[0])
-      clipped_accel_coast_interp = interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [accel_limits_turns[1], clipped_accel_coast])
-      accel_limits_turns[1] = min(accel_limits_turns[1], clipped_accel_coast_interp)
+
+      # Apply speed-dependent blending of acceleration limits
+      speed_blend = np.clip((v_ego - MIN_ALLOW_THROTTLE_SPEED) / (MIN_ALLOW_THROTTLE_SPEED * 2 - MIN_ALLOW_THROTTLE_SPEED), 0.0, 1.0)
+
+      # Calculate coast acceleration limit with continuous blending
+      coast_limit = speed_blend * clipped_accel_coast + (1.0 - speed_blend) * accel_limits_turns[1]
+
+      # Blend between original and coast limits based on allow_factor
+      accel_limits_turns[1] = allow_factor * accel_limits_turns[1] + (1.0 - allow_factor) * coast_limit
 
     if force_slow_decel:
       v_cruise = 0.0
@@ -261,13 +288,49 @@ class LongitudinalPlanner:
 
     if radarless_model:
       model_leads = list(sm['modelV2'].leadsV3)
-      # TODO lead state should be invalidated if its different point than the previous one
       lead_states = [self.lead_one, self.lead_two]
       for index in range(len(lead_states)):
         if len(model_leads) > index:
-          distance_offset = max(frogpilot_toggles.increased_stopped_distance + min(10 - v_ego, 0), 0) if not sm['frogpilotCarState'].trafficModeActive else 0
           model_lead = model_leads[index]
-          lead_states[index].update(model_lead.x[0] - distance_offset, model_lead.y[0], model_lead.v[0], model_lead.a[0], model_lead.prob)
+
+          # Calculate lead dynamics with enhanced early detection
+          lead_speed = model_lead.v[0]
+          stop_factor = 1.0 / (1.0 + np.exp((lead_speed - 0.5) / 0.1))
+
+          # Enhanced TTC calculation with progressive response curve
+          closing_speed = max(v_ego - lead_speed, 0.1)
+          ttc = model_lead.x[0] / closing_speed
+
+          # Stronger response for lower TTC values
+          ttc_factor = 6.0 / (1.0 + np.exp((ttc - 2.5) / 0.4))
+
+          # Progressive speed-based scaling
+          speed_factor = 0.8 + 1.5 / (1.0 + np.exp(-(v_ego - 7.0) / 2.5))
+
+          # Enhanced early braking factor
+          early_brake_factor = 1.0 + 0.3 * (1.0 - np.exp(-v_ego / 12.0))
+
+          # Calculate distance dynamics with continuous curves
+          closing_speed_factor = min(2.0, closing_speed / 5.0)
+          ttc_urgency = np.clip(4.0 / (ttc + 0.1) - 0.5, 0.0, 1.0)
+
+          # Dynamic offset that increases with urgency
+          dynamic_offset = frogpilot_toggles.increased_stopped_distance * 0.5 * closing_speed_factor * ttc_urgency
+
+          # Traffic mode enhancement
+          traffic_offset = 0.0
+          if sm['frogpilotCarState'].trafficModeActive:
+            traffic_offset = max(0.0, 12.0 - v_ego) * 0.6
+
+          # Calculate complete distance offset with continuous blending
+          stopped_offset = frogpilot_toggles.increased_stopped_distance * stop_factor * ttc_factor * speed_factor * early_brake_factor
+          moving_offset = frogpilot_toggles.increased_stopped_distance + traffic_offset
+
+          # Final offset calculation with added dynamic component for early braking
+          distance_offset = stop_factor * stopped_offset + (1.0 - stop_factor) * moving_offset + dynamic_offset
+
+          lead_states[index].update(model_lead.x[0] - distance_offset, model_lead.y[0],
+                                   model_lead.v[0], model_lead.a[0], model_lead.prob)
         else:
           lead_states[index].reset()
     else:
@@ -322,6 +385,6 @@ class LongitudinalPlanner:
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
     longitudinalPlan.allowBrake = True
-    longitudinalPlan.allowThrottle = self.allow_throttle
+    longitudinalPlan.allowThrottle = bool(self.allow_throttle)
 
     pm.send('longitudinalPlan', plan_send)

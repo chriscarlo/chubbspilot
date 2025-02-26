@@ -25,7 +25,6 @@ class HKGLongitudinalTuning:
 
   def _setup_controllers(self) -> None:
     self.mpc = LongitudinalMpc(mode='acc')
-
     self.long_control = LongControl(self.CP)
     self.DT_CTRL = DT_CTRL
     self.params = Params()
@@ -48,7 +47,6 @@ class HKGLongitudinalTuning:
 
   def make_jerk(self, CS, accel, actuators):
     state = getattr(actuators, "longControlState", LongCtrlState.pid)
-    # Handle cancel state to prevent cruise fault
     if not CS.out.cruiseState.enabled:
       self.jerk_upper_limit = 0.0
       self.jerk_lower_limit = 0.0
@@ -64,11 +62,12 @@ class HKGLongitudinalTuning:
     v_error = abs(CS.out.vEgo - CS.out.cruiseState.speed)
 
     if self.CP.flags & HyundaiFlags.CANFD.value:
+      # Smoothly reduce jerk_max as v_error decreases below 3.0
+      jerk_reduction = 1.0
       if v_error < 3.0:
-        jerk_reduction = interp(v_error,
-                              [0.0, 1.0, 3.0],
-                              [0.3, 0.5, 1.0])
-        jerk_max *= jerk_reduction
+        # Smooth sigmoid-like function instead of hard cutoff
+        jerk_reduction = 0.3 + 0.7 * (v_error * v_error) / (v_error * v_error + 1.0)
+      jerk_max *= jerk_reduction
 
       self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
       self.jerk_lower_limit = min(max(1.0, -self.jerk * 4.0), jerk_max)
@@ -76,115 +75,215 @@ class HKGLongitudinalTuning:
     else:
       self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
       self.jerk_lower_limit = min(max(1.0, -self.jerk * 2.0), jerk_max)
-      # Make comfort band smaller when close to set speed, bigger when far away
-      error_factor = interp(v_error, [0.0, 0.5, 1.0, 5.0],
-                                    [0.0, 0.1, 0.5, 1.0])
 
+      # Make comfort band smaller when close to set speed, bigger when far away
+      error_factor = interp(v_error, [0.0, 0.5, 1.0, 5.0], [0.0, 0.1, 0.5, 1.0])
       accel_factor = interp(abs(accel), [0.0, 1.0], [0.2, 0.1])
-      if accel >= 0:
-          self.cb_upper = clip(0.8 * error_factor + accel * accel_factor, 0, 1.0)
-          self.cb_lower = clip(0.6 * error_factor + accel * accel_factor, 0, 0.8)
-      else:
-          self.cb_upper = clip(1.0 * error_factor + accel * accel_factor, 0, 1.2)
-          self.cb_lower = clip(0.8 * error_factor + accel * accel_factor, 0, 1.2)
+
+      # Unified comfort band calculation with smooth transition around accel = 0
+      accel_blend = 0.5 * (1.0 + accel / (abs(accel) + 0.1))  # Smoothly goes from 0 to 1 as accel increases
+
+      cb_upper_pos = 0.8 * error_factor + accel * accel_factor
+      cb_upper_neg = 1.0 * error_factor + accel * accel_factor
+      cb_lower_pos = 0.6 * error_factor + accel * accel_factor
+      cb_lower_neg = 0.8 * error_factor + accel * accel_factor
+
+      self.cb_upper = clip(accel_blend * cb_upper_pos + (1.0 - accel_blend) * cb_upper_neg, 0.0, 1.2)
+      self.cb_lower = clip(accel_blend * cb_lower_pos + (1.0 - accel_blend) * cb_lower_neg, 0.0, 1.2)
 
     return self.jerk
 
   def handle_cruise_cancel(self, CS):
-    """Handle cruise control cancel to prevent faults."""
     if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
       self.accel_last = 0.0
       self.brake_ramp = 0.0
       return True
     return False
 
+  def calculate_emergency_factor(self, CS):
+    emergency_factor = 0.0
+    lead_accel_factor = 0.0
+    new_lead_detected = False
+
+    try:
+        if hasattr(CS.out, 'vEgo') and hasattr(CS.out, 'leadOne'):
+            lead = CS.out.leadOne
+            if lead.status and lead.dRel > 0.1:
+                delta_v = max(0.0, CS.out.vEgo - lead.vLead)
+
+                # Detect newly acquired leads with high delta-v
+                # Store current lead status for next cycle comparison
+                if not hasattr(self, 'prev_lead_status'):
+                    self.prev_lead_status = False
+                    self.prev_lead_id = 0
+                    self.prev_delta_v = 0
+
+                # Consider a lead "new" if it wasn't there before or if delta-v suddenly increased
+                lead_id = id(lead)  # Use object id as simple way to track lead identity
+                new_lead = (not self.prev_lead_status or lead_id != self.prev_lead_id)
+                sudden_delta_v_change = delta_v > max(self.prev_delta_v * 1.5, 2.0)
+                new_lead_detected = new_lead or sudden_delta_v_change
+
+                # Update tracking variables for next cycle
+                self.prev_lead_status = lead.status
+                self.prev_lead_id = lead_id
+                self.prev_delta_v = delta_v
+
+                # Create continuous activation based on relative velocity
+                delta_v_activation = delta_v / (delta_v + 0.1)
+
+                if delta_v > 0:
+                    ttc = lead.dRel / max(delta_v, 0.01)
+
+                    # More responsive TTC factor curve for faster initial response
+                    ttc_factor = clip(1.0 / (1.0 + (2.718281828459045 ** ((ttc - 3.0) * 1.2))), 0.0, 1.0)
+
+                    # Enhanced delta-v factor that responds more quickly to high values
+                    dv_factor = clip(delta_v * delta_v / (delta_v * delta_v + 9.0), 0.0, 1.0)
+
+                    # Combined factor with higher baseline for faster initial response
+                    combined_factor = ttc_factor * (0.6 + 0.4 * dv_factor) * 1.4
+
+                    # Distance factor with more aggressive scaling at closer distances
+                    dist_factor = clip(1.0 - (lead.dRel / (CS.out.vEgo * 1.8 + 4.0)), 0.0, 1.0)
+
+                    # Enhance emergency factor for new leads with significant closing speed
+                    new_lead_boost = 1.0
+                    if new_lead_detected and delta_v > 3.0:
+                        # Progressive boost based on closing speed and TTC
+                        ttc_urgency = clip(3.0 / (ttc + 0.2) - 0.5, 0.0, 1.0)
+                        new_lead_boost = 1.0 + ttc_urgency * min(delta_v / 10.0, 0.8)
+
+                    # Final factor with continuous blending and boost for new leads
+                    emergency_factor = max(combined_factor, dist_factor * 0.9) * delta_v_activation * new_lead_boost
+    except:
+        emergency_factor = 0.0
+        new_lead_detected = False
+
+    return emergency_factor, new_lead_detected
+
   def calculate_limited_accel(self, accel, actuators, CS):
-    """acceleration limiting."""
-    # Reset acceleration limits when cruise is disabled or brake is pressed
     if self.handle_cruise_cancel(CS):
-      return accel
+        return accel
 
     self.make_jerk(CS, accel, actuators)
-
     accel_delta = accel - self.accel_last
-    brake_aggressiveness = 0.0
-    ramp_rate = 0.7
+    emergency_factor, new_lead_detected = self.calculate_emergency_factor(CS)
 
-    if accel > 0 and self.accel_last < 0:
-      self.accel_last = 0.0
-      accel_delta = accel
+    # Add proactive braking based on closing dynamics
+    if hasattr(CS.out, 'leadOne') and CS.out.leadOne.status and CS.out.vEgo > CS.out.leadOne.vLead:
+        closing_speed = max(CS.out.vEgo - CS.out.leadOne.vLead, 0.1)
+        ttc = CS.out.leadOne.dRel / closing_speed
 
-    if accel < 0:
-      # Negative accel logic
-      brake_ratio = clip(abs(accel / CarControllerParams.ACCEL_MIN), 0.0, 1.0)
-      brake_aggressiveness = brake_ratio ** 1.5
+        # More aggressive anticipation with continuous scaling
+        ttc_urgency = clip(4.0 / (ttc + 0.3) - 0.7, 0.0, 1.0)
+        speed_urgency = clip(closing_speed * 0.15, 0.0, 1.0)
+        anticipation_factor = 1.0 + ttc_urgency * speed_urgency * 0.8
 
-      if CS.out.vEgo < 4.47:  # ~10 mph
-        ramp_rate = interp(
-          brake_aggressiveness,
-          [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-          [0.4, 0.55, 0.65, 0.85, 1.2, 1.3]
-          )
-      else:
-        ramp_rate = interp(
-          brake_aggressiveness,
-          [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-          [0.2, 0.3, 0.4, 0.6, 0.9, 1.1]
-          )
+        if accel < 0:
+            accel *= anticipation_factor
+            accel_delta = accel - self.accel_last
 
-      if brake_ratio > 0.8:
-        ramp_rate *= 0.8
+    # Smooth transition between acceleration and braking regions
+    brake_blend = 0.5 - 0.5 * accel / (abs(accel) + 0.2)
 
-      if self.accel_last >= 0:
+    # Enhanced transition from acceleration to braking for newly detected leads
+    if accel < 0 and self.accel_last >= 0:
+        # For new leads with high closing speed, start with higher brake application
+        if new_lead_detected and emergency_factor > 0.3:
+            # Scale initial braking based on emergency factor
+            initial_brake_level = clip(emergency_factor * 0.7, 0.0, 0.7)
+            self.accel_last = -initial_brake_level
+            accel_delta = accel - self.accel_last
+            # Jump-start brake ramp to avoid delay in braking
+            self.brake_ramp = clip(emergency_factor * 0.8, 0.3, 0.8)
+
+    # --- Enhanced Braking Logic ---
+    brake_ratio = clip(abs(accel / CarControllerParams.ACCEL_MIN), 0.0, 1.0)
+    brake_aggressiveness = brake_ratio ** 1.0  # Less progressive curve for faster response
+
+    # Speed-dependent ramp rates with higher values for faster response
+    low_speed_ramp = interp(brake_aggressiveness,
+                          [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                          [0.7, 0.9, 1.1, 1.3, 1.6, 1.8])
+    high_speed_ramp = interp(brake_aggressiveness,
+                           [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                           [0.5, 0.65, 0.8, 1.0, 1.3, 1.6])
+
+    # Smooth speed blending
+    speed_blend = CS.out.vEgo * CS.out.vEgo / (CS.out.vEgo * CS.out.vEgo + 20.0)
+    braking_ramp_rate = low_speed_ramp * (1.0 - speed_blend) + high_speed_ramp * speed_blend
+
+    # More responsive emergency scaling
+    emergency_scale = interp(emergency_factor,
+                          [0.0, 0.3, 0.6, 1.0],
+                          [1.0, 1.3, 1.7, 2.2])  # Higher multipliers for faster response
+    braking_ramp_rate *= emergency_scale
+
+    # Handle transition from acceleration to braking
+    if self.accel_last >= 0 and not new_lead_detected:
         self.brake_ramp = 0.0
-        ramp_rate *= 0.5
+        transition_factor = interp(max(emergency_factor, brake_ratio),
+                               [0.0, 0.3, 0.7, 1.0],
+                               [0.7, 0.85, 1.0, 1.2])  # Higher baseline
+        braking_ramp_rate *= transition_factor
 
-      self.brake_ramp = min(1.0, self.brake_ramp + (ramp_rate * self.DT_CTRL))
+    # Faster ramp-up for braking
+    self.brake_ramp = min(1.0, self.brake_ramp + (braking_ramp_rate * self.DT_CTRL))
 
-      # Smooth factor
-      smooth_factor = interp(abs(accel), [0.0, 0.3, 1.0, 2.0], [0.95, 0.85, 0.75, 0.60])
-      if brake_aggressiveness > 0.8:
-        smooth_factor *= 0.8
+    # Reduced smoothing for faster response, especially in emergencies
+    brake_smooth_factor = 0.85 - 0.45 * (abs(accel) / (abs(accel) + 0.4))
+    emergency_response = 0.5 + 0.5 * emergency_factor  # Higher base value for faster response
+    brake_smooth_factor *= (1.0 - 0.5 * emergency_response)
 
-      # Final smoothing scaled by brake ramp
-      accel_delta *= (smooth_factor * self.brake_ramp)
+    # Apply almost no smoothing for new leads with high closing speeds
+    if new_lead_detected and emergency_factor > 0.4:
+        brake_smooth_factor *= 0.5  # Dramatically reduce smoothing
 
-      # Enforce jerk limits
-      accel_delta = clip(
-        accel_delta,
-        -self.jerk_lower_limit * self.DT_CTRL,
-        self.jerk_upper_limit * self.DT_CTRL
-      )
+    brake_accel_delta = accel_delta * (brake_smooth_factor * self.brake_ramp)
 
-      # Transition from positive accel to negative
-      if self.accel_last > 0:
-        transition_factor = interp(
-          abs(accel), [0, 0.5, 1.0, 1.5, 2.0],
-          [0.3, 0.4, 0.5, 0.6, 0.7]
-        )
-        accel_delta *= transition_factor
-    else:
-      # Positive Acceleration Logic
-      ramp_rate = 0.9 # Increase ramp rate for positive acceleration
-      accel_delta = min(accel - self.accel_last, ramp_rate * self.DT_CTRL)
+    # --- Acceleration Logic (positive accel) ---
+    base_ramp_rate = interp(CS.out.vEgo, [0.0, 1.0, 2.0, 4.0, 6.0], [2.0, 1.7, 1.5, 1.2, 1.0])
+    start_boost = 0.7 * max(0.0, 1.0 - self.accel_last * 2.0)
+    accel_boost = accel * accel * 0.15
+    accel_ramp_rate = base_ramp_rate + start_boost + accel_boost
+    accel_accel_delta = min(accel - self.accel_last, accel_ramp_rate * self.DT_CTRL)
 
-    # Update accel
+    # --- Dynamic jerk limits with enhanced emergency response ---
+    # Base jerk upper limit
+    jerk_upper = self.jerk_upper_limit
+
+    # For braking, increase jerk limit substantially in emergencies
+    # Create a continuous scale based on emergency factor
+    emergency_jerk_scale = 1.0 + emergency_factor * 1.2
+
+    # Apply extra scaling for new leads with high closing speeds
+    if new_lead_detected and emergency_factor > 0.3:
+        emergency_jerk_scale += emergency_factor * 0.8
+
+    jerk_lower = self.jerk_lower_limit * emergency_jerk_scale
+
+    # Blend acceleration and braking deltas
+    accel_delta = brake_blend * brake_accel_delta + (1.0 - brake_blend) * accel_accel_delta
+
+    # Apply dynamic jerk limits
+    accel_delta = clip(accel_delta, -jerk_lower * self.DT_CTRL, jerk_upper * self.DT_CTRL)
+
     accel = self.accel_last + accel_delta
     self.accel_last = accel
     return accel
 
   def calculate_accel(self, accel, actuators, CS, frogpilot_toggles):
-    """Calculate acceleration with cruise control status handling."""
     if self.handle_cruise_cancel(CS):
       return 0.0
     accel = self.calculate_limited_accel(accel, actuators, CS)
     return clip(accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX))
 
   def apply_tune(self, CP: Any) -> None:
-    CP.vEgoStopping = 0.3
-    CP.vEgoStarting = 0.1
+    CP.vEgoStopping = 0.2
+    CP.vEgoStarting = 0.05
     CP.stoppingDecelRate = 0.01
-    CP.startAccel = 1.6
+    CP.startAccel = 2.0
     CP.startingState = True
 
   def get_jerk(self) -> JerkOutput:
@@ -196,7 +295,6 @@ class HKGLongitudinalTuning:
     )
 
   def calculate_and_get_jerk(self, CS, accel, actuators):
-    """Calculate jerk and return JerkOutput."""
     if self.hkg_tuning:
       self.make_jerk(CS, accel, actuators)
       return self.get_jerk()
@@ -215,5 +313,4 @@ class HKGLongitudinalController:
       self.tuning.apply_tune(CP)
 
   def calculate_normal_jerk(self, long_control_state):
-    """Calculate normal jerk based on long control state."""
     return 3.0 if long_control_state == LongCtrlState.pid else 1.0

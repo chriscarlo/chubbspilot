@@ -228,3 +228,39 @@ def update_openpilot(manually_updated, frogpilot_toggles):
     time.sleep(60)
 
   HARDWARE.reboot()
+def get_carstate_attr(carstate, attr, default=None):
+  """
+  Safely retrieves attributes from CarState objects, handling different data structures.
+
+  IMPORTANT: Use this helper in all FrogPilot modules when accessing CarState attributes!
+  This ensures compatibility with both direct and nested CarState objects throughout the codebase.
+
+  OpenPilot has two different CarState object structures:
+  1. A flat structure with direct attributes (used in modeld.py and other modules)
+  2. A nested structure with an 'out' property (used in CarController and vehicle interfaces)
+
+  This helper handles both formats to ensure compatibility across different parts of the system.
+
+  Usage examples:
+    v_ego = get_carstate_attr(carstate, 'vEgo', 0.0)
+    standstill = get_carstate_attr(carstate, 'standstill', False)
+    left_blinker = get_carstate_attr(carstate, 'leftBlinker', False)
+
+  Args:
+      carstate: The CarState object to get the attribute from
+      attr: The attribute name to retrieve
+      default: Default value to return if attribute is not found
+
+  Returns:
+      The attribute value or default if not found
+  """
+  # First try direct access
+  value = getattr(carstate, attr, None)
+
+  # If not found and object has 'out' property, try accessing through 'out'
+  if value is None and hasattr(carstate, 'out'):
+      value = getattr(carstate.out, attr, default)
+
+  # Return either the found value or default
+  return value if value is not None else default
+

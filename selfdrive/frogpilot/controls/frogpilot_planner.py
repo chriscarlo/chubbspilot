@@ -38,7 +38,7 @@ class FrogPilotPlanner:
     self.road_curvature = 1
     self.v_cruise = 0
 
-  def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, radarless_model, radarState, frogpilot_toggles):
+  def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, radarless_model, radarState, frogpilot_toggles, sm):
     if radarless_model:
       model_leads = list(modelData.leadsV3)
       if len(model_leads) > 0:
@@ -64,7 +64,7 @@ class FrogPilotPlanner:
     else:
       self.cem.stop_light_detected = False
 
-    self.frogpilot_events.update(carState, controlsState, frogpilotCarControl, frogpilotCarState, self.lead_one.dRel, modelData, v_lead, frogpilot_toggles)
+    self.frogpilot_events.update(carState, controlsState, frogpilotCarControl, frogpilotCarState, self.lead_one.dRel, modelData, v_lead, frogpilot_toggles, sm)
     self.frogpilot_following.update(carState.aEgo, controlsState, frogpilotCarState, self.lead_one.dRel, v_ego, v_lead, frogpilot_toggles)
 
     check_lane_width = frogpilot_toggles.adjacent_paths or frogpilot_toggles.adjacent_path_metrics or frogpilot_toggles.blind_spot_path or frogpilot_toggles.lane_detection
