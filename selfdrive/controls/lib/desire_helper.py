@@ -214,7 +214,9 @@ class DesireHelper:
     if not (frogpilot_toggles.lane_detection and one_blinker) or below_lane_change_speed:
       lane_available = True
     else:
-      desired_lane_width = frogpilotPlan.laneWidthLeft if effective_left_blinker else frogpilotPlan.laneWidthRight
+      left_lane_width = frogpilotPlan.laneWidthLeft if hasattr(frogpilotPlan, 'laneWidthLeft') else 0
+      right_lane_width = frogpilotPlan.laneWidthRight if hasattr(frogpilotPlan, 'laneWidthRight') else 0
+      desired_lane_width = left_lane_width if effective_left_blinker else right_lane_width
       lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width
 
     # Lane change logic
@@ -441,8 +443,10 @@ class DesireHelper:
         )
 
       if frogpilot_toggles.lane_detection:
-        left_clear = left_clear and frogpilotPlan.laneWidthLeft >= frogpilot_toggles.lane_detection_width
-        right_clear = right_clear and frogpilotPlan.laneWidthRight >= frogpilot_toggles.lane_detection_width
+        left_lane_width = frogpilotPlan.laneWidthLeft if hasattr(frogpilotPlan, 'laneWidthLeft') else 0
+        right_lane_width = frogpilotPlan.laneWidthRight if hasattr(frogpilotPlan, 'laneWidthRight') else 0
+        left_clear = left_clear and left_lane_width >= frogpilot_toggles.lane_detection_width
+        right_clear = right_clear and right_lane_width >= frogpilot_toggles.lane_detection_width
 
       # Start pre-signaling in the best direction (prefer left)
       if left_clear:
