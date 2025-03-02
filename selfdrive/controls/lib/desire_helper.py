@@ -468,20 +468,37 @@ class DesireHelper:
       self.pre_signaling = False
       self.auto_passing_direction = LaneChangeDirection.none
 
+  # COMMENTED OUT: Original SPAS blinker messaging function
+  # def get_spas_blinker_messages(self, packer, CAN, frame, carstate):
+  #   """
+  #   Returns SPAS blinker control messages for Hyundai CAN-FD vehicles
+  #   with auto-passing blinker activation.
+  #   """
+  #   # Override blinker states when auto-passing is active or pre-signaling
+  #   if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
+  #     left_blinker = self.auto_passing_direction == LaneChangeDirection.left
+  #     right_blinker = self.auto_passing_direction == LaneChangeDirection.right
+  #   else:
+  #     left_blinker = self._get_attr(carstate, 'leftBlinker', False)
+  #     right_blinker = self._get_attr(carstate, 'rightBlinker', False)
+  #
+  #   return create_spas_messages(packer, CAN, frame, left_blinker, right_blinker)
+
   def get_spas_blinker_messages(self, packer, CAN, frame, carstate):
     """
-    Returns SPAS blinker control messages for Hyundai CAN-FD vehicles
-    with auto-passing blinker activation.
-    """
-    # Override blinker states when auto-passing is active or pre-signaling
-    if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
-      left_blinker = self.auto_passing_direction == LaneChangeDirection.left
-      right_blinker = self.auto_passing_direction == LaneChangeDirection.right
-    else:
-      left_blinker = self._get_attr(carstate, 'leftBlinker', False)
-      right_blinker = self._get_attr(carstate, 'rightBlinker', False)
+    Replacement function that doesn't send SPAS messages since it requires an MDPS interceptor harness.
+    Internal state tracking is still maintained to enable nudgeless lane changes without signaling.
 
-    return create_spas_messages(packer, CAN, frame, left_blinker, right_blinker)
+    The auto-passing functionality will continue to work but will not activate physical blinkers.
+    Lane changes can still occur through the nudgeless override mechanism in the update() method.
+    """
+    # Still track blinker states internally (needed for state machine logic)
+    if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
+      # We're still tracking this internally but not sending any CAN messages
+      pass
+
+    # Return empty list instead of actual SPAS messages
+    return []
 
   # Add a helper method to handle attribute access
   def _get_attr(self, obj, attr, default=None):

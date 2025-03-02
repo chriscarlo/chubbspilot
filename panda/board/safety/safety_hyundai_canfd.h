@@ -22,12 +22,16 @@ const CanMsg HYUNDAI_CANFD_HDA2_TX_MSGS[] = {
   {0x50, 0, 16},  // LKAS
   {0x1CF, 1, 8},  // CRUISE_BUTTON
   {0x2A4, 0, 24}, // CAM_0x2A4
+  {0x165, 1, 24}, // SPAS1 (ID 357) - Added for turn signal control
+  {0x16A, 1, 32}, // SPAS2 (ID 362) - Added for turn signal control
 };
 
 const CanMsg HYUNDAI_CANFD_HDA2_ALT_STEERING_TX_MSGS[] = {
   {0x110, 0, 32}, // LKAS_ALT
   {0x1CF, 1, 8},  // CRUISE_BUTTON
   {0x362, 0, 32}, // CAM_0x362
+  {0x165, 1, 24}, // SPAS1 (ID 357) - Added for turn signal control
+  {0x16A, 1, 32}, // SPAS2 (ID 362) - Added for turn signal control
 };
 
 const CanMsg HYUNDAI_CANFD_HDA2_LONG_TX_MSGS[] = {
@@ -44,6 +48,8 @@ const CanMsg HYUNDAI_CANFD_HDA2_LONG_TX_MSGS[] = {
   {0x200, 1, 8},  // ADRV_0x200
   {0x345, 1, 8},  // ADRV_0x345
   {0x1DA, 1, 32}, // ADRV_0x1da
+  {0x165, 1, 24}, // SPAS1 (ID 357) - Added for turn signal control
+  {0x16A, 1, 32}, // SPAS2 (ID 362) - Added for turn signal control
 };
 
 const CanMsg HYUNDAI_CANFD_HDA1_TX_MSGS[] = {
@@ -233,6 +239,11 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *to_send) {
   bool tx = true;
   int addr = GET_ADDR(to_send);
 
+  // explicitly allow SPAS messages for turn signal control
+  if (addr == 0x165 || addr == 0x16A) {
+    return true;
+  }
+
   // steering
   const int steer_addr = (hyundai_canfd_hda2 && !hyundai_longitudinal) ? hyundai_canfd_hda2_get_lkas_addr() : 0x12a;
   if (addr == steer_addr) {
@@ -290,6 +301,12 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *to_send) {
 
 static int hyundai_canfd_fwd_hook(int bus_num, int addr) {
   int bus_fwd = -1;
+
+  // Forward SPAS messages from bus 2 (camera) to bus 0 (car)
+  if ((bus_num == 2) && ((addr == 0x165) || (addr == 0x16A))) {
+    bus_fwd = 0;
+    return bus_fwd;
+  }
 
   if (bus_num == 0) {
     bus_fwd = 2;
