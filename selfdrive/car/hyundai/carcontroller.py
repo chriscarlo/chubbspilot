@@ -179,7 +179,14 @@ class CarController(CarControllerBase, HKGLongitudinalController):
       # blinkers
       if hda2 and self.CP.flags & HyundaiFlags.ENABLE_BLINKERS:
         # Use desire_helper to get SPAS messages with auto-passing support
-        can_sends.extend(self.desire_helper.get_spas_blinker_messages(self.packer, self.CAN, self.frame, CS))
+        spas_messages = self.desire_helper.get_spas_blinker_messages(self.packer, self.CAN, self.frame, CS)
+
+        # Debug info - uncomment to log SPAS messages
+        # import json
+        # if CS.out.leftBlinker or CS.out.rightBlinker:
+        #   print(f"SPAS Messages: {json.dumps([str(msg) for msg in spas_messages])}")
+
+        can_sends.extend(spas_messages)
 
       if self.CP.openpilotLongitudinalControl:
         if hda2:

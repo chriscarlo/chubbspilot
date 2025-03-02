@@ -279,18 +279,18 @@ def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
   """
   ret = []
 
-  # SPAS1 message (ID 357)
+  # SPAS1 message (ID 357) - This activates the SPAS system
   values = {
     "CHECKSUM": 0,  # Will be calculated by the packer
     "COUNTER": frame % 256,
 
-    # In non-CANFD, CF_Spas_Stat is 0|4 bits with value 2 for ACTIVE
-    # In CANFD, NEW_SIGNAL_2 is 90|3 bits
-    "NEW_SIGNAL_2": 2,  # Value 2 = ACTIVE based on non-CANFD CF_Spas_Stat
+    # Set all known fields to attempt better SPAS activation
+    # Previous value was 2, but we'll try 7 (full activation pattern)
+    "NEW_SIGNAL_2": 7,
 
-    # In non-CANFD, CR_Spas_StrAngCmd is 8|16 bits (steering angle command)
-    # In CANFD, NEW_SIGNAL_1 is 96|16 bits
-    "NEW_SIGNAL_1": 0,  # Set to 0 since we're not controlling steering
+    # Set a small non-zero value to indicate active system
+    # But not enough to actually steer the vehicle
+    "NEW_SIGNAL_1": 10,
   }
   ret.append(packer.make_can_msg("SPAS1", CAN.ECAN, values))
 
@@ -300,6 +300,7 @@ def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
     blink = 3
   elif right_blink:
     blink = 4
+
   values = {
     "CHECKSUM": 0,  # Will be calculated by the packer
     "COUNTER": frame % 256,
