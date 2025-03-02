@@ -70,6 +70,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"TacoTune", tr("'Taco Bell Run' Turn Speed Hack"), tr("Enable comma's speed hack they used to help handle left and right turns more precisely during their 2022 'Taco Bell' drive by reducing the maximum allowed speed and acceleration while turning."), ""},
 
     {"QOLLongitudinal", tr("Quality of Life Improvements"), tr("Miscellaneous longitudinal focused features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
+    {"MatchFollowDistance", tr("Match Follow Distance - %"), tr("100% means lead metrics come from only the vision model.. 80% is 1:1 follow distance, means .8 comes from model and .2 comes from mpc controller, the lower the percentage, the less from the model."), ""},
     {"CustomCruise", tr("Cruise Increase"), tr("Controls the interval used when increasing the cruise control speed."), ""},
     {"CustomCruiseLong", tr("Cruise Increase (Long Press)"), tr("Controls the interval used when increasing the cruise control speed while holding down the button for 0.5+ seconds."), ""},
     {"ForceStandstill", tr("Force Keep openpilot in the Standstill State"), tr("Keeps openpilot in the 'standstill' state until the gas pedal or 'resume' button is pressed."), ""},
@@ -312,7 +313,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, icon, mapGearsToggles, mapGearsToggleNames);
     } else if (param == "SetSpeedOffset") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 99, tr("mph"));
-
+    } else if (param == "MatchFollowDistance") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 100, "%");
     } else if (param == "SpeedLimitController") {
       FrogPilotManageControl *speedLimitControllerToggle = new FrogPilotManageControl(param, title, desc, icon);
       QObject::connect(speedLimitControllerToggle, &FrogPilotManageControl::manageButtonClicked, [this]() {
