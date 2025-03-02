@@ -420,7 +420,7 @@ class DesireHelper:
     if auto_passing_ready and not self.auto_passing_active:
       # Determine best passing lane (prefer left, fall back to right)
       left_clear = not self._get_attr(carstate, 'leftBlindspot', False)
-      right_clear = not self._get_attr(carstate, 'rightBlinker', False)
+      right_clear = not self._get_attr(carstate, 'rightBlindspot', False)
       if has_lead:
         current_lead_speed = v_ego + lead_one.vRel
         left_clear = left_clear and self.check_adjacent_lead_speed(
