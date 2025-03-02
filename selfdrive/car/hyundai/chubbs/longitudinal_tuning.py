@@ -46,7 +46,7 @@ class HKGLongitudinalTuning:
   def make_jerk(self, CS, accel, actuators):
     state = getattr(actuators, "longControlState", LongCtrlState.pid)
     # Handle cancel state to prevent cruise fault
-    if not CS.out.cruiseState.enabled or CS.out.ButtonEvent.Type.cancel or CS.out.gasPressed or CS.out.brakePressed:
+    if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
       self.accel_last_jerk = 0.0
       self.jerk = 0.0
       self.jerk_count = 0.0
@@ -92,7 +92,7 @@ class HKGLongitudinalTuning:
 
   def handle_cruise_cancel(self, CS):
     """Handle cruise control cancel to prevent faults."""
-    if not CS.out.cruiseState.enabled or CS.out.ButtonEvent.Type.cancel or CS.out.gasPressed or CS.out.brakePressed:
+    if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
       self.accel_last = 0.0
       self.last_accel = 0.0
       self.brake_ramp = 0.0
