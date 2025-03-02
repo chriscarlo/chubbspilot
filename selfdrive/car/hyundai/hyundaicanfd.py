@@ -265,18 +265,44 @@ def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, jerk_upper, 
 
 
 def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
+  """
+  Creates SPAS messages for turn signal control.
+
+  SPAS1 (ID 357):
+  - NEW_SIGNAL_1: Bit 96, 16 bits - possibly equivalent to CR_Spas_StrAngCmd (steering angle command)
+  - NEW_SIGNAL_2: Bit 90, 3 bits - possibly equivalent to CF_Spas_Stat (status field)
+
+  SPAS2 (ID 362):
+  - BLINKER_CONTROL: Bit 133, 3 bits - controls turn signals (3=left, 4=right)
+
+  Based on looking at hyundai_canfd.dbc and hyundai_kia_generic.dbc
+  """
   ret = []
 
+  # SPAS1 message (ID 357)
   values = {
+    "CHECKSUM": 0,  # Will be calculated by the packer
+    "COUNTER": frame % 256,
+
+    # In non-CANFD, CF_Spas_Stat is 0|4 bits with value 2 for ACTIVE
+    # In CANFD, NEW_SIGNAL_2 is 90|3 bits
+    "NEW_SIGNAL_2": 2,  # Value 2 = ACTIVE based on non-CANFD CF_Spas_Stat
+
+    # In non-CANFD, CR_Spas_StrAngCmd is 8|16 bits (steering angle command)
+    # In CANFD, NEW_SIGNAL_1 is 96|16 bits
+    "NEW_SIGNAL_1": 0,  # Set to 0 since we're not controlling steering
   }
   ret.append(packer.make_can_msg("SPAS1", CAN.ECAN, values))
 
+  # SPAS2 message (ID 362) with blinker control
   blink = 0
   if left_blink:
     blink = 3
   elif right_blink:
     blink = 4
   values = {
+    "CHECKSUM": 0,  # Will be calculated by the packer
+    "COUNTER": frame % 256,
     "BLINKER_CONTROL": blink,
   }
   ret.append(packer.make_can_msg("SPAS2", CAN.ECAN, values))
