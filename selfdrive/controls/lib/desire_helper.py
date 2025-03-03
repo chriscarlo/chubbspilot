@@ -49,55 +49,55 @@ TURN_DESIRES = {
 }
 
 
-def detect_adjacent_vehicle_from_radar(direction, radar_tracks, frogpilotPlan, lane_detection_width, v_ego, lead_id=-1):
+# ----------------------------------------------------------------------------------
+# COMMENTED OUT: Side wedge detection (corner radar logic) to ensure no adjacent cars
+# ----------------------------------------------------------------------------------
+# def detect_adjacent_vehicle_from_radar(direction, radar_tracks, frogpilotPlan, lane_detection_width, v_ego, lead_id=-1):
+#   """
+#   Check radar tracks for vehicles in adjacent lanes using a wedge-based or lateral
+#   approach. This is commented out since you do not currently have the corner radar
+#   configured.
+#   """
+#   return False
+
+
+def check_adjacent_lead_speed(direction, radar_tracks, frogpilotPlan, lane_detection_width, v_ego, current_lead_speed, lead_id=-1):
   """
-  Check radar tracks for vehicles in adjacent lanes using TTC-based safety assessment.
+  Determines if changing to the specified lane would be advantageous based on lead vehicle speeds.
+  Returns True if the lane is clear or has a faster lead vehicle than our current lane.
   """
   if not radar_tracks:
-    return False
+    return True
 
-  # Lane width determination
   if direction == LaneChangeDirection.left:
     use_measured_width = hasattr(frogpilotPlan, 'laneWidthLeft') and frogpilotPlan.laneWidthLeft > 0
     lane_width = frogpilotPlan.laneWidthLeft if use_measured_width else (lane_detection_width if lane_detection_width > 0 else 3.7)
-    lateral_min = -lane_width - 0.2  # Added small safety margin
+    lateral_min = -lane_width - 0.2
     lateral_max = 0.0
   else:  # right
     use_measured_width = hasattr(frogpilotPlan, 'laneWidthRight') and frogpilotPlan.laneWidthRight > 0
     lane_width = frogpilotPlan.laneWidthRight if use_measured_width else (lane_detection_width if lane_detection_width > 0 else 3.7)
     lateral_min = 0.0
-    lateral_max = lane_width + 0.2  # Added small safety margin
+    lateral_max = lane_width + 0.2
 
-  # Fixed TTC threshold
-  min_ttc = 2.5  # Static 2.5s TTC threshold for all speeds
+  lead_found = False
+  lead_speed = 0
+  min_distance = float('inf')
 
-  # Scale minimum distance with speed to avoid being rude
-  # Base distance + roughly 1 car length per 10 mph
-  min_distance = 7.0 + (v_ego * 0.3)  # Base distance + scaled factor
-
-  # Check if any radar track is in the adjacent lane with unsafe TTC
   for track in radar_tracks:
-    # Skip lead vehicle in our lane
+    # Skip our current lead if it’s in our lane
     if track.trackId == lead_id:
       continue
 
-    if lateral_min < track.yRel < lateral_max:
-      # First check: minimum distance
-      if abs(track.dRel) < min_distance:
-        return True
+    if lateral_min < track.yRel < lateral_max and track.dRel > 0:
+      if track.dRel < min_distance:
+        min_distance = track.dRel
+        lead_speed = v_ego + track.vRel
+        lead_found = True
 
-      # Calculate TTC only for vehicles that are approaching or moving away slowly
-      if track.vRel < 1.0:
-        closing_speed = max(-track.vRel, 0.1)
-        ttc = abs(track.dRel) / closing_speed
-        if ttc < min_ttc:
-          return True
-
-      # Simple blind-spot check for vehicles at similar speed
-      if abs(track.dRel) < 10.0 and abs(track.yRel) < (lane_width / 2):
-        return True
-
-  return False
+  # If we found a lead in that lane, only proceed if that lead is going faster than our own
+  # current lead speed (so it’s an “advantageous” lane).
+  return (not lead_found) or (lead_speed > current_lead_speed)
 
 
 class DesireHelper:
@@ -130,41 +130,6 @@ class DesireHelper:
     self.pre_signal_timer = 0.0
     self.pre_signaling = False
 
-  def check_adjacent_lead_speed(self, direction, radar_tracks, frogpilotPlan, lane_detection_width, v_ego, current_lead_speed, lead_id=-1):
-    """
-    Determines if changing to the specified lane would be advantageous based on lead vehicle speeds.
-    Returns True if the lane is clear or has a faster lead vehicle than our current lane.
-    """
-    if not radar_tracks:
-      return True
-
-    if direction == LaneChangeDirection.left:
-      use_measured_width = hasattr(frogpilotPlan, 'laneWidthLeft') and frogpilotPlan.laneWidthLeft > 0
-      lane_width = frogpilotPlan.laneWidthLeft if use_measured_width else (lane_detection_width if lane_detection_width > 0 else 3.7)
-      lateral_min = -lane_width - 0.2
-      lateral_max = 0.0
-    else:  # right
-      use_measured_width = hasattr(frogpilotPlan, 'laneWidthRight') and frogpilotPlan.laneWidthRight > 0
-      lane_width = frogpilotPlan.laneWidthRight if use_measured_width else (lane_detection_width if lane_detection_width > 0 else 3.7)
-      lateral_min = 0.0
-      lateral_max = lane_width + 0.2
-
-    lead_found = False
-    lead_speed = 0
-    min_distance = float('inf')
-
-    for track in radar_tracks:
-      if track.trackId == lead_id:
-        continue
-
-      if lateral_min < track.yRel < lateral_max and track.dRel > 0:
-        if track.dRel < min_distance:
-          min_distance = track.dRel
-          lead_speed = v_ego + track.vRel
-          lead_found = True
-
-    return not lead_found or lead_speed > current_lead_speed
-
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilot_toggles):
     """
     carstate here is assumed to be the *cereal* CarState message
@@ -180,35 +145,38 @@ class DesireHelper:
     lead_id = lead_one.radarTrackId if has_lead else -1
 
     # Calculate absolute lead vehicle speed
-    # Handle both direct and nested structure
     v_ego = getattr(carstate, 'vEgo', 0.0) if not hasattr(carstate, 'out') else getattr(carstate.out, 'vEgo', 0.0)
     self.v_lead = v_ego + lead_rel_speed if has_lead else 0.0
 
     # If we have a valid carState from SubMaster, get cluster speed
     if self.sm.valid['carState']:
-      # Using a custom 'speedCluster' if your fork populates it
       self.v_cruise_cluster = self.sm['carState'].cruiseState.speedCluster
 
     # Check auto-passing logic
     self.check_auto_passing(carstate, lateral_active, v_ego, frogpilotPlan, frogpilot_toggles, lead_id)
 
-    # Create effective blinker states (using auto-passing if active)
+    # -------------------------------------------------------------------------
+    # Create effective blinker states (spoof blinkers internally if auto-passing)
+    # -------------------------------------------------------------------------
     if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
-      effective_left_blinker = self.auto_passing_direction == LaneChangeDirection.left
-      effective_right_blinker = self.auto_passing_direction == LaneChangeDirection.right
+      effective_left_blinker = (self.auto_passing_direction == LaneChangeDirection.left)
+      effective_right_blinker = (self.auto_passing_direction == LaneChangeDirection.right)
       one_blinker = True
     else:
       effective_left_blinker = self._get_attr(carstate, 'leftBlinker', False)
       effective_right_blinker = self._get_attr(carstate, 'rightBlinker', False)
-      one_blinker = effective_left_blinker != effective_right_blinker
+      one_blinker = (effective_left_blinker != effective_right_blinker)
 
-    # Cancel auto-passing if driver manually activates blinkers
-    if one_blinker:
+    # If the driver physically activates a turn signal, cancel auto-passing
+    if one_blinker and (
+      self._get_attr(carstate, 'leftBlinker', False) or
+      self._get_attr(carstate, 'rightBlinker', False)
+    ):
       self.auto_passing_active = False
       self.pre_signaling = False
       self.auto_passing_direction = LaneChangeDirection.none
 
-    below_lane_change_speed = v_ego < frogpilot_toggles.minimum_lane_change_speed
+    below_lane_change_speed = (v_ego < frogpilot_toggles.minimum_lane_change_speed)
 
     # Lane detection check
     if not (frogpilot_toggles.lane_detection and one_blinker) or below_lane_change_speed:
@@ -217,19 +185,22 @@ class DesireHelper:
       left_lane_width = frogpilotPlan.laneWidthLeft if hasattr(frogpilotPlan, 'laneWidthLeft') else 0
       right_lane_width = frogpilotPlan.laneWidthRight if hasattr(frogpilotPlan, 'laneWidthRight') else 0
       desired_lane_width = left_lane_width if effective_left_blinker else right_lane_width
-      lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width
+      lane_available = (desired_lane_width >= frogpilot_toggles.lane_detection_width)
 
     # Lane change logic
-    if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX:
+    if (not lateral_active) or (self.lane_change_timer > LANE_CHANGE_TIME_MAX):
       self.lane_change_state = LaneChangeState.off
       self.lane_change_direction = LaneChangeDirection.none
       self.turn_direction = TurnDirection.none
       self.auto_passing_active = False
       self.pre_signaling = False
+
     elif one_blinker and below_lane_change_speed and not self._get_attr(carstate, 'standstill', False) and frogpilot_toggles.use_turn_desires:
+      # Turn desire (for low-speed turning)
       self.lane_change_state = LaneChangeState.off
       self.lane_change_direction = LaneChangeDirection.none
       self.turn_direction = TurnDirection.turnLeft if effective_left_blinker else TurnDirection.turnRight
+
     else:
       self.turn_direction = TurnDirection.none
 
@@ -252,58 +223,63 @@ class DesireHelper:
         self.lane_change_wait_timer += DT_MDL
         self.lane_change_direction = LaneChangeDirection.left if effective_left_blinker else LaneChangeDirection.right
 
+        # Steering nudge detection
         torque_applied = self._get_attr(carstate, 'steeringPressed', False) and (
-                          (self._get_attr(carstate, 'steeringTorque', 0) > 0 and self.lane_change_direction == LaneChangeDirection.left) or
-                          (self._get_attr(carstate, 'steeringTorque', 0) < 0 and self.lane_change_direction == LaneChangeDirection.right))
+          (self._get_attr(carstate, 'steeringTorque', 0) > 0 and self.lane_change_direction == LaneChangeDirection.left) or
+          (self._get_attr(carstate, 'steeringTorque', 0) < 0 and self.lane_change_direction == LaneChangeDirection.right)
+        )
 
         # Reset wait timer if driver nudges steering
         if torque_applied:
           self.lane_change_wait_timer = frogpilot_toggles.lane_change_delay
 
         # Nudgeless or auto-pass override
-        auto_pass_nudgeless = self.auto_passing_active and not self.pre_signaling
-        torque_applied |= frogpilot_toggles.nudgeless or auto_pass_nudgeless
+        auto_pass_nudgeless = (self.auto_passing_active and not self.pre_signaling)
+        torque_applied |= (frogpilot_toggles.nudgeless or auto_pass_nudgeless)
 
-        # Check car's built-in blind spot detection
-        blindspot_detected = ((self._get_attr(carstate, 'leftBlindspot', False) and self.lane_change_direction == LaneChangeDirection.left) or
-                              (self._get_attr(carstate, 'rightBlindspot', False) and self.lane_change_direction == LaneChangeDirection.right))
+        # Car's built-in blind spot detection
+        blindspot_detected = (
+          (self._get_attr(carstate, 'leftBlindspot', False) and self.lane_change_direction == LaneChangeDirection.left) or
+          (self._get_attr(carstate, 'rightBlindspot', False) and self.lane_change_direction == LaneChangeDirection.right)
+        )
 
-        # Use radar tracks for blind spot as well
-        if self.sm.valid['liveTracks']:
-          radar_blindspot = detect_adjacent_vehicle_from_radar(
+        # Radar-based side wedge detection is commented out
+        # if self.sm.valid['liveTracks']:
+        #   radar_blindspot = detect_adjacent_vehicle_from_radar(
+        #     self.lane_change_direction,
+        #     self.sm['liveTracks'],
+        #     frogpilotPlan,
+        #     frogpilot_toggles.lane_detection_width,
+        #     v_ego,
+        #     lead_id
+        #   )
+        #   blindspot_detected |= radar_blindspot
+
+        # Still keep adjacent lead speed check
+        if self.sm.valid['liveTracks'] and has_lead:
+          current_lead_speed = (v_ego + lead_rel_speed)
+          advantageous = check_adjacent_lead_speed(
             self.lane_change_direction,
             self.sm['liveTracks'],
             frogpilotPlan,
             frogpilot_toggles.lane_detection_width,
             v_ego,
+            current_lead_speed,
             lead_id
           )
-          blindspot_detected |= radar_blindspot
-
-          # Check if lane change is advantageous if we have a lead
-          if has_lead:
-            current_lead_speed = v_ego + lead_rel_speed
-            advantageous = self.check_adjacent_lead_speed(
-              self.lane_change_direction,
-              self.sm['liveTracks'],
-              frogpilotPlan,
-              frogpilot_toggles.lane_detection_width,
-              v_ego,
-              current_lead_speed,
-              lead_id
-            )
-            if not advantageous:
-              blindspot_detected = True
+          # If that lane is not advantageous, treat it like a blindspot
+          if not advantageous:
+            blindspot_detected = True
 
         # Cancel conditions
-        if not one_blinker or below_lane_change_speed or self.lane_change_completed:
+        if (not one_blinker) or below_lane_change_speed or self.lane_change_completed:
           self.lane_change_state = LaneChangeState.off
           self.lane_change_direction = LaneChangeDirection.none
           self.auto_passing_active = False
           self.pre_signaling = False
 
         elif torque_applied and not blindspot_detected and lane_available and \
-             self.lane_change_wait_timer >= frogpilot_toggles.lane_change_delay:
+             (self.lane_change_wait_timer >= frogpilot_toggles.lane_change_delay):
           self.lane_change_state = LaneChangeState.laneChangeStarting
           self.lane_change_completed = frogpilot_toggles.one_lane_change
           self.lane_change_wait_timer = 0.0
@@ -366,8 +342,8 @@ class DesireHelper:
     """
     MIN_FOLLOW_TIME = 3.0
     SPEED_DIFF_THRESHOLD = 2.0 * CV.MPH_TO_MS
-    below_lane_change_speed = v_ego < frogpilot_toggles.minimum_lane_change_speed
-    below_auto_pass_speed = v_ego < AUTO_PASS_SPEED_MIN
+    below_lane_change_speed = (v_ego < frogpilot_toggles.minimum_lane_change_speed)
+    below_auto_pass_speed = (v_ego < AUTO_PASS_SPEED_MIN)
 
     lead_one = self.sm['radarState'].leadOne if self.sm.valid['radarState'] else None
     has_lead = lead_one.status if lead_one is not None else False
@@ -375,7 +351,7 @@ class DesireHelper:
     # Track lead follow time
     if has_lead:
       lead_is_slower = (
-        self.v_cruise_cluster > 0 and
+        (self.v_cruise_cluster > 0) and
         (self.v_lead < (self.v_cruise_cluster - SPEED_DIFF_THRESHOLD))
       )
       if lead_is_slower:
@@ -390,63 +366,72 @@ class DesireHelper:
       return
 
     # No manual blinkers and not currently changing lanes
-    no_manual_blinker = not self._get_attr(carstate, 'leftBlinker', False) and not self._get_attr(carstate, 'rightBlinker', False)
-    not_changing_lanes = self.lane_change_state == LaneChangeState.off
+    no_manual_blinker = (
+      not self._get_attr(carstate, 'leftBlinker', False) and
+      not self._get_attr(carstate, 'rightBlinker', False)
+    )
+    not_changing_lanes = (self.lane_change_state == LaneChangeState.off)
 
-    # Auto-passing feature enabled in settings
+    # Auto-passing feature enabled
     auto_passing_enabled = frogpilot_toggles.auto_passing
 
     # Cancel if we detect blindspot or speed drops
     if (self.auto_passing_active or self.pre_signaling) and (
-        (self._get_attr(carstate, 'leftBlindspot', False) and self.auto_passing_direction == LaneChangeDirection.left) or
-        (self._get_attr(carstate, 'rightBlindspot', False) and self.auto_passing_direction == LaneChangeDirection.right) or
-        below_auto_pass_speed  # Cancel if speed drops below threshold
+      (self._get_attr(carstate, 'leftBlindspot', False) and self.auto_passing_direction == LaneChangeDirection.left) or
+      (self._get_attr(carstate, 'rightBlindspot', False) and self.auto_passing_direction == LaneChangeDirection.right) or
+      below_auto_pass_speed
     ):
       self.auto_passing_active = False
       self.pre_signaling = False
       self.auto_passing_direction = LaneChangeDirection.none
       return
 
-    auto_passing_ready = (auto_passing_enabled and
-                          lateral_active and
-                          self.lead_follow_timer >= MIN_FOLLOW_TIME and
-                          not below_lane_change_speed and
-                          not below_auto_pass_speed and
-                          no_manual_blinker and
-                          not_changing_lanes and
-                          self.lane_change_cooldown <= 0.0 and
-                          not self.pre_signaling)
+    auto_passing_ready = (
+      auto_passing_enabled and
+      lateral_active and
+      (self.lead_follow_timer >= MIN_FOLLOW_TIME) and
+      (not below_lane_change_speed) and
+      (not below_auto_pass_speed) and
+      no_manual_blinker and
+      not_changing_lanes and
+      (self.lane_change_cooldown <= 0.0) and
+      (not self.pre_signaling)
+    )
 
     if auto_passing_ready and not self.auto_passing_active:
       # Determine best passing lane (prefer left, fall back to right)
       left_clear = not self._get_attr(carstate, 'leftBlindspot', False)
       right_clear = not self._get_attr(carstate, 'rightBlindspot', False)
-      if has_lead:
-        current_lead_speed = v_ego + lead_one.vRel
-        left_clear = left_clear and self.check_adjacent_lead_speed(
-          LaneChangeDirection.left,
-          self.sm['liveTracks'],
-          frogpilotPlan,
-          frogpilot_toggles.lane_detection_width,
-          v_ego,
-          current_lead_speed,
-          lead_id
-        )
-        right_clear = right_clear and self.check_adjacent_lead_speed(
-          LaneChangeDirection.right,
-          self.sm['liveTracks'],
-          frogpilotPlan,
-          frogpilot_toggles.lane_detection_width,
-          v_ego,
-          current_lead_speed,
-          lead_id
-        )
+
+      # Potentially also check if the lead in that lane is faster:
+      if self.sm.valid['liveTracks'] and has_lead:
+        current_lead_speed = (v_ego + lead_one.vRel)
+        if left_clear:
+          left_clear = check_adjacent_lead_speed(
+            LaneChangeDirection.left,
+            self.sm['liveTracks'],
+            frogpilotPlan,
+            frogpilot_toggles.lane_detection_width,
+            v_ego,
+            current_lead_speed,
+            lead_id
+          )
+        if right_clear:
+          right_clear = check_adjacent_lead_speed(
+            LaneChangeDirection.right,
+            self.sm['liveTracks'],
+            frogpilotPlan,
+            frogpilot_toggles.lane_detection_width,
+            v_ego,
+            current_lead_speed,
+            lead_id
+          )
 
       if frogpilot_toggles.lane_detection:
         left_lane_width = frogpilotPlan.laneWidthLeft if hasattr(frogpilotPlan, 'laneWidthLeft') else 0
         right_lane_width = frogpilotPlan.laneWidthRight if hasattr(frogpilotPlan, 'laneWidthRight') else 0
-        left_clear = left_clear and left_lane_width >= frogpilot_toggles.lane_detection_width
-        right_clear = right_clear and right_lane_width >= frogpilot_toggles.lane_detection_width
+        left_clear = left_clear and (left_lane_width >= frogpilot_toggles.lane_detection_width)
+        right_clear = right_clear and (right_lane_width >= frogpilot_toggles.lane_detection_width)
 
       # Start pre-signaling in the best direction (prefer left)
       if left_clear:
@@ -457,12 +442,12 @@ class DesireHelper:
         self.pre_signaling = True
         self.pre_signal_timer = 0.0
         self.auto_passing_direction = LaneChangeDirection.right
-    # Reset if conditions no longer met
+
     elif (self.auto_passing_active or self.pre_signaling) and (
-        not lateral_active or
-        below_lane_change_speed or
-        below_auto_pass_speed or
-        not auto_passing_enabled
+      (not lateral_active) or
+      below_lane_change_speed or
+      below_auto_pass_speed or
+      (not auto_passing_enabled)
     ):
       self.auto_passing_active = False
       self.pre_signaling = False
@@ -474,10 +459,9 @@ class DesireHelper:
   #   Returns SPAS blinker control messages for Hyundai CAN-FD vehicles
   #   with auto-passing blinker activation.
   #   """
-  #   # Override blinker states when auto-passing is active or pre-signaling
   #   if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
-  #     left_blinker = self.auto_passing_direction == LaneChangeDirection.left
-  #     right_blinker = self.auto_passing_direction == LaneChangeDirection.right
+  #     left_blinker = (self.auto_passing_direction == LaneChangeDirection.left)
+  #     right_blinker = (self.auto_passing_direction == LaneChangeDirection.right)
   #   else:
   #     left_blinker = self._get_attr(carstate, 'leftBlinker', False)
   #     right_blinker = self._get_attr(carstate, 'rightBlinker', False)
@@ -492,18 +476,12 @@ class DesireHelper:
     The auto-passing functionality will continue to work but will not activate physical blinkers.
     Lane changes can still occur through the nudgeless override mechanism in the update() method.
     """
-    # Still track blinker states internally (needed for state machine logic)
-    if (self.auto_passing_active or self.pre_signaling) and not (self._get_attr(carstate, 'leftBlinker', False) or self._get_attr(carstate, 'rightBlinker', False)):
-      # We're still tracking this internally but not sending any CAN messages
-      pass
-
-    # Return empty list instead of actual SPAS messages
+    # We do NOT send any messages here; just return empty
     return []
 
-  # Add a helper method to handle attribute access
   def _get_attr(self, obj, attr, default=None):
-    """Helper to get attribute from an object with fallback to 'out' property"""
+    """Helper to get attribute from an object with fallback to 'out' property."""
     value = getattr(obj, attr, None)
     if value is None and hasattr(obj, 'out'):
-        value = getattr(obj.out, attr, default)
+      value = getattr(obj.out, attr, default)
     return value if value is not None else default
