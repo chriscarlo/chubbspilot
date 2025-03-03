@@ -75,24 +75,11 @@ class FrogPilotFollowing:
       self.desired_follow_distance = 0
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, frogpilot_toggles):
-    # Only adjust t_follow based on lead dynamics (ignore speed-only triggers)
-    if (frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following) and (v_lead < v_ego):
-      closing_speed = max(v_ego - v_lead, 0.1)
-      ttc = lead_distance / closing_speed
+    # Removed TTC-based scaling of t_follow to ensure the follow gap honors the personality setting.
+    # Previously, t_follow was multiplied by a braking_scaling factor based on TTC,
+    # which could increase the gap by up to 50% or more.
+    self.slower_lead = False
 
-      # Define a reaction factor based on time-to-collision (TTC).
-      # When TTC is below 3.5 seconds, scale up t_follow modestly (up to roughly 50% increase).
-      ttc_factor = np.clip((3.5 - ttc) / 3.5, 0.0, 1.0)
-      braking_scaling = 1.0 + ttc_factor * 0.5
-
-      # Apply scaling to t_follow based solely on lead dynamics.
-      self.t_follow *= braking_scaling
-
-      # Mark a slowed-lead scenario if the scaling is significant.
-      self.slower_lead = braking_scaling > 1.05
-    else:
-      self.slower_lead = False
-
-    # Decay t_follow back to the personality baseline when aggressive scaling isn't reinforced.
-    decay_rate = 0.1  # Adjust the decay rate as needed.
+    # Decay t_follow back to the personality baseline (effectively forcing it to remain near the set value)
+    decay_rate = 0.1  # Adjust decay rate if needed.
     self.t_follow = (1 - decay_rate) * self.t_follow + decay_rate * self.personality_t_follow
