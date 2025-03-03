@@ -274,7 +274,7 @@ class LongitudinalPlanner:
     self.a_desired_trajectory_full = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
-    self.j_desired_trajectory = np.interp(CONTROL_N_T_IDX[:-1], T_IDXS_MPC, self.mpc.j_solution)
+    self.j_desired_trajectory = np.interp(CONTROL_N_T_IDX[:-1], T_IDXS_MPC[:-1], self.mpc.j_solution)
 
     self.fcw = self.mpc.crash_cnt > 2 and not sm['carState'].standstill
     if self.fcw:
