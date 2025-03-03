@@ -31,45 +31,46 @@ def get_max_accel_eco(v_ego):
   """
   Replaces the piecewise 'interp' for ECO mode with a single logistic function.
   The shape starts higher at low speed and gently tapers at higher speeds.
+  Enhanced for stronger initial acceleration punch.
   """
   v_mph = v_ego * 2.236936  # Convert from m/s to mph if your code used mph breakpoints
-  # Approximate the original shape: from ~2.0 at 0 mph down to ~0.2 at 40 mph.
+  # Approximate the original shape but with higher initial values for more punch
   return logistic(
       x=v_mph,
       lower=0.2,     # final taper
-      upper=2.0,     # initial maximum
+      upper=2.8,     # increased from 2.0 for stronger initial punch
       midpoint=15.0, # shifted earlier to make the transition happen sooner
-      scale=0.35     # increased for more immediate response
+      scale=0.45     # increased for more immediate response
   )
 
 
 def get_max_accel_sport(v_ego):
   """
-  Sport mode: slightly higher acceleration than ECO.
+  Sport mode: higher acceleration than ECO with stronger initial punch.
   """
   v_mph = v_ego * 2.236936
-  # Approximate from ~3.0 at 0 mph down to ~0.6–1.0 at higher speeds
+  # Higher initial acceleration with similar overall profile
   return logistic(
       x=v_mph,
       lower=0.8,     # a bit higher final taper than ECO
-      upper=3.0,     # initial maximum
+      upper=4.0,     # increased from 3.0 for stronger initial punch
       midpoint=15.0, # shifted earlier for quicker response
-      scale=0.40     # increased for more immediate response
+      scale=0.50     # increased for more immediate response
   )
 
 
 def get_max_accel_sport_plus(v_ego):
   """
-  Sport+ mode: even higher performance, yet still smoothly transitions.
+  Sport+ mode: aggressive initial acceleration with smooth transition to cruising.
   """
   v_mph = v_ego * 2.236936
-  # Approximate from ~4.0 at 0 mph down to ~1.0 at high speeds
+  # More aggressive initial acceleration for that "punch" feeling
   return logistic(
       x=v_mph,
       lower=1.0,
-      upper=4.0,
+      upper=5.5,     # increased from 4.0 for significantly stronger initial punch
       midpoint=15.0, # shifted earlier for quicker response
-      scale=0.45     # highest scale for most immediate response
+      scale=0.55     # highest scale for most immediate response
   )
 
 
@@ -79,8 +80,8 @@ def get_max_accel_sport_plus(v_ego):
 ###############################################################################
 def get_max_accel_low_speeds(max_accel, v_cruise):
   """
-  Emulates a pro driver gently modulating throttle at low speeds,
-  starting around max_accel/4 near zero mph, up to max_accel by city speed limit.
+  Emulates an assertive human driver applying throttle with authority,
+  delivering much stronger initial acceleration while maintaining smoothness.
   """
   # For the transition, we treat v_cruise from 0 to CITY_SPEED_LIMIT as [0, 1] scaled input
   # to a logistic function. That ensures a gentle rise.
@@ -88,16 +89,17 @@ def get_max_accel_low_speeds(max_accel, v_cruise):
     return max_accel  # fallback if city speed limit is zero or invalid
 
   fraction = clip(v_cruise / CITY_SPEED_LIMIT, 0.0, 1.0)
-  lower = max_accel / 3.0  # Increased from /4.0 for more responsive initial acceleration
+  # Dramatically increased from /3.0 to nearly full acceleration even at low speeds
+  lower = max_accel / 1.15
   upper = max_accel
 
-  # We'll center the logistic around fraction=0.4 instead of 0.5 to speed up initial response
+  # We'll center the logistic around fraction=0.25 instead of 0.4 for faster full power
   return logistic(
       x=fraction,
       lower=lower,
       upper=upper,
-      midpoint=0.4,  # shifted earlier for faster roll-on
-      scale=8.0      # increased from 6.0 for more immediate response
+      midpoint=0.25,  # shifted earlier for faster roll-on
+      scale=14.0      # significantly increased for more immediate response
   )
 
 
@@ -109,17 +111,17 @@ def get_max_accel_ramp_off(max_accel, v_cruise, v_ego):
   """
   If v_cruise is only slightly higher than v_ego, we want to softly ramp
   from near 0 to max_accel as the difference (v_cruise - v_ego) grows.
+  Modified to maintain strong acceleration until very close to target speed.
   """
   diff = max(v_cruise - v_ego, 0.0)
   # For small differences, accelerate less; for large differences, accelerate fully.
-  # We'll consider ~10 m/s difference as "definitely need full accel".
-  # Using a logistic shape: from near 0 at diff=0 to near 1 at diff=10.
+  # Only start reducing acceleration when within 3mph of target
   fraction = logistic(
       x=diff,
       lower=0.0,
       upper=1.0,
-      midpoint=4.0,  # shifted earlier from 5.0 for faster initial response
-      scale=1.2      # doubled from 0.6 for more defined transition
+      midpoint=1.3,  # drastically reduced from 4.0 to only taper when ~3mph from target
+      scale=3.0      # increased for more defined, sharper transition
   )
   return fraction * max_accel
 
