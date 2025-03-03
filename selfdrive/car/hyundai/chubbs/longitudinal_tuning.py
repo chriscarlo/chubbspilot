@@ -283,7 +283,7 @@ class HKGLongitudinalTuning:
     CP.vEgoStopping = 0.2
     CP.vEgoStarting = 0.05
     CP.stoppingDecelRate = 0.01
-    CP.startAccel = 2.0
+    CP.startAccel = 3.5
     CP.startingState = True
 
   def get_jerk(self) -> JerkOutput:
