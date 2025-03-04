@@ -26,6 +26,7 @@ import math
 import os
 import requests
 import subprocess
+import glob
 
 import openpilot.system.sentry as sentry
 
@@ -35,6 +36,7 @@ from typing import List
 from urllib.parse import quote
 
 from openpilot.common.params import ParamKeyType
+from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD, UNLOCK_CMD
 from openpilot.system.hardware import HARDWARE, PC
 from openpilot.system.hardware.hw import Paths
@@ -518,3 +520,140 @@ def unlock_doors():
 
 def reboot_device():
   HARDWARE.reboot()
+
+# Path for cloudlog files
+CLOUDLOG_PATH = "/data/log"
+# Define storage location for captured cloudlogs
+if PC:
+  CLOUDLOG_STORAGE_PATH = os.path.join(str(Path.home()), ".comma", "cloudlogs")
+else:
+  CLOUDLOG_STORAGE_PATH = "/data/log/"
+
+def capture_cloudlog():
+  """Capture cloudlog messages from the system logs."""
+  timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+  log_filename = f"cloudlog_{timestamp}.txt"
+  log_path = os.path.join(CLOUDLOG_STORAGE_PATH, log_filename)
+
+  try:
+    if PC:
+      # On PC, we might not have swaglog files, so create a sample log
+      os.makedirs(CLOUDLOG_STORAGE_PATH, exist_ok=True)
+      with open(log_path, "w", encoding="utf-8") as log_file:
+        log_file.write(f"[{timestamp}] Sample cloudlog entry for PC environment\n")
+        log_file.write(f"[{timestamp}] This is a placeholder since we're not on a device\n")
+        log_file.write(f"[{timestamp}] In a real device, this would contain actual cloudlog entries\n")
+    else:
+      # Find the most recent swaglog file
+      swaglog_files = sorted(glob.glob(os.path.join(CLOUDLOG_PATH, "swaglog.*")))
+
+      if not swaglog_files:
+        raise Exception("No swaglog files found in /data/log")
+
+      latest_swaglog = swaglog_files[-1]
+
+      # Just return the filename of the latest swaglog
+      return os.path.basename(latest_swaglog)
+
+    return log_filename
+
+  except Exception as e:
+    raise Exception(f"Error capturing cloudlog: {e}")
+
+def list_cloudlogs():
+  """List all captured cloudlog files."""
+  if PC:
+    os.makedirs(CLOUDLOG_STORAGE_PATH, exist_ok=True)
+    cloudlog_files = sorted(os.listdir(CLOUDLOG_STORAGE_PATH))
+  else:
+    # Just list the swaglog files directly
+    swaglog_files = sorted(glob.glob(os.path.join(CLOUDLOG_PATH, "swaglog.*")))
+    cloudlog_files = [os.path.basename(f) for f in swaglog_files]
+
+  return cloudlog_files
+
+# Global variables for real-time cloudlog streaming
+cloudlog_subscriber = None
+latest_logs = []
+MAX_CACHED_LOGS = 100
+
+def init_cloudlog_subscriber():
+  """Initialize the subscriber for the logMessage topic."""
+  global cloudlog_subscriber
+  import cereal.messaging as messaging
+
+  # Only initialize if not already initialized
+  if cloudlog_subscriber is None:
+    try:
+      cloudlog_subscriber = messaging.sub_sock("logMessage", timeout=100)
+      cloudlog.info("Cloudlog subscriber initialized for fleet manager")
+    except Exception as e:
+      cloudlog.exception(f"Failed to initialize cloudlog subscriber: {e}")
+      # Add a fallback for testing
+      return None
+
+  return cloudlog_subscriber
+
+def get_new_cloudlog_messages():
+  """Get new cloudlog messages since last check."""
+  global cloudlog_subscriber, latest_logs
+  import cereal.messaging as messaging
+
+  if cloudlog_subscriber is None:
+    cloudlog_subscriber = init_cloudlog_subscriber()
+    if cloudlog_subscriber is None:
+      # If still None, add a test message and return
+      test_msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] Test message - subscriber not initialized"
+      latest_logs.append(test_msg)
+      return [test_msg]
+
+  # Get new messages
+  new_messages = []
+
+  try:
+    msgs = messaging.drain_sock(cloudlog_subscriber)
+    if msgs:
+      cloudlog.debug(f"Received {len(msgs)} new cloudlog messages")
+
+    for msg in msgs:
+      try:
+        # The logMessage is a string containing the log entry
+        log_message = msg.logMessage
+
+        # Format timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+        # Add to our cache with a timestamp
+        formatted_msg = f"[{timestamp}] {log_message}"
+        new_messages.append(formatted_msg)
+
+        # Keep a cache of recent messages
+        latest_logs.append(formatted_msg)
+        if len(latest_logs) > MAX_CACHED_LOGS:
+          latest_logs = latest_logs[-MAX_CACHED_LOGS:]
+      except Exception as e:
+        # Skip any messages that can't be parsed properly
+        cloudlog.warning(f"Error parsing log message: {e}")
+        # Add error to logs for debugging
+        error_msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] Error parsing log: {str(e)}"
+        new_messages.append(error_msg)
+        latest_logs.append(error_msg)
+  except Exception as e:
+    cloudlog.exception(f"Error getting cloudlog messages: {e}")
+    # Add error to logs for debugging
+    error_msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] Error getting messages: {str(e)}"
+    new_messages.append(error_msg)
+    latest_logs.append(error_msg)
+
+  # If no messages, add a heartbeat message occasionally
+  if not new_messages and len(latest_logs) % 10 == 0:
+    heartbeat_msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] Heartbeat - no new messages"
+    new_messages.append(heartbeat_msg)
+    latest_logs.append(heartbeat_msg)
+
+  return new_messages
+
+def get_cached_cloudlogs():
+  """Return the cached cloudlog messages."""
+  global latest_logs
+  return latest_logs

@@ -1,0 +1,364 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    PlotJuggler
+{% endblock %}
+
+{% block main %}
+    <br>
+    <h1>PlotJuggler Interface</h1>
+    <div class="plotjuggler-container">
+        <div class="controls-container">
+            <ul class="nav nav-tabs" id="visualizationTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="manual-tab" data-bs-toggle="tab" href="#manual" role="tab" aria-controls="manual" aria-selected="true">Manual Entry</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="browse-tab" data-bs-toggle="tab" href="#browse" role="tab" aria-controls="browse" aria-selected="false">Browse Routes</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="recent-tab" data-bs-toggle="tab" href="#recent" role="tab" aria-controls="recent" aria-selected="false">Recent Routes</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="search-tab" data-bs-toggle="tab" href="#search" role="tab" aria-controls="search" aria-selected="false">Search Routes</a>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="visualizationTabContent">
+                <!-- Manual Entry Tab -->
+                <div class="tab-pane fade show active" id="manual" role="tabpanel" aria-labelledby="manual-tab">
+                    <div class="form-group mt-3">
+                        <label for="route-input">Route or Segment Name:</label>
+                        <input type="text" id="route-input" class="form-control" placeholder="Enter route or segment name (or use demo)" value="{{ route }}">
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input type="checkbox" id="demo-checkbox" class="form-check-input">
+                        <label for="demo-checkbox" class="form-check-label">Use demo route</label>
+                    </div>
+                </div>
+
+                <!-- Browse Routes Tab -->
+                <div class="tab-pane fade" id="browse" role="tabpanel" aria-labelledby="browse-tab">
+                    <div class="route-browser mt-3">
+                        <div class="row">
+                            {% for route in available_routes %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card route-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ route }}</h5>
+                                        <p class="card-text">{{ route_dates[loop.index0] }}</p>
+                                        <button class="btn btn-sm btn-primary select-route-btn" data-route="{{ route }}">Select</button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Routes Tab -->
+                <div class="tab-pane fade" id="recent" role="tabpanel" aria-labelledby="recent-tab">
+                    <div class="recent-routes mt-3">
+                        {% if recent_routes %}
+                            <div class="list-group">
+                                {% for route in recent_routes %}
+                                <button type="button" class="list-group-item list-group-item-action select-route-btn" data-route="{{ route }}">
+                                    {{ route }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">No recent routes found.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Search Routes Tab -->
+                <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
+                    <div class="form-group mt-3">
+                        <label for="route-search-input">Search Routes:</label>
+                        <input type="text" id="route-search-input" class="form-control" placeholder="Enter date (YYYY-MM-DD) or time">
+                    </div>
+                    <button id="search-btn" class="btn btn-primary mt-2">Search</button>
+
+                    <div id="search-results" class="mt-3">
+                        <!-- Search results will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <h4 class="mt-4">PlotJuggler Options</h4>
+
+            <div class="form-group">
+                <label for="layout-select">Layout:</label>
+                <select id="layout-select" class="form-control">
+                    <option value="">No layout (default)</option>
+                    {% for layout in layouts %}
+                    <option value="{{ layout }}">{{ layout }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-check">
+                <input type="checkbox" id="can-checkbox" class="form-check-input">
+                <label for="can-checkbox" class="form-check-label">Parse CAN data</label>
+            </div>
+
+            <div class="form-check">
+                <input type="checkbox" id="stream-checkbox" class="form-check-input">
+                <label for="stream-checkbox" class="form-check-label">Start in streaming mode</label>
+            </div>
+
+            <div class="form-group">
+                <label for="dbc-input">DBC Name (optional):</label>
+                <input type="text" id="dbc-input" class="form-control" placeholder="Auto-detect if not specified">
+            </div>
+
+            <button id="start-button" class="btn btn-primary">Start PlotJuggler</button>
+            <button id="install-button" class="btn btn-secondary">Update PlotJuggler</button>
+        </div>
+
+        <div id="status-container" class="status-container">
+            <div class="card">
+                <div class="card-header">Status</div>
+                <div class="card-body">
+                    <p id="status-text">Ready to start PlotJuggler</p>
+                    <div id="loading-indicator" class="spinner-border text-primary" role="status" style="display: none;">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .plotjuggler-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .controls-container {
+            width: 100%;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-check {
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            margin-right: 10px;
+            margin-top: 15px;
+        }
+
+        .status-container {
+            width: 100%;
+        }
+
+        .route-browser {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .route-card {
+            height: 100%;
+        }
+
+        .recent-routes {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const routeInput = document.getElementById('route-input');
+            const layoutSelect = document.getElementById('layout-select');
+            const canCheckbox = document.getElementById('can-checkbox');
+            const demoCheckbox = document.getElementById('demo-checkbox');
+            const streamCheckbox = document.getElementById('stream-checkbox');
+            const dbcInput = document.getElementById('dbc-input');
+            const startButton = document.getElementById('start-button');
+            const installButton = document.getElementById('install-button');
+            const statusText = document.getElementById('status-text');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const routeSearchInput = document.getElementById('route-search-input');
+            const searchBtn = document.getElementById('search-btn');
+            const searchResults = document.getElementById('search-results');
+
+            // When demo checkbox is checked, disable route input
+            demoCheckbox.addEventListener('change', function() {
+                routeInput.disabled = this.checked;
+            });
+
+            // When stream checkbox is checked, disable route input and can checkbox
+            streamCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    routeInput.disabled = true;
+                    canCheckbox.disabled = true;
+                    demoCheckbox.disabled = true;
+                } else {
+                    routeInput.disabled = demoCheckbox.checked;
+                    canCheckbox.disabled = false;
+                    demoCheckbox.disabled = false;
+                }
+            });
+
+            // Handle route selection from browse or recent tabs
+            document.querySelectorAll('.select-route-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const route = this.getAttribute('data-route');
+                    routeInput.value = route;
+                    // Switch to manual tab
+                    document.getElementById('manual-tab').click();
+                });
+            });
+
+            // Route search functionality
+            searchBtn.addEventListener('click', function() {
+                const searchTerm = routeSearchInput.value.trim();
+                if (!searchTerm) {
+                    alert('Please enter a search term');
+                    return;
+                }
+
+                searchResults.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="sr-only">Searching...</span></div>';
+
+                fetch(`/search_routes?term=${encodeURIComponent(searchTerm)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        searchResults.innerHTML = '';
+
+                        if (data.routes && data.routes.length > 0) {
+                            const listGroup = document.createElement('div');
+                            listGroup.className = 'list-group';
+
+                            data.routes.forEach(route => {
+                                const button = document.createElement('button');
+                                button.type = 'button';
+                                button.className = 'list-group-item list-group-item-action';
+                                button.textContent = route;
+                                button.addEventListener('click', function() {
+                                    routeInput.value = route;
+                                    document.getElementById('manual-tab').click();
+                                });
+
+                                listGroup.appendChild(button);
+                            });
+
+                            searchResults.appendChild(listGroup);
+                        } else {
+                            searchResults.innerHTML = '<div class="alert alert-warning">No routes found matching your search.</div>';
+                        }
+                    })
+                    .catch(error => {
+                        searchResults.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                    });
+            });
+
+            // Start PlotJuggler
+            startButton.addEventListener('click', function() {
+                // Validate inputs
+                if (!streamCheckbox.checked && !demoCheckbox.checked && !routeInput.value.trim()) {
+                    alert('Please enter a route/segment name or select the demo option');
+                    return;
+                }
+
+                // Prepare parameters
+                const params = {
+                    stream: streamCheckbox.checked,
+                    demo: demoCheckbox.checked,
+                    can: canCheckbox.checked,
+                    layout: layoutSelect.value,
+                    dbc: dbcInput.value.trim(),
+                    route: routeInput.value.trim()
+                };
+
+                // Show loading state
+                startButton.disabled = true;
+                installButton.disabled = true;
+                loadingIndicator.style.display = 'inline-block';
+                statusText.textContent = 'Starting PlotJuggler...';
+
+                // Send request to server
+                fetch('/run_plotjuggler', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusText.textContent = data.message;
+
+                        // Save to recent routes if not demo and not streaming
+                        if (!params.demo && !params.stream && params.route) {
+                            fetch('/save_recent_route', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ route: params.route })
+                            });
+                        }
+                    } else {
+                        statusText.textContent = 'Error: ' + data.error;
+                    }
+                })
+                .catch(error => {
+                    statusText.textContent = 'Error: ' + error.message;
+                })
+                .finally(() => {
+                    startButton.disabled = false;
+                    installButton.disabled = false;
+                    loadingIndicator.style.display = 'none';
+                });
+            });
+
+            // Install/Update PlotJuggler
+            installButton.addEventListener('click', function() {
+                // Show loading state
+                startButton.disabled = true;
+                installButton.disabled = true;
+                loadingIndicator.style.display = 'inline-block';
+                statusText.textContent = 'Installing/Updating PlotJuggler...';
+
+                // Send request to server
+                fetch('/install_plotjuggler', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusText.textContent = data.message;
+                    } else {
+                        statusText.textContent = 'Error: ' + data.error;
+                    }
+                })
+                .catch(error => {
+                    statusText.textContent = 'Error: ' + error.message;
+                })
+                .finally(() => {
+                    startButton.disabled = false;
+                    installButton.disabled = false;
+                    loadingIndicator.style.display = 'none';
+                });
+            });
+        });
+    </script>
+{% endblock %}

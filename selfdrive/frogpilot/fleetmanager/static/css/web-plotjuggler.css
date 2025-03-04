@@ -1,0 +1,88 @@
+/* Web PlotJuggler Styles */
+
+/* Signal list styling */
+#signalList {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.message-toggle {
+  transition: transform 0.2s ease;
+}
+
+.fields-container {
+  margin-bottom: 15px;
+}
+
+/* Chart container styling */
+#chartContainer {
+  position: relative;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+#noDataMessage {
+  color: rgba(0, 0, 0, 0.5);
+  max-width: 300px;
+}
+
+#plotChart {
+  /* Ensures the chart is visible but doesn't overflow */
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Loading overlay styling */
+#loadingOverlay {
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Dark mode adaptations */
+.uk-dark #chartContainer {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.uk-dark #signalList {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.uk-dark #noDataMessage {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.uk-dark #loadingOverlay {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  #chartContainer {
+    height: 50vh !important;
+  }
+}
+
+/* Button and control styling */
+.chart-controls button {
+  margin-left: 5px;
+}
+
+.signal-checkbox {
+  margin-right: 5px;
+}
+
+/* Tab styling */
+.uk-tab > * > a {
+  font-size: 0.9rem;
+}
+
+/* Tooltip customization */
+.chartjs-tooltip {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}

@@ -75,6 +75,18 @@ Tools
 
   <div class="separator"></div>
 
+  <h1>PlotJuggler Data Visualization</h1>
+  <div class="textarea-container">
+    <p>Visualize driving data with interactive plots and charts.</p>
+    <a href="/plotjuggler">
+      <button type="button" class="toggle-values-btn">
+        Open PlotJuggler Interface
+      </button>
+    </a>
+  </div>
+
+  <div class="separator"></div>
+
   <h1>Backup/Restore Toggle Values</h1>
   <div class="textarea-container">
     <textarea id="toggleValuesBox" placeholder="Retrieve or restore toggle values."></textarea>
@@ -114,6 +126,16 @@ Tools
     <a id="downloadTmuxLogButton" class="toggle-values-btn" style="display: none;" download>
       <button type="button">Download Log</button>
     </a>
+  </div>
+
+  <!-- Shell Interface -->
+  <div class="separator"></div>
+
+  <h1>Shell Interface</h1>
+  <div class="textarea-container">
+    <input type="text" id="shellCommand" placeholder="Enter shell command" class="uk-input">
+    <button type="button" id="executeShellBtn" class="toggle-values-btn">Execute</button>
+    <pre id="shellOutput" style="margin-top: 10px; background-color: #f0f0f0; padding: 10px; overflow: auto;"></pre>
   </div>
 </div>
 
@@ -223,6 +245,22 @@ Tools
         }
       })
       .catch(error => console.error('Error capturing console log:', error));
+  });
+
+  document.getElementById('executeShellBtn').addEventListener('click', () => {
+    const command = document.getElementById('shellCommand').value;
+    fetch('/execute_shell', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command})
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('shellOutput').textContent = data.output;
+    })
+    .catch(err => {
+      document.getElementById('shellOutput').textContent = 'Error: ' + err;
+    });
   });
 </script>
 

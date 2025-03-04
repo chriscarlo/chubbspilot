@@ -32,6 +32,9 @@ class RouteEngine:
 
     self.params = Params()
 
+    # Import Mapbox keys from JSON file to params
+    self.import_mapbox_keys_from_json()
+
     # Get last gps position from params
     self.last_position = coordinate_from_param("LastGPSPosition", self.params)
     self.last_bearing = None
@@ -74,6 +77,26 @@ class RouteEngine:
 
     self.stop_coord = []
     self.stop_signal = []
+
+  def import_mapbox_keys_from_json(self):
+    """Import Mapbox keys from JSON file to params system"""
+    mapbox_file = "/persist/mapbox/mapbox_api.txt"
+
+    try:
+      if os.path.exists(mapbox_file):
+        with open(mapbox_file, 'r') as f:
+          keys = json.load(f)
+
+        public_key = keys.get("public_key")
+        secret_key = keys.get("secret_key")
+
+        if public_key:
+          self.params.put("MapboxPublicKey", public_key)
+
+        if secret_key:
+          self.params.put("MapboxSecretKey", secret_key)
+    except Exception as e:
+      cloudlog.error(f"Error importing Mapbox keys: {e}")
 
   def update(self):
     self.sm.update(0)
