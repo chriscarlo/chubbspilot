@@ -6,7 +6,6 @@ from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
-
 # -----------------------
 #   LATERAL ACCELERATION
 # -----------------------
@@ -16,7 +15,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     Typically, 'v_ego_ms' is the model's predicted speed, not the actual car speed.
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-    base = 1.62  # was 1.5
+    base = 1.62
     span = 2.38
     center = 35.0
     k = 0.10  # Steepness
@@ -24,7 +23,6 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
     lat_acc = min(lat_acc, 3.02)
     return lat_acc * turn_aggressiveness
-
 
 def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     """
@@ -39,7 +37,6 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
         ):
             apex_indices.append(i)
     return apex_indices
-
 
 # --------------------
 #   DECEL/ACCEL SCALES
@@ -64,7 +61,6 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
         # Sigmoid-like function
         return max_scale - (max_scale - min_scale) * (3 * pos * pos - 2 * pos * pos * pos)
 
-
 def dynamic_accel_scale(v_ego_ms: float) -> float:
     """
     Scale for acceleration exit from corners, also based on current speed.
@@ -76,13 +72,11 @@ def dynamic_accel_scale(v_ego_ms: float) -> float:
     else:
         return decel_scale * (1.5 - 0.05 * (v_ego_ms - 10.0))
 
-
 def dynamic_jerk_scale(v_ego_ms: float) -> float:
     """
     Scale jerk limits (smoothness) based on speed.
     """
     return dynamic_decel_scale(v_ego_ms)
-
 
 def margin_time_fn(v_ego_ms: float) -> float:
     """
@@ -90,11 +84,11 @@ def margin_time_fn(v_ego_ms: float) -> float:
     This is a purely timing-based convenience.
     """
     v_low = 0.0
-    t_low = 1.5     # Was 1.0 - more margin at low speeds
-    v_med = 15.0    # ~34 mph
-    t_med = 3.5     # Was 3.0
-    v_high = 31.3   # ~70 mph
-    t_high = 5.5    # Was 5.0
+    t_low = 1.5
+    v_med = 15.0
+    t_med = 3.5
+    v_high = 31.3
+    t_high = 5.5
 
     if v_ego_ms <= v_low:
         return t_low
@@ -106,7 +100,6 @@ def margin_time_fn(v_ego_ms: float) -> float:
     else:
         ratio = (v_ego_ms - v_med) / (v_high - v_med)
         return t_med + ratio * (t_high - t_med)
-
 
 class VisionTurnSpeedController:
     def __init__(
@@ -142,6 +135,7 @@ class VisionTurnSpeedController:
     def reset(self, speed: float) -> None:
         """
         Reset internal states to a fresh starting speed.
+        Mirrors what happens for a new manual cruise speed, so do this on resume as well.
         """
         self.prev_target_speed = speed
         self.current_accel = 0.0
@@ -162,11 +156,8 @@ class VisionTurnSpeedController:
         )
 
         if is_resume_event:
-            # -- [RESUME FIX] --
-            # Skip *all* smoothing on this iteration AND next iteration
-            # by forcing internal state to match user’s set speed:
-            self.prev_target_speed = v_cruise_cluster
-            self.current_accel = 0.0
+            # Instead of partial modifications, just reset the entire smoothing state
+            self.reset(v_cruise_cluster)
             self.prev_v_cruise_cluster = v_cruise_cluster
             return v_cruise_cluster
 
@@ -299,6 +290,8 @@ class VisionTurnSpeedController:
 
         # (2) Identify apexes & shape the speed around them
         apex_idxs = find_apexes(curvature, threshold=5e-5)
+
+        # You can adjust these multipliers, or simply add a few seconds for earlier decel:
         margin_factor = 2.2
         decel_mult = 1.0
         accel_mult = 1.0
@@ -309,7 +302,8 @@ class VisionTurnSpeedController:
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
 
-            decel_sec = velocity_pred[apex_i] * apex_decel_factor
+            # Add a constant offset (say, 2.0 seconds) so we get there earlier
+            decel_sec = velocity_pred[apex_i] * apex_decel_factor + 2.0
             spool_sec = velocity_pred[apex_i] * apex_spool_factor
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
