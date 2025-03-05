@@ -19,8 +19,6 @@
     <br>
     <a download="{{ route }}-{{ query_type }}.mp4" href="/footage/full/{{ query_type }}/{{ route }}">download full route {{ query_type }}</a>
     <br><br>
-    <button id="visualizeButton" class="btn btn-info">Visualize in PlotJuggler</button>
-    <br><br>
     <a href="{{ route }}?{{ query_segment }},qcamera">qcamera</a> -
     <a href="{{ route }}?{{ query_segment }},fcamera">fcamera</a> -
     <a href="{{ route }}?{{ query_segment }},dcamera">dcamera</a> -
@@ -64,11 +62,6 @@
     video.src = tracks.play();
     document.getElementById("currentsegment").textContent=video.src.split("/")[5];
     document.getElementById("currentview").textContent=video.src.split("/")[4];
-
-    // PlotJuggler button handler
-    document.getElementById('visualizeButton').addEventListener('click', function() {
-      window.location.href = '/plotjuggler?route={{ route }}';
-    });
     </script>
 {% endautoescape %}
     <br><br>

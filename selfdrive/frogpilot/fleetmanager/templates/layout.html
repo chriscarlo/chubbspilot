@@ -40,7 +40,6 @@
     text-align: center;
   }
 </style>
-  {% block head %}{% endblock %}
   <title>FrogPilot: {% block title %}{% endblock %}</title>
 </head>
 <body>
@@ -67,15 +66,6 @@
           </li>
           <li class="nav-item active">
             <a href="/tools" class="nav-link">Tools</a>
-          </li>
-          <li class="nav-item active">
-            <a href="/cloudlog" class="nav-link">Cloudlog</a>
-          </li>
-          <li class="nav-item active">
-            <a href="{{ url_for('plotjuggler_route') }}" class="nav-link">PlotJuggler</a>
-          </li>
-          <li class="nav-item active">
-            <a href="{{ url_for('web_plotjuggler_route') }}" class="nav-link">Web PlotJuggler</a>
           </li>
         </ul>
       </div>
