@@ -24,13 +24,14 @@ params_memory = Params("/dev/shm/params")
 GearShifter = car.CarState.GearShifter
 NON_DRIVING_GEARS = [GearShifter.neutral, GearShifter.park, GearShifter.reverse, GearShifter.unknown]
 
-CITY_SPEED_LIMIT = 25                                   # 55mph is typically the minimum speed for highways
-CRUISING_SPEED = 5                                      # Roughly the speed cars go when not touching the gas while in drive
-EARTH_RADIUS = 6378137                                  # Radius of the Earth in meters
-MODEL_LENGTH = ModelConstants.IDX_N                     # Minimum length of the model
-PLANNER_TIME = ModelConstants.T_IDXS[MODEL_LENGTH - 1]  # Length of time the model projects out for
-THRESHOLD = 0.63                                        # Requires the condition to be true for ~1 second
-TO_RADIANS = math.pi / 180                              # Conversion factor from degrees to radians
+SafetyModel = car.CarParams.SafetyModel
+
+CITY_SPEED_LIMIT = 25                     # 55mph is typically the minimum speed for highways
+CRUISING_SPEED = 5                        # Roughly the speed cars go when not touching the gas while in drive
+EARTH_RADIUS = 6378137                    # Radius of the Earth in meters
+PLANNER_TIME = ModelConstants.T_IDXS[-1]  # Length of time the model projects out for
+THRESHOLD = 0.63                          # Requires the condition to be true for ~1 second
+TO_RADIANS = math.pi / 180                # Conversion factor from degrees to radians
 
 ACTIVE_THEME_PATH = Path(__file__).parent / "assets/active_theme"
 METADATAS_PATH = Path(__file__).parent / "assets/model_metadata"
@@ -55,7 +56,10 @@ DEFAULT_TINYGRAD_MODEL = "not-too-shabby"
 DEFAULT_TINYGRAD_MODEL_NAME = "Not Too Shabby 👀📡"
 DEFAULT_TINYGRAD_MODEL_VERSION = "v7"
 
-EXCLUDED_KEYS = {"AvailableModels", "AvailableModelNames", "ExperimentalModels", "ModelDrivesAndScores", "ModelVersions", "openpilotMinutes", "SpeedLimits", "SpeedLimitsFiltered"}
+EXCLUDED_KEYS = {
+  "AvailableModels", "AvailableModelNames", "CarParamsPersistent", "ExperimentalModels", "ModelDrivesAndScores",
+  "ModelVersions", "openpilotMinutes", "UpdaterAvailableBranches"
+}
 
 def get_frogpilot_toggles(block=True):
   return SimpleNamespace(**json.loads(params_memory.get("FrogPilotToggles", block=block) or "{}"))
@@ -90,8 +94,8 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("AMapKey2", "", 0),
   ("AutomaticallyUpdateModels", "1", 1),
   ("AutomaticUpdates", "1", 0),
-  ("AvailableModels", "", 1),
   ("AvailableModelNames", "", 1),
+  ("AvailableModels", "", 1),
   ("BigMap", "0", 2),
   ("BlacklistedModels", "", 2),
   ("BlindSpotMetrics", "1", 3),
@@ -194,7 +198,8 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("LeadDepartingAlert", "0", 0),
   ("LeadDetectionThreshold", "35", 3),
   ("LeadInfo", "1", 3),
-  ("LockDoors", "1", 0),
+  ("LockDoors", "1", 1),
+  ("LockDoorsTimer", "0", 1),
   ("LongitudinalMetrics", "1", 3),
   ("LongitudinalTune", "1", 0),
   ("LongPitch", "1", 2),
@@ -279,7 +284,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("ShowIP", "0", 3),
   ("ShowMemoryUsage", "1", 3),
   ("ShowSLCOffset", "1", 2),
-  ("ShowSpeedLimits", "1", 0),
+  ("ShowSpeedLimits", "1", 1),
   ("ShowSteering", "0", 3),
   ("ShowStoppingPoint", "0", 3),
   ("ShowStoppingPointMetrics", "0", 3),
@@ -292,8 +297,8 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("SLCConfirmationHigher", "0", 0),
   ("SLCConfirmationLower", "0", 0),
   ("SLCFallback", "2", 2),
-  ("SLCLookaheadHigher", "5", 2),
-  ("SLCLookaheadLower", "5", 2),
+  ("SLCLookaheadHigher", "0", 1),
+  ("SLCLookaheadLower", "0", 1),
   ("SLCOverride", "1", 2),
   ("SLCPriority1", "Navigation", 2),
   ("SLCPriority2", "Map Data", 2),
@@ -615,7 +620,7 @@ class FrogPilotVariables:
     toggle.nnff_lite = lateral_tuning and (params.get_bool("NNFFLite") if tuning_level >= level["NNFFLite"] else default.get_bool("NNFFLite"))
     toggle.use_turn_desires = lateral_tuning and (params.get_bool("TurnDesires") if tuning_level >= level["TurnDesires"] else default.get_bool("TurnDesires"))
 
-    toggle.lock_doors_timer = 0
+    toggle.lock_doors_timer = params.get_int("LockDoorsTimer") if toggle.car_make == "toyota" and tuning_level >= level["LockDoorsTimer"] else default.get_int("LockDoorsTimer")
 
     toggle.long_pitch = openpilot_longitudinal and toggle.car_make == "gm" and (params.get_bool("LongPitch") if tuning_level >= level["LongPitch"] else default.get_bool("LongPitch"))
 

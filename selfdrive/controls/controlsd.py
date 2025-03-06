@@ -189,10 +189,7 @@ class Controls:
     self.always_on_lateral_active = False
     self.always_on_lateral_active_previously = False
     self.decel_pressed = False
-    self.fcw_event_triggered = False
-    self.no_entry_alert_triggered = False
     self.onroad_distance_pressed = False
-    self.steer_saturated_event_triggered = False
 
     self.planner_curves = self.frogpilot_toggles.planner_curvature_model
     self.radarless_model = self.frogpilot_toggles.radarless_model
@@ -402,8 +399,6 @@ class Controls:
     planner_fcw = self.sm['longitudinalPlan'].fcw and self.enabled
     if (planner_fcw or model_fcw) and not (self.CP.notCar and self.joystick_mode):
       self.events.add(EventName.fcw)
-      if self.frogpilot_toggles.random_events:
-        self.fcw_event_triggered = True
 
     for m in messaging.drain_sock(self.log_sock, wait_for_one=False):
       try:
@@ -555,8 +550,6 @@ class Controls:
       if self.events.contains(ET.ENABLE):
         if self.events.contains(ET.NO_ENTRY):
           self.current_alert_types.append(ET.NO_ENTRY)
-          if self.frogpilot_toggles.random_events:
-            self.no_entry_alert_triggered = True
 
         else:
           if self.events.contains(ET.PRE_ENABLE):
@@ -681,10 +674,6 @@ class Controls:
         max_torque = abs(self.sm['carOutput'].actuatorsOutput.steer) > 0.99
         if undershooting and turning and good_speed and max_torque:
           lac_log.active and self.events.add(EventName.goatSteerSaturated if self.frogpilot_toggles.goat_scream_alert else EventName.steerSaturated)
-          if self.frogpilot_toggles.random_events:
-            self.steer_saturated_event_triggered = True
-        else:
-          self.steer_saturated_event_triggered = False
       elif lac_log.saturated:
         # TODO probably should not use dpath_points but curvature
         dpath_points = model_v2.position.y
@@ -760,9 +749,6 @@ class Controls:
     FPCC.alwaysOnLateralActive = self.always_on_lateral_active
     FPCC.accelPressed = self.accel_pressed
     FPCC.decelPressed = self.decel_pressed
-    FPCC.fcwEventTriggered = self.fcw_event_triggered
-    FPCC.noEntryEventTriggered = self.no_entry_alert_triggered
-    FPCC.steerSaturatedEventTriggered = self.steer_saturated_event_triggered
 
     # Update FrogPilot parameters
     if self.sm['frogpilotPlan'].togglesUpdated:
