@@ -263,8 +263,10 @@ class CarState(CarStateBase):
                                                                       cp.vl["BLINKERS"][right_blinker_sig])
     if self.CP.enableBsm:
       alt = "_ALT" if self.CP.carFingerprint == CAR.KIA_K5_2025 else ""
-      ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"][f"FL_INDICATOR{alt}"] != 0
-      ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"][f"FR_INDICATOR{alt}"] != 0
+      cruise_button_pressed = self.cruise_buttons[-1] != Buttons.NONE
+      if not cruise_button_pressed:
+        ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"][f"FL_INDICATOR{alt}"] != 0
+        ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"][f"FR_INDICATOR{alt}"] != 0
     # cruise state
     # CAN FD cars enable on main button press, set available if no TCS faults preventing engagement
     ret.cruiseState.available = self.main_enabled
