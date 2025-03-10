@@ -219,15 +219,12 @@ class HKGLongitudinalController:
         self.cb_lower,
       )
 
-  def calculate_and_get_jerk(self, actuators, CP: CarControllerParams, CS, long_control_state: LongCtrlState) -> JerkOutput:
+  def calculate_and_get_jerk(self, actuators, CS, long_control_state: LongCtrlState) -> JerkOutput:
     """Calculate jerk based on tuning and return JerkOutput."""
     if self.tuning is not None:
       self.tuning.make_jerk(CS, actuators)
     else:
-      if CP.carFingerprint in (CAR.HYUNDAI_KONA_EV):
-        jerk_limit = 8.0 if long_control_state == LongCtrlState.pid else 6.0
-      else:
-        jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
+      jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
 
       self.jerk_upper_limit = jerk_limit
       self.jerk_lower_limit = jerk_limit

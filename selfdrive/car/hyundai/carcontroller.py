@@ -87,7 +87,7 @@ class CarController(CarControllerBase, HKGLongitudinalController):
     accel = self.calculate_accel(actuators.accel, actuators, CS, frogpilot_toggles)
     stopping = actuators.longControlState == LongCtrlState.stopping
     set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
-    self.jerk = self.calculate_and_get_jerk(actuators, self.params, CS, actuators.longControlState)
+    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState)
     # HUD messages
     sys_warning, sys_state, left_lane_warning, right_lane_warning = process_hud_alert(CC.enabled, self.car_fingerprint,
                                                                                       hud_control)
