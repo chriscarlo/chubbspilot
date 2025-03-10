@@ -8,6 +8,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
 from openpilot.selfdrive.car.hyundai.values import CAR, HyundaiFlags, CarControllerParams
 from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import get_car_config
+from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
@@ -19,6 +20,7 @@ class JerkOutput:
     self.cb_lower = cb_lower
 
 class HKGLongitudinalTuning:
+  """Longitudinal tuning methodology for Hyundai vehicles."""
   def __init__(self, CP) -> None:
     self.CP = CP
     self._setup_controllers()
@@ -52,7 +54,7 @@ class HKGLongitudinalTuning:
     self.current_mode = 'acc'
     self.mode_transition_filter = FirstOrderFilter(0.0, 0.5, DT_CTRL)  # 0.5s time constant
     self.mode_transition_timer = 0.0
-    self.mode_transition_duration = 1.0  # time to transition
+    self.mode_transition_duration = 2.0  # time to transition
     self.transitioning = False
 
   def _setup_car_config(self) -> None:
@@ -106,9 +108,9 @@ class HKGLongitudinalTuning:
       if self.CP.radarUnavailable:
         self.cb_upper = self.cb_lower = 0.0
       else:
-        if CS.out.vEgo > 4.92:
-          self.cb_upper = float(np.clip(0.35 + CS.out.aEgo * 0.20, 0.0, 1.0))
-          self.cb_lower = float(np.clip(0.35 + CS.out.aEgo * 0.20, 0.0, 1.0))
+        if CS.out.vEgo > 5.0:
+          self.cb_upper = float(np.clip(0.25 + CS.out.aEgo * 0.20, 0.0, 1.0))
+          self.cb_lower = float(np.clip(0.30 + CS.out.aEgo * 0.20, 0.0, 1.0))
         else:
           # When at low speeds, we don't want ComfortBands to be affecting stopping control.
           self.cb_upper = self.cb_lower = 0.0
@@ -177,34 +179,72 @@ class HKGLongitudinalTuning:
     CP.stoppingDecelRate = config.stopping_decel_rate
     CP.startAccel = config.start_accel
     CP.startingState = True
-
-  def get_jerk(self) -> JerkOutput:
-    return JerkOutput(
-      self.jerk_upper_limit,
-      self.jerk_lower_limit,
-      self.cb_upper,
-      self.cb_lower,
-    )
-
-  def calculate_and_get_jerk(self, CS, actuators):
-    """Calculate jerk and return JerkOutput."""
-    if self.hkg_tuning:
-      self.make_jerk(CS, actuators)
-      return self.get_jerk()
+    CP.longitudinalActuatorDelay = 0.5
 
 
 class HKGLongitudinalController:
+  """Longitudinal controller which gets injected into CarControllerParams."""
   def __init__(self, CP):
     self.CP = CP
     self.tuning = HKGLongitudinalTuning(CP) if Params().get_bool("HKGtuning") else None
     self.jerk = None
+    self.jerk_upper_limit = 0.0
+    self.jerk_lower_limit = 0.0
+    self.cb_upper = 0.0
+    self.cb_lower = 0.0
 
   def apply_tune(self, CP):
-    if self.tuning:
+    if self.tuning is not None:
       self.tuning.apply_tune(CP)
+    else:
+      CP.vEgoStopping = 0.5
+      CP.vEgoStarting = 0.1
+      CP.startingState = True
+      CP.startAccel = 1.0
+      CP.longitudinalActuatorDelay = 0.5
 
-  def calculate_normal_jerk(self, CP: Any, long_control_state: LongCtrlState) -> float:
-    """Calculate normal jerk based on long control state."""
-    if CP.carFingerprint in (CAR.HYUNDAI_KONA_EV):
-      return 8.0 if long_control_state == LongCtrlState.pid else 6.0
-    return 3.0 if long_control_state == LongCtrlState.pid else 1.0
+  def get_jerk(self) -> JerkOutput:
+    if self.tuning is not None:
+      return JerkOutput(
+        self.tuning.jerk_upper_limit,
+        self.tuning.jerk_lower_limit,
+        self.tuning.cb_upper,
+        self.tuning.cb_lower,
+      )
+    else:
+      return JerkOutput(
+        self.jerk_upper_limit,
+        self.jerk_lower_limit,
+        self.cb_upper,
+        self.cb_lower,
+      )
+
+  def calculate_and_get_jerk(self, actuators, CP: CarControllerParams, CS, long_control_state: LongCtrlState) -> JerkOutput:
+    """Calculate jerk based on tuning and return JerkOutput."""
+    if self.tuning is not None:
+      self.tuning.make_jerk(CS, actuators)
+    else:
+      if CP.carFingerprint in (CAR.HYUNDAI_KONA_EV):
+        jerk_limit = 8.0 if long_control_state == LongCtrlState.pid else 6.0
+      else:
+        jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
+
+      self.jerk_upper_limit = jerk_limit
+      self.jerk_lower_limit = jerk_limit
+      self.cb_upper = 0.0
+      self.cb_lower = 0.0
+    return self.get_jerk()
+
+  def calculate_accel(self, accel, actuators, CS, frogpilot_toggles) -> float:
+    """Calculate acceleration based on tuning and return the value."""
+    if Params().get_bool("HKGBraking") and self.tuning is not None:
+      accel = self.tuning.calculate_accel(actuators.accel, actuators, CS, frogpilot_toggles)
+    elif Params().get_bool("HKGBraking") and self.tuning is not None and frogpilot_toggles.sport_plus:
+      accel = self.tuning.calculate_accel(actuators.accel, actuators, CS, frogpilot_toggles)
+      accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo))))
+    elif frogpilot_toggles.sport_plus:
+      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo))))
+    else:
+      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX)))
+
+    return accel
