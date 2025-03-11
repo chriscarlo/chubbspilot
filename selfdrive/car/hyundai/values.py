@@ -149,6 +149,9 @@ class HyundaiCanFDPlatformConfig(PlatformConfig):
   def init(self):
     self.flags |= HyundaiFlags.CANFD
 
+    if self.flags & HyundaiFlags.CORNER_RADAR:
+      self.dbc_dict = dbc_dict('hyundai_canfd', None, 'hyundai_kia_mando_corner_radar_generated')
+
 
 class CAR(Platforms):
   # Hyundai
