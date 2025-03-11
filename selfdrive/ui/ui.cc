@@ -497,7 +497,8 @@ void UIState::updateStatus() {
       status = scene.enabled ? STATUS_ENGAGED : STATUS_DISENGAGED;
     }
 
-    scene.wake_up_screen = controls_state.getAlertStatus() != cereal::ControlsState::AlertStatus::NORMAL || status != previous_status;
+    // Only allow touch events to wake the screen, ignore status changes and alerts
+    scene.wake_up_screen = false;
   }
 
   scene.started |= scene.force_onroad;
@@ -654,8 +655,10 @@ void Device::updateWakefulness(const UIState &s) {
   bool ignition_state_changed = s.scene.ignition != ignition_on;
   ignition_on = s.scene.ignition;
 
+  // Only allow touch events to wake the screen
   if (ignition_on && s.scene.standby_mode) {
-    if (s.scene.wake_up_screen) {
+    // No automatic wake-up from status changes or alerts
+    if (interactive_timeout > 0) {
       resetInteractiveTimeout(s.scene.screen_timeout, s.scene.screen_timeout_onroad);
     }
   }
