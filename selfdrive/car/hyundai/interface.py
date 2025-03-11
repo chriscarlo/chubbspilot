@@ -114,7 +114,7 @@ class CarInterface(CarInterfaceBase):
     ret.startingState = True
     ret.vEgoStarting = 0.02
     ret.startAccel = 2.5
-    ret.longitudinalActuatorDelay = 0.25
+    ret.longitudinalActuatorDelay = 0.35
 
     # Add HKG longitudinal support
     if Params().get_bool("HKGtuning"):
