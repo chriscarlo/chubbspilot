@@ -308,6 +308,13 @@ static int hyundai_canfd_fwd_hook(int bus_num, int addr) {
     return bus_fwd;
   }
 
+  // Forward corner radar messages from bus 1 to bus 0
+  if ((bus_num == 1) && ((addr == 0x100) || (addr == 0x101) || (addr == 0x104) ||
+                         (addr == 0x200) || (addr == 0x201) || (addr == 0x204))) {
+    bus_fwd = 0;
+    return bus_fwd;
+  }
+
   if (bus_num == 0) {
     bus_fwd = 2;
   }
@@ -329,14 +336,6 @@ static int hyundai_canfd_fwd_hook(int bus_num, int addr) {
     if (!block_msg) {
       bus_fwd = 0;
     }
-  }
-
-  // Forward corner radar messages from bus 1 to bus 0
-  // These are the corner radar message IDs from the DBC file
-  if ((bus_num == 1) && ((addr == 0x100) || (addr == 0x101) || (addr == 0x104) ||
-                         (addr == 0x200) || (addr == 0x201) || (addr == 0x204))) {
-    bus_fwd = 0;
-    return bus_fwd;
   }
 
   return bus_fwd;
