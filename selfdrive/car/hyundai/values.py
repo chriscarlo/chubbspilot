@@ -10,6 +10,15 @@ from openpilot.selfdrive.car import get_dbc_path
 from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
 from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
 
+# Add the get_dbc_path function
+def get_dbc_path(dbc_name, dbc_type=None):
+    """Get the path to a DBC file from its name."""
+    from opendbc import DBC_PATH
+    import os
+
+    if dbc_type is not None:
+        dbc_name = f"{dbc_name}_{dbc_type}"
+    return os.path.join(DBC_PATH, f"{dbc_name}.dbc")
 
 
 Ecu = car.CarParams.Ecu
@@ -153,7 +162,7 @@ class HyundaiCanFDPlatformConfig(PlatformConfig):
     self.flags |= HyundaiFlags.CANFD
     if self.flags & HyundaiFlags.CORNER_RADAR:
       self.dbc_dict = dbc_dict('hyundai_canfd', None, 'hyundai_kia_mando_corner_radar_generated')
-      
+
 class CAR(Platforms):
   # Hyundai
   HYUNDAI_AZERA_6TH_GEN = HyundaiPlatformConfig(
