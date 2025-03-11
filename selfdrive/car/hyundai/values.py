@@ -840,3 +840,4 @@ NON_SCC_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_FCA)
 NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
+DBC[CAR.KIA_EV6]['corner_radar'] = dbc_dict('hyundai_kia_mando_corner_radar_generated', None)
