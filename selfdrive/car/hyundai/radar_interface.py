@@ -46,8 +46,7 @@ class RadarInterface(RadarInterfaceBase):
 
     self.radar_off_can = CP.radarUnavailable
     self.rcp = get_radar_can_parser(CP)
-    self.corner_rcp = get_corner_radar_can_parser(CP) if CP.flags & HyundaiFlagsCP.CORNER_RADAR else None
-
+    self.corner_rcp = get_corner_radar_can_parser(CP) if CP.flags & HyundaiFlags.CORNER_RADAR else None
     self.fp_radar_tracks = CP.flags & HyundaiFlagsCP.ENABLE_RADAR_TRACKS
 
   def update(self, can_strings):
