@@ -4,7 +4,7 @@ from cereal import car
 from opendbc.can.parser import CANParser
 from openpilot.selfdrive.car.interfaces import RadarInterfaceBase
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import DBC, HyundaiFlagsCP, CANFD_CAR
+from openpilot.selfdrive.car.hyundai.values import DBC, HyundaiFlags, HyundaiFlagsCP, CANFD_CAR
 
 RADAR_START_ADDR = 0x500
 RADAR_MSG_COUNT = 32
