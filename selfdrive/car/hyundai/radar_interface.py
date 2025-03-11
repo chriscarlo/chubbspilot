@@ -29,6 +29,9 @@ def get_radar_can_parser(CP):
   messages = [(f"RADAR_TRACK_{addr:x}", 50) for addr in range(RADAR_START_ADDR, RADAR_START_ADDR + RADAR_MSG_COUNT)]
   return CANParser(DBC[CP.carFingerprint]['radar'], messages, 1)
 
+def get_corner_radar_can_parser(CP):
+  messages = [(f"CORNER_RADAR_TRACK_{addr:x}", 50) for addr in range(0x7b7, 0x7b7 + 16)]
+  return CANParser(DBC[CP.carFingerprint]['corner_radar'], messages, 1)
 
 class RadarInterface(RadarInterfaceBase):
   def __init__(self, CP):
@@ -43,6 +46,7 @@ class RadarInterface(RadarInterfaceBase):
 
     self.radar_off_can = CP.radarUnavailable
     self.rcp = get_radar_can_parser(CP)
+    self.corner_rcp = get_corner_radar_can_parser(CP) if CP.flags & HyundaiFlagsCP.CORNER_RADAR else None
 
     self.fp_radar_tracks = CP.flags & HyundaiFlagsCP.ENABLE_RADAR_TRACKS
 
@@ -64,6 +68,11 @@ class RadarInterface(RadarInterfaceBase):
       radar_error = rr.errors
     if list(radar_error) and self.fp_radar_tracks:
       return super().update(can_strings)
+
+    if self.corner_rcp:
+      self.corner_rcp.update_strings(can_strings)
+      # Add logic to process corner radar messages here
+
     return rr
 
   def _update(self, updated_messages):
