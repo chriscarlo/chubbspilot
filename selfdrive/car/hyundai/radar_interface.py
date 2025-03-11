@@ -30,7 +30,14 @@ def get_radar_can_parser(CP):
   return CANParser(DBC[CP.carFingerprint]['radar'], messages, 1)
 
 def get_corner_radar_can_parser(CP):
-  messages = [(f"CORNER_RADAR_TRACK_{addr:x}", 50) for addr in range(0x7b7, 0x7b7 + 16)]
+  messages = [
+    ("RADAR_POINTS_METADATA_0x100", 50),
+    ("RADAR_POINTS_METADATA_0x200", 50),
+    ("RADAR_POINTS_0x101", 50),
+    ("RADAR_POINTS_0x201", 50),
+    ("RADAR_POINTS_CHECKSUM_0x104", 50),
+    ("RADAR_POINTS_CHECKSUM_0x204", 50)
+  ]
   return CANParser(DBC[CP.carFingerprint]['corner_radar'], messages, 1)
 
 class RadarInterface(RadarInterfaceBase):
@@ -69,8 +76,10 @@ class RadarInterface(RadarInterfaceBase):
       return super().update(can_strings)
 
     if self.corner_rcp:
-      self.corner_rcp.update_strings(can_strings)
-      # Add logic to process corner radar messages here
+      corner_vls = self.corner_rcp.update_strings(can_strings)
+      # Process corner radar messages if needed
+      # For now, we're just parsing the messages but not using them
+      # This will prevent the error without changing functionality
 
     return rr
 
