@@ -49,7 +49,7 @@ class HKGLongitudinalTuning:
   def make_jerk(self, CS, accel, actuators):
     """Calculate the instantaneous jerk and update jerk limits."""
     state = getattr(actuators, "longControlState", LongCtrlState.pid)
-    if not CS.out.cruiseState.enabled:
+    if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
       self.jerk_upper_limit = 0.0
       self.jerk_lower_limit = 0.0
       self.cb_upper = self.cb_lower = 0.0
