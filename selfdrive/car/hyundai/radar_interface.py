@@ -35,18 +35,23 @@ def get_corner_radar_can_parser(CP):
     ("RADAR_POINTS_METADATA_0x200", 50),  # Right corner metadata
     ("RADAR_POINTS_CHECKSUM_0x104", 50),  # Left checksum
     ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
-    ("BLINDSPOTS_FRONT_CORNER_1", 50),    # Front corner radar 1
-    ("BLINDSPOTS_FRONT_CORNER_2", 50),    # Front corner radar 2
   ]
   messages_pt = [
     ("RADAR_POINTS_0x101", 50),  # Left corner points
     ("RADAR_POINTS_0x201", 50),  # Right corner points
   ]
+  # Add messages for front corner radar from CANFD DBC
+  messages_canfd = [
+    ("BLINDSPOTS_FRONT_CORNER_1", 50),    # Front corner radar 1
+    ("BLINDSPOTS_FRONT_CORNER_2", 50),    # Front corner radar 2
+  ]
   # Metadata on FD bus (129)
   parser_fd = CANParser(DBC[CP.carFingerprint]['corner_radar'], messages_fd, 129)
   # Points on PT bus (0) - note bus 130 appears to mirror bus 0
   parser_pt = CANParser(DBC[CP.carFingerprint]['corner_radar'], messages_pt, 0)
-  return parser_fd, parser_pt
+  # Front corner radar messages on CANFD bus
+  parser_canfd = CANParser(DBC[CP.carFingerprint]['pt'], messages_canfd, 5)
+  return parser_fd, parser_pt, parser_canfd
 
 class RadarInterface(RadarInterfaceBase):
   def __init__(self, CP):
@@ -62,10 +67,11 @@ class RadarInterface(RadarInterfaceBase):
     self.radar_off_can = CP.radarUnavailable
     self.rcp = get_radar_can_parser(CP)
     if CP.flags & HyundaiFlags.CORNER_RADAR:
-      self.corner_rcp_fd, self.corner_rcp_pt = get_corner_radar_can_parser(CP)
+      self.corner_rcp_fd, self.corner_rcp_pt, self.corner_rcp_canfd = get_corner_radar_can_parser(CP)
     else:
       self.corner_rcp_fd = None
       self.corner_rcp_pt = None
+      self.corner_rcp_canfd = None
     self.fp_radar_tracks = CP.flags & HyundaiFlagsCP.ENABLE_RADAR_TRACKS
 
   def update(self, can_strings):
@@ -88,10 +94,11 @@ class RadarInterface(RadarInterfaceBase):
       return super().update(can_strings)
 
     # Process corner radar messages
-    if self.corner_rcp_fd and self.corner_rcp_pt:
-      # Update both parsers
+    if self.corner_rcp_fd and self.corner_rcp_pt and self.corner_rcp_canfd:
+      # Update all parsers
       corner_vls_fd = self.corner_rcp_fd.update_strings(can_strings)
       corner_vls_pt = self.corner_rcp_pt.update_strings(can_strings)
+      corner_vls_canfd = self.corner_rcp_canfd.update_strings(can_strings)
 
       # Process corner radar points
       corner_points = {}
@@ -101,22 +108,7 @@ class RadarInterface(RadarInterfaceBase):
       for msg_name in corner_vls_fd:
         if msg_name.startswith("RADAR_POINTS_METADATA"):
           metadata[msg_name] = self.corner_rcp_fd.vl[msg_name]
-        elif msg_name == "BLINDSPOTS_FRONT_CORNER_1":
-          front_corner_1 = self.corner_rcp_fd.vl[msg_name]
-          if front_corner_1.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
-            corner_points['front_left'] = {
-              'detected': True,
-              'approaching': front_corner_1.get('NEW_SIGNAL_2', 0) > 0
-            }
-        elif msg_name == "BLINDSPOTS_FRONT_CORNER_2":
-          front_corner_2 = self.corner_rcp_fd.vl[msg_name]
-          if front_corner_2.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
-            corner_points['front_right'] = {
-              'detected': True,
-              'approaching': front_corner_2.get('NEW_SIGNAL_2', 0) > 0
-            }
 
-      # Process rear corner points data
       for msg_name in corner_vls_pt:
         if msg_name.startswith("RADAR_POINTS_0x"):
           points = self.corner_rcp_pt.vl[msg_name]
@@ -137,6 +129,23 @@ class RadarInterface(RadarInterfaceBase):
                 'yRel': points[f'POINT_{i}_AZIMUTH'] * 0.001953125,  # Apply scaling from DBC
                 'vRel': (points[f'POINT_{i}_REL_VELOCITY'] * 0.03125) - 66,  # Apply scaling and offset from DBC
               }
+
+      # Process front corner radar points
+      if "BLINDSPOTS_FRONT_CORNER_1" in corner_vls_canfd:
+        front_corner_1 = self.corner_rcp_canfd.vl["BLINDSPOTS_FRONT_CORNER_1"]
+        if front_corner_1.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
+          corner_points['front_left'] = {
+            'detected': True,
+            'approaching': front_corner_1.get('NEW_SIGNAL_2', 0) > 0
+          }
+
+      if "BLINDSPOTS_FRONT_CORNER_2" in corner_vls_canfd:
+        front_corner_2 = self.corner_rcp_canfd.vl["BLINDSPOTS_FRONT_CORNER_2"]
+        if front_corner_2.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
+          corner_points['front_right'] = {
+            'detected': True,
+            'approaching': front_corner_2.get('NEW_SIGNAL_2', 0) > 0
+          }
 
       # Store processed corner radar data
       rr.corner_radar_points = corner_points
