@@ -77,9 +77,10 @@ class RadarInterface(RadarInterfaceBase):
 
     if self.corner_rcp:
       corner_vls = self.corner_rcp.update_strings(can_strings)
-      # Process corner radar messages if needed
-      # For now, we're just parsing the messages but not using them
-      # This will prevent the error without changing functionality
+      # Explicitly handle corner radar messages separately to avoid confusion
+      for msg_name in corner_vls:
+        if msg_name.startswith("RADAR_POINTS_METADATA"):
+          continue  # Skip metadata messages for corner radar
 
     return rr
 
