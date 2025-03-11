@@ -1,24 +1,15 @@
 import re
+import os
 from dataclasses import dataclass, field
 from enum import Enum, IntFlag
 
 from cereal import car
+from opendbc import DBC_PATH
 from panda.python import uds
 from openpilot.common.conversions import Conversions as CV
 from openpilot.selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
-from openpilot.selfdrive.car import get_dbc_path
 from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
 from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
-
-# Add the get_dbc_path function
-def get_dbc_path(dbc_name, dbc_type=None):
-    """Get the path to a DBC file from its name."""
-    from opendbc import DBC_PATH
-    import os
-
-    if dbc_type is not None:
-        dbc_name = f"{dbc_name}_{dbc_type}"
-    return os.path.join(DBC_PATH, f"{dbc_name}.dbc")
 
 
 Ecu = car.CarParams.Ecu
@@ -852,4 +843,4 @@ NON_SCC_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_FCA)
 NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
-DBC[CAR.KIA_EV6]['corner_radar'] = get_dbc_path('hyundai_kia_mando_corner_radar_generated', None)
+DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
