@@ -118,11 +118,7 @@ class HKGLongitudinalTuning:
     self.jerk = (current_accel - self.accel_last_jerk) / self.DT_CTRL
     self.accel_last_jerk = current_accel
 
-    j_error = CS.out.vCruise - CS.out.vEgo
-    if ((j_error < 5.0) and (actuators.accel > 0.0)):
-      jerk_max = akima_interp(j_error, np.array([5.0, 0.0]), np.array([self.car_config.jerk_limits[1], 0.5]))
-    else:
-      jerk_max = self.car_config.jerk_limits[1]
+    jerk_max = self.car_config.jerk_limits[1]
 
 
     if self.CP.flags & HyundaiFlags.CANFD.value:
