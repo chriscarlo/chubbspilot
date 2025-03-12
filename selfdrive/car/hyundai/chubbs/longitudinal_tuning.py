@@ -54,6 +54,7 @@ class HKGLongitudinalTuning:
   def _setup_controllers(self) -> None:
     self.mpc = LongitudinalMpc
     self.long_control = LongControl(self.CP)
+    self.sm = messaging.SubMaster(['controlsState'])
     self.DT_CTRL = DT_CTRL
     self.params = Params()
 
@@ -83,7 +84,7 @@ class HKGLongitudinalTuning:
 
   def update_mpc_mode(self, sm: messaging.SubMaster):
     """Update MPC mode with transition handling."""
-    new_mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
+    new_mode = 'blended' if self.sm['controlsState'].experimentalMode else 'acc'
 
     # Detect mode change
     if new_mode != self.current_mode:
@@ -161,6 +162,7 @@ class HKGLongitudinalTuning:
     if self.handle_cruise_cancel(CS):
       return actuators.accel
     self.make_jerk(CS, actuators)
+    self.update_mpc_mode(self.sm)
 
     target_accel = actuators.accel
 

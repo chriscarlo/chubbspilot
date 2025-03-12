@@ -46,9 +46,9 @@ TUNING_CONFIGS = {
 # Car-specific configurations overriding the defaults
 CAR_SPECIFIC_CONFIGS = {
   CAR.HYUNDAI_IONIQ_5: CarTuningConfig(
-    vego_stopping=0.15,
+    vego_stopping=0.35,
     vego_starting=0.12,
-    stopping_decel_rate=0.25,
+    stopping_decel_rate=0.3,
     start_accel=1.6,
     jerk_limits=(1.0, 5.0),
     brake_response=(1.25, 1.8, 2.55, 3.5),
