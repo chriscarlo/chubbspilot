@@ -77,7 +77,7 @@ poetry self add poetry-dotenv-plugin@^0.1.0
 
 echo "pip packages install..."
 # Set Poetry to ignore SSL verification
-poetry config certificates.verify false
+# poetry config certificates.verify false  # This option doesn't exist in current Poetry version
 # Add --no-deps to prevent hash verification issues
 poetry install --no-cache --no-root
 
