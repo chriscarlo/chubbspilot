@@ -487,6 +487,8 @@ void UIState::updateStatus() {
     auto controls_state = (*sm)["controlsState"].getControlsState();
     auto state = controls_state.getState();
     // Removed the unused variable: auto previous_status = status;
+    // Original code - commented out to prevent status changes from waking screen:
+    // auto previous_status = status;
 
     if (state == cereal::ControlsState::OpenpilotState::PRE_ENABLED || state == cereal::ControlsState::OpenpilotState::OVERRIDING) {
       status = STATUS_OVERRIDE;
@@ -500,6 +502,8 @@ void UIState::updateStatus() {
 
     // Only allow touch events to wake the screen, ignore status changes and alerts
     scene.wake_up_screen = false;
+    // Original code - commented out to prevent status changes from waking screen:
+    // scene.wake_up_screen = controls_state.getAlertStatus() != cereal::ControlsState::AlertStatus::NORMAL || status != previous_status;
   }
 
   scene.started |= scene.force_onroad;
@@ -659,9 +663,18 @@ void Device::updateWakefulness(const UIState &s) {
   // Only allow touch events to wake the screen
   if (ignition_on && s.scene.standby_mode) {
     // No automatic wake-up from status changes or alerts
-    if (interactive_timeout > 0) {
-      resetInteractiveTimeout(s.scene.screen_timeout, s.scene.screen_timeout_onroad);
-    }
+    // We don't reset the timeout here anymore, as we only want touch events to do that
+    // Removing this reset allows the timeout to reach 0 and enter standby mode
+
+    // Original code - commented out to fix standby mode not activating:
+    // if (interactive_timeout > 0) {
+    //   resetInteractiveTimeout(s.scene.screen_timeout, s.scene.screen_timeout_onroad);
+    // }
+
+    // Original original code - commented out to prevent status changes and alerts from waking screen:
+    // if (s.scene.wake_up_screen) {
+    //   resetInteractiveTimeout(s.scene.screen_timeout, s.scene.screen_timeout_onroad);
+    // }
   }
 
   if (ignition_state_changed) {
