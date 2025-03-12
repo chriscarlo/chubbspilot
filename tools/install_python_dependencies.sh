@@ -61,7 +61,7 @@ eval "$(pyenv init --path)"
 # Skip pip update
 echo "Using existing pip version"
 # Install poetry without updating pip
-pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --no-deps poetry==1.7.0
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org poetry==1.7.0
 
 poetry config virtualenvs.prefer-active-python true --local
 poetry config virtualenvs.in-project true --local
@@ -73,13 +73,13 @@ if [[ "$(uname)" == 'Darwin' ]]; then
   echo "export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES" >> $ROOT/.env
 fi
 
-poetry self add --trusted-host pypi.org --trusted-host files.pythonhosted.org --no-deps poetry-dotenv-plugin@^0.1.0
+poetry self add poetry-dotenv-plugin@^0.1.0
 
 echo "pip packages install..."
 # Set Poetry to ignore SSL verification
 poetry config certificates.verify false
 # Add --no-deps to prevent hash verification issues
-poetry install --no-cache --no-root --no-deps
+poetry install --no-cache --no-root
 
 pyenv rehash
 
