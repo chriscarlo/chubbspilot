@@ -19,6 +19,9 @@
 #include "common/swaglog.h"
 #include "common/util.h"
 
+// Check FFmpeg version
+#include <libavcodec/version.h>
+
 ExitHandler do_exit;
 
 using namespace libyuv;
@@ -392,7 +395,11 @@ void OmxEncoder::handle_out_buf(OmxEncoder *encoder, OMX_BUFFERHEADERTYPE *out_b
       LOGW("ts encoder write issue");
     }
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 8, 0)
+    av_packet_unref(&pkt);
+#else
     av_free_packet(&pkt);
+#endif
   }
 
   // give omx back the buffer
@@ -468,10 +475,16 @@ void OmxEncoder::encoder_open(const char* filename) {
   out_stream = avformat_new_stream(ofmt_ctx, NULL);
   assert(out_stream);
 
-  // set codec correctly
+  // Register all codecs and formats in older FFmpeg versions
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   av_register_all();
+#endif
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+  const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+#else
   AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+#endif
   assert(codec);
 
   codec_ctx = avcodec_alloc_context3(codec);

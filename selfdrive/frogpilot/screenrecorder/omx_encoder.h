@@ -8,6 +8,8 @@
 #include <OMX_Component.h>
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
 }
 
 #include "common/queue.h"
