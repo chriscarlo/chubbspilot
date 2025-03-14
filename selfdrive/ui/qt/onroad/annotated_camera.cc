@@ -610,8 +610,14 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
     std::function<void(const QPolygonF&, float, bool)> drawAdjacentLane = [&](const QPolygonF &lane, float laneWidth, bool isBlindSpot) {
       if (isBlindSpot) {
         setAdjacentPathColors(0.0f);
+      } else if (laneWidth >= laneDetectionWidth) {
+        // Always green for lanes wider than or equal to the ideal width
+        setAdjacentPathColors(120.0f);
       } else {
-        float hue = 120.0f * (1 - fmin(fabs(laneWidth - laneDetectionWidth) / (laneDetectionWidth / 2), 1));
+        // For narrower lanes, use the same formula as before but only consider narrower-than-ideal case
+        float deviation = laneDetectionWidth - laneWidth;
+        float normalized_deviation = fmin(deviation / (laneDetectionWidth / 2), 1.0f);
+        float hue = 120.0f * (1.0f - normalized_deviation);
         setAdjacentPathColors(hue);
       }
 
