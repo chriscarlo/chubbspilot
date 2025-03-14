@@ -83,10 +83,6 @@ def early_approach_time_fn(apex_speed: float) -> float:
     """
     Dynamically return how many seconds *before* the apex we want to reach
     the target speed (about 2–3 s).
-    
-    apex_speed is in m/s.
-    For lower apex speeds (city curves), we only need ~2 s early.
-    For higher apex speeds (highway curves), we want ~3 s early.
     """
     lo_speed = 8.0   # ~18 mph
     hi_speed = 22.0  # ~49 mph
@@ -118,6 +114,26 @@ def early_spool_time_fn(apex_speed: float) -> float:
     else:
         ratio = (apex_speed - lo_speed) / (hi_speed - lo_speed)
         return lo_time + ratio * (hi_time - lo_time)
+
+# --- ADDED/CHANGED ---
+def short_horizon_factor(horizon_time: float) -> float:
+    """
+    Returns a multiplier in [0.4, 1.0] based on how short the model horizon is.
+    If horizon is under ~1.5 s, we drastically reduce spool (factor ~ 0.4).
+    If horizon is >= ~4 s, we allow normal spool (factor = 1.0).
+    """
+    min_horizon = 1.5
+    max_horizon = 4.0
+    lo_factor = 0.4
+    hi_factor = 1.0
+
+    if horizon_time <= min_horizon:
+        return lo_factor
+    elif horizon_time >= max_horizon:
+        return hi_factor
+    else:
+        ratio = (horizon_time - min_horizon) / (max_horizon - min_horizon)
+        return lo_factor + ratio * (hi_factor - lo_factor)
 
 # --------------------------
 #   MAIN TURN SPEED CONTROLLER
@@ -237,9 +253,14 @@ class VisionTurnSpeedController:
         orientation_rate = np.abs(np.array(orientation_rate_raw, dtype=float))
         velocity_pred = np.array(velocity_pred_raw, dtype=float)
         n_points = min(len(orientation_rate), len(velocity_pred))
-        if n_points < 5:
-            return 30.0
 
+        # --- ADDED/CHANGED ---
+        # Instead of requiring 5 points, let’s require at least 3.
+        # If fewer than 3, fallback to a more moderate safe speed (e.g. ~22 m/s).
+        if n_points < 3:
+            return 22.0  # ~49 mph fallback
+
+        # We'll still aim for 33 points if possible
         if n_points < 33:
             src_indices = np.linspace(0, n_points - 1, n_points)
             dst_indices = np.linspace(0, n_points - 1, 33)
@@ -253,16 +274,28 @@ class VisionTurnSpeedController:
         eps = 1e-9
         curvature_33 = orientation_rate_33 / np.clip(velocity_pred_33, eps, None)
 
+        # If even with interpolation the curvature is essentially zero, fallback.
         if max(curvature_33) < 1e-5:
             return 30.0
 
+        # --- ADDED/CHANGED ---
+        # Determine how far into the future we actually have valid data.
+        valid_pts = np.where(velocity_pred_33 > 0.01)[0]
+        if len(valid_pts) == 0:
+            # No valid velocity points at all, fallback.
+            return 30.0
+        horizon_idx = valid_pts[-1]
+        horizon_time = times_33[horizon_idx]
+
+        # Pass horizon_time into the planner
         planned_speeds = self._plan_speed_trajectory(
             orientation_rate_33,
             velocity_pred_33,
             curvature_33,
             times_33,
             v_ego,
-            turn_aggressiveness
+            turn_aggressiveness,
+            horizon_time  # <--- new param
         )
         return planned_speeds[0]
 
@@ -273,7 +306,8 @@ class VisionTurnSpeedController:
         curvature: np.ndarray,
         times: np.ndarray,
         v_ego: float,
-        turn_aggressiveness: float
+        turn_aggressiveness: float,
+        horizon_time: float  # --- ADDED ---
     ) -> np.ndarray:
         n = len(orientation_rate)
         dt_array = np.diff(times)
@@ -292,13 +326,15 @@ class VisionTurnSpeedController:
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         planned = safe_speeds.copy()
 
+        # We'll compute a short-horizon factor just once
+        spool_mult = short_horizon_factor(horizon_time)  # --- ADDED ---
+
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
 
             # "Arrive early" to the apex speed by 2–3 s, scaled by apex_speed
             decel_sec = early_approach_time_fn(apex_speed)
-
-            # "Spool out" earlier, maybe 1–2 s, scaled by apex_speed
+            # "Spool out" earlier, 1–2 s, scaled by apex_speed
             spool_sec = early_spool_time_fn(apex_speed)
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
@@ -319,7 +355,7 @@ class VisionTurnSpeedController:
             for idx in range(spool_start, apex_i + 1):
                 planned[idx] = min(planned[idx], apex_speed)
 
-            # Spool up out of apex
+            # Spool up out of apex - but *reduce* if horizon is short
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
                 v_spool_end = planned[spool_end - 1]
@@ -327,6 +363,9 @@ class VisionTurnSpeedController:
                     f = (idx - apex_i) / float(steps_spool)
                     f_curve = math.sqrt(f)
                     spool_val = apex_speed * (1 - f_curve) + v_spool_end * f_curve
+                    # --- ADDED: multiply by spool_mult to be more conservative if horizon is short
+                    spool_val *= spool_mult
+
                     planned[idx] = max(planned[idx], spool_val)
 
         # 3) Standard backward pass
