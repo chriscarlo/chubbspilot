@@ -10,8 +10,8 @@ from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
+from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 from openpilot.selfdrive.modeld.constants import ModelConstants
-
 
 # -----------------------
 #   LATERAL ACCELERATION
@@ -175,7 +175,7 @@ class SteeringTorqueSaturationPredictor:
         # Always assume 409 raw torque is max
         self.MAX_STEER_TORQUE = 409
         # If you want a margin, you can do .85, but you can also set it to 1.0 if you prefer
-        self.TORQUE_MARGIN = 0.85
+        self.TORQUE_MARGIN = 1.0  # No margin initially - be completely passive
         self.WHEELBASE = vehicle_params.wheelbase
 
         self.MODEL_SCALE_FACTOR = 0.01  # previously '0.01' in your code
@@ -189,10 +189,15 @@ class SteeringTorqueSaturationPredictor:
         self.calibration_learning_rate = 0.10
         self.calibration_ema_alpha = 0.05
 
-        # Internal state
-        self.sensitivity_factor = 1.0
+        # Internal state - starting very permissive
+        self.sensitivity_factor = 2.0  # Start extremely permissive (higher = more permissive)
         self.torque_error_ema = 0.0
-        self.confidence = 0.8
+        self.confidence = 0.5  # Start with low confidence
+
+        # Passive mode control
+        self.passive_mode = True  # Start in passive mode
+        self.saturation_count = 0
+        self.saturation_threshold_pct = 0.95  # Only consider >95% of max torque as saturation
 
         self.last_update_time = 0
         self.last_pred_required_torque = 0
@@ -204,8 +209,8 @@ class SteeringTorqueSaturationPredictor:
         self.samples = deque(maxlen=1000)
         self.debug = debug
 
-        # Path to save parameters
-        self.param_path = "/data/openpilot/selfdrive/frogpilot/model_weights/torque_predictor.pkl"
+        # Path to save parameters - use repo-local path
+        self.param_path = "selfdrive/frogpilot/model_weights/torque_predictor.pkl"
 
         # Logging
         self.last_log_time = 0
@@ -219,8 +224,12 @@ class SteeringTorqueSaturationPredictor:
             if os.path.exists(self.param_path):
                 with open(self.param_path, 'rb') as f:
                     data = pickle.load(f)
-                    self.sensitivity_factor = data.get('sensitivity_factor', 1.0)
-                    self.confidence = data.get('confidence', 0.8)
+                    self.sensitivity_factor = data.get('sensitivity_factor', 2.0)
+                    self.confidence = data.get('confidence', 0.5)
+                    self.passive_mode = data.get('passive_mode', True)
+                    self.saturation_count = data.get('saturation_count', 0)
+                    self.saturation_threshold_pct = data.get('saturation_threshold_pct', 0.95)
+                    self.TORQUE_MARGIN = data.get('torque_margin', 1.0)
                     road_bank_stats = data.get('road_bank_stats', {})
                     if self.debug and road_bank_stats:
                         print(f"Loaded road bank stats: mean={road_bank_stats.get('mean', 0.0):.4f}, "
@@ -232,8 +241,12 @@ class SteeringTorqueSaturationPredictor:
         except Exception as e:
             if self.debug:
                 print(f"Error loading torque model: {e}")
-            self.sensitivity_factor = 1.0
-            self.confidence = 0.8
+            self.sensitivity_factor = 2.0
+            self.confidence = 0.5
+            self.passive_mode = True
+            self.saturation_count = 0
+            self.saturation_threshold_pct = 0.95
+            self.TORQUE_MARGIN = 1.0
 
     def _save_model(self):
         try:
@@ -248,6 +261,10 @@ class SteeringTorqueSaturationPredictor:
             data = {
                 'sensitivity_factor': self.sensitivity_factor,
                 'confidence': self.confidence,
+                'passive_mode': self.passive_mode,
+                'saturation_count': self.saturation_count,
+                'saturation_threshold_pct': self.saturation_threshold_pct,
+                'torque_margin': self.TORQUE_MARGIN,
                 'timestamp': time.time(),
                 'road_bank_stats': road_bank_stats
             }
@@ -278,6 +295,8 @@ class SteeringTorqueSaturationPredictor:
             sensitivity_factor=self.sensitivity_factor,
             confidence=self.confidence,
             samples_count=len(self.samples),
+            passive_mode=self.passive_mode,
+            saturation_count=self.saturation_count,
             road_bank=road_bank,
             gravity_component=gravity_component
         )
@@ -296,9 +315,11 @@ class SteeringTorqueSaturationPredictor:
         return required_torque
 
     def get_max_available_torque(self) -> float:
-        # If you want to keep the margin in effect, do:
-        return self.MAX_STEER_TORQUE
-        # Or just return self.MAX_STEER_TORQUE if you want the full 409.
+        # If in passive mode, return very high value effectively disabling limiting
+        if self.passive_mode:
+            return 9999.0
+        # Otherwise apply the margin
+        return self.MAX_STEER_TORQUE * self.TORQUE_MARGIN
 
     def solve_for_torque_limited_speed(self, curvature, max_torque, road_bank=0.0):
         """
@@ -318,11 +339,37 @@ class SteeringTorqueSaturationPredictor:
             return 0.1  # avoid sqrt of negative
         return math.sqrt(adjusted_factor / curvature)
 
+    def detect_saturation_event(self, actual_torque):
+        """
+        Detect if we're seeing a potential steering saturation event
+        """
+        saturation_threshold = self.MAX_STEER_TORQUE * self.saturation_threshold_pct
+
+        if abs(actual_torque) > saturation_threshold:
+            self.saturation_count += 1
+
+            # If we detect a saturation event and are in passive mode,
+            # start transitioning out of passive mode
+            if self.passive_mode and self.saturation_count >= 1:
+                self.passive_mode = False
+                self.TORQUE_MARGIN = 1.0  # Changed from 0.95 to 1.0 - no margin
+
+            return True
+        return False
+
     def update_with_measurement(self, actual_torque, last_curvature, last_speed, road_bank=0.0):
         """
         Normal streaming updates from observed torque.
         """
-        if last_curvature < 1e-6 or last_speed < 1.0:
+        # Check for saturation events
+        saturation_detected = self.detect_saturation_event(actual_torque)
+
+        # Filter out cases of very low curvature or speed - these aren't useful for learning
+        # Also filter out unrealistically high speeds and extreme road banking
+        if (last_curvature < 5e-5 or  # Increased threshold to focus on actual curves
+            last_speed < 1.0 or
+            last_speed > V_CRUISE_MAX * CV.KPH_TO_MS or  # Using V_CRUISE_MAX converted to m/s
+            abs(road_bank) > 0.26):  # ~15 degrees in radians
             return
 
         self.last_update_time = time.time()
@@ -339,6 +386,7 @@ class SteeringTorqueSaturationPredictor:
             'timestamp': self.last_update_time,
             'road_bank': road_bank,
             'intervention': False,
+            'saturation': saturation_detected,
         })
 
         # Decide if we're in calibration phase
@@ -355,18 +403,22 @@ class SteeringTorqueSaturationPredictor:
             + current_ema_alpha * torque_error
         )
 
-        # Adjust sensitivity factor
-        if abs(predicted_torque) > 1e-3:
+        # Adjust sensitivity factor if we've detected saturation or high torque
+        high_torque_sample = abs(actual_torque) > (self.MAX_STEER_TORQUE * 0.75)
+        if (not self.passive_mode or saturation_detected or high_torque_sample) and abs(predicted_torque) > 1e-3:
             error_ratio = self.torque_error_ema / predicted_torque
             adjustment = current_learning_rate * error_ratio
             new_sens = self.sensitivity_factor * (1 + adjustment)
-            self.sensitivity_factor = clip(new_sens, 0.5, 2.0)
+            self.sensitivity_factor = clip(new_sens, 0.5, 3.0)  # Allow higher upper bound
 
-        # Mild shift in confidence if desired
-        self.confidence = clip(self.confidence + 0.0001 * (-torque_error), 0.5, 1.0)
+        # Update confidence - gradually increase with more samples
+        if not self.passive_mode:
+            sample_confidence_factor = min(1.0, len(self.samples) / 500.0)
+            target_confidence = 0.5 + (sample_confidence_factor * 0.4)
+            self.confidence = 0.99 * self.confidence + 0.01 * target_confidence
 
-        # Periodically save model
-        if len(self.samples) % 100 == 0:
+        # Periodically save model or save immediately on saturation
+        if len(self.samples) % 100 == 0 or saturation_detected:
             self._save_model()
 
         # Store last
@@ -380,8 +432,17 @@ class SteeringTorqueSaturationPredictor:
         Special heavier weighting if the driver intervenes to correct understeer/oversteer,
         or if they press gas/brake. We treat it like a big update so the system "learns" quickly.
         """
-        if curvature < 1e-6 or speed < 1.0:
+        # Filter out cases of very low curvature or speed - these aren't useful for learning
+        # Also filter out unrealistically high speeds and extreme road banking
+        if (curvature < 5e-5 or  # Increased threshold to focus on actual curves
+            speed < 1.0 or
+            speed > V_CRUISE_MAX * CV.KPH_TO_MS or  # Using V_CRUISE_MAX converted to m/s
+            abs(road_bank) > 0.26):  # ~15 degrees in radians
             return
+
+        # If they're intervening, exit passive mode immediately
+        self.passive_mode = False
+        self.TORQUE_MARGIN = 1.0  # Changed from 0.95 to 1.0 - no margin
 
         predicted_torque = self.estimate_required_torque(curvature, speed, road_bank)
         torque_error = intervention_torque - predicted_torque
@@ -402,7 +463,7 @@ class SteeringTorqueSaturationPredictor:
             error_ratio = self.torque_error_ema / predicted_torque
             # Multiply by 5.0 for a bigger step
             new_sens = self.sensitivity_factor * (1 + self.learning_rate * 5.0 * error_ratio)
-            self.sensitivity_factor = clip(new_sens, 0.5, 2.0)
+            self.sensitivity_factor = clip(new_sens, 0.5, 3.0)
 
         # Optionally store a sample
         self.samples.append({
@@ -425,7 +486,7 @@ class SteeringTorqueSaturationPredictor:
           safe_speed *= (0.7 + 0.3 * self.confidence).
         This is purely optional. It does not scale with speed, just scales by confidence.
         """
-        if curvature < 1e-5:
+        if curvature < 1e-5 or self.passive_mode:
             return safe_speed
         return safe_speed * (0.7 + 0.3 * self.confidence)
 
@@ -672,18 +733,21 @@ class VisionTurnSpeedController:
             c = max(curvature[i], eps)
             s = math.sqrt(lat_acc_limit / c)  # lat-acc-limited speed
 
-            # Torque-limited check
+            # Torque-limited check - only if not in passive mode
             required_torque = self.torque_predictor.estimate_required_torque(c, s, self.current_road_bank)
             torque_limited = False
-            if required_torque > max_torque:
+
+            # Only apply torque limiting if not in passive mode
+            if (not self.torque_predictor.passive_mode and required_torque > max_torque):
                 torque_limited = True
                 torque_limited_speed = self.torque_predictor.solve_for_torque_limited_speed(
                     c, max_torque, self.current_road_bank
                 )
                 s = min(s, torque_limited_speed)
 
-            # Confidence factor
-            s = self.torque_predictor.apply_model_confidence(s, c)
+            # Confidence factor - only if not in passive mode
+            if not self.torque_predictor.passive_mode:
+                s = self.torque_predictor.apply_model_confidence(s, c)
 
             # Log only for i == 0 to avoid spam
             if i == 0:

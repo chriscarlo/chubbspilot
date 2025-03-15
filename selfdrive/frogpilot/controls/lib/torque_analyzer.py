@@ -24,47 +24,143 @@ import numpy as np
 import os
 import pickle
 import sys
+import time
 from collections import defaultdict
 
-# Add openpilot directory to import path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
-from openpilot.common.conversions import Conversions as CV
+# Import constants from chauffeur_vtsc for consistency
+try:
+    from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
+    from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import SteeringTorqueSaturationPredictor
+except ImportError:
+    # Fallback values if imports fail
+    V_CRUISE_MAX = 145  # kph
+    class SteeringTorqueSaturationPredictor:
+        pass
 
-# Paths
-LOG_PATH = "/data/openpilot/log"
-TORQUE_MODEL_PATH = "/data/openpilot/selfdrive/frogpilot/model_weights/torque_predictor.pkl"
-OUTPUT_DIR = "/data/openpilot/selfdrive/frogpilot/reporting"
+# Define conversion constants directly to avoid import issues
+class CV:
+    """Conversion constants"""
+    MPH_TO_MS = 0.44704
+    MS_TO_MPH = 2.2369362920544
+    KPH_TO_MPH = 0.621371
 
-def load_logs(days=7, event_name="torque_predictor"):
-    """Load torque prediction data from log files"""
+# Paths - use local log_dir for development
+LOG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), "log_dir")
+TORQUE_MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../../frogpilot/model_weights/torque_predictor.pkl")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "../../../frogpilot/reporting")
+
+# Constants for filtering - use imported values or fallbacks
+# The speeds are in different units, so convert as needed
+MAX_REALISTIC_SPEED_MPH = V_CRUISE_MAX * CV.KPH_TO_MPH  # Convert from kph to mph
+# Using the same threshold as in chauffeur_vtsc.py SteeringTorqueSaturationPredictor
+MIN_CURVATURE_THRESHOLD = 5e-5  # Minimum meaningful curvature (match learning algorithm)
+REALISTIC_CURVE_MIN = 5e-5      # Minimum curvature to be considered a real curve
+MAX_BANK_ANGLE = 0.26           # Maximum realistic road bank angle (~15 degrees in radians)
+
+def load_logs(days=7, event_name="torque_predictor", additional_events=None):
+    """Load torque prediction data from swaglog files"""
     logs = []
-    now = datetime.datetime.now()
-    cutoff_date = now - datetime.timedelta(days=days)
+    additional_data = {}
+    now = time.time()
+    cutoff_time = now - (days * 24 * 60 * 60)
 
-    # Get all log files from the specified date range
-    log_files = glob.glob(f"{LOG_PATH}/*.log")
+    # Get all swaglog files
+    if not os.path.exists(LOG_PATH):
+        print(f"Error: Log directory not found at {LOG_PATH}")
+        return logs, additional_data
 
-    for log_file in log_files:
+    # Get all swaglog files
+    swaglog_files = []
+    for filename in os.listdir(LOG_PATH):
+        if filename.startswith("swaglog."):
+            file_path = os.path.join(LOG_PATH, filename)
+            swaglog_files.append(file_path)
+
+    if not swaglog_files:
+        print(f"No swaglog files found in {LOG_PATH}")
+        return logs, additional_data
+
+    print(f"Found {len(swaglog_files)} swaglog files in {LOG_PATH}")
+
+    # Parse each swaglog file
+    for swaglog_file in sorted(swaglog_files):
         try:
-            file_date_str = os.path.basename(log_file).split("--")[0]
-            file_date = datetime.datetime.strptime(file_date_str, "%Y-%m-%d--%H-%M-%S")
+            print(f"Processing {swaglog_file}...")
 
-            if file_date >= cutoff_date:
-                with open(log_file, 'r') as f:
-                    for line in f:
-                        if event_name in line and "cloudlog.event" in line:
-                            try:
-                                # Extract JSON data from the log line
-                                json_data = json.loads(line.split("cloudlog.event")[1].strip())
-                                if json_data.get("event") == event_name:
-                                    json_data["timestamp"] = file_date.timestamp()
-                                    logs.append(json_data)
-                            except (json.JSONDecodeError, IndexError):
-                                pass
+            with open(swaglog_file, 'r') as f:
+                for line in f:
+                    try:
+                        # Parse the JSON line
+                        log_entry = json.loads(line)
+
+                        # Check if this is a torque_predictor event
+                        if "msg" in log_entry and isinstance(log_entry["msg"], dict) and log_entry["msg"].get("event$s") == event_name:
+                            # Extract timestamp
+                            timestamp = log_entry.get("created", 0)
+                            if timestamp < cutoff_time:
+                                continue
+
+                            # Extract the data
+                            msg = log_entry["msg"]
+
+                            # Filter out unrealistic speeds
+                            speed = msg.get("speed$f", 0)
+                            if speed * CV.MS_TO_MPH > MAX_REALISTIC_SPEED_MPH:
+                                continue
+
+                            # Filter out effectively straight roads
+                            curvature = msg.get("curvature$f", 0)
+                            if abs(curvature) < MIN_CURVATURE_THRESHOLD:
+                                continue
+
+                            # Filter out extreme road banking
+                            road_bank = msg.get("road_bank$f", 0)
+                            if abs(road_bank) > MAX_BANK_ANGLE:
+                                continue
+
+                            json_data = {
+                                "curvature": curvature,
+                                "speed": speed,
+                                "required_torque": msg.get("required_torque$f", 0),
+                                "available_torque": msg.get("available_torque$i", 0),
+                                "torque_limited": msg.get("torque_limited$b", False),
+                                "sensitivity_factor": msg.get("sensitivity_factor$f", 1.0),
+                                "confidence": msg.get("confidence$f", 0.8),
+                                "samples_count": msg.get("samples_count$i", 0),
+                                "road_bank": msg.get("road_bank$f", 0),
+                                "gravity_component": msg.get("gravity_component$f", 0),
+                                "timestamp": timestamp
+                            }
+                            logs.append(json_data)
+
+                        # Collect additional event types if specified
+                        if additional_events and "msg" in log_entry and isinstance(log_entry["msg"], dict):
+                            event_type = log_entry["msg"].get("event$s")
+                            if event_type in additional_events:
+                                # Extract timestamp for matching with torque events
+                                timestamp = log_entry.get("created", 0)
+                                if timestamp < cutoff_time:
+                                    continue
+
+                                # Store the additional data by timestamp for later correlation
+                                if event_type not in additional_data:
+                                    additional_data[event_type] = []
+
+                                additional_data[event_type].append({
+                                    "timestamp": timestamp,
+                                    "data": log_entry["msg"]
+                                })
+
+                    except json.JSONDecodeError:
+                        continue
+                    except Exception as e:
+                        if "--verbose" in sys.argv:
+                            print(f"Error parsing log entry: {e}")
+                        continue
         except Exception as e:
-            print(f"Error processing log file {log_file}: {e}")
+            print(f"Error processing swaglog file {swaglog_file}: {e}")
 
-    return logs
+    return logs, additional_data
 
 def load_torque_model():
     """Load the current torque prediction model parameters"""
@@ -72,6 +168,7 @@ def load_torque_model():
         if os.path.exists(TORQUE_MODEL_PATH):
             with open(TORQUE_MODEL_PATH, 'rb') as f:
                 return pickle.load(f)
+        # Default values if model file doesn't exist
         return {"sensitivity_factor": 1.0, "confidence": 0.8}
     except Exception as e:
         print(f"Error loading torque model: {e}")
@@ -90,6 +187,7 @@ def analyze_data(logs, verbose=False):
     available_torques = [log.get("available_torque", 0) for log in logs]
     torque_limited = [log.get("torque_limited", False) for log in logs]
     sensitivity_factors = [log.get("sensitivity_factor", 1.0) for log in logs]
+    road_banks = [log.get("road_bank", 0.0) for log in logs]
 
     # Calculate statistics
     total_events = len(logs)
@@ -97,7 +195,7 @@ def analyze_data(logs, verbose=False):
     limiting_percentage = (limiting_events / total_events * 100) if total_events > 0 else 0
 
     # Group data by speed ranges
-    speed_ranges = defaultdict(lambda: {"count": 0, "limited": 0, "curvatures": [], "required_torques": []})
+    speed_ranges = defaultdict(lambda: {"count": 0, "limited": 0, "curvatures": [], "required_torques": [], "speeds_ms": []})
 
     for i, speed in enumerate(speeds):
         if speed <= 0:
@@ -105,6 +203,7 @@ def analyze_data(logs, verbose=False):
 
         range_key = int(speed * CV.MS_TO_MPH / 10) * 10  # Group in 10 mph buckets
         speed_ranges[range_key]["count"] += 1
+        speed_ranges[range_key]["speeds_ms"].append(speed)
         if torque_limited[i]:
             speed_ranges[range_key]["limited"] += 1
         speed_ranges[range_key]["curvatures"].append(curvatures[i])
@@ -120,25 +219,45 @@ def analyze_data(logs, verbose=False):
         "average_required_torque": np.mean(required_torques) if required_torques else 0,
         "average_available_torque": np.mean(available_torques) if available_torques else 0,
         "average_sensitivity": np.mean(sensitivity_factors) if sensitivity_factors else 1.0,
+        "average_road_bank": np.mean(road_banks) if road_banks else 0.0,
+        "max_road_bank": max(road_banks) if road_banks else 0.0,
+        "min_road_bank": min(road_banks) if road_banks else 0.0,
         "speed_ranges": dict(speed_ranges)
     }
 
+    # Calculate torque saturation ratio
+    # How close to the available torque are we typically getting?
+    torque_ratios = []
+    for i in range(len(required_torques)):
+        if available_torques[i] > 0:
+            torque_ratios.append(required_torques[i] / available_torques[i])
+
+    results["average_torque_ratio"] = np.mean(torque_ratios) if torque_ratios else 0
+    results["max_torque_ratio"] = max(torque_ratios) if torque_ratios else 0
+
     if verbose:
         print("\n===== Torque Prediction Model Analysis =====")
-        print(f"Total events analyzed: {total_events}")
+        print(f"Total real curve events analyzed: {total_events}")
         print(f"Events with torque limiting: {limiting_events} ({limiting_percentage:.1f}%)")
         print(f"Average curvature: {results['average_curvature']:.6f}")
         print(f"Average speed: {results['average_speed']:.1f} m/s ({results['average_speed'] * CV.MS_TO_MPH:.1f} mph)")
         print(f"Average required torque: {results['average_required_torque']:.1f}")
         print(f"Average available torque: {results['average_available_torque']:.1f}")
+        print(f"Average torque required/available ratio: {results['average_torque_ratio']:.2f}")
+        print(f"Maximum torque required/available ratio: {results['max_torque_ratio']:.2f}")
         print(f"Average sensitivity factor: {results['average_sensitivity']:.3f}")
+        print(f"Road banking: avg={results['average_road_bank']:.4f}, min={results['min_road_bank']:.4f}, max={results['max_road_bank']:.4f}")
 
         print("\nBreakdown by speed range:")
         for speed_range, data in sorted(speed_ranges.items()):
-            limit_pct = (data["limited"] / data["count"] * 100) if data["count"] > 0 else 0
-            print(f"{speed_range}-{speed_range+10} mph: {data['count']} events, "
-                  f"{limit_pct:.1f}% limited, "
-                  f"avg curvature: {np.mean(data['curvatures']):.6f}")
+            if data["count"] >= 5:  # Only show ranges with enough data points
+                limit_pct = (data["limited"] / data["count"] * 100) if data["count"] > 0 else 0
+                avg_curve = np.mean(data["curvatures"]) if data["curvatures"] else 0
+                avg_torque = np.mean(data["required_torques"]) if data["required_torques"] else 0
+                print(f"{speed_range}-{speed_range+10} mph: {data['count']} events, "
+                    f"{limit_pct:.1f}% limited, "
+                    f"avg curvature: {avg_curve:.6f}, "
+                    f"avg torque: {avg_torque:.1f}")
 
     return results
 
@@ -149,130 +268,147 @@ def generate_plots(results, model_params):
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # Plot 1: Torque limiting by speed range
+    # Plot 1: Torque limiting by speed range (with minimum count threshold)
     plt.figure(figsize=(12, 6))
 
-    speed_ranges = sorted(results["speed_ranges"].keys())
+    speed_ranges = []
     limiting_percentages = []
+    sample_counts = []
+    min_count = 3  # Minimum number of samples to include in plot
 
-    for speed_range in speed_ranges:
-        data = results["speed_ranges"][speed_range]
-        limit_pct = (data["limited"] / data["count"] * 100) if data["count"] > 0 else 0
-        limiting_percentages.append(limit_pct)
+    for speed_range, data in sorted(results["speed_ranges"].items()):
+        if data["count"] >= min_count:
+            speed_ranges.append(f"{speed_range}-\n{speed_range+10}")
+            limit_pct = (data["limited"] / data["count"] * 100) if data["count"] > 0 else 0
+            limiting_percentages.append(limit_pct)
+            sample_counts.append(data["count"])
 
-    plt.bar([f"{sr}-{sr+10}" for sr in speed_ranges], limiting_percentages)
-    plt.xlabel("Speed Range (mph)")
-    plt.ylabel("Percentage of Events with Torque Limiting (%)")
-    plt.title(f"Torque Limiting by Speed Range\nSensitivity Factor: {model_params.get('sensitivity_factor', 1.0):.2f}")
-    plt.grid(alpha=0.3)
-    plt.savefig(f"{OUTPUT_DIR}/torque_limiting_by_speed.png")
+    if speed_ranges:
+        bars = plt.bar(speed_ranges, limiting_percentages)
 
-    # Plot 2: Required vs Available Torque
-    plt.figure(figsize=(12, 6))
+        # Add count labels to the top of each bar
+        for i, (bar, count) in enumerate(zip(bars, sample_counts)):
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 1,
+                    f'n={count}', ha='center', va='bottom', rotation=0, size=8)
 
-    x_data = []
-    y_req = []
-    y_avail = []
-    colors = []
+        plt.xlabel("Speed Range (mph)")
+        plt.ylabel("Percentage of Events with Torque Limiting (%)")
+        plt.title(f"Torque Limiting by Speed Range\nSensitivity Factor: {model_params.get('sensitivity_factor', 1.0):.2f}")
+        plt.grid(alpha=0.3)
+        plt.ylim(0, 105)  # Leave room for the count labels
+        plt.savefig(f"{OUTPUT_DIR}/torque_limiting_by_speed.png")
 
-    for speed_range in speed_ranges:
-        data = results["speed_ranges"][speed_range]
-        if data["count"] > 0:
-            x_data.append(speed_range + 5)  # Middle of the range
-
-            # Average required torque for this speed range
-            y_req.append(np.mean(data["required_torques"]))
-
-            # Estimated available torque (simplified model)
-            speed_ms = (speed_range + 5) * CV.MPH_TO_MS
-            base_torque = 409  # MAX_STEER_TORQUE
-            available = base_torque
-            if speed_ms < 5.0:
-                available = base_torque
-            elif speed_ms > 30.0:
-                available = base_torque * 0.7
-            else:
-                reduction = (speed_ms - 5.0) / 25.0 * 0.3
-                available = base_torque * (1.0 - reduction)
-
-            y_avail.append(available * 0.85)  # 0.85 is TORQUE_MARGIN
-
-            # Color based on limiting percentage
-            limit_pct = (data["limited"] / data["count"] * 100)
-            colors.append(f"C{min(int(limit_pct/10), 9)}")
-
-    plt.plot(x_data, y_req, 'o-', label="Required Torque")
-    plt.plot(x_data, y_avail, 's-', label="Available Torque")
-    plt.xlabel("Speed (mph)")
-    plt.ylabel("Torque")
-    plt.title("Required vs Available Torque by Speed")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.savefig(f"{OUTPUT_DIR}/torque_vs_speed.png")
-
-    # Plot 3: Curvature vs Speed with Torque Requirement
+    # Plot 2: Curvature vs Speed, colored by limiting status
     plt.figure(figsize=(12, 8))
 
     # Extract data points
     speeds_mph = []
     curvatures = []
-    torque_limited = []
+    is_limited = []
 
     for speed_range, data in results["speed_ranges"].items():
         for i, curve in enumerate(data["curvatures"]):
-            if curve > 0:  # Filter out straight roads
+            if curve > REALISTIC_CURVE_MIN:  # Only include meaningful curves
                 speed_mph = speed_range + 5  # Middle of range as rough estimate
-                speeds_mph.append(speed_mph)
+                real_speed = data["speeds_ms"][i] * CV.MS_TO_MPH
+                speeds_mph.append(real_speed)
                 curvatures.append(curve)
 
-                # Check if this would be torque limited
+                # Check if torque limited
                 required = data["required_torques"][i]
-                torque_limited.append(required)
+                avail_torque = results["average_available_torque"]
+                is_limited.append(required > avail_torque)
 
     # Create scatter plot
-    scatter = plt.scatter(speeds_mph, curvatures, c=torque_limited, cmap='viridis', alpha=0.7)
-
-    # Add colorbar
-    cbar = plt.colorbar(scatter)
-    cbar.set_label('Required Torque')
-
-    # Plot "limiting curve" - the curvature at which torque saturation occurs at each speed
     if speeds_mph:
-        x_curve = np.linspace(min(speeds_mph), max(speeds_mph), 100)
+        plt.scatter(speeds_mph, curvatures, c=is_limited, cmap='coolwarm', alpha=0.7,
+                    s=50, edgecolors='k', linewidths=0.5)
+
+        # Add a colorbar legend
+        cbar = plt.colorbar(ticks=[0, 1])
+        cbar.set_label('Torque Limited')
+        cbar.set_ticklabels(['No', 'Yes'])
+
+        # Plot "limiting curve" - the curvature at which torque saturation occurs at each speed
+        x_curve = np.linspace(5, max(max(speeds_mph), 85), 100)
         y_curve = []
 
         for speed_mph in x_curve:
             speed_ms = speed_mph * CV.MPH_TO_MS
 
-            # Calculate available torque at this speed
-            base_torque = 409  # MAX_STEER_TORQUE
-            if speed_ms < 5.0:
-                available = base_torque
-            elif speed_ms > 30.0:
-                available = base_torque * 0.7
-            else:
-                reduction = (speed_ms - 5.0) / 25.0 * 0.3
-                available = base_torque * (1.0 - reduction)
+            # Calculate available torque (fixed at 409 regardless of speed in the current implementation)
+            available = 409 * 0.85  # MAX_STEER_TORQUE * TORQUE_MARGIN
 
-            available *= 0.85  # TORQUE_MARGIN
+            # Set the required values for the limiting curve calculation
+            # From SteeringTorqueSaturationPredictor in chauffeur_vtsc.py - use same values
+            vehicle_mass = 2055  # Should match VEHICLE_MASS in SteeringTorqueSaturationPredictor
+            steering_ratio = 16.0  # Should match STEERING_RATIO in SteeringTorqueSaturationPredictor
+            model_scale_factor = 0.01  # Should match MODEL_SCALE_FACTOR in SteeringTorqueSaturationPredictor
+            sensitivity = model_params.get('sensitivity_factor', 1.0)
 
-            # Convert to limiting curvature
-            # curvature = torque / (speed^2 * mass * steering_ratio * 0.01 * sensitivity)
+            # Solve for the curvature at which we'd hit the torque limit
+            # curvature = torque / (speed^2 * mass * steering_ratio * model_scale_factor * sensitivity)
             if speed_ms > 0:
-                limiting_curve = available / (speed_ms**2 * 2055 * 16 * 0.01 * model_params.get('sensitivity_factor', 1.0))
+                limiting_curve = available / (speed_ms**2 * vehicle_mass * steering_ratio * model_scale_factor * sensitivity)
                 y_curve.append(limiting_curve)
             else:
                 y_curve.append(0)
 
         plt.plot(x_curve, y_curve, 'r-', linewidth=2, label="Torque Saturation Limit")
 
-    plt.xlabel("Speed (mph)")
-    plt.ylabel("Curvature")
-    plt.title("Road Curvature vs Speed with Torque Requirements")
-    plt.yscale('log')
-    plt.grid(True, which="both", ls="--", alpha=0.3)
-    plt.legend()
-    plt.savefig(f"{OUTPUT_DIR}/curvature_vs_speed.png")
+        plt.xlabel("Speed (mph)")
+        plt.ylabel("Curvature")
+        plt.title("Road Curvature vs Speed with Torque Limiting Status")
+        plt.yscale('log')
+        plt.grid(True, which="both", ls="--", alpha=0.3)
+        plt.legend()
+        plt.savefig(f"{OUTPUT_DIR}/curvature_vs_speed.png")
+
+    # Plot 3: Torque Requirements vs Speed
+    plt.figure(figsize=(12, 6))
+
+    # Group data by speed range for box plots
+    speeds_for_plot = []
+    torques_for_plot = []
+
+    for speed_range, data in sorted(results["speed_ranges"].items()):
+        if data["count"] >= min_count:
+            for _, torque in enumerate(data["required_torques"]):
+                speeds_for_plot.append(speed_range + 5)  # Middle of the range
+                torques_for_plot.append(torque)
+
+    if speeds_for_plot:
+        # Create a box plot grouped by speed
+        from itertools import groupby
+
+        # Group data by speed
+        speed_groups = defaultdict(list)
+        for speed, torque in zip(speeds_for_plot, torques_for_plot):
+            speed_groups[speed].append(torque)
+
+        # Prepare data for box plot
+        box_data = []
+        labels = []
+        for speed, torques in sorted(speed_groups.items()):
+            if len(torques) >= min_count:
+                box_data.append(torques)
+                labels.append(f"{int(speed-5)}-{int(speed+5)}")
+
+        plt.boxplot(box_data, labels=labels, patch_artist=True)
+
+        # Add a horizontal line at the available torque level
+        plt.axhline(y=results["average_available_torque"], color='r', linestyle='-',
+                  label=f"Available Torque: {results['average_available_torque']:.0f}")
+
+        plt.xlabel("Speed Range (mph)")
+        plt.ylabel("Required Torque")
+        plt.title("Distribution of Required Torque by Speed Range")
+        plt.grid(alpha=0.3)
+        plt.legend()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(f"{OUTPUT_DIR}/torque_vs_speed_distribution.png")
 
     print(f"Plots saved to {OUTPUT_DIR}/")
 
@@ -284,12 +420,30 @@ def main():
     args = parser.parse_args()
 
     print(f"Analyzing torque prediction data from the last {args.days} days...")
-    logs = load_logs(days=args.days)
+
+    # Check if the log directory exists
+    if not os.path.exists(LOG_PATH):
+        print(f"Error: Log directory not found at {LOG_PATH}")
+        print(f"Expected path: {LOG_PATH}")
+        print("Make sure you have the log_dir directory in your workspace.")
+        return
+
+    # We might want to look for other events like carState, modelV2, etc.
+    # But for now, just focus on torque_predictor events
+    logs, additional_data = load_logs(days=args.days)
     model_params = load_torque_model()
 
-    print(f"Found {len(logs)} relevant log entries")
+    print(f"Found {len(logs)} relevant real curve log entries")
     print(f"Current model parameters: sensitivity_factor={model_params.get('sensitivity_factor', 1.0):.3f}, "
           f"confidence={model_params.get('confidence', 0.8):.3f}")
+
+    if not logs:
+        print("\nNo torque predictor logs found for real curve scenarios. This could be because:")
+        print("1. You haven't driven the car with the torque predictor feature enabled")
+        print("2. The car hasn't encountered any significant curves to trigger torque prediction")
+        print("3. The logs are stored in a different format or location")
+        print("\nTry driving the car on some curvy roads with openpilot engaged and then run this script again.")
+        return
 
     results = analyze_data(logs, verbose=args.verbose)
 
