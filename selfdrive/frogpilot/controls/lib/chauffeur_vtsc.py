@@ -25,11 +25,10 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
 
-    # More conservative at low speeds (like taco bell) but keeping the logistic structure
     base = 1.4     # Lower base value (more conservative at low speeds)
-    span = 1.8     # Adjusted span to reach desired max
-    center = 30.0  # Shifted center point to be more conservative in mid-range
-    k = 0.10       # Same slope factor
+    span = 1.8     # Additional range to reach the desired max
+    center = 30.0  # Speed (mph) around which the logistic is centered
+    k = 0.10       # Slope factor
     lat_acc = base + span / (1 + math.exp(-k * (v_ego_mph - center)))
     lat_acc = min(lat_acc, 3.2)  # Maximum lateral acceleration limit
 
@@ -39,7 +38,8 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
 def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     """
     Identify 'peaks' in curvature.
-    Keeping your threshold-based approach, though you can make it continuous if you prefer.
+    This logic is largely unchanged from your snippet: we look for points
+    that exceed the threshold and are local maxima.
     """
     apex_indices = []
     for i in range(1, len(curv_array) - 1):
@@ -58,7 +58,7 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
 def dynamic_decel_scale(v_ego_ms: float) -> float:
     """
     Smooth function that transitions from 8.0 at 5m/s to 2.0 at 25m/s
-    using a polynomial. Or you can do logistic, etc.
+    using a polynomial. (No direct torque scaling.)
     """
     min_speed = 5.0
     max_speed = 25.0
@@ -71,13 +71,12 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
         return min_scale
     else:
         pos = (v_ego_ms - min_speed) / (max_speed - min_speed)
-        # smooth polynomial blend
-        return max_scale - (max_scale - min_scale) * (3*pos**2 - 2*pos**3)
+        return max_scale - (max_scale - min_scale) * (3 * pos**2 - 2 * pos**3)
 
 
 def dynamic_accel_scale(v_ego_ms: float) -> float:
     """
-    Tied to decel scale, then scaled up at low speeds.
+    Similar logic for acceleration scale, referencing the decel scale.
     """
     decel_scale = dynamic_decel_scale(v_ego_ms)
     if v_ego_ms < 10.0:
@@ -89,18 +88,17 @@ def dynamic_accel_scale(v_ego_ms: float) -> float:
 
 def dynamic_jerk_scale(v_ego_ms: float) -> float:
     """
-    Keep the jerk scale consistent with decel scale or do a simpler approach.
+    Keep jerk scale consistent with decel scale (or do your own logic).
     """
     return dynamic_decel_scale(v_ego_ms)
 
 
 def margin_time_fn(v_ego_ms: float) -> float:
     """
-    Time-based margin. We keep your piecewise linear approach but rewrite it as
-    a simple continuous function if you prefer:
-
-    - In practice, you had breakpoints at 0 m/s → 1.5s, 15 m/s → 3.5s, 31.3 m/s → 5.5s
-    - Let's do linear interpolation between them (which is effectively what your code did).
+    Time-based margin function.
+    - 0 m/s → 1.5s
+    - 15 m/s → 3.5s
+    - 31.3 m/s (~70 mph) → 5.5s
     """
     v_low, t_low = 0.0, 1.5
     v_med, t_med = 15.0, 3.5
@@ -123,36 +121,32 @@ def margin_time_fn(v_ego_ms: float) -> float:
 # ------------
 def logistic_transition(x, center, scale, lo, hi):
     """
-    A continuous function that transitions from lo to hi in a smooth logistic shape
-    around the 'center' point, with slope controlled by 'scale'.
-
-    e.g. logistic_transition( speed, 8.0, 3.0, 2.0, 3.0 )
+    A continuous logistic that transitions from lo to hi around 'center'.
     """
     return lo + (hi - lo) / (1 + math.exp(-(x - center) / scale))
 
 
 def early_approach_time_fn(apex_speed: float) -> float:
     """
-    Replace the piecewise approach with a logistic approach for continuous behavior.
-    Suppose we want 2s at 8 m/s, 3s at 22 m/s. We'll pick center ~ (8+22)/2=15,
-    scale=3, so it transitions over ~6 m/s.
+    Logistic-based function for how many seconds in advance to start your apex approach decel.
+    E.g. from 2.0s at ~8 m/s to 3.0s at ~22 m/s.
     """
     return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=2.0, hi=3.0)
 
 
 def early_spool_time_fn(apex_speed: float) -> float:
     """
-    Similarly, spool from 1s at 8 m/s to 2s at 22 m/s in a logistic manner.
+    Logistic-based function for how many seconds in advance to start spool-up after an apex.
+    E.g. from 1.0s at ~8 m/s to 2.0s at ~22 m/s.
     """
     return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=1.0, hi=2.0)
 
 
 def short_horizon_factor(horizon_time: float) -> float:
     """
-    A smooth logistic from factor=0.4 (for horizon ~1.5s) to factor=1.0 (for horizon ~4.0s).
-    We'll center around ~2.75s with a scale of ~0.75s, for instance.
+    A logistic factor from ~0.4 (horizon=1.5s) up to ~1.0 (horizon=4.0s).
+    This can slightly re-limit spool-ups if horizon is short.
     """
-    # We'll clamp so it doesn't exceed [0.4, 1.0] anyway
     raw = logistic_transition(horizon_time, center=2.75, scale=0.75, lo=0.4, hi=1.0)
     return clip(raw, 0.4, 1.0)
 
@@ -163,49 +157,57 @@ def short_horizon_factor(horizon_time: float) -> float:
 class SteeringTorqueSaturationPredictor:
     """
     Predicts and learns how much steering torque is needed to hold a given
-    curvature at a given speed, while also factoring in road banking.
+    curvature at a given speed, factoring in road banking if desired.
 
-    The changes here:
-      - The 'learning rate' logic uses a mild exponential average
-      - Max available torque is simply 409 * margin (no more speed-based reduction)
-      - We preserve a continuous update for sensitivity without huge jump thresholds
-      - We rename the '0.01' factor to MODEL_SCALE_FACTOR for clarity
+    Key points:
+    - We do *not* reduce max torque by speed. It's always 409 (with margin).
+    - We keep a mild exponential average for error to avoid jitter.
+    - We have a short 'calibration phase' for the first N samples that uses a
+      higher learning rate.
+    - We have a special 'driver intervention learn' to heavily weight user overrides.
+    - We load/save basic model state to disk so that learning persists across reboots.
     """
 
     def __init__(self, vehicle_params, debug=False):
-        # Basic vehicle parameters (Kia EV6, etc.)
+        # Basic vehicle parameters
         self.VEHICLE_MASS = vehicle_params.mass
         self.STEERING_RATIO = vehicle_params.steerRatio
-        # Always assume 409 raw torque is max, with a margin
+        # Always assume 409 raw torque is max
         self.MAX_STEER_TORQUE = 409
+        # If you want a margin, you can do .85, but you can also set it to 1.0 if you prefer
         self.TORQUE_MARGIN = 0.85
         self.WHEELBASE = vehicle_params.wheelbase
 
-        # Model constants
         self.MODEL_SCALE_FACTOR = 0.01  # previously '0.01' in your code
 
-        # Learning parameters
-        self.learning_rate = 0.02  # base multiplier for adjustments
-        self.sensitivity_factor = 1.0
-        self.torque_error_ema = 0.0     # We'll keep an EMA of the last error
-        self.ema_alpha = 0.01          # smoothing factor for error
-        self.confidence = 0.8          # can auto-adjust over time if desired
+        # Baseline learning parameters
+        self.learning_rate = 0.02
+        self.ema_alpha = 0.01  # Smoothing factor for error
 
-        # Model state
+        # Calibration-phase overrides
+        self.initial_calibration_samples = 100  # faster adaptation for the first 100 samples
+        self.calibration_learning_rate = 0.10
+        self.calibration_ema_alpha = 0.05
+
+        # Internal state
+        self.sensitivity_factor = 1.0
+        self.torque_error_ema = 0.0
+        self.confidence = 0.8
+
         self.last_update_time = 0
         self.last_pred_required_torque = 0
         self.last_actual_torque = 0
         self.last_curvature = 0
         self.last_speed = 0
 
-        # History for offline analysis
+        # For storing recent samples in memory (not on disk)
         self.samples = deque(maxlen=1000)
         self.debug = debug
 
-        # Param path
+        # Path to save parameters
         self.param_path = "/data/openpilot/selfdrive/frogpilot/model_weights/torque_predictor.pkl"
 
-        # Telemetry
+        # Logging
         self.last_log_time = 0
         self.log_frequency = 5.0
 
@@ -219,7 +221,6 @@ class SteeringTorqueSaturationPredictor:
                     data = pickle.load(f)
                     self.sensitivity_factor = data.get('sensitivity_factor', 1.0)
                     self.confidence = data.get('confidence', 0.8)
-                    # Road bank stats loaded, if present
                     road_bank_stats = data.get('road_bank_stats', {})
                     if self.debug and road_bank_stats:
                         print(f"Loaded road bank stats: mean={road_bank_stats.get('mean', 0.0):.4f}, "
@@ -236,6 +237,7 @@ class SteeringTorqueSaturationPredictor:
 
     def _save_model(self):
         try:
+            # Summarize road bank in your history if desired
             road_bank_samples = [s['road_bank'] for s in self.samples if 'road_bank' in s]
             road_bank_stats = {
                 'mean': np.mean(road_bank_samples) if road_bank_samples else 0.0,
@@ -257,12 +259,15 @@ class SteeringTorqueSaturationPredictor:
                 print(f"Error saving torque model: {e}")
 
     def log_telemetry(self, curvature, speed, required_torque, available_torque, torque_limited=False, road_bank=0.0):
+        """
+        Rate-limit logging so we don't spam at high frequency.
+        """
         current_time = time.time()
         if current_time - self.last_log_time < self.log_frequency:
             return
         self.last_log_time = current_time
 
-        gravity_component = 9.81 * math.sin(road_bank)  # sign depends on bank direction
+        gravity_component = 9.81 * math.sin(road_bank)
         cloudlog.event(
             "torque_predictor",
             curvature=curvature,
@@ -279,11 +284,9 @@ class SteeringTorqueSaturationPredictor:
 
     def estimate_required_torque(self, curvature, speed, road_bank=0.0) -> float:
         """
-        Simplified physics:
+        Simplified physics approach:
           required_torque = (lateral_acc - g*sin(bank)) * mass * steer_ratio * MODEL_SCALE_FACTOR * sensitivity
         """
-        # lateral_acc = speed^2 * curvature, ignoring sign for torque magnitude
-        # but watch sign of curvature vs. bank if you do a direction-based approach
         lateral_accel = (speed**2) * curvature
         gravity_component = 9.81 * math.sin(road_bank)
         effective_lat_accel = lateral_accel - gravity_component
@@ -293,26 +296,31 @@ class SteeringTorqueSaturationPredictor:
         return required_torque
 
     def get_max_available_torque(self) -> float:
+        # If you want to keep the margin in effect, do:
         return self.MAX_STEER_TORQUE
+        # Or just return self.MAX_STEER_TORQUE if you want the full 409.
 
     def solve_for_torque_limited_speed(self, curvature, max_torque, road_bank=0.0):
         """
-        speed^2 = ( (max_torque/(mass*steer_ratio*scale*sens)) + g*sin(bank) ) / curvature
+        If we are torque-limited, solve speed from:
+          speed^2 = ( (max_torque/(mass*steer_ratio*scale*sens)) + g*sin(bank) ) / curvature
+
+        This does *not* reduce torque at higher speeds explicitly. It's purely
+        whether you exceed that 409-based limit or not.
         """
         if curvature < 1e-9:
-            return 70.0  # effectively no curve
+            return 70.0  # effectively no curve, or a very gentle one
         gravity_component = 9.81 * math.sin(road_bank)
         denom = self.VEHICLE_MASS * self.STEERING_RATIO * self.MODEL_SCALE_FACTOR * self.sensitivity_factor
         torque_factor = max_torque / denom
         adjusted_factor = torque_factor + gravity_component
         if adjusted_factor <= 0.0:
-            return 0.1  # so you don't sqrt a negative
+            return 0.1  # avoid sqrt of negative
         return math.sqrt(adjusted_factor / curvature)
 
     def update_with_measurement(self, actual_torque, last_curvature, last_speed, road_bank=0.0):
         """
-        We do a mild exponential moving average of the torque error to avoid big jumps from noise.
-        Then we do a small fractional adjustment of sensitivity_factor based on that average error.
+        Normal streaming updates from observed torque.
         """
         if last_curvature < 1e-6 or last_speed < 1.0:
             return
@@ -321,7 +329,7 @@ class SteeringTorqueSaturationPredictor:
         predicted_torque = self.estimate_required_torque(last_curvature, last_speed, road_bank)
         torque_error = actual_torque - predicted_torque
 
-        # Keep a history sample
+        # Keep sample
         self.samples.append({
             'curvature': last_curvature,
             'speed': last_speed,
@@ -329,23 +337,32 @@ class SteeringTorqueSaturationPredictor:
             'actual_torque': actual_torque,
             'error': torque_error,
             'timestamp': self.last_update_time,
-            'road_bank': road_bank
+            'road_bank': road_bank,
+            'intervention': False,
         })
 
-        # Update a mild EMA
-        self.torque_error_ema = (1.0 - self.ema_alpha) * self.torque_error_ema + self.ema_alpha * torque_error
+        # Decide if we're in calibration phase
+        if len(self.samples) < self.initial_calibration_samples:
+            current_learning_rate = self.calibration_learning_rate
+            current_ema_alpha = self.calibration_ema_alpha
+        else:
+            current_learning_rate = self.learning_rate
+            current_ema_alpha = self.ema_alpha
 
-        # Adjust sensitivity factor by a fraction of the normalized error
-        # A negative torque_error_ema will reduce sensitivity, positive increases it
+        # Update torque_error_ema
+        self.torque_error_ema = (
+            (1.0 - current_ema_alpha) * self.torque_error_ema
+            + current_ema_alpha * torque_error
+        )
+
+        # Adjust sensitivity factor
         if abs(predicted_torque) > 1e-3:
             error_ratio = self.torque_error_ema / predicted_torque
-            adjustment = self.learning_rate * error_ratio
-            # Make a small, continuous shift
+            adjustment = current_learning_rate * error_ratio
             new_sens = self.sensitivity_factor * (1 + adjustment)
             self.sensitivity_factor = clip(new_sens, 0.5, 2.0)
 
-        # Optionally adjust confidence if we want to get more or less conservative over time
-        # For demonstration, we do a mild shift:
+        # Mild shift in confidence if desired
         self.confidence = clip(self.confidence + 0.0001 * (-torque_error), 0.5, 1.0)
 
         # Periodically save model
@@ -358,16 +375,59 @@ class SteeringTorqueSaturationPredictor:
         self.last_curvature = last_curvature
         self.last_speed = last_speed
 
+    def driver_intervention_learn(self, intervention_torque, curvature, speed, road_bank=0.0):
+        """
+        Special heavier weighting if the driver intervenes to correct understeer/oversteer,
+        or if they press gas/brake. We treat it like a big update so the system "learns" quickly.
+        """
+        if curvature < 1e-6 or speed < 1.0:
+            return
+
+        predicted_torque = self.estimate_required_torque(curvature, speed, road_bank)
+        torque_error = intervention_torque - predicted_torque
+
+        # We scale up the error so it has a bigger effect
+        intervention_factor = 5.0
+        torque_error *= intervention_factor
+
+        # Big alpha so we push the EMA strongly
+        big_alpha = 0.2
+        self.torque_error_ema = (
+            (1.0 - big_alpha) * self.torque_error_ema
+            + big_alpha * torque_error
+        )
+
+        # Increase sensitivity factor if error is positive, reduce if negative
+        if abs(predicted_torque) > 1e-3:
+            error_ratio = self.torque_error_ema / predicted_torque
+            # Multiply by 5.0 for a bigger step
+            new_sens = self.sensitivity_factor * (1 + self.learning_rate * 5.0 * error_ratio)
+            self.sensitivity_factor = clip(new_sens, 0.5, 2.0)
+
+        # Optionally store a sample
+        self.samples.append({
+            'curvature': curvature,
+            'speed': speed,
+            'predicted_torque': predicted_torque,
+            'actual_torque': intervention_torque,
+            'error': torque_error,
+            'timestamp': time.time(),
+            'road_bank': road_bank,
+            'intervention': True,
+        })
+
+        # Save the model right away if desired
+        self._save_model()
+
     def apply_model_confidence(self, safe_speed, curvature):
         """
-        If we want to be more conservative when confidence is low, we can do:
-            safe_speed *= confidence
-        But we'll keep a small lower bound so we don't overslow too drastically.
+        If you want to reduce safe speed for lower confidence, you can do:
+          safe_speed *= (0.7 + 0.3 * self.confidence).
+        This is purely optional. It does not scale with speed, just scales by confidence.
         """
         if curvature < 1e-5:
-            # basically a straight line
             return safe_speed
-        return safe_speed * (0.7 + 0.3 * self.confidence)  # never reduce below ~70%
+        return safe_speed * (0.7 + 0.3 * self.confidence)
 
 
 # --------------------------
@@ -389,8 +449,11 @@ class VisionTurnSpeedController:
         emergency_lookahead_frames=8,
     ):
         """
-        The main speed planning remains largely the same.
-        We only changed the torque-limiting portion to rely on the new approach.
+        The main speed planner. We incorporate the updated torque predictor that
+        does NOT reduce torque availability at higher speeds. It's always 409-based.
+
+        Also includes a placeholder for calling 'driver_intervention_learn'
+        if we detect the driver is overriding.
         """
         self.turn_smoothing_alpha = turn_smoothing_alpha
         self.reaccel_alpha = reaccel_alpha
@@ -399,8 +462,8 @@ class VisionTurnSpeedController:
 
         self.MAX_DECEL = max_decel
         self.MAX_JERK = max_jerk
-        self.MAX_ACCEL = max_accel if max_accel is not None else 2.0 * max_decel
-        self.MAX_JERK_ACCEL = max_jerk_accel if max_jerk_accel is not None else 2.0 * max_jerk
+        self.MAX_ACCEL = max_accel if max_accel is not None else (2.0 * max_decel)
+        self.MAX_JERK_ACCEL = max_jerk_accel if max_jerk_accel is not None else (2.0 * max_jerk)
 
         self.EMERGENCY_DECEL = emergency_decel
         self.EMERGENCY_SPEED_TOLERANCE = emergency_speed_tolerance
@@ -412,7 +475,7 @@ class VisionTurnSpeedController:
 
         self.sm = messaging.SubMaster(['modelV2', 'carState', 'liveParameters'])
 
-        # Kia EV6 default
+        # Example vehicle params (Kia EV6)
         self.vehicle_params = type('obj', (), {
             'mass': 2055,
             'wheelbase': 2.9,
@@ -423,31 +486,67 @@ class VisionTurnSpeedController:
 
         self.last_cruise_nonzero = False
         self.current_road_bank = 0.0
+        self.last_curvature = 0.0
 
     def reset(self, speed: float) -> None:
         self.prev_target_speed = speed
         self.current_accel = 0.0
 
     def update(self, v_ego: float, v_cruise_cluster: float, turn_aggressiveness=1.0) -> float:
+        """
+        Main method for generating a target speed given:
+        - current speed (v_ego)
+        - cruise set speed (v_cruise_cluster)
+        - optional turn aggressiveness
+        """
         self.sm.update()
         model_data = self.sm['modelV2']
         car_state = self.sm['carState']
 
+        # Update current road bank if available
         if self.sm.updated['liveParameters']:
             self.current_road_bank = self.sm['liveParameters'].roll
 
-        # Update the torque predictor with actual torque
-        if hasattr(car_state, 'steeringTorque') and abs(car_state.steeringTorque) > 0:
-            self.torque_predictor.update_with_measurement(
-                car_state.steeringTorque,
-                getattr(self, 'last_curvature', 0.0),
-                v_ego,
-                self.current_road_bank
+        # Example: if the user is pressing steering, or gas or brake, you might call:
+        if car_state.steeringPressed:
+            # e.g. if they are actively steering, maybe they are correcting
+            self.torque_predictor.driver_intervention_learn(
+                intervention_torque=car_state.steeringTorque,
+                curvature=self.last_curvature,
+                speed=v_ego,
+                road_bank=self.current_road_bank
+            )
+        elif car_state.gasPressed:
+            # user wants more speed → treat it as negative error (we under-shot)
+            self.torque_predictor.driver_intervention_learn(
+                intervention_torque=-999,  # or some big negative
+                curvature=self.last_curvature,
+                speed=v_ego,
+                road_bank=self.current_road_bank
+            )
+        elif car_state.brakePressed:
+            # user wants less speed → treat it as positive error (we over-shot)
+            self.torque_predictor.driver_intervention_learn(
+                intervention_torque=999,  # or some big positive
+                curvature=self.last_curvature,
+                speed=v_ego,
+                road_bank=self.current_road_bank
             )
 
+        # Now do the normal streaming update with actual torque
+        if hasattr(car_state, 'steeringTorque'):
+            # We only do an update if there's some meaningful torque
+            if abs(car_state.steeringTorque) > 0.5:
+                self.torque_predictor.update_with_measurement(
+                    car_state.steeringTorque,
+                    self.last_curvature,
+                    v_ego,
+                    self.current_road_bank
+                )
+
+        # If we just resumed from 0 → some nonzero speed
         is_real_resume = (not self.last_cruise_nonzero) and (v_cruise_cluster > 1e-1)
         self.last_cruise_nonzero = (v_cruise_cluster > 1e-1)
-
         if is_real_resume:
             self.reset(v_cruise_cluster)
             self.prev_v_cruise_cluster = v_cruise_cluster
@@ -533,7 +632,6 @@ class VisionTurnSpeedController:
         if max(curvature_33) < 1e-5:
             return 30.0
 
-        # Determine horizon time
         valid_pts = np.where(velocity_pred_33 > 0.01)[0]
         if len(valid_pts) == 0:
             return 30.0
@@ -572,14 +670,16 @@ class VisionTurnSpeedController:
         for i in range(n):
             lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
             c = max(curvature[i], eps)
-            s = math.sqrt(lat_acc_limit / c)  # standard lat-acc-limited speed
+            s = math.sqrt(lat_acc_limit / c)  # lat-acc-limited speed
 
-            # NEW: Check torque limit
+            # Torque-limited check
             required_torque = self.torque_predictor.estimate_required_torque(c, s, self.current_road_bank)
             torque_limited = False
             if required_torque > max_torque:
                 torque_limited = True
-                torque_limited_speed = self.torque_predictor.solve_for_torque_limited_speed(c, max_torque, self.current_road_bank)
+                torque_limited_speed = self.torque_predictor.solve_for_torque_limited_speed(
+                    c, max_torque, self.current_road_bank
+                )
                 s = min(s, torque_limited_speed)
 
             # Confidence factor
@@ -587,14 +687,17 @@ class VisionTurnSpeedController:
 
             # Log only for i == 0 to avoid spam
             if i == 0:
-                self.torque_predictor.log_telemetry(c, s, required_torque, max_torque, torque_limited, self.current_road_bank)
-                self.last_curvature = c  # store for learning logic
-
+                self.torque_predictor.log_telemetry(
+                    c, s, required_torque, max_torque, torque_limited, self.current_road_bank
+                )
             safe_speeds[i] = s
 
         planned = safe_speeds.copy()
 
-        # 2) Find apexes
+        # For learning updates in the next cycle
+        self.last_curvature = curvature[0]
+
+        # 2) Identify apexes
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         spool_mult = short_horizon_factor(horizon_time)
 
@@ -603,12 +706,12 @@ class VisionTurnSpeedController:
 
             # approach apex earlier
             decel_sec = early_approach_time_fn(apex_speed)
-            # spool out earlier
+            # spool out
             spool_sec = early_spool_time_fn(apex_speed)
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
             spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
-            spool_end   = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
+            spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
             # Ramp down into apex
             if spool_start > decel_start:
@@ -663,7 +766,7 @@ class VisionTurnSpeedController:
             feasible_speed = v_future - desired_acc * dt_ij
             planned[i] = min(planned[i], feasible_speed)
 
-        # 5) Forward pass
+        # 5) Forward pass (accel-limit)
         accel_mult = 1.0
         for i in range(1, n):
             dt_i = dt_array[i - 1] if (i - 1 < len(dt_array)) else 0.05
