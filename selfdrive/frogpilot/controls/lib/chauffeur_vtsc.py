@@ -9,7 +9,6 @@ from collections import deque
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
 from openpilot.common.params import Params
-from openpilot.common.realtime import sec_since_boot
 from openpilot.common.logger import cloudlog
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
@@ -258,7 +257,7 @@ class SteeringTorqueSaturationPredictor:
                 print(f"Error saving torque model: {e}")
 
     def log_telemetry(self, curvature, speed, required_torque, available_torque, torque_limited=False, road_bank=0.0):
-        current_time = sec_since_boot()
+        current_time = time.time()
         if current_time - self.last_log_time < self.log_frequency:
             return
         self.last_log_time = current_time
@@ -318,7 +317,7 @@ class SteeringTorqueSaturationPredictor:
         if last_curvature < 1e-6 or last_speed < 1.0:
             return
 
-        self.last_update_time = sec_since_boot()
+        self.last_update_time = time.time()
         predicted_torque = self.estimate_required_torque(last_curvature, last_speed, road_bank)
         torque_error = actual_torque - predicted_torque
 
