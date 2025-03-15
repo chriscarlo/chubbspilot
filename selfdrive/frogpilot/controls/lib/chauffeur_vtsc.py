@@ -210,7 +210,7 @@ class SteeringTorqueSaturationPredictor:
         self.debug = debug
 
         # Path to save parameters - use repo-local path
-        self.param_path = "selfdrive/frogpilot/model_weights/torque_predictor.pkl"
+        self.param_path = "/data/openpilot/selfdrive/frogpilot/model_weights/torque_predictor.pkl"
 
         # Logging
         self.last_log_time = 0
