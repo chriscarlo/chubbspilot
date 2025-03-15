@@ -9,7 +9,7 @@ from collections import deque
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
 from openpilot.common.params import Params
-from openpilot.common.logger import cloudlog
+from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
 
