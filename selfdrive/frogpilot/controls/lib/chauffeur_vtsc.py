@@ -152,7 +152,7 @@ def short_horizon_factor(horizon_time: float) -> float:
 
 
 # ---------------------------------------------------
-#   REPLACED: STEERING TORQUE SATURATION PREDICTOR
+#   STEERING TORQUE SATURATION PREDICTOR (BINNED)
 # ---------------------------------------------------
 class SteeringTorqueSaturationPredictor:
     """
@@ -293,12 +293,17 @@ class SteeringTorqueSaturationPredictor:
         Called regularly to log actual on-road torque usage. This is how we 'learn.'
         - If speed/curvature are tiny or out of range, ignore them.
         - If saturating, detect it and switch out of passive_mode if needed.
+        - Save model only if we got saturation.
         """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
 
-        self.detect_saturation_event(actual_torque)
+        saturation_detected = self.detect_saturation_event(actual_torque)
         self._record_observation(speed, curvature, actual_torque)
+
+        # Only save if saturating
+        if saturation_detected:
+            self._save_model()
 
         # Optionally store raw sample
         self.samples.append({
@@ -310,14 +315,11 @@ class SteeringTorqueSaturationPredictor:
             "saturation": (abs(actual_torque) > 0.95 * self.MAX_STEER_TORQUE),
         })
 
-        # Save occasionally
-        if self.total_data_count % 100 == 0:
-            self._save_model()
-
     def driver_intervention_learn(self, intervention_torque, curvature, speed, road_bank=0.0):
         """
         If the driver forcibly intervenes (steer override, strong brake, strong gas),
         we treat that as a clue that more/less torque might be needed. We record it.
+        Then we save immediately, as it's an important event.
         """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
@@ -325,10 +327,10 @@ class SteeringTorqueSaturationPredictor:
         # Immediately exit passive mode
         self.passive_mode = False
 
-        # Record it
         self._record_observation(speed, curvature, intervention_torque)
-        self.detect_saturation_event(intervention_torque)
+        self.detect_saturation_event(intervention_torque)  # update counts if needed
 
+        # Save on driver intervention
         self._save_model()
 
     def get_max_available_torque(self):
@@ -399,8 +401,6 @@ class VisionTurnSpeedController:
         The main speed planner. We incorporate the updated torque predictor that
         does NOT reduce torque at higher speeds unless we've actually observed it
         saturating or being overridden in that speed/curvature range.
-
-        Also includes calls to 'driver_intervention_learn' if we detect the driver is overriding.
         """
         self.turn_smoothing_alpha = turn_smoothing_alpha
         self.reaccel_alpha = reaccel_alpha
@@ -624,9 +624,7 @@ class VisionTurnSpeedController:
 
             if not self.torque_predictor.passive_mode and observed_torque > max_torque:
                 torque_limited = True
-                # If torque_limited, you can reduce speed further.
-                # For demonstration, clamp to e.g. 25 m/s (~90 km/h).
-                # You could do a more fancy interpolation or bin-based search.
+                # Simple clamp for demonstration:
                 s = min(s, 25.0)
 
             # Log only once at i=0 to avoid spam

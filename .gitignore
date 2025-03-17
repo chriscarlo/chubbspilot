@@ -2622,3 +2622,10 @@ realdata_dir/00000095--73e25fe20d--6/qcamera.ts
 realdata_dir/00000095--73e25fe20d--6/qlog
 realdata_dir/00000095--73e25fe20d--6/rlog
 /log_dir
+simple_analyzer.py
+selfdrive/frogpilot/controls/lib/longitudinal_analyzer.py
+selfdrive/frogpilot/reporting/longitudinal_control_summary.md
+selfdrive/frogpilot/reporting/event_types.txt
+recent_logs.txt
+selfdrive/frogpilot/reporting/search_results.txt
+selfdrive/frogpilot/reporting/unique_fields.txt
