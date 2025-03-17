@@ -161,14 +161,10 @@ class SteeringTorqueSaturationPredictor:
     - If we have no observation for that bin, default to "no torque limit."
     - If we see saturations or driver interventions, we record those torque values.
     - We do *not* do any theoretical torque formula anymore.
-
-    'passive_mode' remains True until we observe a saturation or driver intervention;
-    then we start applying any torque-based limits (if the user wants to do so in the
-    speed planner).
     """
 
     def __init__(self, vehicle_params, debug=False):
-        # Basic (mostly unused now, but kept for possible expansions)
+        # Basic vehicle parameters
         self.VEHICLE_MASS = vehicle_params.mass
         self.STEERING_RATIO = vehicle_params.steerRatio
         self.MAX_STEER_TORQUE = 409
@@ -317,9 +313,8 @@ class SteeringTorqueSaturationPredictor:
 
     def driver_intervention_learn(self, intervention_torque, curvature, speed, road_bank=0.0):
         """
-        If the driver forcibly intervenes (steer override, strong brake, strong gas),
-        we treat that as a clue that more/less torque might be needed. We record it.
-        Then we save immediately, as it's an important event.
+        If the driver forcibly intervenes, we treat that as a clue that more/less
+        torque might be needed. We record it. Then we save immediately, as it's important.
         """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
@@ -328,9 +323,7 @@ class SteeringTorqueSaturationPredictor:
         self.passive_mode = False
 
         self._record_observation(speed, curvature, intervention_torque)
-        self.detect_saturation_event(intervention_torque)  # update counts if needed
-
-        # Save on driver intervention
+        self.detect_saturation_event(intervention_torque)  # updates counts if needed
         self._save_model()
 
     def get_max_available_torque(self):
@@ -345,16 +338,17 @@ class SteeringTorqueSaturationPredictor:
 
     def predict_observed_torque(self, speed, curvature):
         """
-        Returns the *observed* torque for the given (speed, curvature) bin,
-        purely from the whitelist. If we have no data, returns 0.0 → no limit.
-        If we do have data, that can be used to check if it exceeds hardware.
+        Returns the *observed* torque for the given bin, purely from the whitelist.
+        If we have no data, returns 0.0 → no limit. If we do have data, that can be
+        used to check if it exceeds hardware.
         """
         if self.passive_mode:
             # Passive mode → never limit
             return 0.0
         return self._find_bin_max_torque(speed, curvature)
 
-    def log_telemetry(self, curvature, speed, predicted_torque, available_torque, torque_limited=False):
+    def log_telemetry(self, curvature, speed, predicted_torque,
+                      available_torque, torque_limited=False):
         """
         Simple rate-limited logging for debugging or telemetry.
         """
@@ -363,6 +357,7 @@ class SteeringTorqueSaturationPredictor:
             return
         self.last_log_time = now
 
+        # Log to the Cloudlog for debugging
         cloudlog.event(
             "torque_predictor",
             curvature=curvature,
@@ -375,8 +370,9 @@ class SteeringTorqueSaturationPredictor:
             total_data_count=self.total_data_count
         )
         if self.debug:
-            print(f"[TorquePredictor] speed={speed:.1f} curv={curvature:.6f} pred_torque={predicted_torque:.1f} "
-                  f"avail={available_torque:.1f} limited={torque_limited} passive={self.passive_mode}")
+            print(f"[TorquePredictor] speed={speed:.1f} curv={curvature:.6f} "
+                  f"pred_torque={predicted_torque:.1f} avail={available_torque:.1f} "
+                  f"limited={torque_limited} passive={self.passive_mode}")
 
 
 # --------------------------
@@ -435,6 +431,10 @@ class VisionTurnSpeedController:
         self.last_cruise_nonzero = False
         self.current_road_bank = 0.0
         self.last_curvature = 0.0
+
+        # For debug logging
+        self.last_debug_log_t = 0.0
+        self.debug_log_frequency = 1.0  # log at most once a second
 
     def reset(self, speed: float) -> None:
         self.prev_target_speed = speed
@@ -498,6 +498,7 @@ class VisionTurnSpeedController:
             self.prev_v_cruise_cluster = v_cruise_cluster
             return v_cruise_cluster
 
+        # Compute a raw safe speed from the model predictions
         raw_safe_speed = self._compute_raw_safe_speed(model_data, v_ego, turn_aggressiveness)
         final_raw = min(raw_safe_speed, v_cruise_cluster)
 
@@ -542,6 +543,19 @@ class VisionTurnSpeedController:
 
         self.prev_target_speed = next_target_speed
         self.prev_v_cruise_cluster = v_cruise_cluster
+
+        # Log debug info to cloudlog
+        self.log_controller_debug(
+            v_ego=v_ego,
+            v_cruise_cluster=v_cruise_cluster,
+            raw_safe_speed=raw_safe_speed,
+            final_speed=next_target_speed,
+            turn_aggressiveness=turn_aggressiveness,
+            scale_decel=scale_decel,
+            scale_accel=scale_accel,
+            scale_jerk=scale_jerk,
+            emergency_decel_active=emergency_decel_active
+        )
 
         return next_target_speed
 
@@ -622,15 +636,18 @@ class VisionTurnSpeedController:
             observed_torque = self.torque_predictor.predict_observed_torque(s, c)
             torque_limited = False
 
-            if not self.torque_predictor.passive_mode and observed_torque > max_torque:
+            if (not self.torque_predictor.passive_mode) and (observed_torque > max_torque):
                 torque_limited = True
-                # Simple clamp for demonstration:
+                # Simple clamp or alternative logic if you want
                 s = min(s, 25.0)
 
             # Log only once at i=0 to avoid spam
             if i == 0:
                 self.torque_predictor.log_telemetry(
-                    c, s, observed_torque, max_torque, torque_limited
+                    curvature=c, speed=s,
+                    predicted_torque=observed_torque,
+                    available_torque=max_torque,
+                    torque_limited=torque_limited
                 )
 
             safe_speeds[i] = s
@@ -718,7 +735,8 @@ class VisionTurnSpeedController:
         # 6) Emergency pass (for the first ~N frames)
         do_emergency_braking = False
         for i in range(min(n, self.EMERGENCY_LOOKAHEAD_FRAMES)):
-            if safe_speeds[i] > (safe_speeds[i] + self.EMERGENCY_SPEED_TOLERANCE):
+            # Quick check if we need to do an emergency pass
+            if safe_speeds[i] < (v_ego - self.EMERGENCY_SPEED_TOLERANCE):
                 do_emergency_braking = True
                 break
 
@@ -746,3 +764,16 @@ class VisionTurnSpeedController:
                 else:
                     return i + 1
         return (n - 1) if clip_high else (n - 2)
+
+    def log_controller_debug(self, **kwargs):
+        """
+        Rate-limited logging of turn-speed controller states to cloudlog.
+        """
+        now_t = time.time()
+        if now_t - self.last_debug_log_t < self.debug_log_frequency:
+            return
+        self.last_debug_log_t = now_t
+
+        cloudlog.event("vision_turn_speed_debug", **kwargs)
+        # You can print to console as well if desired:
+        # print(f"[VisionTurnSpeed] {kwargs}")
