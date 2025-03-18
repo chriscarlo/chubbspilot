@@ -385,6 +385,7 @@ class SteeringTorqueSaturationPredictor:
 class VisionTurnSpeedController:
     def __init__(
         # Reduced max_decel and max_jerk for smoother corner approach
+        self,
         turn_smoothing_alpha=0.3,
         reaccel_alpha=0.2,
         low_lat_acc=0.20,
