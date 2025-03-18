@@ -2629,3 +2629,5 @@ selfdrive/frogpilot/reporting/event_types.txt
 recent_logs.txt
 selfdrive/frogpilot/reporting/search_results.txt
 selfdrive/frogpilot/reporting/unique_fields.txt
+/realdata_dir
+/selfdrive/frogpilot/controls/lib/chauffeeur_dev
