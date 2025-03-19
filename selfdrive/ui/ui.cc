@@ -355,6 +355,12 @@ static void update_state(UIState *s) {
                                  sm.rcv_frame("liveCalibration") > scene.started_frame &&
                                  sm.rcv_frame("modelV2") > scene.started_frame &&
                                  sm.rcv_frame("uiPlan") > scene.started_frame);
+
+  if (sm.updated("radarState")) {
+    auto radar_state = sm["radarState"].getRadarState();
+    scene.leftForwardBlindspot = radar_state.getLeftForwardBlindspot();
+    scene.rightForwardBlindspot = radar_state.getRightForwardBlindspot();
+  }
 }
 
 void ui_update_params(UIState *s) {

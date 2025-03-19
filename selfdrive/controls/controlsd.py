@@ -202,6 +202,8 @@ class Controls:
 
     self.error_log = CRASHES_DIR / "error.txt"
 
+    self.can_error_counter = 0  # Add counter for CAN errors
+
   def set_initial_state(self):
     if REPLAY:
       controls_state = self.params.get("ReplayControlsState")
@@ -287,8 +289,13 @@ class Controls:
     # Handle lane change
     if self.sm['modelV2'].meta.laneChangeState == LaneChangeState.preLaneChange:
       direction = self.sm['modelV2'].meta.laneChangeDirection
-      if (CS.leftBlindspot and direction == LaneChangeDirection.left) or \
-         (CS.rightBlindspot and direction == LaneChangeDirection.right):
+
+      # Check both traditional blindspot and forward blindspot from corner radar
+      is_left_blindspot = CS.leftBlindspot or self.sm['radarState'].leftForwardBlindspot
+      is_right_blindspot = CS.rightBlindspot or self.sm['radarState'].rightForwardBlindspot
+
+      if (is_left_blindspot and direction == LaneChangeDirection.left) or \
+         (is_right_blindspot and direction == LaneChangeDirection.right):
         if self.frogpilot_toggles.loud_blindspot_alert:
           self.events.add(EventName.laneChangeBlockedLoud)
         else:
@@ -351,7 +358,13 @@ class Controls:
     if CS.canTimeout:
       self.events.add(EventName.canBusMissing)
     elif not CS.canValid:
-      self.events.add(EventName.canError)
+      # Only add EventName.canError if we've seen the issue persist for multiple updates
+      self.can_error_counter += 1
+      if self.can_error_counter >= 20:  # Require 20 consecutive invalid CAN messages
+        self.events.add(EventName.canError)
+    else:
+      # Reset counter when CAN is valid
+      self.can_error_counter = 0
 
     # generic catch-all. ideally, a more specific event should be added above instead
     has_disable_events = self.events.contains(ET.NO_ENTRY) and (self.events.contains(ET.SOFT_DISABLE) or self.events.contains(ET.IMMEDIATE_DISABLE))

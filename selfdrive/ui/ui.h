@@ -163,6 +163,7 @@ typedef struct UIScene {
   bool lateral_tuning_metrics;
   bool lead_metrics;
   bool left_curve;
+  bool leftForwardBlindspot;
   bool live_valid;
   bool map_open;
   bool memory_metrics;
@@ -181,6 +182,7 @@ typedef struct UIScene {
   bool random_events;
   bool red_light;
   bool reverse;
+  bool rightForwardBlindspot;
   bool road_name_ui;
   bool rotating_wheel;
   bool screen_recorder;

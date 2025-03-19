@@ -207,5 +207,94 @@ class RadarInterface(RadarInterfaceBase):
         else:
             del self.pts[addr]
 
+    # Add corner radar data to points if available
+    # Track ID ranges:
+    # 0-999: Main forward radar
+    # 1000-1999: Rear left corner radar
+    # 2000-2999: Rear right corner radar
+    # 3000-3999: Front left corner radar
+    # 4000-4999: Front right corner radar
+    if hasattr(self, 'corner_rcp_fd') and hasattr(self, 'corner_rcp_pt') and \
+       self.corner_rcp_fd is not None and self.corner_rcp_pt is not None:
+
+      # Get metadata first (point count etc)
+      metadata = {}
+      for msg_name in self.corner_rcp_fd.vl:
+        if msg_name.startswith("RADAR_POINTS_METADATA"):
+          metadata[msg_name] = self.corner_rcp_fd.vl[msg_name]
+
+      # Process rear left and right corner radar points
+      for msg_name in self.corner_rcp_pt.vl:
+        if msg_name.startswith("RADAR_POINTS_0x"):
+          points = self.corner_rcp_pt.vl[msg_name]
+
+          # Get corresponding metadata
+          meta_msg = f"RADAR_POINTS_METADATA_0x{msg_name[-3:]}"
+          if meta_msg not in metadata:
+            continue
+
+          meta = metadata[meta_msg]
+          point_count = meta.get('RADAR_POINT_COUNT', 0)
+
+          # Determine if this is left (0x1) or right (0x2) rear corner radar
+          base_id = 1000 if "0x1" in msg_name else 2000  # 1000 for left, 2000 for right
+
+          # Process each valid point
+          for i in range(1, min(6, point_count + 1)):  # Max 5 points per corner
+            if points.get(f'POINT_{i}_DISTANCE', 0) > 0:  # Only process valid points
+              corner_id = base_id + i  # Simple indexing within each range
+
+              if corner_id not in self.pts:
+                self.pts[corner_id] = car.RadarData.RadarPoint.new_message()
+                self.pts[corner_id].trackId = corner_id
+
+              # Scale values according to DBC
+              self.pts[corner_id].measured = True
+              self.pts[corner_id].dRel = points[f'POINT_{i}_DISTANCE'] * 0.015625
+              self.pts[corner_id].yRel = points[f'POINT_{i}_AZIMUTH'] * 0.001953125
+              self.pts[corner_id].vRel = (points[f'POINT_{i}_REL_VELOCITY'] * 0.03125) - 66
+              self.pts[corner_id].aRel = float('nan')
+              self.pts[corner_id].yvRel = float('nan')
+
+      # Process front corner radar points
+      if self.corner_rcp_canfd:
+        # Front left corner radar
+        if "BLINDSPOTS_FRONT_CORNER_1" in self.corner_rcp_canfd.vl:
+          front_corner_1 = self.corner_rcp_canfd.vl["BLINDSPOTS_FRONT_CORNER_1"]
+          if front_corner_1.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
+            front_left_id = 3000  # Base ID for front left corner
+
+            if front_left_id not in self.pts:
+              self.pts[front_left_id] = car.RadarData.RadarPoint.new_message()
+              self.pts[front_left_id].trackId = front_left_id
+
+            self.pts[front_left_id].measured = True
+            # These values are simplified since we don't have detailed measurements
+            # Adjust with real values if available in the CAN message
+            self.pts[front_left_id].dRel = 10.0  # Placeholder distance
+            self.pts[front_left_id].yRel = -2.0  # Left side
+            self.pts[front_left_id].vRel = 0.0 if not front_corner_1.get('NEW_SIGNAL_2', 0) else -5.0  # Approaching
+            self.pts[front_left_id].aRel = float('nan')
+            self.pts[front_left_id].yvRel = float('nan')
+
+        # Front right corner radar
+        if "BLINDSPOTS_FRONT_CORNER_2" in self.corner_rcp_canfd.vl:
+          front_corner_2 = self.corner_rcp_canfd.vl["BLINDSPOTS_FRONT_CORNER_2"]
+          if front_corner_2.get('NEW_SIGNAL_1', 0) > 0:  # Vehicle detected
+            front_right_id = 4000  # Base ID for front right corner
+
+            if front_right_id not in self.pts:
+              self.pts[front_right_id] = car.RadarData.RadarPoint.new_message()
+              self.pts[front_right_id].trackId = front_right_id
+
+            self.pts[front_right_id].measured = True
+            # These values are simplified since we don't have detailed measurements
+            # Adjust with real values if available in the CAN message
+            self.pts[front_right_id].dRel = 10.0  # Placeholder distance
+            self.pts[front_right_id].yRel = 2.0   # Right side
+            self.pts[front_right_id].vRel = 0.0 if not front_corner_2.get('NEW_SIGNAL_2', 0) else -5.0  # Approaching
+            self.pts[front_right_id].aRel = float('nan')
+            self.pts[front_right_id].yvRel = float('nan')
+
     ret.points = list(self.pts.values())
     return ret

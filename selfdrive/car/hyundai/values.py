@@ -520,7 +520,7 @@ class CAR(Platforms):
       HyundaiCarDocs("Kia EV6 (with HDA II) 2022-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p])),
     ],
     CarSpecs(mass=2055, wheelbase=2.9, steerRatio=16, tireStiffnessFactor=0.65),
-    flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS | HyundaiFlags.CORNER_RADAR,
+    flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS | HyundaiFlags.CORNER_RADAR | HyundaiFlags.MANDO_RADAR,
   )
   KIA_CARNIVAL_4TH_GEN = HyundaiCanFDPlatformConfig(
     [
@@ -844,3 +844,4 @@ NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
 DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
+DBC[CAR.KIA_EV6]['front_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_front_radar_generated.dbc')

@@ -589,10 +589,14 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
     bs.setColorAt(1.0f, QColor::fromHslF(0 / 360.0f, 0.75f, 0.5f, 0.2f));
 
     painter.setBrush(bs);
-    if (blindSpotLeft) {
+    // Check both traditional blindspot and forward blindspot from corner radar
+    bool leftBlindspotActive = blindSpotLeft || scene.leftForwardBlindspot;
+    bool rightBlindspotActive = blindSpotRight || scene.rightForwardBlindspot;
+
+    if (leftBlindspotActive) {
       painter.drawPolygon(scene.track_adjacent_vertices[4]);
     }
-    if (blindSpotRight) {
+    if (rightBlindspotActive) {
       painter.drawPolygon(scene.track_adjacent_vertices[5]);
     }
   }

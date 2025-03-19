@@ -624,6 +624,10 @@ struct RadarState @0x9a185389d6fdd05f {
   leadRightFar @16 :LeadData;
   cumLagMs @5 :Float32;
 
+  # Advanced blindspot detection using corner radar
+  leftForwardBlindspot @17 :Bool;
+  rightForwardBlindspot @18 :Bool;
+
   struct LeadData {
     dRel @0 :Float32;
     yRel @1 :Float32;

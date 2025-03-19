@@ -17,6 +17,38 @@ struct FrogPilotCarControl @0x81c2f05a394cf4af {
   fcwEventTriggered @3 :Bool;
   noEntryEventTriggered @4 :Bool;
   steerSaturatedEventTriggered @5 :Bool;
+
+  # VTSC Debug data
+  vtscControllingCurve @6 :Bool;                # Whether VTSC is actively controlling due to curves
+  vtscCurrentCurvature @7 :Float32;             # Current curvature detected
+  vtscTargetSpeed @8 :Float32;                  # Final target speed after all calculations
+  vtscRawSafeSpeed @9 :Float32;                 # Raw safe speed before smoothing
+  vtscCruiseSpeed @10 :Float32;                 # Current cruise set speed
+  vtscCurrentAccel @11 :Float32;                # Current acceleration/deceleration
+  vtscLateralAccel @12 :Float32;                # Current lateral acceleration limit
+  vtscEmergencyActive @13 :Bool;                # Emergency deceleration active
+  vtscHorizonTime @14 :Float32;                 # Current horizon time
+
+  # Torque predictor data
+  vtscPredictedTorque @15 :Float32;             # Predicted torque for current conditions
+  vtscMaxTorque @16 :Float32;                   # Maximum available torque
+  vtscTorqueLimited @17 :Bool;                  # Whether torque is being limited
+  vtscTorquePassiveMode @18 :Bool;              # Torque predictor in passive mode
+  vtscTorqueSatCount @19 :UInt32;               # Count of torque saturation events
+  vtscTorqueDataCount @20 :UInt32;              # Total data points collected
+
+  # Apex data
+  vtscApexCount @21 :UInt8;                     # Number of apexes detected
+  vtscApexIndices @22 :List(UInt8);             # Indices of detected apexes
+  vtscApexSpeeds @23 :List(Float32);            # Speeds at each apex
+  vtscEarlyApproachTime @24 :Float32;           # Time before apex to start deceleration
+  vtscEarlySpoolTime @25 :Float32;              # Time before/after apex for spool management
+
+  # Scale factors
+  vtscDecelScale @26 :Float32;                  # Dynamic deceleration scale
+  vtscAccelScale @27 :Float32;                  # Dynamic acceleration scale
+  vtscJerkScale @28 :Float32;                   # Dynamic jerk scale
+  vtscShortHorizonFactor @29 :Float32;          # Short horizon adjustment factor
 }
 
 struct FrogPilotCarState @0xaedffd8f31e7b55d {

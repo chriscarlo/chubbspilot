@@ -243,6 +243,46 @@ def get_adjacent_lead(tracks: dict[int, Track], model_data: capnp._DynamicStruct
   return lead_dict
 
 
+def get_forward_blindspot(tracks: dict[int, Track], left: bool = True) -> bool:
+  """
+  Detect vehicles in forward blindspots (adjacent lane but forward of typical blindspot coverage)
+  using corner radar data. This covers the dangerous area where a car might be in an adjacent lane
+  but slightly ahead of the driver's peripheral vision.
+
+  Args:
+    tracks: All radar tracks including corner radar
+    left: Whether to check left or right forward blindspot
+
+  Returns:
+    True if a vehicle is detected in forward blindspot area
+  """
+  # Define the forward blindspot area - forward of B pillar but still in adjacent lane
+  # Y values are negative to the left, positive to the right of car center
+  y_min = -4.0 if left else 0.5   # Lateral distance min
+  y_max = -0.5 if left else 4.0   # Lateral distance max
+  d_min = 3.0                     # Min longitudinal distance (in front of driver's peripheral view)
+  d_max = 20.0                    # Max longitudinal distance to consider
+
+  # Check for ID ranges that correspond to front corner radars
+  front_left_ids = range(3000, 4000)
+  front_right_ids = range(4000, 5000)
+
+  # Check all appropriate tracks
+  relevant_ids = front_left_ids if left else front_right_ids
+  for track_id, track in tracks.items():
+    # Consider both front corner radar points and regular forward radar points in adjacent lanes
+    if (track_id in relevant_ids) or (track_id < 1000 and y_min < track.yRel < y_max and d_min < track.dRel < d_max):
+      # For front corner radar tracks which may not have precise position data,
+      # just use their presence as detection
+      if track_id in relevant_ids:
+        return True
+      # For regular radar tracks, use their position to determine if they're in forward blindspot area
+      elif track.measured and track.vLeadK > 0:  # Only consider valid measurements of moving vehicles
+        return True
+
+  return False
+
+
 class RadarD:
   def __init__(self, frogpilot_toggles, radar_ts: float, delay: int = 0):
     self.points: dict[int, tuple[float, float, float]] = {}
@@ -261,6 +301,10 @@ class RadarD:
     self.radar_tracks_valid = False
 
     self.ready = False
+
+    # Forward blindspot detection
+    self.left_forward_blindspot = False
+    self.right_forward_blindspot = False
 
     # FrogPilot variables
     self.frogpilot_toggles = frogpilot_toggles
@@ -318,14 +362,24 @@ class RadarD:
       model_v_ego = self.v_ego
     leads_v3 = sm['modelV2'].leadsV3
     if len(leads_v3) > 1:
-      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[0], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=True)
-      self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[1], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=False)
+      # Filter out corner radar points for lead vehicle detection
+      # Track ID ranges:
+      # 0-999: Main forward radar
+      # 1000+: Corner radar (all types)
+      forward_radar_tracks = {k: v for k, v in self.tracks.items() if k < 1000}
+
+      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, forward_radar_tracks, leads_v3[0], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=True)
+      self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, forward_radar_tracks, leads_v3[1], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=False)
 
     if self.frogpilot_toggles.adjacent_lead_tracking and self.ready:
       self.radar_state.leadLeft = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=True)
       self.radar_state.leadLeftFar = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=True, far=True)
       self.radar_state.leadRight = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=False)
       self.radar_state.leadRightFar = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=False, far=True)
+
+    # Check for vehicles in forward blindspots using corner radar data
+    self.left_forward_blindspot = get_forward_blindspot(self.tracks, left=True)
+    self.right_forward_blindspot = get_forward_blindspot(self.tracks, left=False)
 
     # Update FrogPilot parameters
     if sm['frogpilotPlan'].togglesUpdated:
@@ -338,17 +392,39 @@ class RadarD:
     radar_msg.valid = self.radar_state_valid
     radar_msg.radarState = self.radar_state
     radar_msg.radarState.cumLagMs = lag_ms
+
+    # Add forward blindspot detection to the radar message
+    radar_msg.radarState.leftForwardBlindspot = self.left_forward_blindspot
+    radar_msg.radarState.rightForwardBlindspot = self.right_forward_blindspot
+
     pm.send("radarState", radar_msg)
 
     # publish tracks for UI debugging (keep last)
     tracks_msg = messaging.new_message('liveTracks', len(self.tracks))
     tracks_msg.valid = self.radar_state_valid
     for index, tid in enumerate(sorted(self.tracks.keys())):
+      # Determine the type of radar based on track ID range
+      radar_type = "main"
+      if tid >= 1000:
+        if tid < 2000:
+          radar_type = "rear_left"
+        elif tid < 3000:
+          radar_type = "rear_right"
+        elif tid < 4000:
+          radar_type = "front_left"
+        else:
+          radar_type = "front_right"
+
       tracks_msg.liveTracks[index] = {
         "trackId": tid,
         "dRel": float(self.tracks[tid].dRel),
         "yRel": float(self.tracks[tid].yRel),
         "vRel": float(self.tracks[tid].vRel),
+        "aRel": float(self.tracks[tid].aLeadK) if hasattr(self.tracks[tid], 'aLeadK') else float('nan'),
+        "measured": bool(self.tracks[tid].measured),
+        # Add a flag to indicate if this is a corner radar point and which type
+        "isCornerRadar": tid >= 1000,
+        "radarType": radar_type,
       }
     pm.send('liveTracks', tracks_msg)
 
