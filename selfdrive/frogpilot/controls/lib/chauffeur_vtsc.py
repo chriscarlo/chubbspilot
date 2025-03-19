@@ -385,7 +385,6 @@ class SteeringTorqueSaturationPredictor:
 class VisionTurnSpeedController:
     def __init__(
         # Reduced max_decel and max_jerk for smoother corner approach
-        self,
         turn_smoothing_alpha=0.3,
         reaccel_alpha=0.2,
         low_lat_acc=0.20,
@@ -546,6 +545,81 @@ class VisionTurnSpeedController:
 
         return next_target_speed
 
+<<<<<<< Updated upstream
+=======
+    def _publish_debug_data(self, v_ego, v_cruise_cluster, target_speed):
+        """
+        Publish debug data to the frogPilotCarControl channel
+        """
+        now = time.time()
+        # Rate limiting to avoid flooding the bus
+        if now - self.last_publish_time < self.publish_rate:
+            return
+        self.last_publish_time = now
+
+        # Create a new message
+        msg = new_message('frogPilotCarControl')
+
+        # Print available fields for debugging (only once)
+        if not hasattr(self, '_fields_logged'):
+            self._fields_logged = True
+            available_fields = [f for f in dir(msg) if not f.startswith('_')]
+            cloudlog.warning(f"Available frogPilotCarControl fields: {available_fields}")
+
+        # Helper function to safely set a field if it exists
+        def safe_set(field_name, value):
+            if hasattr(msg, field_name):
+                setattr(msg, field_name, value)
+            else:
+                cloudlog.error(f"Schema mismatch: Field '{field_name}' not found in frogPilotCarControl message")
+
+        # VTSC Debug data - use the helper function for all fields
+        safe_set('vtscControllingCurve', bool(self.debug.get('controlling_curve', False)))
+        safe_set('vtscCurrentCurvature', float(self.last_curvature) if self.last_curvature is not None else 0.0)
+        safe_set('vtscTargetSpeed', float(target_speed) if target_speed is not None else 0.0)
+        safe_set('vtscRawSafeSpeed', float(self.debug.get('raw_safe_speed', 0.0)))
+        safe_set('vtscCruiseSpeed', float(v_cruise_cluster) if v_cruise_cluster is not None else 0.0)
+        safe_set('vtscCurrentAccel', float(self.current_accel) if self.current_accel is not None else 0.0)
+        safe_set('vtscLateralAccel', float(self.debug.get('lat_accel', 0.0)))
+        safe_set('vtscEmergencyActive', bool(self.debug.get('emergency_active', False)))
+        safe_set('vtscHorizonTime', float(self.debug.get('horizon_time', 0.0)))
+
+        # Torque predictor data
+        torque_data = self.torque_predictor.get_debug_data(self.last_curvature, v_ego)
+        safe_set('vtscPredictedTorque', float(torque_data['predicted_torque']))
+        safe_set('vtscMaxTorque', float(torque_data['max_available_torque']))
+        safe_set('vtscTorqueLimited', bool(torque_data['torque_limited']))
+        safe_set('vtscTorquePassiveMode', bool(self.torque_predictor.passive_mode))
+        safe_set('vtscTorqueSatCount', int(self.torque_predictor.saturation_count))
+        safe_set('vtscTorqueDataCount', int(self.torque_predictor.total_data_count))
+
+        # Apex data
+        safe_set('vtscApexCount', min(255, self.debug.get('apex_count', 0)))
+
+        # For lists, we need to handle them differently
+        if hasattr(msg, 'vtscApexIndices'):
+            msg.vtscApexIndices = [min(255, int(idx)) for idx in self.debug.get('apex_indices', [])[:20]]
+        else:
+            cloudlog.error("Schema mismatch: Field 'vtscApexIndices' not found in frogPilotCarControl message")
+
+        if hasattr(msg, 'vtscApexSpeeds'):
+            msg.vtscApexSpeeds = [float(speed) for speed in self.debug.get('apex_speeds', [])[:20]]
+        else:
+            cloudlog.error("Schema mismatch: Field 'vtscApexSpeeds' not found in frogPilotCarControl message")
+
+        safe_set('vtscEarlyApproachTime', float(self.debug.get('early_approach_time', 0.0)))
+        safe_set('vtscEarlySpoolTime', float(self.debug.get('early_spool_time', 0.0)))
+
+        # Scale factors
+        safe_set('vtscDecelScale', float(self.debug.get('decel_scale', 0.0)))
+        safe_set('vtscAccelScale', float(self.debug.get('accel_scale', 0.0)))
+        safe_set('vtscJerkScale', float(self.debug.get('jerk_scale', 0.0)))
+        safe_set('vtscShortHorizonFactor', float(self.debug.get('short_horizon_factor', 0.0)))
+
+        # Send the message
+        self.pm.send('frogPilotCarControl', msg)
+
+>>>>>>> Stashed changes
     # ------------------------
     #  Build raw safe speed
     # ------------------------
@@ -720,7 +794,8 @@ class VisionTurnSpeedController:
         # 6) Emergency pass (for the first ~N frames)
         do_emergency_braking = False
         for i in range(min(n, self.EMERGENCY_LOOKAHEAD_FRAMES)):
-            if safe_speeds[i] > (safe_speeds[i] + self.EMERGENCY_SPEED_TOLERANCE):
+            # Check if there's a sudden drop in safe speed that exceeds our tolerance
+            if i > 0 and safe_speeds[i-1] > (safe_speeds[i] + self.EMERGENCY_SPEED_TOLERANCE):
                 do_emergency_braking = True
                 break
 
