@@ -384,7 +384,7 @@ class SteeringTorqueSaturationPredictor:
 # --------------------------
 class VisionTurnSpeedController:
     def __init__(
-        # Reduced max_decel and max_jerk for smoother corner approach
+        self,
         turn_smoothing_alpha=0.3,
         reaccel_alpha=0.2,
         low_lat_acc=0.20,
@@ -545,8 +545,6 @@ class VisionTurnSpeedController:
 
         return next_target_speed
 
-<<<<<<< Updated upstream
-=======
     def _publish_debug_data(self, v_ego, v_cruise_cluster, target_speed):
         """
         Publish debug data to the frogPilotCarControl channel
@@ -619,7 +617,6 @@ class VisionTurnSpeedController:
         # Send the message
         self.pm.send('frogPilotCarControl', msg)
 
->>>>>>> Stashed changes
     # ------------------------
     #  Build raw safe speed
     # ------------------------
