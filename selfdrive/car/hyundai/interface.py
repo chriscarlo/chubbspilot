@@ -132,10 +132,14 @@ class CarInterface(CarInterfaceBase):
       if 0x544 in fingerprint[0]:
         ret.flags |= HyundaiFlags.NAV_MSG.value
 
-      if ret.flags & HyundaiFlags.MANDO_RADAR and ret.radarUnavailable:
-        ret.flags |= HyundaiFlagsCP.ENABLE_RADAR_TRACKS.value
-        if Params().get_bool("HyundaiRadarTracksAvailable"):
-          ret.radarUnavailable = False
+      # Always set ENABLE_RADAR_TRACKS flag if MANDO_RADAR flag is present AND user has enabled the feature
+      if ret.flags & HyundaiFlags.MANDO_RADAR:
+        # Check if user has enabled radar tracks
+        if Params().get_bool("HyundaiRadarTracks"):
+          ret.flags |= HyundaiFlagsCP.ENABLE_RADAR_TRACKS.value
+          # Set radar to available if tracks are available
+          if Params().get_bool("HyundaiRadarTracksAvailable"):
+            ret.radarUnavailable = False
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
@@ -189,21 +193,41 @@ class CarInterface(CarInterfaceBase):
   #Initialize radar tracks if enabled in FrogPilot Variables.
   @staticmethod
   def initialize_radar_tracks(CP, logcan, sendcan):
-    if not (CP.flags & HyundaiFlagsCP.ENABLE_RADAR_TRACKS):
-        return
+    # Check if the car has MANDO_RADAR flag, which is required for radar tracks
+    has_mando_radar = CP.flags & HyundaiFlags.MANDO_RADAR
 
+    # Get parameters
     params = Params()
-    if not params.get_bool("HyundaiRadarTracks"):
-        return
+    user_enabled = params.get_bool("HyundaiRadarTracks")
+
+    # If user has not enabled the feature or car doesn't have Mando radar, don't proceed
+    if not user_enabled or not has_mando_radar:
+      return
+
+    # When user has explicitly enabled radar tracks, we should try to enable them
+    # regardless of the current radar availability status
+
+    # First, reset the availability parameters to force a fresh check
+    if user_enabled:
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", False)
 
     # Enable radar tracks config
-    enable_radar_tracks(logcan, sendcan,
-                       bus=0,
-                       addr=0x7d0,
-                       config_data_id=b'\x01\x42')
+    cloudlog.warning("radar_tracks: attempting to enable radar tracks due to user preference...")
+    success = enable_radar_tracks(logcan, sendcan,
+                    bus=0,
+                    addr=0x7d0,
+                    config_data_id=b'\x01\x42',
+                    timeout=0.1,
+                    retry=10)
 
-    # Handle radar tracks availability status
-    CarInterface.update_radar_tracks_availability(params, logcan, CP)
+    # If enabling was successful, mark tracks as available
+    if success:
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailable", True)
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", True)
+      cloudlog.warning("radar_tracks: successfully enabled radar tracks")
+    else:
+      # If not successful, update availability status through the standard check
+      CarInterface.update_radar_tracks_availability(params, logcan, CP)
 
   @staticmethod
   def update_radar_tracks_availability(params, logcan, CP):
@@ -213,14 +237,18 @@ class CarInterface(CarInterfaceBase):
     # Cache current availability
     params.put_bool_nonblocking("HyundaiRadarTracksAvailableCache", rt_avail)
 
-    # Only update persistent status if not already set
-    if not rt_avail_persist:
+    # Update availability status if:
+    # 1. Persistent flag is not set, OR
+    # 2. User has explicitly enabled radar tracks (force a re-check)
+    if not rt_avail_persist or params.get_bool("HyundaiRadarTracks"):
         messaging.drain_sock_raw(logcan)
         fingerprint = can_fingerprint(lambda: get_one_can(logcan))
         radar_unavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[CP.carFingerprint]["radar"] is None
 
         params.put_bool_nonblocking("HyundaiRadarTracksAvailable", not radar_unavailable)
         params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", True)
+
+        cloudlog.warning(f"radar_tracks: availability check completed. Available: {not radar_unavailable}")
 
   @staticmethod
   def init(CP, logcan, sendcan):
