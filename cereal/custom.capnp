@@ -5,6 +5,8 @@ using Car = import "car.capnp";
 
 @0xb526ba661d550a59;
 
+# Recompile damn you
+
 # custom.capnp: a home for empty structs reserved for custom forks
 # These structs are guaranteed to remain reserved and empty in mainline
 # cereal, so use these if you want custom events in your fork.

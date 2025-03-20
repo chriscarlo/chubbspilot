@@ -2677,3 +2677,7 @@ tools/plotjuggler/layouts/demo.xml
 tools/plotjuggler/layouts/longitudinal.xml
 tools/plotjuggler/layouts/system_lag_debug.xml
 tools/plotjuggler/layouts/tuning.xml
+analyze_radar_data.ps1
+rlog_to_csv.py
+search_radar_data.py
+opendbc/hyundai_canfd_fixed.dbc
