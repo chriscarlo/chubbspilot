@@ -597,7 +597,6 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
 
       // Split points into top half (forward) and bottom half (rear)
       QPolygonF topHalf, bottomHalf;
-      int midpoint = leftPoly.size() / 2;
 
       // Find where to split the polygon (approximately middle height)
       float midY = 0;
@@ -640,7 +639,6 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
 
       // Split points into top half (forward) and bottom half (rear)
       QPolygonF topHalf, bottomHalf;
-      int midpoint = rightPoly.size() / 2;
 
       // Find where to split the polygon (approximately middle height)
       float midY = 0;
