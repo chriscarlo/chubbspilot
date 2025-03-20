@@ -589,15 +589,92 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
     bs.setColorAt(1.0f, QColor::fromHslF(0 / 360.0f, 0.75f, 0.5f, 0.2f));
 
     painter.setBrush(bs);
-    // Check both traditional blindspot and forward blindspot from corner radar
-    bool leftBlindspotActive = blindSpotLeft || scene.leftForwardBlindspot;
-    bool rightBlindspotActive = blindSpotRight || scene.rightForwardBlindspot;
 
-    if (leftBlindspotActive) {
-      painter.drawPolygon(scene.track_adjacent_vertices[4]);
+    // For each side, draw separate polygons for front and rear blindspots
+    if (scene.leftForwardBlindspot || blindSpotLeft) {
+      // Get the original polygon for left side
+      QPolygonF leftPoly = scene.track_adjacent_vertices[4];
+
+      // Split points into top half (forward) and bottom half (rear)
+      QPolygonF topHalf, bottomHalf;
+      int midpoint = leftPoly.size() / 2;
+
+      // Find where to split the polygon (approximately middle height)
+      float midY = 0;
+      for (int i = 0; i < leftPoly.size(); i++) {
+        midY += leftPoly[i].y();
+      }
+      midY /= leftPoly.size();
+
+      // Create polygons for top and bottom halves
+      for (int i = 0; i < leftPoly.size(); i++) {
+        if (leftPoly[i].y() <= midY) {
+          topHalf << leftPoly[i];
+        } else {
+          bottomHalf << leftPoly[i];
+        }
+      }
+
+      // Add connecting points to close the polygons
+      if (!topHalf.isEmpty() && !bottomHalf.isEmpty()) {
+        topHalf << QPointF(bottomHalf.first().x(), midY);
+        topHalf << QPointF(topHalf.first().x(), topHalf.first().y());
+
+        bottomHalf << QPointF(topHalf.last().x(), midY);
+        bottomHalf << QPointF(bottomHalf.first().x(), bottomHalf.first().y());
+      }
+
+      // Draw the appropriate halves based on which sensors are active
+      if (scene.leftForwardBlindspot && !topHalf.isEmpty()) {
+        painter.drawPolygon(topHalf);
+      }
+
+      if (blindSpotLeft && !bottomHalf.isEmpty()) {
+        painter.drawPolygon(bottomHalf);
+      }
     }
-    if (rightBlindspotActive) {
-      painter.drawPolygon(scene.track_adjacent_vertices[5]);
+
+    if (scene.rightForwardBlindspot || blindSpotRight) {
+      // Get the original polygon for right side
+      QPolygonF rightPoly = scene.track_adjacent_vertices[5];
+
+      // Split points into top half (forward) and bottom half (rear)
+      QPolygonF topHalf, bottomHalf;
+      int midpoint = rightPoly.size() / 2;
+
+      // Find where to split the polygon (approximately middle height)
+      float midY = 0;
+      for (int i = 0; i < rightPoly.size(); i++) {
+        midY += rightPoly[i].y();
+      }
+      midY /= rightPoly.size();
+
+      // Create polygons for top and bottom halves
+      for (int i = 0; i < rightPoly.size(); i++) {
+        if (rightPoly[i].y() <= midY) {
+          topHalf << rightPoly[i];
+        } else {
+          bottomHalf << rightPoly[i];
+        }
+      }
+
+      // Add connecting points to close the polygons
+      if (!topHalf.isEmpty() && !bottomHalf.isEmpty()) {
+        topHalf << QPointF(bottomHalf.first().x(), midY);
+        topHalf << QPointF(topHalf.first().x(), topHalf.first().y());
+
+        bottomHalf << QPointF(topHalf.last().x(), midY);
+        bottomHalf << QPointF(bottomHalf.first().x(), bottomHalf.first().y());
+      }
+
+      // Draw the appropriate halves based on which sensors are active
+      if (scene.rightForwardBlindspot && !topHalf.isEmpty()) {
+        painter.drawPolygon(topHalf);
+      }
+
+      if (blindSpotRight && !bottomHalf.isEmpty()) {
+        painter.drawPolygon(bottomHalf);
+      }
     }
   }
 
@@ -638,8 +715,12 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
       }
     };
 
-    drawAdjacentLane(scene.track_adjacent_vertices[4], scene.lane_width_left, blindSpotLeft);
-    drawAdjacentLane(scene.track_adjacent_vertices[5], scene.lane_width_right, blindSpotRight);
+    // Check both rear and forward blindspots for each side
+    bool leftBlindspotActive = blindSpotLeft || scene.leftForwardBlindspot;
+    bool rightBlindspotActive = blindSpotRight || scene.rightForwardBlindspot;
+
+    drawAdjacentLane(scene.track_adjacent_vertices[4], scene.lane_width_left, leftBlindspotActive);
+    drawAdjacentLane(scene.track_adjacent_vertices[5], scene.lane_width_right, rightBlindspotActive);
   }
 
   // Paint path edges
@@ -1293,7 +1374,13 @@ void AnnotatedCameraWidget::drawRoadName(QPainter &p) {
 }
 
 void AnnotatedCameraWidget::drawTurnSignals(QPainter &p) {
-  bool blindspotActive = turnSignalLeft ? blindSpotLeft : blindSpotRight;
+  // Get scene to access forward blindspot variables
+  const UIScene &scene = uiState()->scene;
+
+  // Check both rear and forward blindspots
+  bool blindspotActive = turnSignalLeft ?
+    (blindSpotLeft || scene.leftForwardBlindspot) :
+    (blindSpotRight || scene.rightForwardBlindspot);
 
   if (signalStyle == "static") {
     int signalXPosition = turnSignalLeft ? (rect().center().x() * 0.75) - signalWidth : rect().center().x() * 1.25;

@@ -169,7 +169,7 @@ class DesireHelper:
       self._reset_lane_change()
       return  # Immediately exit, skip the rest of the update
 
-    # If we’re below lane change speed, we can’t do a lane change
+    # If we're below lane change speed, we can't do a lane change
     below_lane_change_speed = (v_ego < frogpilot_toggles.minimum_lane_change_speed)
 
     # Check if we should revert to off if lateral is off or time exceeded
@@ -202,7 +202,16 @@ class DesireHelper:
             (effective_right_blinker and getattr(carstate, 'rightBlindspot', False))
           )
 
+          # Check front blindspot from corner radar
+          front_blindspot_detected = (
+            (effective_left_blinker and getattr(carstate, 'leftForwardBlindspot', False)) or
+            (effective_right_blinker and getattr(carstate, 'rightForwardBlindspot', False))
+          )
+          blindspot_detected = blindspot_detected or front_blindspot_detected
+
           # Also check advantage via radar
+          # Commenting out radar points usage temporarily due to issues
+          """
           if self.sm.valid['liveTracks'] and has_lead:
             current_lead_speed = self.v_lead
             adv_ok = check_adjacent_lead_speed(
@@ -216,8 +225,9 @@ class DesireHelper:
             )
             if not adv_ok:
               blindspot_detected = True
+          """
 
-          # If manual “one lane change per blinker” is active, see if we already used it
+          # If manual "one lane change per blinker" is active, see if we already used it
           # to prevent multiple merges off the same physical blink
           manual_blink = (physical_left or physical_right)
           if frogpilot_toggles.one_lane_change and manual_blink and self.lane_change_completed:
@@ -295,7 +305,7 @@ class DesireHelper:
     if not (frogpilot_toggles.auto_passing and lateral_active):
       return
 
-    # If we’re already in or just finished a lane change, wait for cooldown
+    # If we're already in or just finished a lane change, wait for cooldown
     if (self.lane_change_state != LaneChangeState.off) or (self.lane_change_cooldown > 0.0):
       return
 
@@ -315,7 +325,11 @@ class DesireHelper:
     left_clear = not getattr(carstate, 'leftBlindspot', False)
     right_clear = not getattr(carstate, 'rightBlindspot', False)
 
-    # Use radar tracks to see if each lane is “advantageous”
+    # Also check front blindspots
+    left_clear = left_clear and not getattr(carstate, 'leftForwardBlindspot', False)
+    right_clear = right_clear and not getattr(carstate, 'rightForwardBlindspot', False)
+
+    # Use radar tracks to see if each lane is "advantageous"
     if self.sm.valid['liveTracks'] and (self.v_lead > 0.0):
       from_radar = self.sm['liveTracks']
       current_lead_speed = self.v_lead
@@ -350,7 +364,7 @@ class DesireHelper:
       if right_clear:
         right_clear = (lw_right >= min_width)
 
-    # Decide direction (prefer left if it’s clear; else right)
+    # Decide direction (prefer left if it's clear; else right)
     if left_clear:
       self.auto_passing_direction = LaneChangeDirection.left
     elif right_clear:
