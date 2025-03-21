@@ -5,6 +5,9 @@ set -e
 export PYTHONHTTPSVERIFY=0
 export GIT_SSL_NO_VERIFY=true
 export CURL_CA_BUNDLE=""
+export PIP_TRUSTED_HOST="pypi.org files.pythonhosted.org pypi.python.org"
+export REQUESTS_CA_BUNDLE=""
+export NODE_TLS_REJECT_UNAUTHORIZED=0
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 ROOT=$DIR/../
@@ -77,7 +80,7 @@ poetry self add poetry-dotenv-plugin@^0.1.0
 
 echo "pip packages install..."
 # Set Poetry to ignore SSL verification
-# poetry config certificates.verify false  # This option doesn't exist in current Poetry version
+poetry config http.verify false 2>/dev/null || echo "Poetry config http.verify not supported in this version"
 # Add --no-deps to prevent hash verification issues
 poetry install --no-cache --no-root
 
