@@ -1,0 +1,262 @@
+CONFLICTS LIST FOR DBC MERGE
+=============================
+
+Found 19 conflicts across 244 unique message IDs.
+
+Priority order (highest to lowest):
+1. hyundai_kia_mando_corner_radar_generated.dbc
+2. hyundai_kia_mando_front_radar_generated.dbc
+3. hyundai_canfd.dbc
+4. hyundai_kia_generic.dbc
+
+Conflict 1:
+  Message ID: 64 (0x40)
+  Source 1: hyundai_canfd.dbc
+    Name: GEAR_ALT
+    Size: 32
+    Sender: XXX
+  Source 2: hyundai_kia_generic.dbc
+    Name: DATC14
+    Size: 8
+    Sender: DATC
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: GEAR_ALT (size: 32, sender: XXX)
+
+Conflict 2:
+  Message ID: 256 (0x100)
+  Source 1: hyundai_canfd.dbc
+    Name: ACCELERATOR_BRAKE_ALT
+    Size: 32
+    Sender: XXX
+  Source 2: hyundai_kia_mando_corner_radar_generated.dbc
+    Name: RADAR_POINTS_METADATA_0x100
+    Size: 64
+    Sender: RADAR
+  RESOLUTION: Using definition from hyundai_kia_mando_corner_radar_generated.dbc (priority 1)
+    Selected: RADAR_POINTS_METADATA_0x100 (size: 64, sender: RADAR)
+
+Conflict 3:
+  Message ID: 304 (0x130)
+  Source 1: hyundai_canfd.dbc
+    Name: GEAR_SHIFTER
+    Size: 16
+    Sender: XXX
+  Source 2: hyundai_kia_generic.dbc
+    Name: YRS11
+    Size: 8
+    Sender: ACU
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: GEAR_SHIFTER (size: 16, sender: XXX)
+
+Conflict 4:
+  Message ID: 357 (0x165)
+  Source 1: hyundai_canfd.dbc
+    Name: SPAS1
+    Size: 24
+    Sender: APRK
+  Source 2: hyundai_kia_generic.dbc
+    Name: S_MDPS12
+    Size: 8
+    Sender: XXX
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: SPAS1 (size: 24, sender: APRK)
+
+Conflict 5:
+  Message ID: 352 (0x160)
+  Source 1: hyundai_canfd.dbc
+    Name: ADRV_0x160
+    Size: 16
+    Sender: ADRV
+  Source 2: hyundai_kia_generic.dbc
+    Name: AHB1
+    Size: 8
+    Sender: iBAU
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: ADRV_0x160 (size: 16, sender: ADRV)
+
+Conflict 6:
+  Message ID: 387 (0x183)
+  Source 1: hyundai_canfd.dbc
+    Name: CAM_0x183
+    Size: 32
+    Sender: CAMERA
+  Source 2: hyundai_kia_generic.dbc
+    Name: REA11
+    Size: 8
+    Sender: REA
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: CAM_0x183 (size: 32, sender: CAMERA)
+
+Conflict 7:
+  Message ID: 512 (0x200)
+  Source 1: hyundai_canfd.dbc
+    Name: ADRV_0x200
+    Size: 8
+    Sender: ADRV
+  Source 2: hyundai_kia_mando_corner_radar_generated.dbc
+    Name: RADAR_POINTS_METADATA_0x200
+    Size: 64
+    Sender: RADAR
+  Source 3: hyundai_kia_generic.dbc
+    Name: EMS20
+    Size: 6
+    Sender: EMS
+  RESOLUTION: Using definition from hyundai_kia_mando_corner_radar_generated.dbc (priority 1)
+    Selected: RADAR_POINTS_METADATA_0x200 (size: 64, sender: RADAR)
+
+Conflict 8:
+  Message ID: 513 (0x201)
+  Source 1: hyundai_canfd.dbc
+    Name: RADAR_0x201
+    Size: 32
+    Sender: FRONT_RADAR
+  Source 2: hyundai_kia_mando_corner_radar_generated.dbc
+    Name: RADAR_POINTS_0x201
+    Size: 64
+    Sender: RADAR
+  RESOLUTION: Using definition from hyundai_kia_mando_corner_radar_generated.dbc (priority 1)
+    Selected: RADAR_POINTS_0x201 (size: 64, sender: RADAR)
+
+Conflict 9:
+  Message ID: 593 (0x251)
+  Source 1: hyundai_canfd.dbc
+    Name: RADAR_0x251
+    Size: 16
+    Sender: FRONT_RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: MDPS12
+    Size: 8
+    Sender: MDPS
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: RADAR_0x251 (size: 16, sender: FRONT_RADAR)
+
+Conflict 10:
+  Message ID: 1151 (0x47F)
+  Source 1: hyundai_canfd.dbc
+    Name: HVAC_TOUCH_BUTTONS
+    Size: 8
+    Sender: XXX
+  Source 2: hyundai_kia_generic.dbc
+    Name: ESP11
+    Size: 6
+    Sender: ESC
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: HVAC_TOUCH_BUTTONS (size: 8, sender: XXX)
+
+Conflict 11:
+  Message ID: 354 (0x162)
+  Source 1: hyundai_canfd.dbc
+    Name: MSG_162
+    Size: 32
+    Sender: CCNC
+  Source 2: hyundai_kia_generic.dbc
+    Name: TCU_DCT13
+    Size: 3
+    Sender: TCU
+  RESOLUTION: Using definition from hyundai_canfd.dbc (priority 3)
+    Selected: MSG_162 (size: 32, sender: CCNC)
+
+Conflict 12:
+  Message ID: 1280 (0x500)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_500
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: ACU14
+    Size: 1
+    Sender: ACU
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_500 (size: 8, sender: RADAR)
+
+Conflict 13:
+  Message ID: 1281 (0x501)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_501
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: ECS11
+    Size: 3
+    Sender: ECS
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_501 (size: 8, sender: RADAR)
+
+Conflict 14:
+  Message ID: 1282 (0x502)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_502
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: TCU14
+    Size: 4
+    Sender: TCU
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_502 (size: 8, sender: RADAR)
+
+Conflict 15:
+  Message ID: 1287 (0x507)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_507
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: TCS15
+    Size: 4
+    Sender: ESC
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_507 (size: 8, sender: RADAR)
+
+Conflict 16:
+  Message ID: 1290 (0x50A)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_50a
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: SCC13
+    Size: 8
+    Sender: SCC
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_50a (size: 8, sender: RADAR)
+
+Conflict 17:
+  Message ID: 1292 (0x50C)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_50c
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: CLU13
+    Size: 8
+    Sender: CLU
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_50c (size: 8, sender: RADAR)
+
+Conflict 18:
+  Message ID: 1301 (0x515)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_515
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: CLU14
+    Size: 8
+    Sender: CLU
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_515 (size: 8, sender: RADAR)
+
+Conflict 19:
+  Message ID: 1307 (0x51B)
+  Source 1: hyundai_kia_mando_front_radar_generated.dbc
+    Name: RADAR_TRACK_51b
+    Size: 8
+    Sender: RADAR
+  Source 2: hyundai_kia_generic.dbc
+    Name: CLU16
+    Size: 8
+    Sender: CLU
+  RESOLUTION: Using definition from hyundai_kia_mando_front_radar_generated.dbc (priority 2)
+    Selected: RADAR_TRACK_51b (size: 8, sender: RADAR)
+

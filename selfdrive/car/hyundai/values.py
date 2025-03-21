@@ -2,8 +2,11 @@ import re
 import os
 from dataclasses import dataclass, field
 from enum import Enum, IntFlag
+from typing import TYPE_CHECKING
 
 from cereal import car
+if TYPE_CHECKING:
+  from cereal.car import CarParams
 from opendbc import DBC_PATH
 from panda.python import uds
 from openpilot.common.conversions import Conversions as CV
@@ -11,9 +14,7 @@ from openpilot.selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms
 from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
 from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
 
-
 Ecu = car.CarParams.Ecu
-
 
 class CarControllerParams:
   ACCEL_MIN = -6.0 # m/s
@@ -128,8 +129,10 @@ class Footnote(Enum):
 class HyundaiCarDocs(CarDocs):
   package: str = "Smart Cruise Control (SCC)"
 
-  def init_make(self, CP: car.CarParams):
-    if CP.flags & HyundaiFlags.CANFD:
+  def init_make(self, CP: 'CarParams'):
+    # More explicit check for flag that should satisfy the linter
+    has_canfd = bool(CP.flags & int(HyundaiFlags.CANFD))
+    if has_canfd:
       self.footnotes.insert(0, Footnote.CANFD)
 
 
@@ -843,5 +846,5 @@ NON_SCC_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_FCA)
 NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
-DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
-DBC[CAR.KIA_EV6]['front_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_front_radar_generated.dbc')
+# DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
+# DBC[CAR.KIA_EV6]['front_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_front_radar_generated.dbc')

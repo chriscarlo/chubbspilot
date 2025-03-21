@@ -1,0 +1,78 @@
+import re
+import os
+from collections import defaultdict
+from dbc_merger_auto import parse_dbc_file, analyze_conflicts, resolve_conflict
+
+def save_conflicts_to_file(conflicts, message_sources, dbc_priorities, output_file):
+    """Save conflicts to a file with detailed information."""
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"CONFLICTS LIST FOR DBC MERGE\n")
+        f.write(f"=============================\n\n")
+        f.write(f"Found {len(conflicts)} conflicts across {len(message_sources)} unique message IDs.\n\n")
+        f.write(f"Priority order (highest to lowest):\n")
+        for i, dbc_file in enumerate(dbc_priorities):
+            f.write(f"{i+1}. {dbc_file}\n")
+        f.write("\n")
+
+        for i, conflict in enumerate(conflicts):
+            f.write(f"Conflict {i+1}:\n")
+            if conflict['type'] == 'message':
+                msg_id = conflict['id']
+                f.write(f"  Message ID: {msg_id} (0x{msg_id:X})\n")
+                for j, source in enumerate(conflict['sources']):
+                    f.write(f"  Source {j+1}: {os.path.basename(source)}\n")
+                    f.write(f"    Name: {conflict['names'][j]}\n")
+                    f.write(f"    Size: {conflict['sizes'][j]}\n")
+                    f.write(f"    Sender: {conflict['senders'][j]}\n")
+
+                # Determine which source to use based on priority
+                selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
+                selected_index = conflict['sources'].index(selected_source)
+                f.write(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})\n")
+                f.write(f"    Selected: {conflict['names'][selected_index]} (size: {conflict['sizes'][selected_index]}, sender: {conflict['senders'][selected_index]})\n")
+
+            elif conflict['type'] == 'signal':
+                msg_id = conflict['message_id']
+                signal = conflict['signal_name']
+                f.write(f"  Signal: {signal} in message ID {msg_id} (0x{msg_id:X})\n")
+                for j, source in enumerate(conflict['sources']):
+                    f.write(f"  Source {j+1}: {os.path.basename(source)}\n")
+                    def_str = ' '.join(str(x) for x in conflict['definitions'][j])
+                    f.write(f"    Definition: {def_str}\n")
+
+                # Determine which source to use based on priority
+                selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
+                selected_index = conflict['sources'].index(selected_source)
+                f.write(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})\n")
+                def_str = ' '.join(str(x) for x in conflict['definitions'][selected_index])
+                f.write(f"    Selected: {def_str}\n")
+
+            f.write("\n")
+
+if __name__ == "__main__":
+    # Define the priority order for files (first has highest priority)
+    dbc_priorities = [
+        "hyundai_kia_mando_corner_radar_generated.dbc",
+        "hyundai_kia_mando_front_radar_generated.dbc",
+        "hyundai_canfd.dbc",
+        "hyundai_kia_generic.dbc"
+    ]
+
+    dbc_files = [
+        "opendbc/hyundai_canfd.dbc",
+        "opendbc/hyundai_kia_mando_corner_radar_generated.dbc",
+        "opendbc/hyundai_kia_mando_front_radar_generated.dbc",
+        "opendbc/hyundai_kia_generic.dbc"
+    ]
+
+    # Get output filename from the merger script
+    output_base = "hyundai_kia_canfd_mando_radars.dbc"
+    conflicts_output = f"{os.path.splitext(output_base)[0]}_CONFLICTS.txt"
+
+    print(f"Analyzing conflicts...")
+    conflicts, message_sources, dbcs = analyze_conflicts(dbc_files)
+    print(f"Found {len(conflicts)} conflicts across {len(message_sources)} unique message IDs.")
+
+    # Save conflicts to file
+    save_conflicts_to_file(conflicts, message_sources, dbc_priorities, conflicts_output)
+    print(f"Conflicts saved to: {conflicts_output}")

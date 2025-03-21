@@ -1,0 +1,219 @@
+import re
+import os
+from collections import defaultdict
+
+def parse_dbc_file(file_path):
+    """Parse a DBC file and extract message definitions and other components."""
+    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+        content = f.read()
+
+    # Extract components
+    version_match = re.search(r'VERSION\s+"([^"]*)"', content)
+    version = version_match.group(1) if version_match else ""
+
+    # Extract NS section
+    ns_match = re.search(r'NS_\s+:(.*?)BS_\s*:', content, re.DOTALL)
+    ns_section = ns_match.group(1).strip() if ns_match else ""
+
+    # Extract bus units (BU)
+    bu_match = re.search(r'BU_\s*:(.*?)(?:BO_|VAL_TABLE_)', content, re.DOTALL)
+    bus_units = []
+    if bu_match:
+        bu_line = bu_match.group(1).strip()
+        if bu_line:
+            bus_units = re.split(r'\s+', bu_line)
+
+    # Extract message definitions (BO_)
+    bo_pattern = r'BO_\s+(\d+)\s+([^:]+):\s+(\d+)\s+([^\n]+)(?:\n(?:\s+SG_\s+[^\n]+))*'
+    messages = {}
+    for match in re.finditer(bo_pattern, content):
+        msg_id = int(match.group(1))
+        msg_name = match.group(2).strip()
+        msg_size = int(match.group(3))
+        msg_sender = match.group(4).strip()
+        msg_text = match.group(0)
+
+        # Extract signals
+        signals = {}
+        sg_pattern = r'SG_\s+([^\s:]+)\s*:\s*([^"]+)"([^"]*)"(.*)'
+        for sg_match in re.finditer(sg_pattern, msg_text):
+            sg_name = sg_match.group(1).strip()
+            sg_def = sg_match.group(2).strip()
+            sg_unit = sg_match.group(3).strip()
+            sg_receivers = sg_match.group(4).strip()
+            signals[sg_name] = (sg_def, sg_unit, sg_receivers)
+
+        messages[msg_id] = {
+            'name': msg_name,
+            'size': msg_size,
+            'sender': msg_sender,
+            'signals': signals,
+            'text': msg_text
+        }
+
+    # Extract value definitions (VAL_)
+    value_definitions = []
+    val_pattern = r'VAL_\s+(\d+)\s+([^;]+);'
+    for match in re.finditer(val_pattern, content):
+        value_definitions.append(match.group(0))
+
+    # Extract comments (CM_)
+    comments = []
+    cm_pattern = r'CM_[^;]+;'
+    for match in re.finditer(cm_pattern, content):
+        comments.append(match.group(0))
+
+    # Extract other sections
+    other_sections = []
+
+    # BA_DEF_ (signal/message attribute definitions)
+    ba_def_pattern = r'BA_DEF_\s+[^;]+;'
+    for match in re.finditer(ba_def_pattern, content):
+        other_sections.append(match.group(0))
+
+    # BA_ (signal/message attribute values)
+    ba_pattern = r'BA_\s+[^;]+;'
+    for match in re.finditer(ba_pattern, content):
+        other_sections.append(match.group(0))
+
+    # VAL_TABLE_ (value tables)
+    val_table_pattern = r'VAL_TABLE_\s+[^;]+;'
+    for match in re.finditer(val_table_pattern, content):
+        other_sections.append(match.group(0))
+
+    # Extract remaining content that doesn't fit into other categories
+    # This includes attributes, signal groups, etc.
+    remaining_content = content
+
+    return {
+        'version': version,
+        'ns_section': ns_section,
+        'bus_units': bus_units,
+        'messages': messages,
+        'value_definitions': value_definitions,
+        'comments': comments,
+        'other_sections': other_sections,
+        'content': content
+    }
+
+def analyze_conflicts(dbc_files):
+    """Compare multiple DBC files and identify conflicts."""
+    dbcs = {}
+    message_sources = defaultdict(list)
+    conflicts = []
+
+    # Parse each DBC file
+    for file_path in dbc_files:
+        file_name = os.path.basename(file_path)
+        parsed_dbc = parse_dbc_file(file_path)
+        dbcs[file_path] = parsed_dbc
+
+        # Track which files define which message IDs
+        for msg_id in parsed_dbc['messages']:
+            message_sources[msg_id].append(file_path)
+
+    # Check for conflicts in message definitions
+    for msg_id, sources in message_sources.items():
+        if len(sources) > 1:
+            # Multiple files define the same message ID
+            messages = [dbcs[src]['messages'][msg_id] for src in sources]
+            names = [msg['name'] for msg in messages]
+            sizes = [msg['size'] for msg in messages]
+            senders = [msg['sender'] for msg in messages]
+
+            # Check if they have different names, sizes, or senders
+            if len(set(names)) > 1 or len(set(sizes)) > 1 or len(set(senders)) > 1:
+                conflict = {
+                    'type': 'message',
+                    'id': msg_id,
+                    'sources': sources,
+                    'names': names,
+                    'sizes': sizes,
+                    'senders': senders
+                }
+                conflicts.append(conflict)
+                continue
+
+            # Check for conflicts in signal definitions
+            all_signals = set()
+            for msg in messages:
+                all_signals.update(msg['signals'].keys())
+
+            for signal_name in all_signals:
+                signal_defs = []
+                for i, msg in enumerate(messages):
+                    if signal_name in msg['signals']:
+                        signal_defs.append((sources[i], msg['signals'][signal_name]))
+
+                if len(signal_defs) > 1:
+                    # Check if signal definitions are different
+                    if not all(signal_defs[0][1] == signal_def[1] for signal_def in signal_defs[1:]):
+                        conflict = {
+                            'type': 'signal',
+                            'message_id': msg_id,
+                            'signal_name': signal_name,
+                            'sources': [src for src, _ in signal_defs],
+                            'definitions': [definition for _, definition in signal_defs]
+                        }
+                        conflicts.append(conflict)
+
+    return conflicts, message_sources, dbcs
+
+def print_conflicts(conflicts):
+    """Print details about conflicts found."""
+    print(f"Found {len(conflicts)} conflicts between files:")
+
+    for i, conflict in enumerate(conflicts):
+        print(f"\nConflict {i+1}:")
+        if conflict['type'] == 'message':
+            print(f"  Message ID: {conflict['id']} (0x{conflict['id']:X})")
+            for j, source in enumerate(conflict['sources']):
+                print(f"  Source {j+1}: {os.path.basename(source)}")
+                print(f"    Name: {conflict['names'][j]}")
+                print(f"    Size: {conflict['sizes'][j]}")
+                print(f"    Sender: {conflict['senders'][j]}")
+        elif conflict['type'] == 'signal':
+            print(f"  Signal: {conflict['signal_name']} in message ID {conflict['message_id']} (0x{conflict['message_id']:X})")
+            for j, source in enumerate(conflict['sources']):
+                print(f"  Source {j+1}: {os.path.basename(source)}")
+                def_str = ' '.join(str(x) for x in conflict['definitions'][j])
+                print(f"    Definition: {def_str}")
+
+if __name__ == "__main__":
+    dbc_files = [
+        "opendbc/hyundai_canfd.dbc",
+        "opendbc/hyundai_kia_mando_corner_radar_generated.dbc",
+        "opendbc/hyundai_kia_mando_front_radar_generated.dbc",
+        "opendbc/hyundai_kia_generic.dbc"
+    ]
+
+    print("Analyzing DBC files...")
+    file_info = {}
+    total_messages = 0
+
+    for file_path in dbc_files:
+        try:
+            dbc = parse_dbc_file(file_path)
+            msg_count = len(dbc['messages'])
+            file_info[file_path] = msg_count
+            total_messages += msg_count
+            print(f"{os.path.basename(file_path)}: {msg_count} messages")
+        except Exception as e:
+            print(f"Error parsing {file_path}: {e}")
+
+    print(f"\nTotal messages across all files: {total_messages}")
+
+    print("\nAnalyzing conflicts...")
+    conflicts, message_sources, dbcs = analyze_conflicts(dbc_files)
+
+    # Count unique message IDs
+    unique_message_ids = len(message_sources)
+    print(f"Unique message IDs across all files: {unique_message_ids}")
+
+    # Print conflicts
+    print_conflicts(conflicts)
+
+    # Print summary
+    if conflicts:
+        non_conflict_messages = unique_message_ids - len(set([c['id'] if c['type'] == 'message' else c['message_id'] for c in conflicts]))
+        print(f"\nSummary: Found {len(conflicts)} conflicts. {non_conflict_messages} messages have no conflicts.")
