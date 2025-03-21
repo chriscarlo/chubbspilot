@@ -25,6 +25,17 @@ juggle_dir = os.path.dirname(os.path.realpath(__file__))
 bin_path = os.path.join(juggle_dir, "bin")
 os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "") + os.pathsep + bin_path
 
+# Create symlink to handle incorrect DBC path
+opendbc_path = os.path.join(BASEDIR, "opendbc")
+opendbc_dbc_path = os.path.join(opendbc_path, "dbc")
+if not os.path.exists(opendbc_dbc_path):
+    try:
+        os.makedirs(os.path.dirname(opendbc_dbc_path), exist_ok=True)
+        # Create a symlink from /openpilot/opendbc/dbc -> /openpilot/opendbc
+        os.symlink(opendbc_path, opendbc_dbc_path)
+    except Exception as e:
+        print(f"Warning: Could not create DBC symlink: {e}")
+
 DEMO_ROUTE = "a2a0ccea32023010|2023-07-27--13-01-19"
 RELEASES_URL = "https://github.com/commaai/PlotJuggler/releases/download/latest"
 INSTALL_DIR = os.path.join(juggle_dir, "bin")
