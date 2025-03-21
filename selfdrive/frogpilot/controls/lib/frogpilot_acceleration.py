@@ -4,7 +4,7 @@ from openpilot.selfdrive.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.selfdrive.controls.lib.longitudinal_planner import A_CRUISE_MIN, get_max_accel
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
 
-A_CRUISE_MIN_ECO = A_CRUISE_MIN / 2
+A_CRUISE_MIN_ECO = A_CRUISE_MIN
 A_CRUISE_MIN_SPORT = max(A_CRUISE_MIN, A_CRUISE_MIN * 2)
 
 def logistic(x, lower, upper, midpoint, scale):
