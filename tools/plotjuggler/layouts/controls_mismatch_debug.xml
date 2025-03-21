@@ -8,25 +8,25 @@
       <plot style="Lines" mode="TimeSeries">
        <range top="17.500000" bottom="-0.500000" left="0.000000" right="10.000000"/>
        <limitY/>
-       <curve name="carState/vEgo" color="#1f77b4"/>
+       <curve name="/carState/vEgo" color="#1f77b4"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range top="1.025000" bottom="-0.025000" left="0.000000" right="10.000000"/>
        <limitY/>
-       <curve name="carState/cruiseState/enabled" color="#1f77b4"/>
-       <curve name="carState/cruiseState/available" color="#d62728"/>
-       <curve name="carControl/latActive" color="#1ac938"/>
-       <curve name="carControl/longActive" color="#ff7f0e"/>
+       <curve name="/carState/cruiseState/enabled" color="#1f77b4"/>
+       <curve name="/carState/cruiseState/available" color="#d62728"/>
+       <curve name="/carControl/latActive" color="#1ac938"/>
+       <curve name="/carControl/longActive" color="#ff7f0e"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range top="1.025000" bottom="-0.025000" left="0.000000" right="10.000000"/>
        <limitY/>
-       <curve name="controlsState/enabled" color="#1f77b4"/>
-       <curve name="controlsState/active" color="#d62728"/>
+       <curve name="/controlsState/enabled" color="#1f77b4"/>
+       <curve name="/controlsState/active" color="#d62728"/>
       </plot>
      </DockArea>
     </DockSplitter>
