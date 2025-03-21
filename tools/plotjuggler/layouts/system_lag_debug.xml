@@ -9,15 +9,15 @@
        <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
         <range top="800.000000" bottom="-0.000000" left="0.000000" right="60.000000"/>
         <limitY/>
-        <curve name="deviceState.cpuUsagePercent" color="#1f77b4"/>
-        <curve name="deviceState.gpuUsagePercent" color="#d62728"/>
+        <curve name="deviceState/cpuUsagePercent" color="#1f77b4"/>
+        <curve name="deviceState/gpuUsagePercent" color="#d62728"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
         <range top="3.371108" bottom="-0.911490" left="0.000000" right="60.000000"/>
         <limitY/>
-        <curve name="modelV2.frameDropPerc" color="#f14cc1"/>
+        <curve name="modelV2/frameDropPerc" color="#f14cc1"/>
        </plot>
       </DockArea>
      </DockSplitter>
@@ -26,14 +26,14 @@
        <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
         <range top="26.000000" bottom="-0.000000" left="0.000000" right="60.000000"/>
         <limitY/>
-        <curve name="deviceState.thermalStatus" color="#1ac938"/>
+        <curve name="deviceState/thermalStatus" color="#1ac938"/>
        </plot>
       </DockArea>
       <DockArea name="...">
        <plot style="Lines" mode="TimeSeries" flip_y="false" flip_x="false">
         <range top="-3.593455" bottom="-12.190956" left="0.000000" right="60.000000"/>
         <limitY/>
-        <curve name="controlsState.cumLagMs" color="#9467bd"/>
+        <curve name="controlsState/cumLagMs" color="#9467bd"/>
        </plot>
       </DockArea>
      </DockSplitter>

@@ -8,7 +8,7 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="1.253354" top="29.954036" bottom="-0.841715" right="631.055584"/>
        <limitY/>
-       <curve color="#0072b2" name="carState.vEgo"/>
+       <curve color="#0072b2" name="carState/vEgo"/>
       </plot>
      </DockArea>
      <DockArea name="Curvature [1/m] True [blue] Vehicle Model [purple] Plan [green]">
@@ -24,8 +24,8 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="0.783333" bottom="-0.783333" right="631.055209"/>
        <limitY/>
-       <curve color="#0072b2" name="carState.steeringTorqueEps"/>
-       <curve color="#009e73" name="carState.steeringTorque"/>
+       <curve color="#0072b2" name="carState/steeringTorqueEps"/>
+       <curve color="#009e73" name="carState/steeringTorque"/>
        <curve color="#785ef0" name="engaged steer torque"/>
       </plot>
      </DockArea>
@@ -33,7 +33,7 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="9.604631" bottom="-4.546753" right="631.055209"/>
        <limitY/>
-       <curve color="#0072b2" name="carState.steeringAngleDeg"/>
+       <curve color="#0072b2" name="carState/steeringAngleDeg"/>
        <curve color="#785ef0" name="engaged steering model angle"/>
        <curve color="#009e73" name="engaged steering desired angle"/>
       </plot>
@@ -42,8 +42,8 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="0.016667" bottom="-0.016667" right="631.055209"/>
        <limitY/>
-       <curve color="#0072b2" name="controlsState.lateralControlState.torqueState.yawRate"/>
-       <curve color="#009e73" name="controlsState.lateralControlState.torqueState.roll"/>
+       <curve color="#0072b2" name="controlsState/lateralControlState/torqueState/yawRate"/>
+       <curve color="#009e73" name="controlsState/lateralControlState/torqueState/roll"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -56,30 +56,30 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#d62728" name="liveParameters.liveSteerRatioV"/>
-       <curve color="#1ac938" name="liveParameters.steerRatio"/>
-       <curve color="#ff7f0e" name="carParams.steerRatio"/>
+       <curve color="#d62728" name="liveParameters/liveSteerRatioV"/>
+       <curve color="#1ac938" name="liveParameters/steerRatio"/>
+       <curve color="#ff7f0e" name="carParams/steerRatio"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#d62728" name="liveParameters.stiffnessFactor"/>
+       <curve color="#d62728" name="liveParameters/stiffnessFactor"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#f14cc1" name="carControl.latActive"/>
+       <curve color="#f14cc1" name="carControl/latActive"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#d62728" name="liveParameters.roll"/>
+       <curve color="#d62728" name="liveParameters/roll"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -92,23 +92,23 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carState.vEgo"/>
+       <curve color="#1f77b4" name="carState/vEgo"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carControl.actuators.steeringAngleDeg"/>
-       <curve color="#d62728" name="carState.steeringAngleDeg"/>
+       <curve color="#1f77b4" name="carControl/actuators/steeringAngleDeg"/>
+       <curve color="#d62728" name="carState/steeringAngleDeg"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carControl.lateralControlState.latControlCheckState.lkaActive"/>
-       <curve color="#d62728" name="carControl.lateralControlState.latControlCheckState.steerSaturated"/>
+       <curve color="#1f77b4" name="carControl/lateralControlState/latControlCheckState/lkaActive"/>
+       <curve color="#d62728" name="carControl/lateralControlState/latControlCheckState/steerSaturated"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -121,35 +121,35 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carState.aEgo"/>
-       <curve color="#d62728" name="longitudinalPlan.aTarget"/>
-       <curve color="#1ac938" name="carControl.actuators.accel"/>
+       <curve color="#1f77b4" name="carState/aEgo"/>
+       <curve color="#d62728" name="longitudinalPlan/aTarget"/>
+       <curve color="#1ac938" name="carControl/actuators/accel"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#ff7f0e" name="controlsState.ufAccelCmd"/>
-       <curve color="#f14cc1" name="controlsState.upAccelCmd"/>
-       <curve color="#9467bd" name="controlsState.uiAccelCmd"/>
+       <curve color="#ff7f0e" name="controlsState/ufAccelCmd"/>
+       <curve color="#f14cc1" name="controlsState/upAccelCmd"/>
+       <curve color="#9467bd" name="controlsState/uiAccelCmd"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#17becf" name="carState.vEgo"/>
-       <curve color="#bcbd22" name="longitudinalPlan.vTargetDEPRECATED"/>
+       <curve color="#17becf" name="carState/vEgo"/>
+       <curve color="#bcbd22" name="longitudinalPlan/vTargetDEPRECATED"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carControl.longActive"/>
-       <curve color="#d62728" name="carState.brake"/>
-       <curve color="#1ac938" name="carState.gas"/>
+       <curve color="#1f77b4" name="carControl/longActive"/>
+       <curve color="#d62728" name="carState/brake"/>
+       <curve color="#1ac938" name="carState/gas"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -162,33 +162,33 @@
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="radarState.leadOne.dRel"/>
-       <curve color="#d62728" name="modelV2.position.x"/>
+       <curve color="#1f77b4" name="radarState/leadOne/dRel"/>
+       <curve color="#d62728" name="modelV2/position/x"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="radarState.leadOne.vRel"/>
-       <curve color="#d62728" name="modelV2.velocity.x"/>
+       <curve color="#1f77b4" name="radarState/leadOne/vRel"/>
+       <curve color="#d62728" name="modelV2/velocity/x"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="radarState.leadOne.aRel"/>
-       <curve color="#d62728" name="modelV2.acceleration.x"/>
+       <curve color="#1f77b4" name="radarState/leadOne/aRel"/>
+       <curve color="#d62728" name="modelV2/acceleration/x"/>
       </plot>
      </DockArea>
      <DockArea name="...">
       <plot style="Lines" mode="TimeSeries">
        <range left="0.000000" top="1.000000" bottom="-1.000000" right="1.000000"/>
        <limitY/>
-       <curve color="#1f77b4" name="carState.aEgo"/>
-       <curve color="#d62728" name="longitudinalPlan.aTarget"/>
-       <curve color="#1ac938" name="carControl.actuators.accel"/>
+       <curve color="#1f77b4" name="carState/aEgo"/>
+       <curve color="#d62728" name="longitudinalPlan/aTarget"/>
+       <curve color="#1ac938" name="carControl/actuators/accel"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -206,27 +206,27 @@
  <customMathEquations>
   <snippet name="engaged curvature plan">
    <property name="title" value="when plan engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, lateralPlan.curvature, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, lateralPlan/curvature, 0)"/>
   </snippet>
   <snippet name="engaged curvature vehicle model">
    <property name="title" value="when vm engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, controlsState.curvature, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, controlsState/curvature, 0)"/>
   </snippet>
   <snippet name="engaged curvature yaw">
    <property name="title" value="when engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, carState.curvature, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, carState/curvature, 0)"/>
   </snippet>
   <snippet name="engaged steer torque">
    <property name="title" value="when engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, carControl.actuators.steer, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, carControl/actuators/steer, 0)"/>
   </snippet>
   <snippet name="engaged steering model angle">
    <property name="title" value="when engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, controlsState.lateralControlState.torqueState.feedforwardAct, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, controlsState/lateralControlState/torqueState/feedforwardAct, 0)"/>
   </snippet>
   <snippet name="engaged steering desired angle">
    <property name="title" value="when engaged"/>
-   <property name="snippet_text" value="{my_value} = if(carControl.latActive, controlsState.lateralControlState.torqueState.desiredLateralAccel, 0)"/>
+   <property name="snippet_text" value="{my_value} = if(carControl/latActive, controlsState/lateralControlState/torqueState/desiredLateralAccel, 0)"/>
   </snippet>
  </customMathEquations>
  <snippets/>
