@@ -21,6 +21,10 @@ from openpilot.tools.lib.logreader import LogReader, ReadMode
 
 juggle_dir = os.path.dirname(os.path.realpath(__file__))
 
+# Ensure library path includes the bin directory
+bin_path = os.path.join(juggle_dir, "bin")
+os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "") + os.pathsep + bin_path
+
 DEMO_ROUTE = "a2a0ccea32023010|2023-07-27--13-01-19"
 RELEASES_URL = "https://github.com/commaai/PlotJuggler/releases/download/latest"
 INSTALL_DIR = os.path.join(juggle_dir, "bin")
