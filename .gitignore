@@ -2681,3 +2681,4 @@ analyze_radar_data.ps1
 rlog_to_csv.py
 search_radar_data.py
 opendbc/hyundai_canfd_fixed.dbc
+compare_dirs.py
