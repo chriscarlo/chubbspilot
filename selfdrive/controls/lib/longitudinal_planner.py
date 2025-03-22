@@ -35,7 +35,8 @@ def get_max_accel(v_ego):
   return interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
 def get_coast_accel(pitch):
-  return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
+  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
+  return np.sin(pitch) * -5.65 - 0.3
 
 def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
   """
@@ -129,6 +130,21 @@ class Lead:
       self.aLeadTau = LEAD_ACCEL_TAU
     else:
       self.aLeadTau *= 0.9
+
+#
+# --- NEW FUNCTION FOR DYNAMIC TTC THRESHOLD ---
+#
+def emergency_brake_threshold(v_ego: float) -> float:
+  """
+  Returns a dynamic time-to-collision threshold based on the time
+  required to brake from v_ego to 0 at -6 m/s^2 + 0.5s margin.
+  For example:
+    - if v_ego = 10 m/s, threshold = 10/6 + 0.5 ~ 2.17s
+    - if v_ego = 40 m/s (~90 mph), threshold = 40/6 + 0.5 ~ 7.17s
+  Tune the +0.5 margin or the decel assumption as needed.
+  """
+  t_stop = v_ego / 6.0   # time to decelerate from v_ego to 0 @ -6 m/s^2
+  return t_stop + 0.5    # add a small safety margin
 
 class LongitudinalPlanner:
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
@@ -263,12 +279,17 @@ class LongitudinalPlanner:
       self.lead_one = sm['radarState'].leadOne
       self.lead_two = sm['radarState'].leadTwo
 
-    self.mpc.set_weights(sm['frogpilotPlan'].accelerationJerk, sm['frogpilotPlan'].dangerJerk,
-                         sm['frogpilotPlan'].speedJerk, prev_accel_constraint, personality=sm['controlsState'].personality)
+    self.mpc.set_weights(sm['frogpilotPlan'].accelerationJerk,
+                         sm['frogpilotPlan'].dangerJerk,
+                         sm['frogpilotPlan'].speedJerk,
+                         prev_accel_constraint,
+                         personality=sm['controlsState'].personality)
     self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    self.mpc.update(self.lead_one, self.lead_two, sm['frogpilotPlan'].vCruise, x, v, a, j, radarless_model,
-                    sm['frogpilotPlan'].tFollow, sm['frogpilotCarState'].trafficModeActive,
+    self.mpc.update(self.lead_one, self.lead_two, sm['frogpilotPlan'].vCruise,
+                    x, v, a, j, radarless_model,
+                    sm['frogpilotPlan'].tFollow,
+                    sm['frogpilotCarState'].trafficModeActive,
                     personality=sm['controlsState'].personality)
 
     self.a_desired_trajectory_full = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
@@ -300,20 +321,38 @@ class LongitudinalPlanner:
     longitudinalPlan.fcw = self.fcw
 
     if classic_model:
-      a_target, should_stop = get_accel_from_plan_classic(self.CP, longitudinalPlan.speeds,
-                                                          longitudinalPlan.accels, vEgoStopping=frogpilot_toggles.vEgoStopping)
+      a_target, should_stop = get_accel_from_plan_classic(self.CP,
+                                                          longitudinalPlan.speeds,
+                                                          longitudinalPlan.accels,
+                                                          vEgoStopping=frogpilot_toggles.vEgoStopping)
     else:
       action_t = self.CP.longitudinalActuatorDelay + DT_MDL
-      a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds, longitudinalPlan.accels,
-                                                  action_t=action_t, vEgoStopping=frogpilot_toggles.vEgoStopping)
+      a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds,
+                                                  longitudinalPlan.accels,
+                                                  action_t=action_t,
+                                                  vEgoStopping=frogpilot_toggles.vEgoStopping)
 
-    # Emergency braking override using TTC:
-    if self.lead_one.status:
-      closing_speed = max(sm['carState'].vEgo - self.lead_one.vLead, 0.1)
-      ttc_lead = self.lead_one.dRel / closing_speed
-      if ttc_lead < 1.0:
-         should_stop = True
-         cloudlog.info("Emergency braking override: critical TTC %.2f", ttc_lead)
+    #
+    # ------ PATCHED EMERGENCY-BRAKING LOGIC FOR BOTH LEADS ------
+    #
+    # We check each lead's TTC against a dynamic threshold based on -6 m/s^2 decel.
+    #
+    for lead in [self.lead_one, self.lead_two]:
+      if lead.status:
+        closing_speed = max(sm['carState'].vEgo - lead.vLead, 0.1)
+        ttc_lead = lead.dRel / closing_speed
+        ttc_threshold = emergency_brake_threshold(sm['carState'].vEgo)  # dynamic
+        if ttc_lead < ttc_threshold:
+          should_stop = True
+          cloudlog.info(
+            f"Emergency braking override: lead dRel={lead.dRel:.1f}, "
+            f"closing_speed={closing_speed:.1f}, ttc={ttc_lead:.2f}, "
+            f"threshold={ttc_threshold:.2f}"
+          )
+          break
+    #
+    # -------------------- END PATCH -----------------------------
+    #
 
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
