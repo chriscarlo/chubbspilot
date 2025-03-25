@@ -102,7 +102,8 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
   filename = os.path.basename(local_path)
   file_client = dir_client.get_file_client(filename)
   with open(local_path, "rb") as f:
-    file_client.upload_file(f)
+    # Add timeout to prevent indefinite hangs
+    file_client.upload_file(f, timeout=300)  # 5 minute timeout
 
   cloudlog.event("azure._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
 
@@ -171,7 +172,10 @@ class UploadQueueCache:
   def cache(upload_queue: Queue[UploadItem]) -> None:
     try:
       queue_list: list[UploadItem | None] = list(upload_queue.queue)
-      items = [asdict(i) for i in queue_list if i is not None and (i.id not in cancelled_uploads)]
+      # Only include items that aren't None, aren't cancelled, and don't have current=True
+      # (current=True indicates in-progress upload that completed successfully)
+      items = [asdict(i) for i in queue_list if i is not None and (i.id not in cancelled_uploads)
+               and not (i.current and i.progress >= 1.0)]
       Params().put("AzureUploadQueue", json.dumps(items))
     except Exception:
       cloudlog.exception("azure.UploadQueueCache.cache.exception")
@@ -254,6 +258,11 @@ def upload_handler(end_event: threading.Event) -> None:
 
         cloudlog.event("azure.upload_handler.success", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
+
+        # Properly mark the item as done and remove from tracking
+        upload_queue.task_done()
+        if item.id in cancelled_uploads:
+          cancelled_uploads.remove(item.id)
 
         # Persist queue updates
         UploadQueueCache.cache(upload_queue)
