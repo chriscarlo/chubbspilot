@@ -12,71 +12,138 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL, Ratekeeper, Priority, config_realtime_process
 from openpilot.common.swaglog import cloudlog
 
-from openpilot.common.simple_kalman import KF1D
+# Removed openpilot.common.simple_kalman import, since we'll define our own 2D filter here
 
 from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
-# Default lead acceleration decay set to 50% at 1.5s
+# ---------------------------------------------------------------------------------------
+# 2D Kalman filter: state = [ dRel, vRel ]
+# ---------------------------------------------------------------------------------------
+import numpy as np
+
+class KF2D:
+  """
+  Minimal 2D Kalman filter for tracking [dRel, vRel].
+  The state transition assumes constant velocity (zero accel).
+  You can expand to 3D if you want explicit acceleration in the state.
+  """
+
+  def __init__(self, dt: float):
+    self.dt = dt
+
+    # State x = [ dRel, vRel ]^T
+    self.x = np.zeros((2, 1))
+    # Covariance P
+    self.P = np.eye(2) * 1e3  # large initial uncertainty
+
+    # Constant-velocity state transition:
+    #   dRel_{k+1} = dRel_k + dt*vRel_k
+    #   vRel_{k+1} = vRel_k
+    self.A = np.array([
+      [1.0, dt],
+      [0.0, 1.0],
+    ])
+
+    # We measure [dRel, vRel] directly
+    self.C = np.eye(2)
+
+    # Process noise Q (tune these).
+    # Larger Q -> trust the model less, respond faster to measurements
+    self.Q = np.array([
+      [0.3*dt, 0.0 ],
+      [0.0,    0.3*dt],
+    ])**2
+
+    # Measurement noise R (tune these).
+    # If radar distance is accurate, keep R(dRel) small; if vRel is noisy, keep R(vRel) bigger, etc.
+    self.R = np.diag([1.0, 2.0])
+
+  def predict(self):
+    # Predict next (x, P)
+    self.x = self.A @ self.x
+    self.P = self.A @ self.P @ self.A.T + self.Q
+
+  def update(self, z: np.ndarray):
+    """
+    z is [dRel_meas, vRel_meas].
+    We'll do the standard linear Kalman update.
+    """
+    z = z.reshape((2, 1))
+    y = z - (self.C @ self.x)                      # residual
+    S = self.C @ self.P @ self.C.T + self.R        # residual covariance
+    K = self.P @ self.C.T @ np.linalg.inv(S)       # Kalman gain
+    self.x = self.x + K @ y
+    I = np.eye(2)
+    self.P = (I - K @ self.C) @ self.P
+
+# ---------------------------------------------------------------------------------------
+# Original constants, plus we keep _LEAD_ACCEL_TAU if you like
+# ---------------------------------------------------------------------------------------
 _LEAD_ACCEL_TAU = 0.6
 
-# radar tracks
-SPEED, ACCEL = 0, 1     # Kalman filter states enum
-
-# stationary qualification parameters
-V_EGO_STATIONARY = 4.   # no stationary object flag below this speed
-
-RADAR_TO_CENTER = 2.7   # (deprecated) RADAR is ~ 2.7m ahead from center of car
-RADAR_TO_CAMERA = 1.52  # RADAR is ~ 1.5m ahead from center of mesh frame
-
-
-class KalmanParams:
-  def __init__(self, dt: float):
-    # Lead Kalman Filter params, calculating K from A, C, Q, R requires the control library.
-    # hardcoding a lookup table to compute K for values of radar_ts between 0.01s and 0.2s
-    assert dt > .01 and dt < .2, "Radar time step must be between .01s and 0.2s"
-    self.A = [[1.0, dt], [0.0, 1.0]]
-    self.C = [1.0, 0.0]
-    #Q = np.matrix([[10., 0.0], [0.0, 100.]])
-    #R = 1e3
-    #K = np.matrix([[ 0.05705578], [ 0.03073241]])
-    dts = [dt * 0.01 for dt in range(1, 21)]
-    K0 = [0.12287673, 0.14556536, 0.16522756, 0.18281627, 0.1988689,  0.21372394,
-          0.22761098, 0.24069424, 0.253096,   0.26491023, 0.27621103, 0.28705801,
-          0.29750003, 0.30757767, 0.31732515, 0.32677158, 0.33594201, 0.34485814,
-          0.35353899, 0.36200124]
-    K1 = [0.29666309, 0.29330885, 0.29042818, 0.28787125, 0.28555364, 0.28342219,
-          0.28144091, 0.27958406, 0.27783249, 0.27617149, 0.27458948, 0.27307714,
-          0.27162685, 0.27023228, 0.26888809, 0.26758976, 0.26633338, 0.26511557,
-          0.26393339, 0.26278425]
-    self.K = [[interp(dt, dts, K0)], [interp(dt, dts, K1)]]
-
+# For track association
+V_EGO_STATIONARY = 4.0
+RADAR_TO_CAMERA = 1.52
 
 class Track:
-  def __init__(self, identifier: int, v_lead: float, kalman_params: KalmanParams):
+  def __init__(self, identifier: int, d_rel_init: float, v_rel_init: float, dt: float):
     self.identifier = identifier
     self.cnt = 0
+    # We'll keep aLeadTau logic if desired
     self.aLeadTau = _LEAD_ACCEL_TAU
-    self.K_A = kalman_params.A
-    self.K_C = kalman_params.C
-    self.K_K = kalman_params.K
-    self.kf = KF1D([[v_lead], [0.0]], self.K_A, self.K_C, self.K_K)
 
-  def update(self, d_rel: float, y_rel: float, v_rel: float, v_lead: float, measured: float):
-    # relative values, copy
-    self.dRel = d_rel   # LONG_DIST
-    self.yRel = y_rel   # -LAT_DIST
-    self.vRel = v_rel   # REL_SPEED
+    # New 2D KF for [dRel, vRel]
+    self.kf = KF2D(dt)
+    self.kf.x[0, 0] = d_rel_init
+    self.kf.x[1, 0] = v_rel_init
+    # e.g. smaller initial cov if we trust the first measurement
+    self.kf.P = np.diag([10.0, 10.0])
+
+    # For computing approximate acceleration
+    self.prev_vRel_K = v_rel_init
+    self.aLeadK = 0.0
+
+    # store raw measured values
+    self.dRel = d_rel_init
+    self.yRel = 0.0
+    self.vRel = v_rel_init
+    self.vLead = 0.0
+    self.measured = False
+
+  def update(self, d_rel: float, y_rel: float, v_rel: float, v_lead: float, measured: bool, v_ego: float):
+    """
+    d_rel: measured distance
+    y_rel: measured lateral offset
+    v_rel: measured relative speed
+    v_lead: measured absolute lead speed (v_rel + v_ego)
+    measured: bool
+    v_ego: our own speed
+    """
+    # store raw
+    self.dRel = d_rel
+    self.yRel = y_rel
+    self.vRel = v_rel
     self.vLead = v_lead
-    self.measured = measured   # measured or estimate
+    self.measured = measured
 
-    # computed velocity and accelerations
+    # 1) Predict
+    self.kf.predict()
+
+    # 2) Update with measurement = [d_rel, v_rel]
+    z = np.array([d_rel, v_rel], dtype=float)
+    self.kf.update(z)
+
+    # Get filtered states
+    dRel_K = float(self.kf.x[0, 0])
+    vRel_K = float(self.kf.x[1, 0])
+
+    # approximate lead acceleration
     if self.cnt > 0:
-      self.kf.update(self.vLead)
+      dt = self.kf.dt
+      self.aLeadK = (vRel_K - self.prev_vRel_K) / dt
+    self.prev_vRel_K = vRel_K
 
-    self.vLeadK = float(self.kf.x[SPEED][0])
-    self.aLeadK = float(self.kf.x[ACCEL][0])
-
-    # Learn if constant acceleration
+    # If you want to keep some "aLeadTau" adaptation logic:
     if abs(self.aLeadK) < 0.5:
       self.aLeadTau = min(max(self.aLeadTau, 1e-2) * 1.1, _LEAD_ACCEL_TAU)
     else:
@@ -84,22 +151,35 @@ class Track:
 
     self.cnt += 1
 
+    self.dRel_K = dRel_K
+    self.vRel_K = vRel_K
+    self.vLeadK = vRel_K + v_ego   # filtered absolute speed
+
   def get_key_for_cluster(self):
-    # Weigh y higher since radar is inaccurate in this dimension
+    # Weigh y higher since radar is inaccurate in that dimension
     return [self.dRel, self.yRel*2, self.vRel]
 
   def reset_a_lead(self, aLeadK: float, aLeadTau: float):
-    self.kf = KF1D([[self.vLead], [aLeadK]], self.K_A, self.K_C, self.K_K)
+    # If you ever want to forcibly reset the filter's acceleration estimate
     self.aLeadK = aLeadK
     self.aLeadTau = aLeadTau
+    # Optionally reinit the KF with new states
+    self.kf.x[1, 0] = self.vRel  # or aLeadK if you expand to 3D
+
+  def is_potential_fcw(self, model_prob: float):
+    return model_prob > 0.9
 
   def get_RadarState(self, model_prob: float = 0.0):
+    """
+    Return a dictionary for radarState.leadOne / leadTwo, with *filtered* velocity.
+    We'll store `vLead` and `vRel` as the filtered versions so the planner uses them.
+    """
     return {
-      "dRel": float(self.dRel),
-      "yRel": float(self.yRel),
-      "vRel": float(self.vRel),
-      "vLead": float(self.vLead),
-      "vLeadK": float(self.vLeadK),
+      "dRel": float(self.dRel_K),   # use filtered distance
+      "yRel": float(self.yRel),     # lateral remains unfiltered
+      "vRel": float(self.vRel_K),   # filtered relative speed
+      "vLead": float(self.vLeadK),  # filtered absolute speed
+      "vLeadK": float(self.vLeadK), # same as above, for debugging if you like
       "aLeadK": float(self.aLeadK),
       "aLeadTau": float(self.aLeadTau),
       "status": True,
@@ -110,6 +190,7 @@ class Track:
     }
 
   def potential_adjacent_lead(self, far: bool, left: bool, model_data: capnp._DynamicStructReader, standstill: bool):
+    # unchanged from your original
     if standstill or self.vLeadK < 1:
       return False
 
@@ -122,7 +203,6 @@ class Track:
     else:
       near_lane = interp(self.dRel, model_data.laneLines[near_lane_index].x, model_data.laneLines[near_lane_index].y)
       far_lane = interp(self.dRel, model_data.laneLines[far_lane_index].x, model_data.laneLines[far_lane_index].y)
-
       return min(near_lane, far_lane) < self.yRel < max(near_lane, far_lane)
 
   def potential_far_lead(self, model_data: capnp._DynamicStructReader):
@@ -135,12 +215,8 @@ class Track:
     return left_lane < self.yRel < right_lane
 
   def potential_low_speed_lead(self, v_ego: float):
-    # stop for stuff in front of you and low speed, even without model confirmation
-    # Radar points closer than 0.75, are almost always glitches on toyota radars
+    # unchanged from your original
     return abs(self.yRel) < 1.0 and (v_ego < V_EGO_STATIONARY) and (0.75 < self.dRel < 25)
-
-  def is_potential_fcw(self, model_prob: float):
-    return model_prob > .9
 
   def __str__(self):
     ret = f"x: {self.dRel:4.1f}  y: {self.yRel:4.1f}  v: {self.vRel:4.1f}  a: {self.aLeadK:4.1f}"
@@ -149,31 +225,28 @@ class Track:
 
 def laplacian_pdf(x: float, mu: float, b: float):
   b = max(b, 1e-4)
-  return math.exp(-abs(x-mu)/b)
+  return math.exp(-abs(x - mu)/b)
 
 
 def match_vision_to_track(v_ego: float, lead: capnp._DynamicStructReader, tracks: dict[int, Track]):
   offset_vision_dist = lead.x[0] - RADAR_TO_CAMERA
 
-  def prob(c):
+  def prob(c: Track):
+    # We'll compare to the raw states, or the filtered states?  Typically filtered is safer.
+    # But your original code used c.dRel, c.vRel...
     prob_d = laplacian_pdf(c.dRel, offset_vision_dist, lead.xStd[0])
     prob_y = laplacian_pdf(c.yRel, -lead.y[0], lead.yStd[0])
     prob_v = laplacian_pdf(c.vRel + v_ego, lead.v[0], lead.vStd[0])
-
-    # This isn't exactly right, but it's a good heuristic
     return prob_d * prob_y * prob_v
 
   track = max(tracks.values(), key=prob)
 
-  # if no 'sane' match is found return -1
-  # stationary radar points can be false positives
-  dist_sane = abs(track.dRel - offset_vision_dist) < max([(offset_vision_dist)*.25, 5.0])
+  dist_sane = abs(track.dRel - offset_vision_dist) < max(offset_vision_dist * 0.25, 5.0)
   vel_sane = (abs(track.vRel + v_ego - lead.v[0]) < 10) or (v_ego + track.vRel > 3)
   if dist_sane and vel_sane:
     return track
   else:
     return None
-
 
 
 def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: float, model_v_ego: float):
@@ -198,7 +271,6 @@ def get_lead(v_ego: float, ready: bool, tracks: dict[int, Track], lead_msg: capn
              model_v_ego: float, model_data: capnp._DynamicStructReader,
              frogpilot_toggles: SimpleNamespace, frogpilotCarState: capnp._DynamicStructReader,
              low_speed_override: bool = True) -> dict[str, Any]:
-  # Determine leads, this is where the essential logic happens
   if len(tracks) > 0 and ready and lead_msg.prob > frogpilot_toggles.lead_detection_probability:
     track = match_vision_to_track(v_ego, lead_msg, tracks)
   else:
@@ -214,8 +286,6 @@ def get_lead(v_ego: float, ready: bool, tracks: dict[int, Track], lead_msg: capn
     low_speed_tracks = [c for c in tracks.values() if c.potential_low_speed_lead(v_ego)]
     if len(low_speed_tracks) > 0:
       closest_track = min(low_speed_tracks, key=lambda c: c.dRel)
-
-      # Only choose new track if it is actually closer than the previous one
       if (not lead_dict['status']) or (closest_track.dRel < lead_dict['dRel']):
         lead_dict = closest_track.get_RadarState()
 
@@ -245,71 +315,49 @@ def get_adjacent_lead(tracks: dict[int, Track], model_data: capnp._DynamicStruct
 
 def get_forward_blindspot(tracks: dict[int, Track], left: bool = True) -> bool:
   """
-  Detect vehicles in forward blindspots (adjacent lane but forward of typical blindspot coverage)
-  using corner radar data. This covers the dangerous area where a car might be in an adjacent lane
-  but slightly ahead of the driver's peripheral vision.
-
-  Args:
-    tracks: All radar tracks including corner radar
-    left: Whether to check left or right forward blindspot
-
-  Returns:
-    True if a vehicle is detected in forward blindspot area
+  Detect vehicles in forward blindspots (adjacent lane but forward).
+  We'll keep your original logic, just referencing track data.
   """
-  # Define the forward blindspot area - forward of B pillar but still in adjacent lane
-  # Y values are negative to the left, positive to the right of car center
-  y_min = -4.0 if left else 0.5   # Lateral distance min
-  y_max = -0.5 if left else 4.0   # Lateral distance max
-  d_min = 3.0                     # Min longitudinal distance (in front of driver's peripheral view)
-  d_max = 20.0                    # Max longitudinal distance to consider
+  y_min = -4.0 if left else 0.5
+  y_max = -0.5 if left else 4.0
+  d_min = 3.0
+  d_max = 20.0
 
-  # Check for ID ranges that correspond to front corner radars
   front_left_ids = range(3000, 4000)
   front_right_ids = range(4000, 5000)
 
-  # Check all appropriate tracks
   relevant_ids = front_left_ids if left else front_right_ids
   for track_id, track in tracks.items():
-    # Consider both front corner radar points and regular forward radar points in adjacent lanes
     if (track_id in relevant_ids) or (track_id < 1000 and y_min < track.yRel < y_max and d_min < track.dRel < d_max):
-      # For front corner radar tracks which may not have precise position data,
-      # just use their presence as detection
       if track_id in relevant_ids:
         return True
-      # For regular radar tracks, use their position to determine if they're in forward blindspot area
-      elif track.measured and track.vLeadK > 0:  # Only consider valid measurements of moving vehicles
+      elif track.measured and track.vLeadK > 0:
         return True
-
   return False
 
 
 class RadarD:
   def __init__(self, frogpilot_toggles, radar_ts: float, delay: int = 0):
     self.points: dict[int, tuple[float, float, float]] = {}
-
     self.current_time = 0.0
 
     self.tracks: dict[int, Track] = {}
-    self.kalman_params = KalmanParams(radar_ts)
+    self.radar_state: capnp._DynamicStructBuilder | None = None
 
     self.v_ego = 0.0
     self.v_ego_hist = deque([0.0], maxlen=delay+1)
     self.last_v_ego_frame = -1
 
-    self.radar_state: capnp._DynamicStructBuilder | None = None
     self.radar_state_valid = False
     self.radar_tracks_valid = False
-
     self.ready = False
 
-    # Forward blindspot detection
     self.left_forward_blindspot = False
     self.right_forward_blindspot = False
 
-    # FrogPilot variables
     self.frogpilot_toggles = frogpilot_toggles
-
     self.classic_model = self.frogpilot_toggles.classic_model
+    self.radar_ts = radar_ts
 
   def update(self, sm: messaging.SubMaster, rr):
     self.ready = sm.seen['modelV2']
@@ -330,24 +378,24 @@ class RadarD:
     for pt in radar_points:
       ar_pts[pt.trackId] = [pt.dRel, pt.yRel, pt.vRel, pt.measured]
 
-    # *** remove missing points from meta data ***
+    # Remove missing points
     for ids in list(self.tracks.keys()):
       if ids not in ar_pts:
         self.tracks.pop(ids, None)
 
-    # *** compute the tracks ***
+    # Update or create tracks
     for ids in ar_pts:
-      rpt = ar_pts[ids]
+      d_rel, y_rel, v_rel, measured = ar_pts[ids]
+      # align v_ego by a fixed time
+      v_lead = v_rel + self.v_ego_hist[0]
 
-      # align v_ego by a fixed time to align it with the radar measurement
-      v_lead = rpt[2] + self.v_ego_hist[0]
-
-      # create the track if it doesn't exist or it's a new track
       if ids not in self.tracks:
-        self.tracks[ids] = Track(ids, v_lead, self.kalman_params)
-      self.tracks[ids].update(rpt[0], rpt[1], rpt[2], v_lead, rpt[3])
+        # create new track with initial distance, relative speed
+        self.tracks[ids] = Track(ids, d_rel, v_rel, self.radar_ts)
 
-    # *** publish radarState ***
+      self.tracks[ids].update(d_rel, y_rel, v_rel, v_lead, measured, self.v_ego_hist[0])
+
+    # publish radarState
     self.radar_state_valid = sm.all_checks() and len(radar_errors) == 0
     self.radar_state = log.RadarState.new_message()
     self.radar_state.mdMonoTime = sm.logMonoTime['modelV2']
@@ -360,28 +408,34 @@ class RadarD:
       model_v_ego = sm['modelV2'].velocity.x[0]
     else:
       model_v_ego = self.v_ego
+
     leads_v3 = sm['modelV2'].leadsV3
     if len(leads_v3) > 1:
-      # Filter out corner radar points for lead vehicle detection
-      # Track ID ranges:
-      # 0-999: Main forward radar
-      # 1000+: Corner radar (all types)
+      # filter out corner radar points for lead detection
       forward_radar_tracks = {k: v for k, v in self.tracks.items() if k < 1000}
-
-      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, forward_radar_tracks, leads_v3[0], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=True)
-      self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, forward_radar_tracks, leads_v3[1], model_v_ego, sm['modelV2'], self.frogpilot_toggles, sm['frogpilotCarState'], low_speed_override=False)
+      self.radar_state.leadOne = get_lead(self.v_ego, self.ready, forward_radar_tracks,
+                                          leads_v3[0], model_v_ego, sm['modelV2'],
+                                          self.frogpilot_toggles, sm['frogpilotCarState'],
+                                          low_speed_override=True)
+      self.radar_state.leadTwo = get_lead(self.v_ego, self.ready, forward_radar_tracks,
+                                          leads_v3[1], model_v_ego, sm['modelV2'],
+                                          self.frogpilot_toggles, sm['frogpilotCarState'],
+                                          low_speed_override=False)
 
     if self.frogpilot_toggles.adjacent_lead_tracking and self.ready:
-      self.radar_state.leadLeft = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=True)
-      self.radar_state.leadLeftFar = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=True, far=True)
-      self.radar_state.leadRight = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=False)
-      self.radar_state.leadRightFar = get_adjacent_lead(self.tracks, sm['modelV2'], sm['carState'].standstill, left=False, far=True)
+      self.radar_state.leadLeft = get_adjacent_lead(self.tracks, sm['modelV2'],
+                                                    sm['carState'].standstill, left=True)
+      self.radar_state.leadLeftFar = get_adjacent_lead(self.tracks, sm['modelV2'],
+                                                       sm['carState'].standstill, left=True, far=True)
+      self.radar_state.leadRight = get_adjacent_lead(self.tracks, sm['modelV2'],
+                                                     sm['carState'].standstill, left=False)
+      self.radar_state.leadRightFar = get_adjacent_lead(self.tracks, sm['modelV2'],
+                                                        sm['carState'].standstill, left=False, far=True)
 
-    # Check for vehicles in forward blindspots using corner radar data
+    # Check forward blindspots
     self.left_forward_blindspot = get_forward_blindspot(self.tracks, left=True)
     self.right_forward_blindspot = get_forward_blindspot(self.tracks, left=False)
 
-    # Update FrogPilot parameters
     if sm['frogpilotPlan'].togglesUpdated:
       self.frogpilot_toggles = get_frogpilot_toggles()
 
@@ -392,18 +446,15 @@ class RadarD:
     radar_msg.valid = self.radar_state_valid
     radar_msg.radarState = self.radar_state
     radar_msg.radarState.cumLagMs = lag_ms
-
-    # Add forward blindspot detection to the radar message
     radar_msg.radarState.leftForwardBlindspot = self.left_forward_blindspot
     radar_msg.radarState.rightForwardBlindspot = self.right_forward_blindspot
 
     pm.send("radarState", radar_msg)
 
-    # publish tracks for UI debugging (keep last)
+    # publish tracks for UI debugging
     tracks_msg = messaging.new_message('liveTracks', len(self.tracks))
     tracks_msg.valid = self.radar_state_valid
     for index, tid in enumerate(sorted(self.tracks.keys())):
-      # Determine the type of radar based on track ID range
       radar_type = "main"
       if tid >= 1000:
         if tid < 2000:
@@ -415,20 +466,21 @@ class RadarD:
         else:
           radar_type = "front_right"
 
+      t = self.tracks[tid]
       tracks_msg.liveTracks[index] = {
         "trackId": tid,
-        "dRel": float(self.tracks[tid].dRel),
-        "yRel": float(self.tracks[tid].yRel),
-        "vRel": float(self.tracks[tid].vRel),
-        "aRel": float(self.tracks[tid].aLeadK) if hasattr(self.tracks[tid], 'aLeadK') else float('nan'),
-        "measured": bool(self.tracks[tid].measured),
-        # Add a flag to indicate if this is a corner radar point and which type
+        "dRel": float(t.dRel_K),   # filtered
+        "yRel": float(t.yRel),
+        "vRel": float(t.vRel_K),   # filtered
+        "aRel": float(t.aLeadK),
+        "measured": bool(t.measured),
         "isCornerRadar": tid >= 1000,
         "radarType": radar_type,
       }
     pm.send('liveTracks', tracks_msg)
 
   def update_radardless(self, rr):
+    # unchanged
     radar_points = []
     radar_errors = []
     if rr is not None:
@@ -436,12 +488,12 @@ class RadarD:
       radar_errors = rr.errors
 
     self.radar_tracks_valid = len(radar_errors) == 0
-
     self.points = {}
     for pt in radar_points:
       self.points[pt.trackId] = (pt.dRel, pt.yRel, pt.vRel)
 
   def publish_radardless(self):
+    # unchanged
     tracks_msg = messaging.new_message('liveTracks', len(self.points))
     tracks_msg.valid = self.radar_tracks_valid
     for index, tid in enumerate(sorted(self.points.keys())):
@@ -451,60 +503,48 @@ class RadarD:
         "yRel": -float(self.points[tid][1]),
         "vRel": float(self.points[tid][2]),
       }
-
     return tracks_msg
 
-# fuses camera and radar data for best lead detection
 def main():
   config_realtime_process(5, Priority.CTRL_LOW)
-
-  # wait for stats about the car to come in from controls
   cloudlog.info("radard is waiting for CarParams")
   with car.CarParams.from_bytes(Params().get("CarParams", block=True)) as msg:
     CP = msg
   cloudlog.info("radard got CarParams")
 
-  # import the radar from the fingerprint
   cloudlog.info("radard is importing %s", CP.carName)
   RadarInterface = importlib.import_module(f'selfdrive.car.{CP.carName}.radar_interface').RadarInterface
 
-  # *** setup messaging
   can_sock = messaging.sub_sock('can')
-
   RI = RadarInterface(CP)
-
   rk = Ratekeeper(1.0 / CP.radarTimeStep, print_delay_threshold=None)
 
-  # FrogPilot variables
   frogpilot_toggles = get_frogpilot_toggles()
-
   RD = RadarD(frogpilot_toggles, CP.radarTimeStep, RI.delay)
 
   if not frogpilot_toggles.radarless_model:
-    sm = messaging.SubMaster(['modelV2', 'carState', 'frogpilotCarState', 'frogpilotPlan'], frequency=int(1./DT_CTRL))
+    sm = messaging.SubMaster(['modelV2', 'carState', 'frogpilotCarState', 'frogpilotPlan'],
+                             frequency=int(1./DT_CTRL))
     pm = messaging.PubMaster(['radarState', 'liveTracks'])
-    while 1:
+    while True:
       can_strings = messaging.drain_sock_raw(can_sock, wait_for_one=True)
       rr = RI.update(can_strings)
       sm.update(0)
       if rr is None:
         continue
-
       RD.update(sm, rr)
       RD.publish(pm, -rk.remaining*1000.0)
       rk.monitor_time()
   else:
     pub_sock = messaging.pub_sock('liveTracks')
-    while 1:
+    while True:
       can_strings = messaging.drain_sock_raw(can_sock, wait_for_one=True)
       rr = RI.update(can_strings)
       if rr is None:
         continue
-
       RD.update_radardless(rr)
       msg = RD.publish_radardless()
       pub_sock.send(msg.to_bytes())
-
       rk.monitor_time()
 
 if __name__ == "__main__":

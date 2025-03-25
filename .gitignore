@@ -2682,3 +2682,7 @@ rlog_to_csv.py
 search_radar_data.py
 opendbc/hyundai_canfd_fixed.dbc
 compare_dirs.py
+/data
+analyze_radar.py
+dbc_overlap_report.txt
+hyundai_kia_canfd_mando_radars_CONFLICTS.txt
