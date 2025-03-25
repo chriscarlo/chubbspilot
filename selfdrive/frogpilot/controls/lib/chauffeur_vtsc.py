@@ -131,7 +131,7 @@ def early_approach_time_fn(apex_speed: float) -> float:
     Logistic-based function for how many seconds in advance to start your apex approach decel.
     E.g. from 2.0s at ~8 m/s to 3.0s at ~22 m/s.
     """
-    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=2.0, hi=3.0)
+    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=2.0, hi=5.0)
 
 
 def early_spool_time_fn(apex_speed: float) -> float:
