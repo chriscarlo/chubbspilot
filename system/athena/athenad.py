@@ -40,6 +40,14 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata
 from openpilot.system.hardware.hw import Paths
 
+# ---- NEW IMPORTS FOR AZURE FILE SHARE ----
+try:
+  from azure.storage.fileshare import ShareFileClient, ShareDirectoryClient
+except ImportError:
+  cloudlog.exception("Azure storage fileshare SDK not installed! Please pip install azure-storage-file-share.")
+  ShareFileClient = None
+  ShareDirectoryClient = None
+# ------------------------------------------
 
 ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
@@ -61,37 +69,6 @@ UploadItemDict = dict[str, str | bool | int | float | dict[str, str]]
 
 UploadFilesToUrlResponse = dict[str, int | list[UploadItemDict] | list[str]]
 
-
-@dataclass
-class UploadFile:
-  fn: str
-  url: str
-  headers: dict[str, str]
-  allow_cellular: bool
-
-  @classmethod
-  def from_dict(cls, d: dict) -> UploadFile:
-    return cls(d.get("fn", ""), d.get("url", ""), d.get("headers", {}), d.get("allow_cellular", False))
-
-
-@dataclass
-class UploadItem:
-  path: str
-  url: str
-  headers: dict[str, str]
-  created_at: int
-  id: str | None
-  retry_count: int = 0
-  current: bool = False
-  progress: float = 0
-  allow_cellular: bool = False
-
-  @classmethod
-  def from_dict(cls, d: dict) -> UploadItem:
-    return cls(d["path"], d["url"], d["headers"], d["created_at"], d["id"], d["retry_count"], d["current"],
-               d["progress"], d["allow_cellular"])
-
-
 dispatcher["echo"] = lambda s: s
 recv_queue: Queue[str] = queue.Queue()
 send_queue: Queue[str] = queue.Queue()
@@ -102,19 +79,15 @@ cancelled_uploads: set[str] = set()
 
 cur_upload_items: dict[int, UploadItem | None] = {}
 
-
 def strip_bz2_extension(fn: str) -> str:
   if fn.endswith('.bz2'):
     return fn[:-4]
   return fn
 
-
 class AbortTransferException(Exception):
   pass
 
-
 class UploadQueueCache:
-
   @staticmethod
   def initialize(upload_queue: Queue[UploadItem]) -> None:
     try:
@@ -128,8 +101,8 @@ class UploadQueueCache:
   @staticmethod
   def cache(upload_queue: Queue[UploadItem]) -> None:
     try:
-      queue: list[UploadItem | None] = list(upload_queue.queue)
-      items = [asdict(i) for i in queue if i is not None and (i.id not in cancelled_uploads)]
+      queue_list: list[UploadItem | None] = list(upload_queue.queue)
+      items = [asdict(i) for i in queue_list if i is not None and (i.id not in cancelled_uploads)]
       Params().put("AthenadUploadQueue", json.dumps(items))
     except Exception:
       cloudlog.exception("athena.UploadQueueCache.cache.exception")
@@ -145,6 +118,8 @@ def handle_long_poll(ws: WebSocket, exit_event: threading.Event | None) -> None:
     threading.Thread(target=upload_handler, args=(end_event,), name='upload_handler'),
     threading.Thread(target=log_handler, args=(end_event,), name='log_handler'),
     threading.Thread(target=stat_handler, args=(end_event,), name='stat_handler'),
+    # ---- NEW: We'll spawn the realdata_handler to poll /data/media/0/realdata ----
+    threading.Thread(target=realdata_handler, args=(end_event,), name='realdata_handler'),
   ] + [
     threading.Thread(target=jsonrpc_handler, args=(end_event,), name=f'worker_{x}')
     for x in range(HANDLER_THREADS)
@@ -152,6 +127,7 @@ def handle_long_poll(ws: WebSocket, exit_event: threading.Event | None) -> None:
 
   for thread in threads:
     thread.start()
+
   try:
     while not end_event.wait(0.1):
       if exit_event is not None and exit_event.is_set():
@@ -208,8 +184,8 @@ def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = Tr
 
 
 def cb(sm, item, tid, end_event: threading.Event, sz: int, cur: int) -> None:
-  # Abort transfer if connection changed to metered after starting upload
-  # or if athenad is shutting down to re-connect the websocket
+  # This callback was used for the old approach to track upload progress,
+  # can still use it if you want, or ignore for Azure.
   sm.update(0)
   metered = sm['deviceState'].networkMetered
   if metered and (not item.allow_cellular):
@@ -221,13 +197,144 @@ def cb(sm, item, tid, end_event: threading.Event, sz: int, cur: int) -> None:
   cur_upload_items[tid] = replace(item, progress=cur / sz if sz else 1)
 
 
+# ---- (LEGACY) _do_upload() was the old Comma/Athena upload. We keep it for reference if needed. ----
+def _do_upload(upload_item, callback: Callable = None) -> requests.Response:
+  """
+  Original method for uploading to Comma's endpoints with a PUT to a presigned URL.
+  We'll leave it here, but not actually call it if we've moved to Azure.
+  """
+  path = upload_item.path
+  compress = False
+
+  # If file does not exist, but does exist without the .bz2 extension we will compress on the fly
+  if not os.path.exists(path) and os.path.exists(strip_bz2_extension(path)):
+    path = strip_bz2_extension(path)
+    compress = True
+
+  with open(path, "rb") as f:
+    content = f.read()
+    if compress:
+      cloudlog.event("athena.upload_handler.compress", fn=path, fn_orig=upload_item.path)
+      content = bz2.compress(content)
+
+  with io.BytesIO(content) as data:
+    return requests.put(
+      upload_item.url,
+      data=CallbackReader(data, callback, len(content)) if callback else data,
+      headers={**upload_item.headers, 'Content-Length': str(len(content))},
+      timeout=30
+    )
+# --------------------------------------------------------------------------------------------
+
+# ---- NEW: Azure-based upload logic ----
+AZURE_SHARE_NAME = "test-rlog-1"
+AZURE_BASE_DIR   = "rlogs"
+
+def get_azure_connection_string() -> str:
+  """
+  Reads the Azure connection string from /data/persist/azure_conn_string.
+  """
+  try:
+    with open("/data/persist/azure_conn_string", "r") as f:
+      return f.read().strip()
+  except Exception:
+    cloudlog.exception("athena.get_azure_connection_string.exception")
+    return ""
+
+
+def _do_upload_azure(upload_item: UploadItem, callback: Callable = None):
+  """
+  Upload a file to Azure File Share.
+  We'll create a sub-directory named upload_item.azure_subdir (if provided),
+  within AZURE_BASE_DIR, then upload the local 'rlog' file.
+
+  If you want progress tracking, you can adapt the 'callback' like in the old code.
+  """
+  conn_str = get_azure_connection_string()
+  if not conn_str or (ShareDirectoryClient is None):
+    cloudlog.error("Azure connection string not found or azure-storage-file-share not installed")
+    raise Exception("Azure upload not configured")
+
+  subdir_name = upload_item.azure_subdir if upload_item.azure_subdir else "default"
+  local_path = upload_item.path
+  if not os.path.isfile(local_path):
+    raise FileNotFoundError(f"Local file not found: {local_path}")
+
+  dir_client = ShareDirectoryClient.from_connection_string(
+    conn_str=conn_str,
+    share_name=AZURE_SHARE_NAME,
+    directory_path=f"{AZURE_BASE_DIR}/{subdir_name}"
+  )
+  try:
+    # Create subdir if it doesn't exist
+    dir_client.create_directory()
+  except Exception as e:
+    # If it already exists, that's fine. Otherwise, log it.
+    if "ResourceAlreadyExists" not in str(e):
+      cloudlog.exception("Azure create_directory error", exc_info=e)
+
+  # The actual file in that subdir. We'll call it "rlog" or the local file's name:
+  filename = os.path.basename(local_path)  # e.g. "rlog"
+  file_client = dir_client.get_file_client(filename)
+
+  # If we want to forcibly overwrite, that's the default behavior of upload_file().
+  with open(local_path, "rb") as f:
+    # We can do chunked uploads automatically
+    file_client.upload_file(f)
+
+  # No explicit return needed; if we get here, success
+  cloudlog.event("athena._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
+
+# --------------------------------------------------------------------------------------------
+
+@dataclass
+class UploadFile:
+  fn: str
+  url: str
+  headers: dict[str, str]
+  allow_cellular: bool
+
+  @classmethod
+  def from_dict(cls, d: dict) -> UploadFile:
+    return cls(d.get("fn", ""), d.get("url", ""), d.get("headers", {}), d.get("allow_cellular", False))
+
+@dataclass
+class UploadItem:
+  path: str
+  url: str
+  headers: dict[str, str]
+  created_at: int
+  id: str | None
+  retry_count: int = 0
+  current: bool = False
+  progress: float = 0
+  allow_cellular: bool = False
+
+  # ---- NEW: store the name of the subdirectory on Azure, if any
+  azure_subdir: str | None = None
+
+  @classmethod
+  def from_dict(cls, d: dict) -> UploadItem:
+    return cls(
+      d["path"],
+      d["url"],
+      d["headers"],
+      d["created_at"],
+      d["id"],
+      d.get("retry_count", 0),
+      d.get("current", False),
+      d.get("progress", 0),
+      d.get("allow_cellular", False),
+      d.get("azure_subdir", None),
+    )
+
+
 def upload_handler(end_event: threading.Event) -> None:
   sm = messaging.SubMaster(['deviceState'])
   tid = threading.get_ident()
 
   while not end_event.is_set():
     cur_upload_items[tid] = None
-
     try:
       cur_upload_items[tid] = item = replace(upload_queue.get(timeout=1), current=True)
 
@@ -251,27 +358,36 @@ def upload_handler(end_event: threading.Event) -> None:
 
       try:
         fn = item.path
+        file_size = 0
         try:
-          sz = os.path.getsize(fn)
+          file_size = os.path.getsize(fn)
         except OSError:
-          sz = -1
+          pass
 
-        cloudlog.event("athena.upload_handler.upload_start", fn=fn, sz=sz, network_type=network_type, metered=metered, retry_count=item.retry_count)
-        response = _do_upload(item, partial(cb, sm, item, tid, end_event))
+        cloudlog.event("athena.upload_handler.upload_start", fn=fn, sz=file_size,
+                       network_type=network_type, metered=metered, retry_count=item.retry_count)
 
-        if response.status_code not in (200, 201, 401, 403, 412):
-          cloudlog.event("athena.upload_handler.retry", status_code=response.status_code, fn=fn, sz=sz, network_type=network_type, metered=metered)
-          retry_upload(tid, end_event)
-        else:
-          cloudlog.event("athena.upload_handler.success", fn=fn, sz=sz, network_type=network_type, metered=metered)
+        # ---- REPLACE with Azure Upload ----
+        _do_upload_azure(item, partial(cb, sm, item, tid, end_event, file_size))
+
+        cloudlog.event("athena.upload_handler.success", fn=fn, sz=file_size,
+                       network_type=network_type, metered=metered)
 
         UploadQueueCache.cache(upload_queue)
+
       except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.SSLError):
-        cloudlog.event("athena.upload_handler.timeout", fn=fn, sz=sz, network_type=network_type, metered=metered)
+        cloudlog.event("athena.upload_handler.timeout", fn=fn, sz=file_size,
+                       network_type=network_type, metered=metered)
         retry_upload(tid, end_event)
+
       except AbortTransferException:
-        cloudlog.event("athena.upload_handler.abort", fn=fn, sz=sz, network_type=network_type, metered=metered)
+        cloudlog.event("athena.upload_handler.abort", fn=fn, sz=file_size,
+                       network_type=network_type, metered=metered)
         retry_upload(tid, end_event, False)
+
+      except Exception:
+        cloudlog.exception("athena.upload_handler.azure_upload_fail")
+        retry_upload(tid, end_event)
 
     except queue.Empty:
       pass
@@ -279,41 +395,17 @@ def upload_handler(end_event: threading.Event) -> None:
       cloudlog.exception("athena.upload_handler.exception")
 
 
-def _do_upload(upload_item: UploadItem, callback: Callable = None) -> requests.Response:
-  path = upload_item.path
-  compress = False
-
-  # If file does not exist, but does exist without the .bz2 extension we will compress on the fly
-  if not os.path.exists(path) and os.path.exists(strip_bz2_extension(path)):
-    path = strip_bz2_extension(path)
-    compress = True
-
-  with open(path, "rb") as f:
-    content = f.read()
-    if compress:
-      cloudlog.event("athena.upload_handler.compress", fn=path, fn_orig=upload_item.path)
-      content = bz2.compress(content)
-
-  with io.BytesIO(content) as data:
-    return requests.put(upload_item.url,
-                        data=CallbackReader(data, callback, len(content)) if callback else data,
-                        headers={**upload_item.headers, 'Content-Length': str(len(content))},
-                        timeout=30)
-
-
-# security: user should be able to request any message from their car
 @dispatcher.add_method
 def getMessage(service: str, timeout: int = 1000) -> dict:
   if service is None or service not in SERVICE_LIST:
     raise Exception("invalid service")
 
-  socket = messaging.sub_sock(service, timeout=timeout)
-  ret = messaging.recv_one(socket)
+  socket_ = messaging.sub_sock(service, timeout=timeout)
+  ret = messaging.recv_one(socket_)
 
   if ret is None:
     raise TimeoutError
 
-  # this is because capnp._DynamicStructReader doesn't have typing information
   return cast(dict, ret.to_dict())
 
 
@@ -337,22 +429,16 @@ def setNavDestination(latitude: int = 0, longitude: int = 0, place_name: str = N
     "place_details": place_details,
   }
   Params().put("NavDestination", json.dumps(destination))
-
   return {"success": 1}
 
 
 def scan_dir(path: str, prefix: str) -> list[str]:
   files = []
-  # only walk directories that match the prefix
-  # (glob and friends traverse entire dir tree)
   with os.scandir(path) as i:
     for e in i:
       rel_path = os.path.relpath(e.path, Paths.log_root())
       if e.is_dir(follow_symlinks=False):
-        # add trailing slash
         rel_path = os.path.join(rel_path, '')
-        # if prefix is a partial dir name, current dir will start with prefix
-        # if prefix is a partial file name, prefix with start with dir name
         if rel_path.startswith(prefix) or prefix.startswith(rel_path):
           files.extend(scan_dir(e.path, prefix))
       else:
@@ -367,7 +453,10 @@ def listDataDirectory(prefix='') -> list[str]:
 
 @dispatcher.add_method
 def uploadFileToUrl(fn: str, url: str, headers: dict[str, str]) -> UploadFilesToUrlResponse:
-  # this is because mypy doesn't understand that the decorator doesn't change the return type
+  """
+  Legacy JSON-RPC method. Not really used if you’re purely on Azure now,
+  but we keep it for completeness.
+  """
   response: UploadFilesToUrlResponse = uploadFilesToUrls([{
     "fn": fn,
     "url": url,
@@ -378,10 +467,14 @@ def uploadFileToUrl(fn: str, url: str, headers: dict[str, str]) -> UploadFilesTo
 
 @dispatcher.add_method
 def uploadFilesToUrls(files_data: list[UploadFileDict]) -> UploadFilesToUrlResponse:
+  """
+  Another legacy method. If you want to adapt it to queue Azure uploads,
+  you could do so. Right now it queues items with the old structure.
+  """
   files = map(UploadFile.from_dict, files_data)
-
   items: list[UploadItemDict] = []
   failed: list[str] = []
+
   for file in files:
     if len(file.fn) == 0 or file.fn[0] == '/' or '..' in file.fn or len(file.url) == 0:
       failed.append(file.fn)
@@ -392,7 +485,6 @@ def uploadFilesToUrls(files_data: list[UploadFileDict]) -> UploadFilesToUrlRespo
       failed.append(file.fn)
       continue
 
-    # Skip item if already in queue
     url = file.url.split('?')[0]
     if any(url == item['url'].split('?')[0] for item in listUploadQueue()):
       continue
@@ -411,7 +503,6 @@ def uploadFilesToUrls(files_data: list[UploadFileDict]) -> UploadFilesToUrlRespo
     items.append(asdict(item))
 
   UploadQueueCache.cache(upload_queue)
-
   resp: UploadFilesToUrlResponse = {"enqueued": len(items), "items": items}
   if failed:
     resp["failed"] = failed
@@ -438,64 +529,52 @@ def cancelUpload(upload_id: str | list[str]) -> dict[str, int | str]:
   cancelled_uploads.update(cancelled_ids)
   return {"success": 1}
 
+
 @dispatcher.add_method
 def setRouteViewed(route: str) -> dict[str, int | str]:
-  # maintain a list of the last 10 routes viewed in connect
   params = Params()
-
   r = params.get("AthenadRecentlyViewedRoutes", encoding="utf8")
   routes = [] if r is None else r.split(",")
   routes.append(route)
-
-  # remove duplicates
   routes = list(dict.fromkeys(routes))
-
   params.put("AthenadRecentlyViewedRoutes", ",".join(routes[-10:]))
   return {"success": 1}
 
 
 def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local_port: int) -> dict[str, int]:
-  try:
-    if local_port not in LOCAL_PORT_WHITELIST:
-      raise Exception("Requested local port not whitelisted")
+  if local_port not in LOCAL_PORT_WHITELIST:
+    raise Exception("Requested local port not whitelisted")
 
-    cloudlog.debug("athena.startLocalProxy.starting")
+  cloudlog.debug("athena.startLocalProxy.starting")
 
-    dongle_id = Params().get("DongleId").decode('utf8')
-    identity_token = Api(dongle_id).get_token()
-    ws = create_connection(remote_ws_uri,
-                           cookie="jwt=" + identity_token,
-                           enable_multithread=True)
+  dongle_id = Params().get("DongleId").decode('utf8')
+  identity_token = Api(dongle_id).get_token()
+  ws = create_connection(remote_ws_uri,
+                         cookie="jwt=" + identity_token,
+                         enable_multithread=True)
 
-    # Set TOS to keep connection responsive while under load.
-    # DSCP of 36/HDD_LINUX_AC_VI with the minimum delay flag
-    ws.sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x90)
+  ws.sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x90)
+  ssock, csock = socket.socketpair()
+  local_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  local_sock.connect(('127.0.0.1', local_port))
+  local_sock.setblocking(False)
 
-    ssock, csock = socket.socketpair()
-    local_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    local_sock.connect(('127.0.0.1', local_port))
-    local_sock.setblocking(False)
+  proxy_end_event = threading.Event()
+  threads = [
+    threading.Thread(target=ws_proxy_recv, args=(ws, local_sock, ssock, proxy_end_event, global_end_event)),
+    threading.Thread(target=ws_proxy_send, args=(ws, local_sock, csock, proxy_end_event))
+  ]
+  for thread in threads:
+    thread.start()
 
-    proxy_end_event = threading.Event()
-    threads = [
-      threading.Thread(target=ws_proxy_recv, args=(ws, local_sock, ssock, proxy_end_event, global_end_event)),
-      threading.Thread(target=ws_proxy_send, args=(ws, local_sock, csock, proxy_end_event))
-    ]
-    for thread in threads:
-      thread.start()
-
-    cloudlog.debug("athena.startLocalProxy.started")
-    return {"success": 1}
-  except Exception as e:
-    cloudlog.exception("athenad.startLocalProxy.exception")
-    raise e
+  cloudlog.debug("athena.startLocalProxy.started")
+  return {"success": 1}
 
 
 @dispatcher.add_method
 def getPublicKey() -> str | None:
   if not os.path.isfile(Paths.persist_root() + '/comma/id_rsa.pub'):
     return None
-
   with open(Paths.persist_root() + '/comma/id_rsa.pub') as f:
     return f.read()
 
@@ -550,7 +629,6 @@ def takeSnapshot() -> str | dict[str, str] | None:
 
 
 def get_logs_to_send_sorted() -> list[str]:
-  # TODO: scan once then use inotify to detect file creation/deletion
   curr_time = int(time.time())
   logs = []
   for log_entry in os.listdir(Paths.swaglog_root()):
@@ -562,10 +640,8 @@ def get_logs_to_send_sorted() -> list[str]:
         time_sent = int.from_bytes(value, sys.byteorder)
     except (ValueError, TypeError):
       pass
-    # assume send failed and we lost the response if sent more than one hour ago
     if not time_sent or curr_time - time_sent > 3600:
       logs.append(log_entry)
-  # excluding most recent (active) log file
   return sorted(logs)[:-1]
 
 
@@ -582,10 +658,9 @@ def log_handler(end_event: threading.Event) -> None:
         log_files = get_logs_to_send_sorted()
         last_scan = curr_scan
 
-      # send one log
       curr_log = None
       if len(log_files) > 0:
-        log_entry = log_files.pop() # newest log file
+        log_entry = log_files.pop()
         cloudlog.debug(f"athena.log_handler.forward_request {log_entry}")
         try:
           curr_time = int(time.time())
@@ -603,10 +678,8 @@ def log_handler(end_event: threading.Event) -> None:
             low_priority_send_queue.put_nowait(json.dumps(jsonrpc))
             curr_log = log_entry
         except OSError:
-          pass  # file could be deleted by log rotation
+          pass
 
-      # wait for response up to ~100 seconds
-      # always read queue at least once to process any old responses that arrive
       for _ in range(100):
         if end_event.is_set():
           break
@@ -620,7 +693,7 @@ def log_handler(end_event: threading.Event) -> None:
             try:
               setxattr(log_path, LOG_ATTR_NAME, LOG_ATTR_VALUE_MAX_UNIX_TIME)
             except OSError:
-              pass  # file could be deleted by log rotation
+              pass
           if curr_log == log_entry:
             break
         except queue.Empty:
@@ -658,7 +731,44 @@ def stat_handler(end_event: threading.Event) -> None:
     time.sleep(0.1)
 
 
-def ws_proxy_recv(ws: WebSocket, local_sock: socket.socket, ssock: socket.socket, end_event: threading.Event, global_end_event: threading.Event) -> None:
+# ---- NEW: realdata_handler: scans /data/media/0/realdata/ for subdirectories,
+# finds "rlog" file, queues an UploadItem pointing to Azure.
+def realdata_handler(end_event: threading.Event) -> None:
+  while not end_event.is_set():
+    try:
+      base_path = "/data/media/0/realdata"
+      if os.path.isdir(base_path):
+        for d in os.listdir(base_path):
+          sub_dir_full = os.path.join(base_path, d)
+          if os.path.isdir(sub_dir_full):
+            # Check if there's a file named "rlog"
+            rlog_path = os.path.join(sub_dir_full, "rlog")
+            if os.path.isfile(rlog_path):
+              # Create a unique ID so we don't double-queue
+              upload_id = f"azure|{d}"
+              # Check if it's already in the queue or uploading
+              queued_items = list(upload_queue.queue) + list(cur_upload_items.values())
+              if any((qi is not None and qi.id == upload_id) for qi in queued_items):
+                continue
+
+              # Create new item and push to queue
+              item = UploadItem(
+                path=rlog_path,
+                url="",  # not used for Azure
+                headers={},
+                created_at=int(time.time() * 1000),
+                id=upload_id,
+                azure_subdir=d
+              )
+              upload_queue.put_nowait(item)
+              UploadQueueCache.cache(upload_queue)
+      time.sleep(60)
+    except Exception:
+      cloudlog.exception("athena.realdata_handler.exception")
+
+
+def ws_proxy_recv(ws: WebSocket, local_sock: socket.socket, ssock: socket.socket,
+                  end_event: threading.Event, global_end_event: threading.Event) -> None:
   while not (end_event.is_set() or global_end_event.is_set()):
     try:
       r = select.select((ws.sock,), (), (), 30)
@@ -678,7 +788,6 @@ def ws_proxy_recv(ws: WebSocket, local_sock: socket.socket, ssock: socket.socket
   local_sock.close()
   ws.close()
   cloudlog.debug("athena.ws_proxy_recv done closing sockets")
-
   end_event.set()
 
 
@@ -688,15 +797,12 @@ def ws_proxy_send(ws: WebSocket, local_sock: socket.socket, signal_sock: socket.
       r, _, _ = select.select((local_sock, signal_sock), (), ())
       if r:
         if r[0].fileno() == signal_sock.fileno():
-          # got end signal from ws_proxy_recv
           end_event.set()
           break
         data = local_sock.recv(4096)
         if not data:
-          # local_sock is dead
           end_event.set()
           break
-
         ws.send(data, ABNF.OPCODE_BINARY)
     except Exception:
       cloudlog.exception("athenad.ws_proxy_send.exception")
@@ -736,11 +842,13 @@ def ws_send(ws: WebSocket, end_event: threading.Event) -> None:
         data = send_queue.get_nowait()
       except queue.Empty:
         data = low_priority_send_queue.get(timeout=1)
+
       for i in range(0, len(data), WS_FRAME_SIZE):
         frame = data[i:i+WS_FRAME_SIZE]
         last = i + WS_FRAME_SIZE >= len(data)
         opcode = ABNF.OPCODE_TEXT if i == 0 else ABNF.OPCODE_CONT
         ws.send_frame(ABNF.create_frame(frame, opcode, last))
+
     except queue.Empty:
       pass
     except Exception:
@@ -759,13 +867,10 @@ def ws_manage(ws: WebSocket, end_event: threading.Event) -> None:
       onroad_prev = onroad
 
       if sock is not None:
-        # While not sending data, onroad, we can expect to time out in 7 + (7 * 2) = 21s
-        #                         offroad, we can expect to time out in 30 + (10 * 3) = 60s
-        # FIXME: TCP_USER_TIMEOUT is effectively 2x for some reason (32s), so it's mostly unused
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 16000 if onroad else 0)
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 7 if onroad else 30)
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 7 if onroad else 10)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 2 if onroad else 3)
+        sock.setsockopt(socket.TCP_KEEPIDLE, socket.TCP_KEEPCNT, 2 if onroad else 3)  # sometimes needed
 
     if end_event.wait(5):
       break
@@ -808,6 +913,7 @@ def main(exit_event: threading.Event = None):
       cur_upload_items.clear()
 
       handle_long_poll(ws, exit_event)
+
     except (KeyboardInterrupt, SystemExit):
       break
     except (ConnectionError, TimeoutError, WebSocketException):
@@ -815,7 +921,6 @@ def main(exit_event: threading.Event = None):
       params.remove("LastAthenaPingTime")
     except Exception:
       cloudlog.exception("athenad.main.exception")
-
       conn_retries += 1
       params.remove("LastAthenaPingTime")
 
