@@ -2686,3 +2686,15 @@ compare_dirs.py
 analyze_radar.py
 dbc_overlap_report.txt
 hyundai_kia_canfd_mando_radars_CONFLICTS.txt
+plot_curvature_speed.py
+merged_hyundai_kia_canfd_mando_radars_CONFLICTS.txt
+merged_hyundai_kia_canfd_mando_radars.dbc
+hyundai_kia_canfd_mando_radars_CONFLICTS.txt
+hyundai_kia_canfd_mando_radars.dbc
+dbc_merger_with_resolver.py
+dbc_merger_auto.py
+dbc_merger.py
+dbc_conflict_extractor.py
+curvature_speed_relationship_20mph_steep.png
+curvature_speed_relationship_20mph.png
+curvature_speed_relationship.png

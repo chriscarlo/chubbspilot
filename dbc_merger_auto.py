@@ -3,87 +3,172 @@ import os
 from collections import defaultdict
 
 def parse_dbc_file(file_path):
-    """Parse a DBC file and extract message definitions and other components."""
+    """
+    Parse a DBC file in a line-based way:
+      - Read the file line by line.
+      - Capture each message (BO_) along with its SG_ lines, etc. in a 'lines' list.
+      - Also separately capture VAL_, BA_, CM_, VAL_TABLE_, etc. lines in sets/lists.
+
+    This preserves original newlines (so we can re-output messages in a readable format).
+    """
     with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-        content = f.read()
+        all_lines = f.readlines()
 
-    # Extract components
-    version_match = re.search(r'VERSION\s+"([^"]*)"', content)
-    version = version_match.group(1) if version_match else ""
+    # Extract version (just one-liner if present)
+    version = ""
+    version_regex = re.compile(r'^VERSION\s+"([^"]*)"\s*$')
 
-    # Extract NS section
-    ns_match = re.search(r'NS_\s+:(.*?)BS_\s*:', content, re.DOTALL)
-    ns_section = ns_match.group(1).strip() if ns_match else ""
-
-    # Extract bus units (BU)
-    bu_match = re.search(r'BU_\s*:(.*?)(?:BO_|VAL_TABLE_)', content, re.DOTALL)
+    # We'll collect everything else in these structures:
+    ns_section_lines = []
     bus_units = []
-    if bu_match:
-        bu_line = bu_match.group(1).strip()
-        if bu_line:
-            bus_units = re.split(r'\s+', bu_line)
 
-    # Extract message definitions (BO_)
-    bo_pattern = r'BO_\s+(\d+)\s+([^:]+):\s+(\d+)\s+([^\n]+)(?:\n(?:\s+SG_\s+[^\n]+))*'
+    # For messages, store as:
+    #   messages[msg_id] = {
+    #       'id': msg_id,
+    #       'name': <string>,
+    #       'size': <int>,
+    #       'sender': <string>,
+    #       'lines': [str, str, ... all lines for that message],
+    #       'signals': dict of signals parsed out
+    #   }
     messages = {}
-    for match in re.finditer(bo_pattern, content):
-        msg_id = int(match.group(1))
-        msg_name = match.group(2).strip()
-        msg_size = int(match.group(3))
-        msg_sender = match.group(4).strip()
-        msg_text = match.group(0)
 
-        # Extract signals
-        signals = {}
-        sg_pattern = r'SG_\s+([^\s:]+)\s*:\s*([^"]+)"([^"]*)"(.*)'
-        for sg_match in re.finditer(sg_pattern, msg_text):
-            sg_name = sg_match.group(1).strip()
-            sg_def = sg_match.group(2).strip()
-            sg_unit = sg_match.group(3).strip()
-            sg_receivers = sg_match.group(4).strip()
-            signals[sg_name] = (sg_def, sg_unit, sg_receivers)
+    # For deduplicating attributes, values, comments, etc., keep them as lines
+    # but we store them in sets so we don't get duplicates across files
+    # (If you want to keep duplicates verbatim, you could use lists instead.)
+    value_definitions = set()  # lines with VAL_ ...
+    comments = set()           # lines with CM_ ...
+    other_sections = set()     # lines with BA_, BA_DEF_, VAL_TABLE_, etc.
 
-        messages[msg_id] = {
-            'name': msg_name,
-            'size': msg_size,
-            'sender': msg_sender,
-            'signals': signals,
-            'text': msg_text
-        }
+    # We'll do a quick pass to capture the "BUS UNITS" line if it appears
+    # (BU_: <units>).
+    # Similarly, the NS_ and BS_ sections are just lines until we hit "BU_:" or "BO_:" or end.
+    # For practical reasons, we’ll do it with a small state machine approach.
 
-    # Extract value definitions (VAL_)
-    value_definitions = []
-    val_pattern = r'VAL_\s+(\d+)\s+([^;]+);'
-    for match in re.finditer(val_pattern, content):
-        value_definitions.append(match.group(0))
+    # For capturing lines belonging to the "NS_ :" section (until we see BS_:)
+    # or the BU_: line. This is simpler than big regex for those sections.
 
-    # Extract comments (CM_)
-    comments = []
-    cm_pattern = r'CM_[^;]+;'
-    for match in re.finditer(cm_pattern, content):
-        comments.append(match.group(0))
+    # State machine:
+    #   "GLOBAL"  -> reading lines at top level
+    #   "INSIDE_MESSAGE" -> we have encountered a BO_ line, collecting lines until next BO_ or end
+    current_message_id = None
+    current_message_lines = []
+    current_message_signals = {}
+    current_state = "GLOBAL"
 
-    # Extract other sections
-    other_sections = []
+    bo_regex = re.compile(r'^BO_\s+(\d+)\s+([^:]+):\s+(\d+)\s+(\S.*)$')
+    sg_regex = re.compile(r'^\s*SG_\s+([^\s:]+)\s*:\s*([^"]+)"([^"]*)"(.*)')
 
-    # BA_DEF_ (signal/message attribute definitions)
-    ba_def_pattern = r'BA_DEF_\s+[^;]+;'
-    for match in re.finditer(ba_def_pattern, content):
-        other_sections.append(match.group(0))
+    # Helper to finalize a message we were collecting
+    def finalize_message():
+        if current_message_id is not None and current_message_lines:
+            # Parse out fields from the first line (BO_...) again
+            first_line = current_message_lines[0].rstrip('\n')
+            m = bo_regex.match(first_line)
+            if m:
+                msg_id_str, msg_name, msg_size_str, msg_sender = m.groups()
+                msg_id = int(msg_id_str)
+                msg_size = int(msg_size_str)
+                messages[msg_id] = {
+                    'id': msg_id,
+                    'name': msg_name.strip(),
+                    'size': msg_size,
+                    'sender': msg_sender.strip(),
+                    'lines': current_message_lines[:],  # copy of the list
+                    'signals': dict(current_message_signals)
+                }
 
-    # BA_ (signal/message attribute values)
-    ba_pattern = r'BA_\s+[^;]+;'
-    for match in re.finditer(ba_pattern, content):
-        other_sections.append(match.group(0))
+    for line in all_lines:
+        line_stripped = line.strip('\r\n')
 
-    # VAL_TABLE_ (value tables)
-    val_table_pattern = r'VAL_TABLE_\s+[^;]+;'
-    for match in re.finditer(val_table_pattern, content):
-        other_sections.append(match.group(0))
+        # Check for version line
+        version_match = version_regex.match(line_stripped)
+        if version_match:
+            version = version_match.group(1)
+
+        # If we’re not inside a message block, see if this line starts a new message
+        if current_state == "GLOBAL":
+            # Check if line starts a new BO_ message
+            bo_match = bo_regex.match(line_stripped)
+            if bo_match:
+                # Start a new message block
+                current_state = "INSIDE_MESSAGE"
+                current_message_id = int(bo_match.group(1))
+                current_message_lines = [line]
+                current_message_signals = {}
+                continue
+
+            # If line is BU_: <units...> store it
+            if line_stripped.startswith('BU_:'):
+                # parse out units
+                # e.g. "BU_: XXX CAMERA FRONT_RADAR ADRV APRK"
+                # separate by whitespace after "BU_:"
+                parted = line_stripped.split(':', 1)
+                if len(parted) == 2:
+                    raw_units = parted[1].strip()
+                    bus_units.extend(raw_units.split())
+
+            # If line starts with "NS_ :" or "BS_:", just store them in memory
+            # We'll add them to final output from the first file later
+            # For simplicity, let’s store them all in ns_section_lines, we can do a simple parse
+            if line_stripped.startswith('NS_ :'):
+                ns_section_lines.append(line)
+                continue
+            elif line_stripped.startswith('BS_:'):
+                ns_section_lines.append(line)
+                continue
+
+            # Check for attribute lines, value lines, comment lines, etc.
+            # We'll store them in sets for dedup. (If you want to preserve order, use lists.)
+            if line_stripped.startswith('VAL_ '):
+                value_definitions.add(line)
+                continue
+            elif line_stripped.startswith('CM_ '):
+                comments.add(line)
+                continue
+            elif line_stripped.startswith('BA_DEF_') or line_stripped.startswith('BA_'):
+                other_sections.add(line)
+                continue
+            elif line_stripped.startswith('VAL_TABLE_'):
+                other_sections.add(line)
+                continue
+
+            # Otherwise, store or ignore. Possibly it’s part of the NS section, or random lines
+            ns_section_lines.append(line)
+
+        elif current_state == "INSIDE_MESSAGE":
+            # We’re reading lines for the current message
+            bo_match = bo_regex.match(line_stripped)
+            if bo_match:
+                # We have encountered a new BO_ => finalize the old message and start a new one
+                finalize_message()
+                current_message_id = int(bo_match.group(1))
+                current_message_lines = [line]
+                current_message_signals = {}
+                continue
+            else:
+                # Add this line to current message
+                current_message_lines.append(line)
+
+                # If it is an SG_ line, parse out signal def
+                sg_match = sg_regex.match(line_stripped)
+                if sg_match:
+                    sg_name = sg_match.group(1).strip()
+                    sg_def = sg_match.group(2).strip()
+                    sg_unit = sg_match.group(3).strip()
+                    sg_receivers = sg_match.group(4).strip()
+                    current_message_signals[sg_name] = (sg_def, sg_unit, sg_receivers)
+
+    # If we ended the file while still inside a message, finalize that last message
+    if current_state == "INSIDE_MESSAGE":
+        finalize_message()
+
+    # Convert bus_units to a list of unique items
+    bus_units = list(dict.fromkeys(bus_units))  # preserve order but remove duplicates
 
     return {
         'version': version,
-        'ns_section': ns_section,
+        'ns_section_lines': ns_section_lines,  # raw lines for NS_ and BS_ or any leftover
         'bus_units': bus_units,
         'messages': messages,
         'value_definitions': value_definitions,
@@ -91,32 +176,35 @@ def parse_dbc_file(file_path):
         'other_sections': other_sections
     }
 
+
 def analyze_conflicts(dbc_files):
-    """Compare multiple DBC files and identify conflicts."""
+    """
+    Compare multiple DBC files and identify conflicts in messages/signals.
+    This part is largely the same as in your original script.
+    """
     dbcs = {}
     message_sources = defaultdict(list)
     conflicts = []
 
-    # Parse each DBC file
+    # Parse each DBC
     for file_path in dbc_files:
-        file_name = os.path.basename(file_path)
-        parsed_dbc = parse_dbc_file(file_path)
-        dbcs[file_path] = parsed_dbc
+        parsed = parse_dbc_file(file_path)
+        dbcs[file_path] = parsed
 
         # Track which files define which message IDs
-        for msg_id in parsed_dbc['messages']:
+        for msg_id in parsed['messages']:
             message_sources[msg_id].append(file_path)
 
-    # Check for conflicts in message definitions
+    # Check conflicts
     for msg_id, sources in message_sources.items():
         if len(sources) > 1:
-            # Multiple files define the same message ID
+            # same message ID in multiple files
             messages = [dbcs[src]['messages'][msg_id] for src in sources]
-            names = [msg['name'] for msg in messages]
-            sizes = [msg['size'] for msg in messages]
-            senders = [msg['sender'] for msg in messages]
+            names = [m['name'] for m in messages]
+            sizes = [m['size'] for m in messages]
+            senders = [m['sender'] for m in messages]
 
-            # Check if they have different names, sizes, or senders
+            # If they differ in name, size, or sender => conflict
             if len(set(names)) > 1 or len(set(sizes)) > 1 or len(set(senders)) > 1:
                 conflict = {
                     'type': 'message',
@@ -129,7 +217,7 @@ def analyze_conflicts(dbc_files):
                 conflicts.append(conflict)
                 continue
 
-            # Check for conflicts in signal definitions
+            # Check signals
             all_signals = set()
             for msg in messages:
                 all_signals.update(msg['signals'].keys())
@@ -141,23 +229,25 @@ def analyze_conflicts(dbc_files):
                         signal_defs.append((sources[i], msg['signals'][signal_name]))
 
                 if len(signal_defs) > 1:
-                    # Check if signal definitions are different
-                    if not all(signal_defs[0][1] == signal_def[1] for signal_def in signal_defs[1:]):
-                        conflict = {
-                            'type': 'signal',
-                            'message_id': msg_id,
-                            'signal_name': signal_name,
-                            'sources': [src for src, _ in signal_defs],
-                            'definitions': [definition for _, definition in signal_defs]
-                        }
-                        conflicts.append(conflict)
+                    # If definitions differ
+                    first_def = signal_defs[0][1]
+                    for (_, other_def) in signal_defs[1:]:
+                        if other_def != first_def:
+                            conflict = {
+                                'type': 'signal',
+                                'message_id': msg_id,
+                                'signal_name': signal_name,
+                                'sources': [s for s, _ in signal_defs],
+                                'definitions': [d for _, d in signal_defs]
+                            }
+                            conflicts.append(conflict)
+                            break
 
     return conflicts, message_sources, dbcs
 
-def print_conflicts(conflicts, dbc_priorities):
-    """Print details about conflicts found and how they will be resolved."""
-    print(f"Found {len(conflicts)} conflicts between files:")
 
+def print_conflicts(conflicts, dbc_priorities):
+    print(f"Found {len(conflicts)} conflicts between files:")
     for i, conflict in enumerate(conflicts):
         print(f"\nConflict {i+1}:")
         if conflict['type'] == 'message':
@@ -168,13 +258,10 @@ def print_conflicts(conflicts, dbc_priorities):
                 print(f"    Name: {conflict['names'][j]}")
                 print(f"    Size: {conflict['sizes'][j]}")
                 print(f"    Sender: {conflict['senders'][j]}")
-
-            # Determine which source to use based on priority
             selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
             selected_index = conflict['sources'].index(selected_source)
-            print(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})")
-            print(f"    Selected: {conflict['names'][selected_index]} (size: {conflict['sizes'][selected_index]}, sender: {conflict['senders'][selected_index]})")
-
+            print(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} "
+                  f"(priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})")
         elif conflict['type'] == 'signal':
             msg_id = conflict['message_id']
             signal = conflict['signal_name']
@@ -183,253 +270,172 @@ def print_conflicts(conflicts, dbc_priorities):
                 print(f"  Source {j+1}: {os.path.basename(source)}")
                 def_str = ' '.join(str(x) for x in conflict['definitions'][j])
                 print(f"    Definition: {def_str}")
-
-            # Determine which source to use based on priority
             selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
             selected_index = conflict['sources'].index(selected_source)
-            print(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})")
-            def_str = ' '.join(str(x) for x in conflict['definitions'][selected_index])
-            print(f"    Selected: {def_str}")
+            print(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} "
+                  f"(priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})")
+
 
 def resolve_conflict(sources, dbc_priorities):
-    """Resolve conflict by selecting the source with highest priority."""
-    # Convert source paths to basenames for comparison with priorities
-    source_basenames = [os.path.basename(src) for src in sources]
-
-    # Find the source with highest priority (lowest index in dbc_priorities)
+    # same as before
     highest_priority_idx = float('inf')
     highest_priority_source = None
-
-    for i, src in enumerate(sources):
-        src_basename = os.path.basename(src)
-        if src_basename in dbc_priorities:
-            priority_idx = dbc_priorities.index(src_basename)
-            if priority_idx < highest_priority_idx:
-                highest_priority_idx = priority_idx
+    for src in sources:
+        basename = os.path.basename(src)
+        if basename in dbc_priorities:
+            idx = dbc_priorities.index(basename)
+            if idx < highest_priority_idx:
+                highest_priority_idx = idx
                 highest_priority_source = src
-
-    # If no match in priorities, use the first source
     if highest_priority_source is None:
-        highest_priority_source = sources[0]
-
+        return sources[0]
     return highest_priority_source
 
-def auto_resolve_conflicts(conflicts, dbc_priorities):
-    """Automatically resolve conflicts based on file priority."""
-    decisions = {}
 
+def auto_resolve_conflicts(conflicts, dbc_priorities):
+    decisions = {}
     for i, conflict in enumerate(conflicts):
         conflict_id = i + 1
-        if conflict['type'] == 'message':
-            sources = conflict['sources']
-        else:  # signal conflict
-            sources = conflict['sources']
-
-        selected_source = resolve_conflict(sources, dbc_priorities)
-        selected_index = sources.index(selected_source)
+        selected = resolve_conflict(conflict['sources'], dbc_priorities)
+        selected_index = conflict['sources'].index(selected)
         decisions[conflict_id] = selected_index
-
     return decisions
 
+
 def merge_dbc_files(dbc_files, output_file, conflicts, decisions, dbc_priorities):
-    """Merge multiple DBC files using conflict resolution decisions."""
-    # Re-analyze to get the latest data
+    # re-analyze
     conflicts, message_sources, dbcs = analyze_conflicts(dbc_files)
 
-    # Create a mapping of conflicts for easier lookup
+    # map conflicts
     conflict_map = {}
     for i, conflict in enumerate(conflicts):
+        c_id = i + 1
         if conflict['type'] == 'message':
-            conflict_map[('message', conflict['id'])] = (i + 1, conflict)
-        elif conflict['type'] == 'signal':
-            conflict_map[('signal', conflict['message_id'], conflict['signal_name'])] = (i + 1, conflict)
+            conflict_map[('message', conflict['id'])] = (c_id, conflict)
+        else:  # signal conflict
+            conflict_map[('signal', conflict['message_id'], conflict['signal_name'])] = (c_id, conflict)
 
-    # Collect all unique bus units
+    # gather all bus units
     all_bus_units = set()
-    for file_path, dbc in dbcs.items():
+    for path, dbc in dbcs.items():
         all_bus_units.update(dbc['bus_units'])
 
-    # Write merged DBC file
-    with open(output_file, 'w', encoding='utf-8') as f:
-        # Write header and version
-        f.write('CM_ "AUTOGENERATED MERGED FILE FROM MULTIPLE DBC FILES";\n\n')
-        f.write('VERSION ""\n\n')
+    # gather sets of other lines
+    all_val_defs = set()
+    all_comments = set()
+    all_other_sections = set()
 
-        # Write NS section from the first file
-        first_file = list(dbcs.keys())[0]
-        f.write('NS_ :\n')
-        f.write(dbcs[first_file]['ns_section'])
-        f.write('\n\nBS_:\n\n')
+    for path, dbc in dbcs.items():
+        all_val_defs.update(dbc['value_definitions'])
+        all_comments.update(dbc['comments'])
+        all_other_sections.update(dbc['other_sections'])
+
+    # We'll use the FIRST file's NS_ lines + version as a base
+    first_file = dbc_files[0]
+    version = dbcs[first_file]['version']
+    ns_section_lines = dbcs[first_file]['ns_section_lines']
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        # Write a header
+        f.write('CM_ "AUTOGENERATED MERGED FILE FROM MULTIPLE DBC FILES";\n\n')
+        f.write(f'VERSION "{version}"\n\n' if version else 'VERSION ""\n\n')
+
+        # Write NS_ lines (including BS_) we captured from the first file
+        for ln in ns_section_lines:
+            f.write(ln if ln.endswith('\n') else ln + '\n')
+        f.write('\n')
 
         # Write bus units
         f.write('BU_:')
         for unit in sorted(all_bus_units):
-            if unit != 'XXX' and unit.strip():  # Skip generic XXX and empty units
+            if unit.strip() and unit != 'XXX':
                 f.write(f' {unit}')
-        f.write('\n\n\n')
+        f.write('\n\n')
 
-        # Write value tables (from all files)
-        val_tables = set()
-        for dbc in dbcs.values():
-            for section in dbc['other_sections']:
-                if section.startswith('VAL_TABLE_'):
-                    val_tables.add(section)
+        # Now, we sort messages by ID so it’s consistent
+        all_msg_ids = sorted(message_sources.keys())
 
-        for val_table in sorted(val_tables):
-            f.write(f'{val_table}\n')
-
-        if val_tables:
-            f.write('\n')
-
-        # Write message definitions
         written_messages = set()
-        for msg_id, sources in sorted(message_sources.items()):
-            if msg_id in written_messages:
-                continue
-
-            # Check if this message has a conflict
-            conflict_key = ('message', msg_id)
-            if conflict_key in conflict_map:
-                conflict_id, conflict = conflict_map[conflict_key]
-
-                # Use the decision to determine which source to use
-                if conflict_id in decisions:
-                    source_index = decisions[conflict_id]
-                    if 0 <= source_index < len(sources):
-                        source = sources[source_index]
-                    else:
-                        print(f"Warning: Invalid source index {source_index+1} for conflict {conflict_id}. Using first source.")
-                        source = sources[0]
+        for msg_id in all_msg_ids:
+            # check conflict
+            c_key = ('message', msg_id)
+            if c_key in conflict_map:
+                c_id, conflict = conflict_map[c_key]
+                if c_id in decisions:
+                    src_index = decisions[c_id]
+                    chosen_file = conflict['sources'][src_index]
                 else:
-                    # No decision made, use the first source
-                    print(f"Warning: No decision for conflict {conflict_id}. Using first source.")
-                    source = sources[0]
+                    # fallback
+                    chosen_file = conflict['sources'][0]
             else:
-                # No conflict, use the first source
-                source = sources[0]
+                # no conflict
+                chosen_file = message_sources[msg_id][0]
 
-            msg = dbcs[source]['messages'][msg_id]
-
-            # Extract the original message text but make sure it ends properly
-            msg_text = msg['text'].strip()
-
-            # Write the message definition
-            f.write(f'{msg_text}\n\n')
+            # Write out the chosen file’s lines for that message
+            chosen_msg = dbcs[chosen_file]['messages'][msg_id]
+            for ln in chosen_msg['lines']:
+                if not ln.endswith('\n'):
+                    f.write(ln + '\n')
+                else:
+                    f.write(ln)
+            f.write('\n')
             written_messages.add(msg_id)
 
-        # Write other components from all files
-        # Value definitions
-        all_val_defs = set()
-        for dbc in dbcs.values():
-            all_val_defs.update(dbc['value_definitions'])
-
-        for val_def in sorted(all_val_defs):
-            f.write(f'{val_def}\n')
-
+        # Write out value definitions
         if all_val_defs:
+            for ln in sorted(all_val_defs):
+                if not ln.endswith('\n'):
+                    f.write(ln + '\n')
+                else:
+                    f.write(ln)
             f.write('\n')
 
-        # BA_DEF_ and BA_ sections
-        all_ba_defs = set()
-        for dbc in dbcs.values():
-            for section in dbc['other_sections']:
-                if section.startswith('BA_DEF_') or section.startswith('BA_'):
-                    all_ba_defs.add(section)
-
-        for ba_def in sorted(all_ba_defs):
-            f.write(f'{ba_def}\n')
-
-        if all_ba_defs:
+        # Write out BA_ and BA_DEF_ sections, VAL_TABLE_ lines, etc.
+        if all_other_sections:
+            for ln in sorted(all_other_sections):
+                if not ln.endswith('\n'):
+                    f.write(ln + '\n')
+                else:
+                    f.write(ln)
             f.write('\n')
 
-        # Comments
-        all_comments = set()
-        for dbc in dbcs.values():
-            all_comments.update(dbc['comments'])
+        # Write out comments
+        if all_comments:
+            for ln in sorted(all_comments):
+                if not ln.endswith('\n'):
+                    f.write(ln + '\n')
+                else:
+                    f.write(ln)
+            f.write('\n')
 
-        for comment in sorted(all_comments):
-            f.write(f'{comment}\n')
-
-        # Additional notes about the merge
-        f.write('\n')
-        for i, file_path in enumerate(dbc_files):
-            file_name = os.path.basename(file_path)
-            priority = dbc_priorities.index(file_name) + 1 if file_name in dbc_priorities else "N/A"
-            f.write(f'CM_ "File {i+1}: {file_name} (Priority: {priority})";\n')
-
-        # Add conflict resolution information
+        # Final notes
+        for i, path in enumerate(dbc_files):
+            base = os.path.basename(path)
+            prio = dbc_priorities.index(base) + 1 if base in dbc_priorities else 'N/A'
+            f.write(f'CM_ "File {i+1}: {base} (Priority: {prio})";\n')
         f.write('\nCM_ "Conflict resolutions:";\n')
         for i, conflict in enumerate(conflicts):
-            conflict_id = i + 1
-            if conflict_id in decisions:
-                source_index = decisions[conflict_id]
+            c_id = i + 1
+            if c_id in decisions:
+                src_idx = decisions[c_id]
                 if conflict['type'] == 'message':
                     msg_id = conflict['id']
-                    selected_source = conflict['sources'][source_index]
-                    selected_name = conflict['names'][source_index]
-                    f.write(f'CM_ "Conflict {conflict_id}: Message ID {msg_id} (0x{msg_id:X}) - Used {os.path.basename(selected_source)} definition ({selected_name})";\n')
-                else:  # signal conflict
+                    chosen_src = conflict['sources'][src_idx]
+                    chosen_name = conflict['names'][src_idx]
+                    f.write(f'CM_ "Conflict {c_id}: Message ID {msg_id} - Using {os.path.basename(chosen_src)} ({chosen_name})";\n')
+                else:
                     msg_id = conflict['message_id']
-                    signal = conflict['signal_name']
-                    selected_source = conflict['sources'][source_index]
-                    f.write(f'CM_ "Conflict {conflict_id}: Signal {signal} in message ID {msg_id} (0x{msg_id:X}) - Used {os.path.basename(selected_source)} definition";\n')
+                    sig = conflict['signal_name']
+                    chosen_src = conflict['sources'][src_idx]
+                    f.write(f'CM_ "Conflict {c_id}: Signal {sig} in Msg ID {msg_id} - Using {os.path.basename(chosen_src)}";\n')
 
-    print(f"Successfully merged {len(dbc_files)} DBC files into {output_file}")
+    print(f"\nSuccessfully merged {len(dbc_files)} DBC files into {output_file}")
     print(f"Total messages: {len(message_sources)}")
     print(f"Conflicts resolved: {len(decisions)}")
     return True
 
-def extract_conflicts(conflicts, message_sources, dbc_priorities, output_file):
-    """Extract and save conflicts to a separate file for review."""
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(f"CONFLICTS LIST FOR DBC MERGE\n")
-        f.write(f"=============================\n\n")
-        f.write(f"Found {len(conflicts)} conflicts across {len(message_sources)} unique message IDs.\n\n")
-        f.write(f"Priority order (highest to lowest):\n")
-        for i, dbc_file in enumerate(dbc_priorities):
-            f.write(f"{i+1}. {dbc_file}\n")
-        f.write("\n")
-
-        for i, conflict in enumerate(conflicts):
-            f.write(f"Conflict {i+1}:\n")
-            if conflict['type'] == 'message':
-                msg_id = conflict['id']
-                f.write(f"  Message ID: {msg_id} (0x{msg_id:X})\n")
-                for j, source in enumerate(conflict['sources']):
-                    f.write(f"  Source {j+1}: {os.path.basename(source)}\n")
-                    f.write(f"    Name: {conflict['names'][j]}\n")
-                    f.write(f"    Size: {conflict['sizes'][j]}\n")
-                    f.write(f"    Sender: {conflict['senders'][j]}\n")
-
-                # Determine which source to use based on priority
-                selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
-                selected_index = conflict['sources'].index(selected_source)
-                f.write(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})\n")
-                f.write(f"    Selected: {conflict['names'][selected_index]} (size: {conflict['sizes'][selected_index]}, sender: {conflict['senders'][selected_index]})\n")
-
-            elif conflict['type'] == 'signal':
-                msg_id = conflict['message_id']
-                signal = conflict['signal_name']
-                f.write(f"  Signal: {signal} in message ID {msg_id} (0x{msg_id:X})\n")
-                for j, source in enumerate(conflict['sources']):
-                    f.write(f"  Source {j+1}: {os.path.basename(source)}\n")
-                    def_str = ' '.join(str(x) for x in conflict['definitions'][j])
-                    f.write(f"    Definition: {def_str}\n")
-
-                # Determine which source to use based on priority
-                selected_source = resolve_conflict(conflict['sources'], dbc_priorities)
-                selected_index = conflict['sources'].index(selected_source)
-                f.write(f"  RESOLUTION: Using definition from {os.path.basename(selected_source)} (priority {dbc_priorities.index(os.path.basename(selected_source)) + 1})\n")
-                def_str = ' '.join(str(x) for x in conflict['definitions'][selected_index])
-                f.write(f"    Selected: {def_str}\n")
-
-            f.write("\n")
-
-    print(f"Conflicts saved to: {output_file}")
-    return True
 
 if __name__ == "__main__":
-    # Define the priority order for files (first has highest priority)
     dbc_priorities = [
         "hyundai_kia_mando_corner_radar_generated.dbc",
         "hyundai_kia_mando_front_radar_generated.dbc",
@@ -445,40 +451,34 @@ if __name__ == "__main__":
     ]
 
     output_file = "hyundai_kia_canfd_mando_radars.dbc"
-    conflicts_output = f"{os.path.splitext(output_file)[0]}_CONFLICTS.txt"
 
     print("Analyzing DBC files...")
-    for i, file_path in enumerate(dbc_files):
+    for fp in dbc_files:
         try:
-            dbc = parse_dbc_file(file_path)
-            basename = os.path.basename(file_path)
-            priority = dbc_priorities.index(basename) + 1 if basename in dbc_priorities else "N/A"
-            print(f"{basename}: {len(dbc['messages'])} messages (Priority: {priority})")
+            parsed = parse_dbc_file(fp)
+            base = os.path.basename(fp)
+            prio = dbc_priorities.index(base) + 1 if base in dbc_priorities else 'N/A'
+            print(f"{base}: {len(parsed['messages'])} messages (Priority: {prio})")
         except Exception as e:
-            print(f"Error parsing {file_path}: {e}")
+            print(f"Error parsing {fp}: {e}")
 
     print("\nAnalyzing conflicts...")
-    conflicts, message_sources, dbcs = analyze_conflicts(dbc_files)
-    print(f"Found {len(conflicts)} conflicts across {len(message_sources)} unique message IDs.")
+    conflicts, msg_sources, dbcs = analyze_conflicts(dbc_files)
+    print(f"Found {len(conflicts)} conflicts across {len(msg_sources)} unique message IDs.")
 
-    # Print detailed conflict information and resolution
+    # Print conflicts
     print_conflicts(conflicts, dbc_priorities)
 
-    # Extract conflicts to a separate file for review
-    extract_conflicts(conflicts, message_sources, dbc_priorities, conflicts_output)
-
-    # Automatically resolve conflicts based on file priority
-    print("\nAutomatically resolving conflicts based on file priority...")
+    # Auto resolve
+    print("\nAutomatically resolving conflicts based on priority...")
     decisions = auto_resolve_conflicts(conflicts, dbc_priorities)
     print(f"Resolved {len(decisions)} conflicts.")
 
-    # Merge files using the decisions
+    # Merge
     print("\nMerging files...")
     merge_dbc_files(dbc_files, output_file, conflicts, decisions, dbc_priorities)
 
     print(f"\nMerged file created: {output_file}")
-    print("The merge prioritized files in this order:")
-    for i, dbc_file in enumerate(dbc_priorities):
-        print(f"{i+1}. {dbc_file}")
-
-    print("\nUse this file with PlotJuggler to decode CAN signals from the vehicle.")
+    print("Priority order used:")
+    for i, f in enumerate(dbc_priorities):
+        print(f"{i+1}. {f}")
