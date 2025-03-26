@@ -24,7 +24,6 @@ from typing import cast
 # OpenPilot / system imports
 import cereal.messaging as messaging
 from cereal import log
-from openpilot.common.api import Api  # If you don't need this, remove it
 from openpilot.common.file_helpers import CallbackReader  # If you don't need chunk callbacks, remove it
 from openpilot.common.params import Params
 from openpilot.common.realtime import set_core_affinity
@@ -42,21 +41,19 @@ except ImportError:
   ShareFileClient = None
   ShareDirectoryClient = None
 
-# Constants (unrelated to Athena)
+# Constants
 HANDLER_THREADS = 1
-MAX_RETRY_COUNT = 30  # Try re-upload at most 30 times
-RETRY_DELAY = 10      # seconds
-MAX_AGE = 31 * 24 * 3600  # seconds (1 month)
+MAX_RETRY_COUNT = 30     # Try re-upload at most 30 times
+RETRY_DELAY = 10         # seconds to wait after a failed attempt
+MAX_AGE = 31 * 24 * 3600 # 31 days in seconds
 
 # Azure File Share config
 AZURE_SHARE_NAME = "test-rlog-1"
 AZURE_BASE_DIR   = "rlogs"
 
-
 # ------------------------------------------------------------------------------
 # Azure Connection / Upload
 # ------------------------------------------------------------------------------
-
 def get_azure_connection_string() -> str:
   """
   Reads the Azure connection string from /data/persist/azure_conn_string
@@ -102,7 +99,7 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
   filename = os.path.basename(local_path)
   file_client = dir_client.get_file_client(filename)
   with open(local_path, "rb") as f:
-    # Add timeout to prevent indefinite hangs
+    # Add a reasonable timeout to prevent indefinite hangs
     file_client.upload_file(f, timeout=300)  # 5 minute timeout
 
   cloudlog.event("azure._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
@@ -111,7 +108,6 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
 # ------------------------------------------------------------------------------
 # Upload Items/Queue
 # ------------------------------------------------------------------------------
-
 @dataclass
 class UploadItem:
   path: str
@@ -121,7 +117,7 @@ class UploadItem:
   id: str | None
   retry_count: int = 0
   current: bool = False
-  progress: float = 0
+  progress: float = 0      # We'll set this to 1.0 on success
   allow_cellular: bool = False
 
   # Azure-specific subdirectory name
@@ -147,7 +143,6 @@ class AbortTransferException(Exception):
   pass
 
 
-# We still keep a global to track which items each thread is processing
 cur_upload_items: dict[int, UploadItem | None] = {}
 cancelled_uploads: set[str] = set()
 upload_queue: Queue[UploadItem] = queue.Queue()
@@ -155,11 +150,11 @@ upload_queue: Queue[UploadItem] = queue.Queue()
 
 class UploadQueueCache:
   """
-  Simple utility to persist the upload queue across restarts.
-  Renamed references from "AthenadUploadQueue" to "AzureUploadQueue."
+  Simple utility to persist the upload queue across restarts in a param named "AzureUploadQueue".
   """
   @staticmethod
   def initialize(upload_queue: Queue[UploadItem]) -> None:
+    """Load any previously queued items from the param store."""
     try:
       upload_queue_json = Params().get("AzureUploadQueue")
       if upload_queue_json is not None:
@@ -170,21 +165,31 @@ class UploadQueueCache:
 
   @staticmethod
   def cache(upload_queue: Queue[UploadItem]) -> None:
+    """
+    Save items back to the param store, omitting cancelled or fully completed ones.
+    """
     try:
-      queue_list: list[UploadItem | None] = list(upload_queue.queue)
-      # Only include items that aren't None, aren't cancelled, and don't have current=True
-      # (current=True indicates in-progress upload that completed successfully)
-      items = [asdict(i) for i in queue_list if i is not None and (i.id not in cancelled_uploads)
-               and not (i.current and i.progress >= 1.0)]
+      queue_list = list(upload_queue.queue)
+      # Filter out items that are fully done (progress=1.0) or in cancelled_uploads
+      items = []
+      for i in queue_list:
+        if i is None:
+          continue
+        if i.id in cancelled_uploads:
+          continue
+        if i.progress >= 1.0:
+          continue
+        # otherwise, keep it
+        items.append(asdict(i))
+
       Params().put("AzureUploadQueue", json.dumps(items))
     except Exception:
       cloudlog.exception("azure.UploadQueueCache.cache.exception")
 
 
 # ------------------------------------------------------------------------------
-# Upload Handler
+# Upload Handler Thread
 # ------------------------------------------------------------------------------
-
 def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = True) -> None:
   """
   If an upload fails or is aborted, re-queue it (unless we've exceeded retry limits).
@@ -192,8 +197,7 @@ def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = Tr
   item = cur_upload_items[tid]
   if item is not None and item.retry_count < MAX_RETRY_COUNT:
     new_retry_count = item.retry_count + 1 if increase_count else item.retry_count
-
-    item = replace(item, retry_count=new_retry_count, progress=0, current=False)
+    item = replace(item, retry_count=new_retry_count, progress=0.0, current=False)
     upload_queue.put_nowait(item)
     UploadQueueCache.cache(upload_queue)
 
@@ -208,7 +212,7 @@ def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = Tr
 def upload_handler(end_event: threading.Event) -> None:
   """
   Thread that pulls items off `upload_queue` and uploads them to Azure.
-  If metered == True and item.allow_cellular == False, it will retry later.
+  Retries if needed, or if the connection is metered but not allowed, it defers.
   """
   sm = messaging.SubMaster(['deviceState'])
   tid = threading.get_ident()
@@ -223,7 +227,7 @@ def upload_handler(end_event: threading.Event) -> None:
         cancelled_uploads.remove(item.id)
         continue
 
-      # Remove item if too old
+      # If it's too old, skip
       age = datetime.now() - datetime.fromtimestamp(item.created_at / 1000)
       if age.total_seconds() > MAX_AGE:
         cloudlog.event("azure.upload_handler.expired", item=item, error=True)
@@ -235,7 +239,6 @@ def upload_handler(end_event: threading.Event) -> None:
       network_type = sm['deviceState'].networkType.raw
 
       if metered and (not item.allow_cellular):
-        # We'll retry without incrementing the count, to wait for non-cell
         retry_upload(tid, end_event, increase_count=False)
         continue
 
@@ -256,24 +259,27 @@ def upload_handler(end_event: threading.Event) -> None:
         # Perform the Azure upload
         _do_upload_azure(item)
 
+        # ---- FIX: set item.progress=1.0 to mark success so it's removed from param store ----
+        item = replace(item, progress=1.0)
+        cur_upload_items[tid] = item
+
         cloudlog.event("azure.upload_handler.success", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
 
-        # Properly mark the item as done and remove from tracking
+        # Mark queue item as done
         upload_queue.task_done()
-        if item.id in cancelled_uploads:
-          cancelled_uploads.remove(item.id)
 
-        # Persist queue updates
+        # Immediately re-cache to remove this item from param store
         UploadQueueCache.cache(upload_queue)
 
-      except (AbortTransferException,):
-        # If we (optionally) used a callback or paused mid-upload
+      except AbortTransferException:
+        # If we had a partial/cancel upload
         cloudlog.event("azure.upload_handler.abort", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
         retry_upload(tid, end_event, increase_count=False)
 
       except Exception:
+        # Any other error, we can try again
         cloudlog.exception("azure.upload_handler.azure_upload_fail")
         retry_upload(tid, end_event)
 
@@ -284,13 +290,12 @@ def upload_handler(end_event: threading.Event) -> None:
 
 
 # ------------------------------------------------------------------------------
-# Automatic RLog Finder
+# Automatic RLog Finder (realdata_handler)
 # ------------------------------------------------------------------------------
-
 def realdata_handler(end_event: threading.Event) -> None:
   """
   Scans /data/media/0/realdata/, finds subdirectories that contain an 'rlog'
-  file, and enqueues them for upload (unless they're already in the queue).
+  file, and enqueues them for upload (unless they're already queued).
   """
   while not end_event.is_set():
     try:
@@ -301,12 +306,14 @@ def realdata_handler(end_event: threading.Event) -> None:
           if os.path.isdir(sub_dir_full):
             rlog_path = os.path.join(sub_dir_full, "rlog")
             if os.path.isfile(rlog_path):
-              # Create a unique ID so we don't double-queue
+              # Create a unique ID for each directory
               upload_id = f"azure|{d}"
 
               # Check if it's already in the queue or uploading
               queued_items = list(upload_queue.queue) + list(cur_upload_items.values())
               if any((qi is not None and qi.id == upload_id) for qi in queued_items):
+                # OPTIONAL: Debug log so we can see if we're skipping
+                cloudlog.debug(f"realdata_handler: skipping {d}, already queued or uploading.")
                 continue
 
               # Create new item and push to queue
@@ -331,13 +338,13 @@ def realdata_handler(end_event: threading.Event) -> None:
 # ------------------------------------------------------------------------------
 # Entry Point
 # ------------------------------------------------------------------------------
-
 def main():
   """
   Minimal 'main' that:
    - Initializes the queue from storage
    - Spawns the upload handler
    - Spawns the realdata directory scanner
+   - Runs indefinitely
   """
   try:
     set_core_affinity([0, 1, 2, 3])

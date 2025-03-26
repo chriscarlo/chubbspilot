@@ -19,35 +19,31 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 # -----------------------
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
     """
-    Allows up to ~3.2 m/s^2 (≈0.33g) of lateral acceleration at higher speeds,
-    with a smooth logistic transition starting from lower values (~1.4 m/s^2)
-    at low speeds. This helps corner more gently at lower speed, but remains
-    near ~3.2 m/s^2 on highways.
+    Allows up to ~3.2 m/s^2 (≈0.33g) at higher speeds, with a smooth logistic
+    transition from ~1.4 m/s^2 at very low speeds. Tweak as needed if you suspect
+    the curve speeds are too low or too high from the base 'max lat accel' logic.
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
 
-    base = 1.4     # Lower base value (more conservative at low speeds)
-    span = 1.8     # Additional range to reach the desired max
-    center = 30.0  # Speed (mph) around which the logistic is centered
-    k = 0.10       # Slope factor
+    base = 1.4      # Lower base value at very low speeds
+    span = 1.8      # Additional range to get close to 3.2
+    center = 20.0   # Speed (mph) around which the logistic is centered
+    k = 0.15        # Slope factor
     lat_acc = base + span / (1 + math.exp(-k * (v_ego_mph - center)))
-    lat_acc = min(lat_acc, 3.2)  # Maximum lateral acceleration limit
+    lat_acc = min(lat_acc, 3.2)  # Cap around 3.2 m/s²
 
     return lat_acc * turn_aggressiveness
 
 
 def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     """
-    Identify 'peaks' in curvature. We look for points above 'threshold' that
-    are local maxima (≥ next point, > previous point).
+    Identify 'peaks' in curvature above 'threshold' that are local maxima.
     """
     apex_indices = []
     for i in range(1, len(curv_array) - 1):
-        if (
-            curv_array[i] > threshold
-            and curv_array[i] >= curv_array[i + 1]
-            and curv_array[i] > curv_array[i - 1]
-        ):
+        if (curv_array[i] > threshold and
+            curv_array[i] >= curv_array[i + 1] and
+            curv_array[i] > curv_array[i - 1]):
             apex_indices.append(i)
     return apex_indices
 
@@ -57,8 +53,8 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
 # --------------------
 def dynamic_decel_scale(v_ego_ms: float) -> float:
     """
-    Smooth function that transitions from 8.0 at 5 m/s to 2.0 at 25 m/s
-    using a polynomial. (No direct torque scaling.)
+    Used to scale maximum decel. Adjust up or down if you want more or less decel
+    at different speeds.
     """
     min_speed = 5.0
     max_speed = 25.0
@@ -76,13 +72,12 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
 
 def dynamic_accel_scale(v_ego_ms: float) -> float:
     """
-    Similar logic for acceleration scale, referencing the decel scale.
+    Similar logic for acceleration scale (limit).
     """
     decel_scale = dynamic_decel_scale(v_ego_ms)
     if v_ego_ms < 10.0:
         return decel_scale * 1.5
     else:
-        # reduce from 1.5 down to 1.0 in the range [10 m/s, ∞)
         return decel_scale * max(1.0, 1.5 - 0.05 * (v_ego_ms - 10.0))
 
 
@@ -95,7 +90,7 @@ def dynamic_jerk_scale(v_ego_ms: float) -> float:
 
 def margin_time_fn(v_ego_ms: float) -> float:
     """
-    Time-based margin function.
+    Time-based margin function for the backward pass.
     - 0 m/s → 1.5s
     - 15 m/s → 3.5s
     - 31.3 m/s (~70 mph) → 5.5s
@@ -117,84 +112,65 @@ def margin_time_fn(v_ego_ms: float) -> float:
 
 
 # ------------
-#   NEW HELPERS
+#   LOGISTICS
 # ------------
 def logistic_transition(x, center, scale, lo, hi):
-    """
-    A continuous logistic that transitions from lo to hi around 'center'.
-    """
     return lo + (hi - lo) / (1 + math.exp(-(x - center) / scale))
 
 
 def early_approach_time_fn(apex_speed: float) -> float:
     """
-    Logistic-based function for how many seconds in advance to start your apex approach decel.
-    E.g. from 2.0s at ~8 m/s to 3.0s at ~22 m/s.
+    Start apex decel some seconds before apex. Tweak for earlier slowdown.
     """
-    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=2.0, hi=5.0)
+    # NEW OR CHANGED: Increase these if you want more comfortable, earlier slowdowns.
+    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=3.0, hi=4.0)
 
 
 def early_spool_time_fn(apex_speed: float) -> float:
     """
-    Logistic-based function for how many seconds in advance to start spool-up after an apex.
-    E.g. from 1.0s at ~8 m/s to 2.0s at ~22 m/s.
+    Ramp up again after the apex.
     """
-    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=1.0, hi=2.0)
+    # If you also want to spool up slower, you can bump these up a bit:
+    return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=1.5, hi=2.5)
 
 
 def short_horizon_factor(horizon_time: float) -> float:
-    """
-    A logistic factor from ~0.4 (horizon=1.5s) up to ~1.0 (horizon=4.0s).
-    This can slightly re-limit spool-ups if horizon is short.
-    """
     raw = logistic_transition(horizon_time, center=2.75, scale=0.75, lo=0.4, hi=1.0)
     return clip(raw, 0.4, 1.0)
 
 
-# ------------------------------------------------------------
-#   STEERING TORQUE SATURATION PREDICTOR (REFINED FOR NEAR SAT)
-# ------------------------------------------------------------
+# ---------------------------------------------------
+#   STEERING TORQUE SATURATION PREDICTOR (REFINED)
+# ---------------------------------------------------
 class SteeringTorqueSaturationPredictor:
     """
-    A data-driven predictor that learns from actual on-road observations:
-      - Maintains a 2D map: (speed_bin, curvature_bin) → max observed torque
-      - Records ANY torque sample, but pays special attention if torque > 90% of max
-      - If torque > 95% of max, we count a 'saturation' event and exit passive_mode.
-
-    The usage is then used in the speed planning code to predict if we might
-    saturate or get close to saturating on upcoming curves, and adjust speed.
+    Data-driven approach that only truly clamps speeds if prior data in that
+    bin shows an actual saturation. If you want to be very strict about saturations,
+    ignore anything < 100%. That way, it "stays out of the front-line" unless
+    you're certain you'd exceed 409 Nm in that scenario.
     """
 
     def __init__(self, vehicle_params, debug=False):
-        self.VEHICLE_MASS = vehicle_params.mass
-        self.STEERING_RATIO = vehicle_params.steerRatio
         self.MAX_STEER_TORQUE = 409
 
-        # NEW OR CHANGED:
-        self.near_sat_threshold_pct = 0.95  # 95% = near saturation
-        self.saturation_threshold_pct = 0.995
+        # We'll store *all* data, but only clamp if fraction > 1.0
+        self.saturation_threshold_pct = 0.95  # to detect "hard sat" events
+        # We can still track "near sat" if we want, but won't clamp for it.
 
         self.TORQUE_MARGIN = 1.0
 
-        # Binning resolution
-        self.speed_bin_size = 2.0         # m/s bins
-        self.curv_bin_size = 1e-4        # curvature bins
-        self.max_speed_bin = 60.0        # clamp speeds at ~60 m/s (~216 km/h)
-        self.max_curv_bin = 0.01         # clamp curvature at 0.01 (100 m radius)
+        # Binning
+        self.speed_bin_size = 2.0
+        self.curv_bin_size = 1e-4
+        self.max_speed_bin = 60.0
+        self.max_curv_bin = 0.01
 
-        # observed_map: (speed_idx, curv_idx) → max absolute torque
         self.observed_map = {}
 
         self.samples = deque(maxlen=2000)
+        self.passive_mode = True  # no speed-limiting from torque initially
 
-        # Passive mode (no speed-limiting from torque) until we see a reason
-        self.passive_mode = True
-
-        # Counters
         self.saturation_count = 0
-        self.near_saturation_count = 0
-
-        # Track total data stored
         self.total_data_count = 0
 
         self.debug = debug
@@ -202,13 +178,8 @@ class SteeringTorqueSaturationPredictor:
         self.log_frequency = 5.0
 
         self.param_path = "selfdrive/frogpilot/model_weights/torque_predictor.pkl"
-
-        # Load from disk
         self._load_model()
 
-    # --------------------------
-    #   LOADING & SAVING
-    # --------------------------
     def _load_model(self):
         if os.path.exists(self.param_path):
             try:
@@ -217,7 +188,6 @@ class SteeringTorqueSaturationPredictor:
                     self.observed_map = data.get("observed_map", {})
                     self.passive_mode = data.get("passive_mode", True)
                     self.saturation_count = data.get("saturation_count", 0)
-                    self.near_saturation_count = data.get("near_saturation_count", 0)
                     self.total_data_count = data.get("total_data_count", 0)
                     self.TORQUE_MARGIN = data.get("torque_margin", 1.0)
                 if self.debug:
@@ -231,7 +201,6 @@ class SteeringTorqueSaturationPredictor:
             "observed_map": self.observed_map,
             "passive_mode": self.passive_mode,
             "saturation_count": self.saturation_count,
-            "near_saturation_count": self.near_saturation_count,
             "total_data_count": self.total_data_count,
             "torque_margin": self.TORQUE_MARGIN,
             "timestamp": time.time()
@@ -244,9 +213,6 @@ class SteeringTorqueSaturationPredictor:
             if self.debug:
                 print(f"[TorquePredictor] Error saving model: {e}")
 
-    # --------------------------
-    #   BINNING & LOOKUP
-    # --------------------------
     def _get_bin_indices(self, speed, curvature):
         s_clamped = max(0.0, min(speed, self.max_speed_bin))
         c_clamped = max(0.0, min(abs(curvature), self.max_curv_bin))
@@ -261,28 +227,14 @@ class SteeringTorqueSaturationPredictor:
         self.observed_map[bin_idx] = new_val
         self.total_data_count += 1
 
-    def _find_bin_max_torque(self, speed, curvature):
-        bin_idx = self._get_bin_indices(speed, curvature)
-        return self.observed_map.get(bin_idx, 0.0)
-
-    # --------------------------
-    #   MAIN API METHODS
-    # --------------------------
     def detect_saturation_event(self, actual_torque):
         """
-        Distinguish between "near saturation" (>90%) and "full saturation" (>95%).
-        If we detect full saturation the first time, exit passive_mode.
+        If torque > 95% of 409, count it as a saturation. If we see that for
+        the first time, we exit passive mode.
         """
-        near_threshold = self.MAX_STEER_TORQUE * self.near_sat_threshold_pct
         sat_threshold = self.MAX_STEER_TORQUE * self.saturation_threshold_pct
 
-        near_sat = abs(actual_torque) >= near_threshold
-        sat = abs(actual_torque) >= sat_threshold
-
-        if near_sat:
-            self.near_saturation_count += 1
-
-        if sat:
+        if abs(actual_torque) >= sat_threshold:
             self.saturation_count += 1
             if self.passive_mode:
                 self.passive_mode = False
@@ -292,37 +244,30 @@ class SteeringTorqueSaturationPredictor:
 
     def update_with_measurement(self, actual_torque, curvature, speed, road_bank=0.0):
         """
-        Called regularly to log actual on-road torque usage. We record *every*
-        torque, but pay special attention when torque is near or above 90%.
-        If 95% is exceeded, we log a saturation event.
+        Called regularly. We'll log all torque usage, but only treat >95% as saturations.
         """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
 
-        # Mark if near or saturating
         saturation_detected = self.detect_saturation_event(actual_torque)
-
-        # Always record the new max torque for that bin
         self._record_observation(speed, curvature, actual_torque)
 
-        # Save model only if a full saturation occurred (avoid spamming)
         if saturation_detected:
             self._save_model()
 
-        # Optionally store raw sample
         self.samples.append({
             "speed": speed,
             "curvature": curvature,
             "torque": actual_torque,
             "road_bank": road_bank,
             "ts": time.time(),
-            "saturation": (abs(actual_torque) > self.saturation_threshold_pct * self.MAX_STEER_TORQUE),
+            "saturation": (abs(actual_torque) > 0.95 * self.MAX_STEER_TORQUE),
         })
 
     def driver_intervention_learn(self, intervention_torque, curvature, speed, road_bank=0.0):
         """
-        If the driver forcibly intervenes, treat it as a clue that more or less torque
-        might be needed. Record it immediately, exit passive_mode if it's big.
+        If the driver forcibly intervenes, we treat that as important data.
+        We record it + switch out of passive mode if it's big enough.
         """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
@@ -330,15 +275,9 @@ class SteeringTorqueSaturationPredictor:
         self.passive_mode = False
         self._record_observation(speed, curvature, intervention_torque)
         self.detect_saturation_event(intervention_torque)
-
-        # Save on driver intervention
         self._save_model()
 
     def get_max_available_torque(self):
-        """
-        If in passive mode, we return a large "no limit" value.
-        Otherwise, hardware limit times margin.
-        """
         if self.passive_mode:
             return 9999.0
         else:
@@ -346,13 +285,13 @@ class SteeringTorqueSaturationPredictor:
 
     def predict_observed_torque(self, speed, curvature):
         """
-        Returns the *max observed torque* for the bin (speed, curvature).
-        If we have no data, returns 0.0 → no stored torque limit.
-        If in passive mode, we also do not try to limit.
+        Return the max torque we've seen in the bin.
+        If we have no data or are in passive mode, return 0 => no clamp.
         """
         if self.passive_mode:
             return 0.0
-        return self._find_bin_max_torque(speed, curvature)
+        bin_idx = self._get_bin_indices(speed, curvature)
+        return self.observed_map.get(bin_idx, 0.0)
 
     def log_telemetry(self, curvature, speed, predicted_torque, available_torque, torque_limited=False):
         now = time.time()
@@ -369,7 +308,6 @@ class SteeringTorqueSaturationPredictor:
             torque_limited=torque_limited,
             passive_mode=self.passive_mode,
             saturation_count=self.saturation_count,
-            near_saturation_count=self.near_saturation_count,
             total_data_count=self.total_data_count
         )
         if self.debug:
@@ -395,11 +333,6 @@ class VisionTurnSpeedController:
         emergency_speed_tolerance=2.0,
         emergency_lookahead_frames=8,
     ):
-        """
-        Our main speed planner. We incorporate the updated torque predictor
-        that does NOT reduce torque unless we see ourselves nearing or hitting
-        hardware limits for the given speed/curvature bin.
-        """
         self.turn_smoothing_alpha = turn_smoothing_alpha
         self.reaccel_alpha = reaccel_alpha
         self.LOW_LAT_ACC = low_lat_acc
@@ -420,7 +353,6 @@ class VisionTurnSpeedController:
 
         self.sm = messaging.SubMaster(['modelV2', 'carState', 'liveParameters'])
 
-        # Example vehicle params
         self.vehicle_params = type('obj', (), {
             'mass': 2055,
             'wheelbase': 2.9,
@@ -442,11 +374,10 @@ class VisionTurnSpeedController:
         model_data = self.sm['modelV2']
         car_state = self.sm['carState']
 
-        # Road bank if available
         if self.sm.updated['liveParameters']:
             self.current_road_bank = self.sm['liveParameters'].roll
 
-        # Detect driver interventions
+        # Check driver intervention
         if car_state.steeringPressed:
             self.torque_predictor.driver_intervention_learn(
                 intervention_torque=car_state.steeringTorque,
@@ -456,7 +387,7 @@ class VisionTurnSpeedController:
             )
         elif car_state.gasPressed:
             self.torque_predictor.driver_intervention_learn(
-                intervention_torque=-999,  # some large negative
+                intervention_torque=-999,
                 curvature=self.last_curvature,
                 speed=v_ego,
                 road_bank=self.current_road_bank
@@ -469,7 +400,7 @@ class VisionTurnSpeedController:
                 road_bank=self.current_road_bank
             )
 
-        # Update the torque predictor with real torque usage
+        # Update torque usage
         if hasattr(car_state, 'steeringTorque'):
             if abs(car_state.steeringTorque) > 0.5:
                 self.torque_predictor.update_with_measurement(
@@ -479,7 +410,7 @@ class VisionTurnSpeedController:
                     self.current_road_bank
                 )
 
-        # Handle resume from zero
+        # If we resume from 0
         is_real_resume = (not self.last_cruise_nonzero) and (v_cruise_cluster > 1e-1)
         self.last_cruise_nonzero = (v_cruise_cluster > 1e-1)
         if is_real_resume:
@@ -550,7 +481,6 @@ class VisionTurnSpeedController:
         if n_points < 3:
             return 22.0
 
-        # Resample to 33 points
         if n_points < 33:
             src_indices = np.linspace(0, n_points - 1, n_points)
             dst_indices = np.linspace(0, n_points - 1, 33)
@@ -570,6 +500,7 @@ class VisionTurnSpeedController:
         valid_pts = np.where(velocity_pred_33 > 0.01)[0]
         if len(valid_pts) == 0:
             return 30.0
+
         horizon_idx = valid_pts[-1]
         horizon_time = times_33[horizon_idx]
 
@@ -601,35 +532,27 @@ class VisionTurnSpeedController:
         max_torque = self.torque_predictor.get_max_available_torque()
         safe_speeds = np.zeros(n, dtype=float)
 
-        # 1) Basic curvature-limited speeds + check predicted torque usage
+        # 1) Basic curvature-limited speeds
         for i in range(n):
             lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
             c = max(curvature[i], eps)
             s = math.sqrt(lat_acc_limit / c)
 
-            # NEW OR CHANGED: more nuanced approach if we find near saturation
+            # NEW OR CHANGED:
+            # Only clamp speed if we have *actual saturations* stored
             observed_torque = self.torque_predictor.predict_observed_torque(s, c)
             torque_limited = False
 
             if not self.torque_predictor.passive_mode and observed_torque > 0.0:
                 torque_frac = observed_torque / max_torque
+                # We'll clamp only if fraction > 1.0 => actual saturation
                 if torque_frac > 1.0:
-                    # Full saturation predicted => clamp speed forcibly
                     torque_limited = True
-                    s = min(s, 25.0)  # crude cap, or something fancier
-                elif torque_frac > 0.9:
-                    # near saturation => gently reduce speed, but still allow
-                    # approaching the limit
-                    torque_limited = True
-                    # e.g., linearly scale from 1.0 at 0.9 => 0.85 at 1.0
-                    # (example; tweak as you like)
-                    scale = 1.0 - 0.15 * max(0.0, torque_frac - 0.9) / 0.1
-                    s = min(s, s * scale)
+                    # Example: forcibly clamp if we have actual data showing saturations
+                    s = min(s, 25.0)  # or some other approach
 
             if i == 0:
-                self.torque_predictor.log_telemetry(
-                    c, s, observed_torque, max_torque, torque_limited
-                )
+                self.torque_predictor.log_telemetry(c, s, observed_torque, max_torque, torque_limited)
 
             safe_speeds[i] = s
 
@@ -641,14 +564,15 @@ class VisionTurnSpeedController:
 
         for apex_i in apex_idxs:
             apex_speed = safe_speeds[apex_i]
-            decel_sec = early_approach_time_fn(apex_speed)
-            spool_sec = early_spool_time_fn(apex_speed)
+
+            # NEW OR CHANGED: more generous approach/spool times
+            decel_sec = early_approach_time_fn(apex_speed)  # default ~3-4s now
+            spool_sec = early_spool_time_fn(apex_speed)     # default ~1.5-2.5s
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
             spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
-            # Approach decel
             if spool_start > decel_start:
                 v_decel_start = safe_speeds[decel_start]
                 steps_decel = spool_start - decel_start
@@ -658,11 +582,9 @@ class VisionTurnSpeedController:
                     decel_val = v_decel_start * (1 - f_curve) + apex_speed * f_curve
                     safe_speeds[idx] = min(safe_speeds[idx], decel_val)
 
-            # Force apex
             for idx in range(spool_start, apex_i + 1):
                 safe_speeds[idx] = min(safe_speeds[idx], apex_speed)
 
-            # Spool out
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
                 v_spool_end = safe_speeds[spool_end - 1]
@@ -678,13 +600,15 @@ class VisionTurnSpeedController:
             dt_i = dt_array[i] if i < len(dt_array) else 0.05
             v_next = safe_speeds[i + 1]
             err = safe_speeds[i] - v_next
-            desired_acc = clip(err / dt_i, -2.0, 2.0)  # general limit
+            desired_acc = clip(err / dt_i, -2.0, 2.0)
             feasible_speed = v_next - desired_acc * dt_i
             safe_speeds[i] = min(safe_speeds[i], feasible_speed)
 
         # 4) Margin-based backward pass
         base_margin = margin_time_fn(v_ego)
-        margin_factor = 2.2
+
+        # NEW OR CHANGED: increase margin_factor to slow down *earlier*
+        margin_factor = 3.0  # was 2.2, now 3.0 => more lead time
         margin_t = base_margin * margin_factor
 
         for i in range(n - 2, -1, -1):
