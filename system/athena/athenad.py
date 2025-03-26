@@ -36,10 +36,12 @@ from openpilot.system.hardware.hw import Paths
 # ---- Azure imports ----
 try:
   from azure.storage.fileshare import ShareFileClient, ShareDirectoryClient
+  from azure.core.exceptions import ServiceResponseError  # <-- NEW import for catching timeouts
 except ImportError:
   cloudlog.exception("Azure storage fileshare SDK not installed! Please `pip install azure-storage-file-share`.")
   ShareFileClient = None
   ShareDirectoryClient = None
+  ServiceResponseError = None
 
 # Constants
 HANDLER_THREADS = 1
@@ -101,8 +103,8 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
   filename = os.path.basename(local_path)
   file_client = dir_client.get_file_client(filename)
   with open(local_path, "rb") as f:
-    # Add a reasonable timeout to prevent indefinite hangs
-    file_client.upload_file(f, timeout=300)  # 5 minute timeout
+    # Increase or decrease timeout as desired
+    file_client.upload_file(f, timeout=300)  # 5 minute chunk-level timeout
 
   cloudlog.event("azure._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
 
@@ -278,7 +280,17 @@ def upload_handler(end_event: threading.Event) -> None:
 
         upload_queue.task_done()
         UploadQueueCache.cache(upload_queue)
-        # No retry, just skip it.
+
+      # ---- NEW: treat Azure's ServiceResponseError timeouts as normal connection/timeouts
+      except (ConnectionError, TimeoutError) as e:
+        # Possibly a local network glitch
+        cloudlog.event("azure.upload_handler.timeout", fn=fn, error=str(e))
+        retry_upload(tid, end_event)
+
+      except ServiceResponseError as e:
+        # Azure chunk-level or network-level error
+        cloudlog.event("azure.upload_handler.timeout", fn=fn, error=str(e))
+        retry_upload(tid, end_event)
 
       except AbortTransferException:
         # If we had a partial/cancel upload
