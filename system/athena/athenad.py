@@ -71,8 +71,8 @@ def debug_queue_status():
   for tid, item in cur_upload_items.items():
     if item is not None:
       print(f"  Thread {tid}: {item.path} (progress: {item.progress}, retries: {item.retry_count})")
-  print("Queued items:")
-  for item in list(upload_queue.queue):
+  print("Next 3 queued items:")
+  for item in list(upload_queue.queue)[:3]:
     print(f"  {item.path} (retries: {item.retry_count})")
   print("========================\n")
 
