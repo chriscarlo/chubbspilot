@@ -54,6 +54,7 @@ AZURE_BASE_DIR   = "rlogs"
 # ------------------------------------------------------------------------------
 # Azure Connection / Upload
 # ------------------------------------------------------------------------------
+
 def get_azure_connection_string() -> str:
   """
   Reads the Azure connection string from /data/persist/azure_conn_string
@@ -72,6 +73,7 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
   Upload a file to Azure File Share.
   Creates a sub-directory named upload_item.azure_subdir (if provided)
   within AZURE_BASE_DIR, then uploads the local file (e.g., 'rlog').
+  Raises FileNotFoundError if the local file isn't found.
   """
   conn_str = get_azure_connection_string()
   if not conn_str or (ShareDirectoryClient is None):
@@ -259,18 +261,24 @@ def upload_handler(end_event: threading.Event) -> None:
         # Perform the Azure upload
         _do_upload_azure(item)
 
-        # ---- FIX: set item.progress=1.0 to mark success so it's removed from param store ----
+        # Mark success
         item = replace(item, progress=1.0)
         cur_upload_items[tid] = item
-
         cloudlog.event("azure.upload_handler.success", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
 
-        # Mark queue item as done
         upload_queue.task_done()
-
-        # Immediately re-cache to remove this item from param store
         UploadQueueCache.cache(upload_queue)
+
+      except FileNotFoundError:
+        # The local file was missing
+        cloudlog.event("azure.upload_handler.not_found", fn=fn)
+        item = replace(item, progress=1.0)
+        cur_upload_items[tid] = item
+
+        upload_queue.task_done()
+        UploadQueueCache.cache(upload_queue)
+        # No retry, just skip it.
 
       except AbortTransferException:
         # If we had a partial/cancel upload
@@ -312,7 +320,6 @@ def realdata_handler(end_event: threading.Event) -> None:
               # Check if it's already in the queue or uploading
               queued_items = list(upload_queue.queue) + list(cur_upload_items.values())
               if any((qi is not None and qi.id == upload_id) for qi in queued_items):
-                # OPTIONAL: Debug log so we can see if we're skipping
                 cloudlog.debug(f"realdata_handler: skipping {d}, already queued or uploading.")
                 continue
 
