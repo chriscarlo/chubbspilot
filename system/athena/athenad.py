@@ -53,6 +53,29 @@ MAX_AGE = 31 * 24 * 3600 # 31 days in seconds
 AZURE_SHARE_NAME = "test-rlog-1"
 AZURE_BASE_DIR   = "rlogs"
 
+# Debug flag - only True when running directly
+DEBUG = __name__ == "__main__"
+
+def debug_print(*args, **kwargs):
+  if DEBUG:
+    print("[DEBUG]", *args, **kwargs)
+
+def debug_queue_status():
+  """Print current status of upload queue and active uploads"""
+  if not DEBUG:
+    return
+  print("\n[DEBUG] === Queue Status ===")
+  print(f"Active uploads: {len([x for x in cur_upload_items.values() if x is not None])}")
+  print(f"Queue size: {upload_queue.qsize()}")
+  print("Active upload items:")
+  for tid, item in cur_upload_items.items():
+    if item is not None:
+      print(f"  Thread {tid}: {item.path} (progress: {item.progress}, retries: {item.retry_count})")
+  print("Queued items:")
+  for item in list(upload_queue.queue):
+    print(f"  {item.path} (retries: {item.retry_count})")
+  print("========================\n")
+
 # ------------------------------------------------------------------------------
 # Azure Connection / Upload
 # ------------------------------------------------------------------------------
@@ -64,8 +87,11 @@ def get_azure_connection_string() -> str:
   """
   try:
     with open("/data/persist/azure_conn_string", "r") as f:
-      return f.read().strip()
-  except Exception:
+      conn_str = f.read().strip()
+      debug_print(f"Successfully read Azure connection string (length: {len(conn_str)})")
+      return conn_str
+  except Exception as e:
+    debug_print(f"Failed to read Azure connection string: {str(e)}")
     cloudlog.exception("azure.get_azure_connection_string.exception")
     return ""
 
@@ -79,34 +105,55 @@ def _do_upload_azure(upload_item: UploadItem, callback=None):
   """
   conn_str = get_azure_connection_string()
   if not conn_str or (ShareDirectoryClient is None):
+    debug_print("Azure upload not configured - missing connection string or SDK")
     raise Exception("Azure upload not configured (missing connection string or azure-storage-file-share).")
 
   subdir_name = upload_item.azure_subdir if upload_item.azure_subdir else "default"
   local_path = upload_item.path
+  debug_print(f"\n[DEBUG] === Starting Azure Upload ===")
+  debug_print(f"Local path: {local_path}")
+  debug_print(f"Target subdirectory: {subdir_name}")
+  debug_print(f"File size: {os.path.getsize(local_path) if os.path.exists(local_path) else 'N/A'} bytes")
+
   if not os.path.isfile(local_path):
+    debug_print(f"File not found: {local_path}")
     raise FileNotFoundError(f"Local file not found: {local_path}")
 
-  dir_client = ShareDirectoryClient.from_connection_string(
-    conn_str=conn_str,
-    share_name=AZURE_SHARE_NAME,
-    directory_path=f"{AZURE_BASE_DIR}/{subdir_name}"
-  )
   try:
-    # Create subdir if it doesn't exist
-    dir_client.create_directory()
+    debug_print("Creating Azure directory client...")
+    dir_client = ShareDirectoryClient.from_connection_string(
+      conn_str=conn_str,
+      share_name=AZURE_SHARE_NAME,
+      directory_path=f"{AZURE_BASE_DIR}/{subdir_name}"
+    )
+    debug_print(f"Directory client created for: {AZURE_BASE_DIR}/{subdir_name}")
+
+    try:
+      debug_print("Attempting to create directory if it doesn't exist...")
+      dir_client.create_directory()
+      debug_print("Directory created successfully")
+    except Exception as e:
+      if "ResourceAlreadyExists" not in str(e):
+        debug_print(f"Error creating directory: {str(e)}")
+        cloudlog.exception("Azure create_directory error", exc_info=e)
+      else:
+        debug_print("Directory already exists, continuing...")
+
+    # Upload the file
+    filename = os.path.basename(local_path)
+    debug_print(f"Getting file client for: {filename}")
+    file_client = dir_client.get_file_client(filename)
+
+    debug_print("Starting file upload...")
+    with open(local_path, "rb") as f:
+      file_client.upload_file(f, timeout=300)  # 5 minute chunk-level timeout
+    debug_print("File upload completed successfully")
+    debug_print("=== Azure Upload Complete ===\n")
+
+    cloudlog.event("azure._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
   except Exception as e:
-    # If it already exists, that's fine. Otherwise, log it.
-    if "ResourceAlreadyExists" not in str(e):
-      cloudlog.exception("Azure create_directory error", exc_info=e)
-
-  # Upload the file
-  filename = os.path.basename(local_path)
-  file_client = dir_client.get_file_client(filename)
-  with open(local_path, "rb") as f:
-    # Increase or decrease timeout as desired
-    file_client.upload_file(f, timeout=300)  # 5 minute chunk-level timeout
-
-  cloudlog.event("azure._do_upload_azure.success", subdir=subdir_name, local_path=local_path)
+    debug_print(f"Error during Azure upload: {str(e)}")
+    raise
 
 
 # ------------------------------------------------------------------------------
@@ -201,15 +248,23 @@ def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = Tr
   item = cur_upload_items[tid]
   if item is not None and item.retry_count < MAX_RETRY_COUNT:
     new_retry_count = item.retry_count + 1 if increase_count else item.retry_count
+    debug_print(f"\n[DEBUG] === Retrying Upload ===")
+    debug_print(f"File: {item.path}")
+    debug_print(f"Retry count: {new_retry_count}")
+    debug_print(f"Increase count: {increase_count}")
+
     item = replace(item, retry_count=new_retry_count, progress=0.0, current=False)
     upload_queue.put_nowait(item)
     UploadQueueCache.cache(upload_queue)
+    debug_print("Item requeued successfully")
+    debug_print("=== Retry Complete ===\n")
 
     cur_upload_items[tid] = None
 
-    for _ in range(RETRY_DELAY):
+    for i in range(RETRY_DELAY):
       time.sleep(1)
       if end_event.is_set():
+        debug_print(f"Retry delay interrupted after {i+1} seconds")
         break
 
 
@@ -220,20 +275,34 @@ def upload_handler(end_event: threading.Event) -> None:
   """
   sm = messaging.SubMaster(['deviceState'])
   tid = threading.get_ident()
+  debug_print(f"\n[DEBUG] === Upload Handler Started ===")
+  debug_print(f"Thread ID: {tid}")
+  debug_print("=== Upload Handler Ready ===\n")
 
   while not end_event.is_set():
     cur_upload_items[tid] = None
     try:
       item = upload_queue.get(timeout=1)
+      debug_print(f"\n[DEBUG] === Processing Upload Item ===")
+      debug_print(f"File: {item.path}")
+      debug_print(f"ID: {item.id}")
+      debug_print(f"Retry count: {item.retry_count}")
+      debug_print(f"Created at: {datetime.fromtimestamp(item.created_at / 1000)}")
+      debug_print(f"Allow cellular: {item.allow_cellular}")
+      debug_print("=== Item Details Complete ===\n")
+
       cur_upload_items[tid] = replace(item, current=True)
+      debug_queue_status()
 
       if item.id in cancelled_uploads:
+        debug_print(f"Item {item.id} was cancelled, skipping")
         cancelled_uploads.remove(item.id)
         continue
 
       # If it's too old, skip
       age = datetime.now() - datetime.fromtimestamp(item.created_at / 1000)
       if age.total_seconds() > MAX_AGE:
+        debug_print(f"Item {item.id} is too old ({age.total_seconds()}s), skipping")
         cloudlog.event("azure.upload_handler.expired", item=item, error=True)
         continue
 
@@ -241,8 +310,13 @@ def upload_handler(end_event: threading.Event) -> None:
       sm.update(0)
       metered = sm['deviceState'].networkMetered
       network_type = sm['deviceState'].networkType.raw
+      debug_print(f"\n[DEBUG] === Network Status ===")
+      debug_print(f"Network type: {network_type}")
+      debug_print(f"Metered connection: {metered}")
+      debug_print("=== Network Check Complete ===\n")
 
       if metered and (not item.allow_cellular):
+        debug_print("Metered connection detected and cellular not allowed, deferring upload")
         retry_upload(tid, end_event, increase_count=False)
         continue
 
@@ -251,7 +325,9 @@ def upload_handler(end_event: threading.Event) -> None:
         file_size = 0
         try:
           file_size = os.path.getsize(fn)
-        except OSError:
+          debug_print(f"File size: {file_size} bytes")
+        except OSError as e:
+          debug_print(f"Error getting file size: {str(e)}")
           pass
 
         cloudlog.event("azure.upload_handler.upload_start",
@@ -266,46 +342,69 @@ def upload_handler(end_event: threading.Event) -> None:
         # Mark success
         item = replace(item, progress=1.0)
         cur_upload_items[tid] = item
+        debug_print(f"\n[DEBUG] === Upload Success ===")
+        debug_print(f"File: {fn}")
+        debug_print(f"Size: {file_size} bytes")
+        debug_print("=== Upload Complete ===\n")
+
         cloudlog.event("azure.upload_handler.success", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
 
         upload_queue.task_done()
         UploadQueueCache.cache(upload_queue)
+        debug_queue_status()
 
       except FileNotFoundError:
-        # The local file was missing
+        debug_print(f"\n[DEBUG] === File Not Found ===")
+        debug_print(f"File: {fn}")
+        debug_print("=== Error Complete ===\n")
         cloudlog.event("azure.upload_handler.not_found", fn=fn)
         item = replace(item, progress=1.0)
         cur_upload_items[tid] = item
 
         upload_queue.task_done()
         UploadQueueCache.cache(upload_queue)
+        debug_queue_status()
 
-      # ---- NEW: treat Azure's ServiceResponseError timeouts as normal connection/timeouts
       except (ConnectionError, TimeoutError) as e:
-        # Possibly a local network glitch
+        debug_print(f"\n[DEBUG] === Connection Error ===")
+        debug_print(f"File: {fn}")
+        debug_print(f"Error: {str(e)}")
+        debug_print("=== Error Complete ===\n")
         cloudlog.event("azure.upload_handler.timeout", fn=fn, error=str(e))
         retry_upload(tid, end_event)
 
       except ServiceResponseError as e:
-        # Azure chunk-level or network-level error
+        debug_print(f"\n[DEBUG] === Azure Service Error ===")
+        debug_print(f"File: {fn}")
+        debug_print(f"Error: {str(e)}")
+        debug_print("=== Error Complete ===\n")
         cloudlog.event("azure.upload_handler.timeout", fn=fn, error=str(e))
         retry_upload(tid, end_event)
 
       except AbortTransferException:
-        # If we had a partial/cancel upload
+        debug_print(f"\n[DEBUG] === Upload Aborted ===")
+        debug_print(f"File: {fn}")
+        debug_print(f"Size: {file_size} bytes")
+        debug_print("=== Abort Complete ===\n")
         cloudlog.event("azure.upload_handler.abort", fn=fn, sz=file_size,
                        network_type=network_type, metered=metered)
         retry_upload(tid, end_event, increase_count=False)
 
-      except Exception:
-        # Any other error, we can try again
+      except Exception as e:
+        debug_print(f"\n[DEBUG] === Unexpected Error ===")
+        debug_print(f"File: {fn}")
+        debug_print(f"Error: {str(e)}")
+        debug_print("=== Error Complete ===\n")
         cloudlog.exception("azure.upload_handler.azure_upload_fail")
         retry_upload(tid, end_event)
 
     except queue.Empty:
       pass
-    except Exception:
+    except Exception as e:
+      debug_print(f"\n[DEBUG] === Handler Error ===")
+      debug_print(f"Error: {str(e)}")
+      debug_print("=== Error Complete ===\n")
       cloudlog.exception("azure.upload_handler.exception")
 
 
@@ -317,21 +416,34 @@ def realdata_handler(end_event: threading.Event) -> None:
   Scans /data/media/0/realdata/, finds subdirectories that contain an 'rlog'
   file, and enqueues them for upload (unless they're already queued).
   """
+  debug_print(f"\n[DEBUG] === Realdata Handler Started ===")
+  debug_print("=== Realdata Handler Ready ===\n")
+
   while not end_event.is_set():
     try:
       base_path = "/data/media/0/realdata"
       if os.path.isdir(base_path):
+        debug_print(f"\n[DEBUG] === Scanning Directory ===")
+        debug_print(f"Base path: {base_path}")
+
         for d in os.listdir(base_path):
           sub_dir_full = os.path.join(base_path, d)
           if os.path.isdir(sub_dir_full):
             rlog_path = os.path.join(sub_dir_full, "rlog")
             if os.path.isfile(rlog_path):
+              debug_print(f"\n[DEBUG] === Found RLog File ===")
+              debug_print(f"Directory: {d}")
+              debug_print(f"RLog path: {rlog_path}")
+              debug_print(f"File size: {os.path.getsize(rlog_path)} bytes")
+
               # Create a unique ID for each directory
               upload_id = f"azure|{d}"
+              debug_print(f"Upload ID: {upload_id}")
 
               # Check if it's already in the queue or uploading
               queued_items = list(upload_queue.queue) + list(cur_upload_items.values())
               if any((qi is not None and qi.id == upload_id) for qi in queued_items):
+                debug_print("File already queued or uploading, skipping")
                 cloudlog.debug(f"realdata_handler: skipping {d}, already queued or uploading.")
                 continue
 
@@ -346,11 +458,20 @@ def realdata_handler(end_event: threading.Event) -> None:
               )
               upload_queue.put_nowait(item)
               UploadQueueCache.cache(upload_queue)
+              debug_print("File queued for upload")
+              debug_print("=== Queue Update Complete ===\n")
+              debug_queue_status()
+
+        debug_print("=== Directory Scan Complete ===\n")
 
       # Sleep for a bit before scanning again
+      debug_print("Sleeping for 60 seconds before next scan...")
       time.sleep(60)
 
-    except Exception:
+    except Exception as e:
+      debug_print(f"\n[DEBUG] === Realdata Handler Error ===")
+      debug_print(f"Error: {str(e)}")
+      debug_print("=== Error Complete ===\n")
       cloudlog.exception("azure.realdata_handler.exception")
 
 
@@ -365,13 +486,17 @@ def main():
    - Spawns the realdata directory scanner
    - Runs indefinitely
   """
+  debug_print("Starting Azure upload service")
   try:
     set_core_affinity([0, 1, 2, 3])
+    debug_print("Successfully set core affinity")
   except Exception:
+    debug_print("Failed to set core affinity")
     cloudlog.exception("failed to set core affinity")
 
   # Initialize from stored queue
   UploadQueueCache.initialize(upload_queue)
+  debug_print("Initialized upload queue from storage")
 
   end_event = threading.Event()
 
@@ -381,16 +506,19 @@ def main():
 
   upload_thread.start()
   realdata_thread.start()
+  debug_print("Started upload and realdata handler threads")
 
   try:
     while True:
       time.sleep(1)
   except KeyboardInterrupt:
+    debug_print("Received keyboard interrupt, shutting down...")
     pass
   finally:
     end_event.set()
     upload_thread.join()
     realdata_thread.join()
+    debug_print("Service shutdown complete")
 
 
 if __name__ == "__main__":
