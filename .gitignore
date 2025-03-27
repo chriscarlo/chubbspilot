@@ -2698,3 +2698,8 @@ dbc_conflict_extractor.py
 curvature_speed_relationship_20mph_steep.png
 curvature_speed_relationship_20mph.png
 curvature_speed_relationship.png
+check_data_field.py
+fix_complex_csvs.py
+test_compare.py
+test_data_field.py
+test_extract_can.py
