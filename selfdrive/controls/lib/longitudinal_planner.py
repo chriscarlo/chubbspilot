@@ -149,9 +149,11 @@ def calc_emergency_factor(v_ego: float, d_rel: float, v_lead: float) -> float:
     return 0.0
 
   ttc = d_rel / closing_speed
-  # logistic or similar shape: near 1.0 if TTC ~1s, near 0 if TTC ~4s+
-  return 1.0 / (1.0 + math.exp(1.5 * (ttc - 2.5)))
-
+  exponent = 1.5 * (ttc - 2.5)
+  # Clamp the exponent to avoid math range overflow (700 is a safe upper bound)
+  exponent = min(exponent, 700)
+  return 1.0 / (1.0 + math.exp(exponent))
+  
 def get_drel(lead, classic_model):
   if classic_model:
     return lead.dRel
