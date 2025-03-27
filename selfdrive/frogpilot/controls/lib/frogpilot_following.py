@@ -8,12 +8,12 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
 
 TRAFFIC_MODE_BP = [0., CITY_SPEED_LIMIT]
 
-# -- Constants for "assertive-from-stop" logic --
-LOW_SPEED_THRESHOLD = 11.4     # ~25 mph in m/s
+# -- Lower decay for less messing with t_follow
+DECAY_RATE = 0.02  # was 0.1
+LOW_SPEED_THRESHOLD = 11.4
 MIN_T_FOLLOW_AT_LOW_SPEED = 0.7
-LEAD_ACCEL_THRESHOLD = 0.2    # m/s^2 threshold to consider "lead is accelerating"
-ACCEL_OVERSHOOT_RATIO = 0.9  # fraction of lead accel we’ll use
-DECAY_RATE = 0.1              # how quickly t_follow decays back to baseline each cycle
+LEAD_ACCEL_THRESHOLD = 0.2
+ACCEL_OVERSHOOT_RATIO = 0.9
 
 class FrogPilotFollowing:
   def __init__(self, FrogPilotPlanner):
@@ -33,24 +33,19 @@ class FrogPilotFollowing:
 
     self.desired_follow_distance = 0
     self.t_follow = 0
-    self.personality_t_follow = 0  # Baseline personality setting for t_follow
+    self.personality_t_follow = 0
 
-    # (Optional) If you want to store an override acceleration you can feed to your planner
-    # or to the MPC, define it here. By default, set to None.
+    # Acceleration override: optionally used if catching up
     self.acceleration_override = None
 
   def update(self, aEgo, controlsState, frogpilotCarState,
              lead_distance, v_ego, v_lead, frogpilot_toggles):
     """
-    Main entry point each loop. It:
-      1. Figures out your baseline personality-based jerk factors & t_follow
-      2. Determines if a lead is present
-      3. Calls update_follow_values() to do special low-speed logic
-      4. Sets the final desired_follow_distance
+    Main entry point each loop. By default, we do minimal messing with t_follow unless
+    frogpilot_toggles.enableCatchUp is True.
     """
     # 1) Baseline personality or traffic-mode logic
     if frogpilotCarState.trafficModeActive:
-      # Traffic Mode logic
       if aEgo >= 0:
         self.base_acceleration_jerk = np.interp(
           v_ego, TRAFFIC_MODE_BP, frogpilot_toggles.traffic_mode_jerk_acceleration
@@ -74,7 +69,6 @@ class FrogPilotFollowing:
       )
 
     else:
-      # Normal / Personality-based logic
       if aEgo >= 0:
         (self.base_acceleration_jerk,
          self.base_danger_jerk,
@@ -116,70 +110,45 @@ class FrogPilotFollowing:
         controlsState.personality
       )
 
-    # Start each update cycle with the personality baseline
     self.t_follow = self.personality_t_follow
-
-    # Set the jerk values based on the base personality factors
     self.acceleration_jerk = self.base_acceleration_jerk
     self.danger_jerk = self.base_danger_jerk
     self.speed_jerk = self.base_speed_jerk
 
     # 2) Determine if a lead is being tracked
     self.following_lead = self.frogpilot_planner.tracking_lead \
-                          and lead_distance < (self.t_follow + 1.) * v_ego
+                          and lead_distance < (self.t_follow + 1.0) * v_ego
 
-    # 3) If lead is present, do the special follow logic
+    # 3) If lead is present and user wants catchup logic, do it
     if self.frogpilot_planner.tracking_lead:
-      # Get the Kalman-filtered lead acceleration directly
       lead_accel_est = self.frogpilot_planner.lead_one.aLeadK
-
-      # Pass it into update_follow_values
-      self.update_follow_values(lead_distance, v_ego, v_lead, lead_accel_est, frogpilot_toggles)
-
-      # 4) Finally, compute the desired follow distance from t_follow
+      if frogpilot_toggles.enableCatchUp:
+        self.update_follow_values(lead_distance, v_ego, v_lead, lead_accel_est, frogpilot_toggles)
+      else:
+        # If catch-up is disabled, skip messing with t_follow
+        self.acceleration_override = None  # no forced override
       self.desired_follow_distance = int(desired_follow_distance(v_ego, v_lead, self.t_follow))
     else:
       self.desired_follow_distance = 0
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, lead_accel, frogpilot_toggles):
     """
-    Adjust t_follow for a more assertive launch from low speed.
-    If the lead is actively accelerating, we reduce follow gap and/or
-    override acceleration to "catch up" in a humanlike way.
+    Old "low-speed catch-up" logic.
+    If you'd like to reduce how often it triggers, you can raise LOW_SPEED_THRESHOLD
+    or tighten conditions below.
     """
+    global DECAY_RATE
 
-    # By default, decay t_follow back to personality baseline
+    # By default, decay t_follow from any prior short gap back to personality baseline
     self.t_follow = (1.0 - DECAY_RATE) * self.t_follow + DECAY_RATE * self.personality_t_follow
-
-    # Reset override each cycle by default; we'll set it if conditions apply
     self.acceleration_override = None
 
-    # If we are below LOW_SPEED_THRESHOLD and the lead is pulling away, reduce t_follow
-    if v_ego < LOW_SPEED_THRESHOLD:
-      # Check if lead is faster than ego
-      if v_lead > v_ego:
-        # 1) Shrink t_follow linearly from MIN_T_FOLLOW_AT_LOW_SPEED up to baseline
-        alpha = np.clip(v_ego / LOW_SPEED_THRESHOLD, 0., 1.)
-        reduced_t_follow = (1. - alpha) * MIN_T_FOLLOW_AT_LOW_SPEED + alpha * self.personality_t_follow
-        self.t_follow = min(self.t_follow, reduced_t_follow)
+    if v_ego < LOW_SPEED_THRESHOLD and v_lead > v_ego:
+      alpha = np.clip(v_ego / LOW_SPEED_THRESHOLD, 0., 1.)
+      reduced_t_follow = (1. - alpha) * MIN_T_FOLLOW_AT_LOW_SPEED + alpha * self.personality_t_follow
+      self.t_follow = min(self.t_follow, reduced_t_follow)
 
-        # 2) If the lead acceleration estimate is above threshold, let's override
-        #    some of our normal acceleration logic to "catch up"
-        if lead_accel > LEAD_ACCEL_THRESHOLD:
-          # We'll command a fraction of the lead's observed acceleration
-          override_accel = ACCEL_OVERSHOOT_RATIO * lead_accel
-
-          # Assign it to self.acceleration_override, which you can feed into your
-          # final acceleration command or MPC. The actual usage depends on how
-          # your system is structured.
-          self.acceleration_override = override_accel
-
-          # Optionally: bump up jerk a bit if you want. For instance:
-          self.acceleration_jerk *= 1.2
-
-    # Else, once you're above LOW_SPEED_THRESHOLD, the standard personality-based
-    # t_follow behavior applies, thanks to the decay back to self.personality_t_follow.
-    # The override is None, so no special forced-acceleration.
-
-    # Additional safety checks or logic to handle quick re-stops can go here:
-    # e.g., if lead_accel < 0 or lead_distance is small, you might revert to baseline instantly.
+      if lead_accel > LEAD_ACCEL_THRESHOLD:
+        override_accel = ACCEL_OVERSHOOT_RATIO * lead_accel
+        self.acceleration_override = override_accel
+        self.acceleration_jerk *= 1.2

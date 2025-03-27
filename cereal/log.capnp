@@ -1116,7 +1116,7 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   shouldStop @37: Bool;
   allowThrottle @38: Bool;
   allowBrake @39: Bool;
-
+  emergencyFactor @40: Float32;
 
   solverExecutionTime @35 :Float32;
 
@@ -1162,6 +1162,7 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
     y @1 :List(Float32);
   }
 }
+
 struct UiPlan {
   frameId @2 :UInt32;
   position @0 :XYZTData;

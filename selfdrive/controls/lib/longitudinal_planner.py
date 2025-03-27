@@ -71,12 +71,19 @@ def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
   should_stop = (v_target < vEgoStopping and v_target_1sec < vEgoStopping)
   return a_target, should_stop
 
+# === OLD function kept for backward compatibility only, but no longer used ===
+def emergency_brake_threshold(v_ego: float) -> float:
+  """
+  Old discrete time-to-collision threshold function used previously.
+  We keep it here for reference or backward compat but do not call it.
+  """
+  return (v_ego / 6.0) + 0.5
+
 # If you're using "radarless_model", you have a 'Lead' class with a simple Kalman
 # Otherwise, in normal radar usage, we get a capnp struct from radarState.
 LEAD_KALMAN_SPEED, LEAD_KALMAN_ACCEL = 0, 1
 
 def lead_kf(v_lead: float, dt: float = 0.05):
-  # Old 1D code for the "classic" lead if you want it
   from openpilot.common.simple_kalman import KF1D
   assert dt > .01 and dt < .2
   A = [[1.0, dt],[0.0, 1.0]]
@@ -131,42 +138,33 @@ class Lead:
     else:
       self.aLeadTau *= 0.9
 
-#
-# A dynamic time-to-collision threshold function
-#
-def emergency_brake_threshold(v_ego: float) -> float:
-  t_stop = v_ego / 6.0
-  return t_stop + 0.5
+# === NEW continuous factor function for emergency braking ===
+def calc_emergency_factor(v_ego: float, d_rel: float, v_lead: float) -> float:
+  """
+  Returns a continuous factor [0..1+] for how urgent braking is.
+  The bigger the factor, the closer we are to a critical TTC.
+  """
+  closing_speed = max(v_ego - v_lead, 0.0)
+  if closing_speed < 0.001 or d_rel < 0.01:
+    return 0.0
 
-#
-# Helper to unify how we get lead fields in "classic_model" (dictionary style) vs. normal capnp struct
-#
+  ttc = d_rel / closing_speed
+  # logistic or similar shape: near 1.0 if TTC ~1s, near 0 if TTC ~4s+
+  return 1.0 / (1.0 + math.exp(1.5 * (ttc - 2.5)))
+
 def get_drel(lead, classic_model):
-  """
-  Return the lead's distance, either from a dictionary or from a capnp struct
-  """
   if classic_model:
-    # old "Lead" object with .dRel
     return lead.dRel
   else:
-    # radarState lead is a capnp struct with .dRel
     return lead.dRel
 
 def get_vlead(lead, classic_model):
-  """
-  Return the lead's speed, either from a dictionary or from a capnp struct
-  """
   if classic_model:
-    # old "Lead" object with .vLead
     return lead.vLead
   else:
-    # radarState lead is a capnp struct with .vLead
     return lead.vLead
 
 def get_status(lead, classic_model):
-  """
-  Return the lead's status (True/False).
-  """
   if classic_model:
     return lead.status
   else:
@@ -192,6 +190,10 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
     self.solverExecutionTime = 0.0
+
+    # === NEW fields to store continuous emergency factor ===
+    self.emergency_factor = 0.0
+    self.should_stop = False
 
   @staticmethod
   def parse_model(model_msg, model_error, v_ego, taco_tune):
@@ -278,7 +280,6 @@ class LongitudinalPlanner:
 
     # Construct leads from either radarless model or from radarState
     if radarless_model:
-      # In "classic model" mode, we fill self.lead_one/lead_two with the old style
       model_leads = list(sm['modelV2'].leadsV3)
       lead_states = [self.lead_one, self.lead_two]
       for index in range(len(lead_states)):
@@ -308,7 +309,6 @@ class LongitudinalPlanner:
         else:
           lead_states[index].reset()
     else:
-      # If not radarless, we get a capnp struct from radarState
       self.lead_one = sm['radarState'].leadOne
       self.lead_two = sm['radarState'].leadTwo
 
@@ -338,6 +338,24 @@ class LongitudinalPlanner:
     self.a_desired = float(np.interp(self.dt, CONTROL_N_T_IDX, self.a_desired_trajectory))
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.a_desired + a_prev) / 2.0
 
+    # === NEW: compute continuous emergency_factor and set should_stop if large ===
+    self.emergency_factor = 0.0
+    self.should_stop = False
+    for lead_obj in [self.lead_one, self.lead_two]:
+      if get_status(lead_obj, radarless_model):
+        d_rel = get_drel(lead_obj, radarless_model)
+        v_lead = get_vlead(lead_obj, radarless_model)
+        ef = calc_emergency_factor(v_ego, d_rel, v_lead)
+        if ef > self.emergency_factor:
+          self.emergency_factor = ef
+
+    # Example threshold for forcibly stopping
+    if self.emergency_factor > 0.85:
+      self.should_stop = True
+      # Optionally clamp the desired accel to strongly negative, or do other logic:
+      self.a_desired = min(self.a_desired, -2.0)
+      cloudlog.info(f"Emergency factor high ({self.emergency_factor:.2f}) => forcing stop")
+
   def publish(self, classic_model, sm, pm, frogpilot_toggles):
     plan_send = messaging.new_message('longitudinalPlan')
     plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
@@ -350,8 +368,6 @@ class LongitudinalPlanner:
     longitudinalPlan.accels = self.a_desired_trajectory.tolist()
     longitudinalPlan.jerks = self.j_desired_trajectory.tolist()
 
-    # We'll unify the hasLead logic. If in "classic_model", self.lead_one is a Lead object
-    # otherwise it's a capnp struct from radarState.
     if classic_model:
       longitudinalPlan.hasLead = self.lead_one.status
     else:
@@ -360,44 +376,29 @@ class LongitudinalPlanner:
     longitudinalPlan.longitudinalPlanSource = self.mpc.source
     longitudinalPlan.fcw = self.fcw
 
-    # Compute final a_target, should_stop
+    # Compute final a_target, should_stop from the plan
     if classic_model:
-      a_target, should_stop = get_accel_from_plan_classic(self.CP,
-                                                          longitudinalPlan.speeds,
-                                                          longitudinalPlan.accels,
-                                                          vEgoStopping=frogpilot_toggles.vEgoStopping)
+      a_target, plan_should_stop = get_accel_from_plan_classic(self.CP,
+                                                               longitudinalPlan.speeds,
+                                                               longitudinalPlan.accels,
+                                                               vEgoStopping=frogpilot_toggles.vEgoStopping)
     else:
       action_t = self.CP.longitudinalActuatorDelay + DT_MDL
-      a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds,
-                                                  longitudinalPlan.accels,
-                                                  action_t=action_t,
-                                                  vEgoStopping=frogpilot_toggles.vEgoStopping)
+      a_target, plan_should_stop = get_accel_from_plan(longitudinalPlan.speeds,
+                                                       longitudinalPlan.accels,
+                                                       action_t=action_t,
+                                                       vEgoStopping=frogpilot_toggles.vEgoStopping)
 
-    #
-    # Emergency braking override
-    #
-    # We'll do the same approach for lead_one, lead_two, calling our get_drel / get_vlead helpers
-    # so it doesn't matter if we have a dictionary or a capnp struct
-    #
-    for lead_obj in [self.lead_one, self.lead_two]:
-      if get_status(lead_obj, classic_model):
-        d_rel = get_drel(lead_obj, classic_model)
-        v_lead = get_vlead(lead_obj, classic_model)
-        closing_speed = max(sm['carState'].vEgo - v_lead, 0.1)
-        ttc_lead = d_rel / closing_speed
-        ttc_threshold = emergency_brake_threshold(sm['carState'].vEgo)
-        if ttc_lead < ttc_threshold:
-          should_stop = True
-          cloudlog.info(
-            f"Emergency braking override: lead dRel={d_rel:.1f}, "
-            f"closing_speed={closing_speed:.1f}, ttc={ttc_lead:.2f}, "
-            f"threshold={ttc_threshold:.2f}"
-          )
-          break
+    # The final "should_stop" is also influenced by the new emergency factor logic
+    # If self.should_stop is True from above, we override.
+    should_stop = plan_should_stop or self.should_stop
 
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = bool(self.allow_throttle)
+
+    # === NEW: Publish the continuous emergency factor to tuner. ===
+    longitudinalPlan.emergencyFactor = float(self.emergency_factor)
 
     pm.send('longitudinalPlan', plan_send)
