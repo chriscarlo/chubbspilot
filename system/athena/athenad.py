@@ -50,8 +50,8 @@ RETRY_DELAY = 10         # seconds to wait after a failed attempt
 MAX_AGE = 31 * 24 * 3600 # 31 days in seconds
 
 # Azure File Share config
-AZURE_SHARE_NAME = "test-rlog-1"
-AZURE_BASE_DIR   = "rlogs"
+AZURE_SHARE_NAME = "drivelogs"
+AZURE_BASE_DIR   = "chauffeurrlogs"
 
 # Debug flag - only True when running directly
 DEBUG = __name__ == "__main__"
