@@ -7,9 +7,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
 
 TRAFFIC_MODE_BP = [0., CITY_SPEED_LIMIT]
-
-# -- Lower decay for less messing with t_follow
-DECAY_RATE = 0.02  # was 0.1
+DECAY_RATE = 0.02
 LOW_SPEED_THRESHOLD = 11.4
 MIN_T_FOLLOW_AT_LOW_SPEED = 0.7
 LEAD_ACCEL_THRESHOLD = 0.2
@@ -19,11 +17,9 @@ class FrogPilotFollowing:
   def __init__(self, FrogPilotPlanner):
     self.frogpilot_planner = FrogPilotPlanner
 
-    # Tracking / state booleans
     self.following_lead = False
     self.slower_lead = False
 
-    # Jerk / follow distance / time-gap variables
     self.acceleration_jerk = 0
     self.base_acceleration_jerk = 0
     self.base_speed_jerk = 0
@@ -34,17 +30,11 @@ class FrogPilotFollowing:
     self.desired_follow_distance = 0
     self.t_follow = 0
     self.personality_t_follow = 0
-
-    # Acceleration override: optionally used if catching up
     self.acceleration_override = None
 
   def update(self, aEgo, controlsState, frogpilotCarState,
              lead_distance, v_ego, v_lead, frogpilot_toggles):
-    """
-    Main entry point each loop. By default, we do minimal messing with t_follow unless
-    frogpilot_toggles.enableCatchUp is True.
-    """
-    # 1) Baseline personality or traffic-mode logic
+    
     if frogpilotCarState.trafficModeActive:
       if aEgo >= 0:
         self.base_acceleration_jerk = np.interp(
@@ -115,31 +105,17 @@ class FrogPilotFollowing:
     self.danger_jerk = self.base_danger_jerk
     self.speed_jerk = self.base_speed_jerk
 
-    # 2) Determine if a lead is being tracked
     self.following_lead = self.frogpilot_planner.tracking_lead \
                           and lead_distance < (self.t_follow + 1.0) * v_ego
 
-    # 3) If lead is present and user wants catchup logic, do it
     if self.frogpilot_planner.tracking_lead:
       lead_accel_est = self.frogpilot_planner.lead_one.aLeadK
-      if frogpilot_toggles.enableCatchUp:
-        self.update_follow_values(lead_distance, v_ego, v_lead, lead_accel_est, frogpilot_toggles)
-      else:
-        # If catch-up is disabled, skip messing with t_follow
-        self.acceleration_override = None  # no forced override
+      self.update_follow_values(lead_distance, v_ego, v_lead, lead_accel_est)
       self.desired_follow_distance = int(desired_follow_distance(v_ego, v_lead, self.t_follow))
     else:
       self.desired_follow_distance = 0
 
-  def update_follow_values(self, lead_distance, v_ego, v_lead, lead_accel, frogpilot_toggles):
-    """
-    Old "low-speed catch-up" logic.
-    If you'd like to reduce how often it triggers, you can raise LOW_SPEED_THRESHOLD
-    or tighten conditions below.
-    """
-    global DECAY_RATE
-
-    # By default, decay t_follow from any prior short gap back to personality baseline
+  def update_follow_values(self, lead_distance, v_ego, v_lead, lead_accel):
     self.t_follow = (1.0 - DECAY_RATE) * self.t_follow + DECAY_RATE * self.personality_t_follow
     self.acceleration_override = None
 
