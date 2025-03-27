@@ -542,4 +542,4 @@ class LongitudinalPlanner:
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = bool(self.allow_throttle)
 
-    pm.send('longitudinalPlan', plan_send)
+    pm.send(plan_send.to_bytes())
