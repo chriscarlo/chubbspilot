@@ -620,7 +620,7 @@ void Device::setAwake(bool on) {
 
 void Device::resetInteractiveTimeout(int timeout, int timeout_onroad) {
   if (timeout == -1) {
-    timeout = (ignition_on ? 10 : 30);
+    timeout = (ignition_on ? timeout_onroad : timeout);  // timeout_onroad for onroad, timeout for offroad
   } else {
     timeout = (ignition_on ? timeout_onroad : timeout);
   }
