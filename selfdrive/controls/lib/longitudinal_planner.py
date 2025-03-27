@@ -346,7 +346,7 @@ class LongitudinalPlanner:
 
     return x, v, a, j, throttle_prob
 
-  def update(self, radarless_model, sm, frogpilot_toggles):
+  def update(self, radarless_model, sm, frogpilot_toggles, pm):
     """
     Updates the longitudinal planner with the latest sensor data and model predictions.
 
@@ -509,22 +509,12 @@ class LongitudinalPlanner:
     self.a_desired = final_a_target
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.a_desired + a_prev) / 2.0
 
-    self.publish(radarless_model, sm, messaging.pub_sock, frogpilot_toggles, self.a_desired, should_stop)
+    self.publish(radarless_model, sm, pm, frogpilot_toggles)
 
-  def publish(self, classic_model, sm, pm, frogpilot_toggles, a_target_final, should_stop):
-    """
-    Publishes the results of the longitudinal planning step.
-
-    :param classic_model: Boolean indicating the model path used.
-    :param sm: State manager (messaging sub).
-    :param pm: Pub socket for sending the final plan message.
-    :param frogpilot_toggles: Additional configuration toggles/parameters.
-    :param a_target_final: The final chosen acceleration target (m/s^2).
-    :param should_stop: Whether the plan indicates a stop condition.
-    """
+  def publish(self, classic_model, sm, pm, frogpilot_toggles):
     plan_send = messaging.new_message('longitudinalPlan')
-    plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
     longitudinalPlan = plan_send.longitudinalPlan
+    plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
 
     longitudinalPlan.modelMonoTime = sm.logMonoTime['modelV2']
     longitudinalPlan.processingDelay = (plan_send.logMonoTime / 1e9) - sm.logMonoTime['modelV2']
@@ -533,13 +523,12 @@ class LongitudinalPlanner:
     longitudinalPlan.speeds = self.v_desired_trajectory.tolist()
     longitudinalPlan.accels = self.a_desired_trajectory.tolist()
     longitudinalPlan.jerks = self.j_desired_trajectory.tolist()
-
-    longitudinalPlan.hasLead = self.lead_one.status if classic_model else self.lead_one.status
+    longitudinalPlan.hasLead = self.lead_one.status
     longitudinalPlan.longitudinalPlanSource = self.mpc.source
     longitudinalPlan.fcw = self.fcw
-    longitudinalPlan.aTarget = a_target_final
-    longitudinalPlan.shouldStop = should_stop
+    longitudinalPlan.aTarget = self.a_desired
+    longitudinalPlan.shouldStop = self.fcw  # or use a better logic if needed
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = bool(self.allow_throttle)
 
-    pm.send(plan_send.to_bytes())
+    pm.send('longitudinalPlan', plan_send)

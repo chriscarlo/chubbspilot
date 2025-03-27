@@ -187,7 +187,8 @@ def gen_long_ocp():
   # from an obstacle at every timestep. This obstacle can be a lead car
   # or other object. In e2e mode we can use x_position targets as a cost
   # instead.
-  costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
+  # costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
+  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.729),
            x_ego,
            v_ego,
            a_ego,

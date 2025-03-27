@@ -76,7 +76,7 @@ class HKGLongitudinalTuning:
     self.jerk = (current_accel - self.accel_last_jerk) / self.DT_CTRL
     self.accel_last_jerk = current_accel
 
-    jerk_max = 5.0
+    jerk_max = 6.0
     v_error = abs(CS.out.vEgo - CS.out.cruiseState.speed)
 
     if self.CP.flags & HyundaiFlags.CANFD.value:
@@ -86,7 +86,7 @@ class HKGLongitudinalTuning:
       jerk_max *= jerk_reduction
 
       self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
-      self.jerk_lower_limit = min(max(1.0, -self.jerk * 4.0), jerk_max)
+      self.jerk_lower_limit = min(max(1.0, -self.jerk * 6.0), jerk_max)
       self.cb_upper = self.cb_lower = 0.0
     else:
       # Apply legacy jerk scaling for non-CAN FD vehicles.
@@ -94,7 +94,7 @@ class HKGLongitudinalTuning:
       error_factor = clip(error_factor, 0.0, 1.0)
 
       self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
-      self.jerk_lower_limit = min(max(1.0, -self.jerk * 2.0), jerk_max)
+      self.jerk_lower_limit = min(max(1.0, -self.jerk * 6.0), jerk_max)
 
       accel_abs = abs(accel)
       accel_factor = 0.2 - 0.1 * (accel_abs / (accel_abs + 1.0))
