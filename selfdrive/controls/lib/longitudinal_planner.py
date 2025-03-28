@@ -38,37 +38,14 @@ _A_TOTAL_MAX_BP = [20., 40.]
 
 
 def get_max_accel(v_ego):
-  """
-  Returns the maximum allowed acceleration for the given ego vehicle speed.
-
-  :param v_ego: The current speed of the vehicle (m/s).
-  :return: Maximum allowed acceleration (m/s^2).
-  """
   return interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
 
 def get_coast_accel(pitch):
-  """
-  Computes a nominal coast acceleration based on road pitch, aiming to maintain
-  a near-constant speed on inclines/declines.
-
-  :param pitch: The road pitch angle (radians).
-  :return: A nominal coast acceleration (m/s^2).
-  """
   return np.sin(pitch) * -5.65 - 0.3
 
 
 def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
-  """
-  Limits longitudinal acceleration in turns to prevent exceeding total
-  lateral/longitudinal acceleration limits.
-
-  :param v_ego: Ego speed (m/s).
-  :param angle_steers: Steering angle (degrees).
-  :param a_target: [min_accel, max_accel] from the planner.
-  :param CP: Car parameters object with steerRatio and wheelbase.
-  :return: A possibly modified [min_accel, max_accel] respecting lateral limits.
-  """
   a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
   a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
   a_x_allowed = math.sqrt(max(a_total_max ** 2 - a_y ** 2, 0.))
@@ -76,16 +53,6 @@ def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
 
 
 def get_accel_from_plan_classic(CP, speeds, accels, vEgoStopping):
-  """
-  For a 'classic' model path: computes a reference acceleration and determines
-  whether to stop based on discrete velocity checks.
-
-  :param CP: Car parameters object.
-  :param speeds: A list of predicted future speeds over CONTROL_N points.
-  :param accels: A list of predicted future accelerations over CONTROL_N points.
-  :param vEgoStopping: Speed threshold below which the vehicle should be considered stopping.
-  :return: (a_target, should_stop) for the immediate time horizon.
-  """
   if len(speeds) == CONTROL_N:
     from openpilot.common.numpy_fast import interp
     v_target_now = interp(DT_MDL, CONTROL_N_T_IDX, speeds)
@@ -108,16 +75,6 @@ def get_accel_from_plan_classic(CP, speeds, accels, vEgoStopping):
 
 
 def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
-  """
-  For a non-classic model path: computes a reference acceleration and determines
-  whether to stop, using a continuous interpolation of future speed/accel.
-
-  :param speeds: A list of predicted future speeds over CONTROL_N points.
-  :param accels: A list of predicted future accelerations over CONTROL_N points.
-  :param action_t: A time offset to project the speed/accel.
-  :param vEgoStopping: Speed threshold below which the vehicle should be considered stopping.
-  :return: (a_target, should_stop) for the immediate time horizon.
-  """
   if len(speeds) == CONTROL_N:
     v_now = speeds[0]
     a_now = accels[0]
@@ -137,13 +94,6 @@ LEAD_KALMAN_SPEED, LEAD_KALMAN_ACCEL = 0, 1
 
 
 def lead_kf(v_lead: float, dt: float = 0.05):
-  """
-  Creates and returns a 1D Kalman filter for the lead's speed and acceleration.
-
-  :param v_lead: Initial lead vehicle speed.
-  :param dt: Time step for the filter (seconds).
-  :return: A KF1D object for lead speed/accel estimation.
-  """
   from openpilot.common.simple_kalman import KF1D
   assert 0.01 < dt < 0.2
   A = [[1.0, dt],
@@ -169,10 +119,6 @@ def lead_kf(v_lead: float, dt: float = 0.05):
 
 
 class Lead:
-  """
-  Tracks information about a lead vehicle, including distance, velocity, and
-  a Kalman-filter-based estimate of lead acceleration.
-  """
   def __init__(self):
     self.dRel = 0.0
     self.yRel = 0.0
@@ -186,21 +132,11 @@ class Lead:
     self.kf: KF1D | None = None
 
   def reset(self):
-    """Resets lead tracking, including the Kalman filter."""
     self.status = False
     self.kf = None
     self.aLeadTau = LEAD_ACCEL_TAU
 
   def update(self, dRel: float, yRel: float, vLead: float, aLead: float, prob: float):
-    """
-    Updates lead vehicle information and Kalman filter states.
-
-    :param dRel: Distance to the lead vehicle.
-    :param yRel: Lateral offset to the lead vehicle.
-    :param vLead: Lead vehicle velocity.
-    :param aLead: Lead vehicle acceleration.
-    :param prob: Probability that this lead is valid.
-    """
     self.dRel = dRel
     self.yRel = yRel
     self.vLead = vLead
@@ -223,15 +159,6 @@ class Lead:
 
 
 def calc_emergency_braking_factor(v_ego: float, lead_d_rel: float, lead_v: float) -> float:
-  """
-  Computes a continuous emergency braking factor in [0.0 .. ~2.0], indicating
-  urgency for deceleration.
-
-  :param v_ego: Ego vehicle speed (m/s).
-  :param lead_d_rel: Distance to the lead vehicle (m).
-  :param lead_v: Lead vehicle speed (m/s).
-  :return: A factor > 1.0 indicates very urgent braking, while 0.0 means no urgency.
-  """
   closing_speed = max(v_ego - lead_v, 0.0)
   if lead_d_rel < 0.1 or closing_speed < 0.01:
     return 0.0
@@ -247,41 +174,19 @@ def calc_emergency_braking_factor(v_ego: float, lead_d_rel: float, lead_v: float
 
 
 def get_drel(lead, classic_model):
-  """
-  Provides the lead vehicle distance. In this implementation, both paths are identical,
-  but can be specialized if the 'classic' and 'radarless' models diverge.
-  """
-  return lead.dRel if classic_model else lead.dRel
+  return lead.dRel
 
 
 def get_vlead(lead, classic_model):
-  """
-  Provides the lead vehicle speed. In this implementation, both paths are identical,
-  but can be specialized if the 'classic' and 'radarless' models diverge.
-  """
-  return lead.vLead if classic_model else lead.vLead
+  return lead.vLead
 
 
 def get_status(lead, classic_model):
-  """
-  Indicates whether a lead is present. Both paths are identical here,
-  but kept for potential future differences.
-  """
-  return lead.status if classic_model else lead.status
+  return lead.status
 
 
 class LongitudinalPlanner:
-  """
-  Manages longitudinal planning via an MPC-based approach, using vehicle dynamics,
-  lead-vehicle information, and model predictions to set target accelerations.
-  """
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
-    """
-    :param CP: Car parameters object.
-    :param init_v: Initial speed (m/s).
-    :param init_a: Initial acceleration (m/s^2).
-    :param dt: Planning timestep (seconds).
-    """
     self.CP = CP
     self.mpc = LongitudinalMpc(dt=dt)
     self.fcw = False
@@ -302,16 +207,6 @@ class LongitudinalPlanner:
 
   @staticmethod
   def parse_model(model_msg, model_error, v_ego, taco_tune):
-    """
-    Extracts position, velocity, acceleration, and jerk profiles from model predictions,
-    applying optional 'taco_tune' constraints for curvature.
-
-    :param model_msg: The modelV2 message containing predicted states.
-    :param model_error: An offset to adjust the velocity based on model speed error.
-    :param v_ego: Ego vehicle speed (m/s).
-    :param taco_tune: Flag indicating whether to apply additional curvature-based speed limits.
-    :return: Tuple (x, v, a, j, throttle_prob).
-    """
     if (len(model_msg.position.x) == ModelConstants.IDX_N and
         len(model_msg.velocity.x) == ModelConstants.IDX_N and
         len(model_msg.acceleration.x) == ModelConstants.IDX_N):
@@ -347,17 +242,13 @@ class LongitudinalPlanner:
     return x, v, a, j, throttle_prob
 
   def update(self, radarless_model, sm, frogpilot_toggles, pm):
-    """
-    Updates the longitudinal planner with the latest sensor data and model predictions.
-
-    :param radarless_model: If True, uses model-based leads; otherwise uses radar leads.
-    :param sm: State manager (messaging sub) with required data fields.
-    :param frogpilot_toggles: Additional configuration toggles/parameters.
-    """
     self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
-    accel_coast = get_coast_accel(sm['carControl'].orientationNED[1]) if len(sm['carControl'].orientationNED) == 3 else ACCEL_MAX
-    v_ego = sm['carState'].vEgo
+    if len(sm['carControl'].orientationNED) == 3:
+      accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
+    else:
+      accel_coast = ACCEL_MAX
 
+    v_ego = sm['carState'].vEgo
     v_cruise_kph = min(sm['controlsState'].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
     v_cruise_initialized = (sm['controlsState'].vCruise != V_CRUISE_UNSET)
@@ -381,9 +272,9 @@ class LongitudinalPlanner:
 
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
     self.v_model_error = get_speed_error(sm['modelV2'], v_ego)
+
     x, v, a, j, throttle_prob = self.parse_model(sm['modelV2'], self.v_model_error, v_ego, frogpilot_toggles.taco_tune)
 
-    # Determine if throttle is allowed, blending probability and speed logic
     throttle_weight = np.clip((throttle_prob - (ALLOW_THROTTLE_THRESHOLD - 0.1)) / 0.2, 0.0, 1.0)
     speed_weight = np.clip((MIN_ALLOW_THROTTLE_SPEED + 1.0 - v_ego) / 1.0, 0.0, 1.0)
     allow_factor = np.clip(throttle_weight + speed_weight, 0.0, 1.0)
@@ -444,12 +335,18 @@ class LongitudinalPlanner:
       self.lead_two = sm['radarState'].leadTwo
 
     # Configure MPC
-    self.mpc.set_weights(sm['frogpilotPlan'].accelerationJerk,
-                         sm['frogpilotPlan'].dangerJerk,
-                         sm['frogpilotPlan'].speedJerk,
+    # PATCH: ensure these fields are float in case they could be None
+    accel_jerk = float(getattr(sm['frogpilotPlan'], 'accelerationJerk', 0.0))
+    danger_jerk = float(getattr(sm['frogpilotPlan'], 'dangerJerk', 0.0))
+    speed_jerk = float(getattr(sm['frogpilotPlan'], 'speedJerk', 0.0))
+
+    self.mpc.set_weights(accel_jerk,
+                         danger_jerk,
+                         speed_jerk,
                          prev_accel_constraint,
                          personality=sm['controlsState'].personality)
-    self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
+
+    self.mpc.set_accel_limits(float(accel_limits_turns[0]), float(accel_limits_turns[1]))
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
 
     # Solve
@@ -506,32 +403,36 @@ class LongitudinalPlanner:
         should_stop = True
         final_a_target = min(final_a_target, plan_a_target)
 
-    self.a_desired = final_a_target
+    # PATCH: ensure self.a_desired is always float
+    self.a_desired = float(final_a_target if final_a_target is not None else 0.0)
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.a_desired + a_prev) / 2.0
 
     self.publish(radarless_model, sm, pm, frogpilot_toggles)
 
-
   def publish(self, classic_model, sm, pm, frogpilot_toggles):
     plan_send = messaging.new_message('longitudinalPlan')
     plan_send.init('longitudinalPlan')
-
-    longitudinalPlan = plan_send.longitudinalPlan
     plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
 
-    longitudinalPlan.modelMonoTime = sm.logMonoTime['modelV2']
-    longitudinalPlan.processingDelay = (plan_send.logMonoTime / 1e9) - sm.logMonoTime['modelV2']
-    longitudinalPlan.solverExecutionTime = self.mpc.solve_time
+    # PATCH: Safely handle modelMonoTime and processingDelay
+    model_mono_time = sm.logMonoTime.get('modelV2', 0) or 0
+    plan_send.longitudinalPlan.modelMonoTime = int(model_mono_time)
+    plan_send.longitudinalPlan.processingDelay = float(plan_send.logMonoTime - model_mono_time) / 1e9
 
-    longitudinalPlan.speeds = self.v_desired_trajectory.tolist()
-    longitudinalPlan.accels = self.a_desired_trajectory.tolist()
-    longitudinalPlan.jerks = self.j_desired_trajectory.tolist()
-    longitudinalPlan.hasLead = self.lead_one.status
-    longitudinalPlan.longitudinalPlanSource = self.mpc.source
-    longitudinalPlan.fcw = self.fcw
-    longitudinalPlan.aTarget = self.a_desired
-    longitudinalPlan.shouldStop = self.fcw  # or use a better logic if needed
-    longitudinalPlan.allowBrake = True
-    longitudinalPlan.allowThrottle = bool(self.allow_throttle)
+    plan_send.longitudinalPlan.solverExecutionTime = float(self.mpc.solve_time or 0.0)
+
+    # PATCH: Ensure arrays are floats
+    plan_send.longitudinalPlan.speeds = [float(x) for x in self.v_desired_trajectory]
+    plan_send.longitudinalPlan.accels = [float(x) for x in self.a_desired_trajectory]
+    plan_send.longitudinalPlan.jerks = [float(x) for x in self.j_desired_trajectory]
+
+    # PATCH: Ensure booleans/strings/floats are safe
+    plan_send.longitudinalPlan.hasLead = bool(self.lead_one.status)
+    plan_send.longitudinalPlan.longitudinalPlanSource = str(getattr(self.mpc, "source", "") or "")
+    plan_send.longitudinalPlan.fcw = bool(self.fcw)
+    plan_send.longitudinalPlan.aTarget = float(self.a_desired or 0.0)
+    plan_send.longitudinalPlan.shouldStop = bool(self.fcw)  # Or refine logic as needed
+    plan_send.longitudinalPlan.allowBrake = True
+    plan_send.longitudinalPlan.allowThrottle = bool(self.allow_throttle)
 
     pm.send('longitudinalPlan', plan_send)
