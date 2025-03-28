@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import cereal.messaging as messaging
 
 from openpilot.common.conversions import Conversions as CV
@@ -44,7 +45,13 @@ class FrogPilotPlanner:
       if len(model_leads) > 0:
         distance_offset = frogpilot_toggles.increased_stopped_distance if not frogpilotCarState.trafficModeActive else 0
         model_lead = model_leads[0]
-        self.lead_one.update(model_lead.x[0] - distance_offset, model_lead.y[0], model_lead.v[0], model_lead.a[0], model_lead.prob)
+        self.lead_one.update(
+          model_lead.x[0] - distance_offset,
+          model_lead.y[0],
+          model_lead.v[0],
+          model_lead.a[0],
+          model_lead.prob
+        )
       else:
         self.lead_one.reset()
     else:
@@ -64,30 +71,42 @@ class FrogPilotPlanner:
     else:
       self.cem.stop_light_detected = False
 
-    self.frogpilot_events.update(carState, controlsState, frogpilotCarControl, frogpilotCarState, self.lead_one.dRel, modelData, v_lead, frogpilot_toggles, sm)
-    self.frogpilot_following.update(carState.aEgo, controlsState, frogpilotCarState, self.lead_one.dRel, v_ego, v_lead, frogpilot_toggles)
+    self.frogpilot_events.update(carState, controlsState, frogpilotCarControl, frogpilotCarState,
+                                 self.lead_one.dRel, modelData, v_lead, frogpilot_toggles, sm)
+    self.frogpilot_following.update(carState.aEgo, controlsState, frogpilotCarState,
+                                    self.lead_one.dRel, v_ego, v_lead, frogpilot_toggles)
 
-    check_lane_width = frogpilot_toggles.adjacent_paths or frogpilot_toggles.adjacent_path_metrics or frogpilot_toggles.blind_spot_path or frogpilot_toggles.lane_detection
+    check_lane_width = (frogpilot_toggles.adjacent_paths or
+                        frogpilot_toggles.adjacent_path_metrics or
+                        frogpilot_toggles.blind_spot_path or
+                        frogpilot_toggles.lane_detection)
     if check_lane_width and v_ego >= frogpilot_toggles.minimum_lane_change_speed:
-      self.lane_width_left = calculate_lane_width(modelData.laneLines[0], modelData.laneLines[1], modelData.roadEdges[0])
-      self.lane_width_right = calculate_lane_width(modelData.laneLines[3], modelData.laneLines[2], modelData.roadEdges[1])
+      self.lane_width_left = calculate_lane_width(modelData.laneLines[0],
+                                                  modelData.laneLines[1],
+                                                  modelData.roadEdges[0])
+      self.lane_width_right = calculate_lane_width(modelData.laneLines[3],
+                                                   modelData.laneLines[2],
+                                                   modelData.roadEdges[1])
     else:
       self.lane_width_left = 0
       self.lane_width_right = 0
 
     self.lateral_check = v_ego >= frogpilot_toggles.pause_lateral_below_speed
-    self.lateral_check |= frogpilot_toggles.pause_lateral_below_signal and not (carState.leftBlinker or carState.rightBlinker)
+    self.lateral_check |= (frogpilot_toggles.pause_lateral_below_signal and
+                           not (carState.leftBlinker or carState.rightBlinker))
     self.lateral_check |= carState.standstill
 
     self.model_length = modelData.position.x[MODEL_LENGTH - 1]
-    self.model_stopped = self.model_length < CRUISING_SPEED * PLANNER_TIME
+    self.model_stopped = (self.model_length < CRUISING_SPEED * PLANNER_TIME)
     self.model_stopped |= self.frogpilot_vcruise.forcing_stop
 
     self.road_curvature = calculate_road_curvature(modelData, v_ego) if v_ego > CRUISING_SPEED else 1
     self.road_curvature_detected = (1 / self.road_curvature)**0.5 < v_ego
 
     self.tracking_lead = self.set_lead_status(carState, v_lead)
-    self.v_cruise = self.frogpilot_vcruise.update(carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles)
+    self.v_cruise = self.frogpilot_vcruise.update(carControl, carState, controlsState,
+                                                  frogpilotCarControl, frogpilotCarState,
+                                                  frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles)
 
   def set_lead_status(self, carState, v_lead):
     following_lead = self.lead_one.status
@@ -115,35 +134,52 @@ class FrogPilotPlanner:
 
     frogpilotPlan.desiredFollowDistance = self.frogpilot_following.desired_follow_distance
 
-    frogpilotPlan.experimentalMode = self.cem.experimental_mode or self.frogpilot_vcruise.slc.experimental_mode
+    # PATCH: Ensure experimentalMode is a bool
+    frogpilotPlan.experimentalMode = bool(self.cem.experimental_mode or
+                                          getattr(self.frogpilot_vcruise.slc, "experimental_mode", False))
 
-    frogpilotPlan.forcingStop = self.frogpilot_vcruise.forcing_stop
-    frogpilotPlan.forcingStopLength = self.frogpilot_vcruise.tracked_model_length
+    frogpilotPlan.forcingStop = bool(self.frogpilot_vcruise.forcing_stop)
+    frogpilotPlan.forcingStopLength = float(self.frogpilot_vcruise.tracked_model_length)
 
     frogpilotPlan.frogpilotEvents = self.frogpilot_events.events.to_msg()
 
-    frogpilotPlan.laneWidthLeft = self.lane_width_left
-    frogpilotPlan.laneWidthRight = self.lane_width_right
+    frogpilotPlan.laneWidthLeft = float(self.lane_width_left)
+    frogpilotPlan.laneWidthRight = float(self.lane_width_right)
 
-    frogpilotPlan.lateralCheck = self.lateral_check
+    frogpilotPlan.lateralCheck = bool(self.lateral_check)
 
     frogpilotPlan.maxAcceleration = float(self.frogpilot_acceleration.max_accel)
     frogpilotPlan.minAcceleration = float(self.frogpilot_acceleration.min_accel)
 
     frogpilotPlan.redLight = bool(self.cem.stop_light_detected)
 
-    frogpilotPlan.slcMapSpeedLimit = self.frogpilot_vcruise.slc.map_speed_limit
-    frogpilotPlan.slcOverridden = bool(self.frogpilot_vcruise.override_slc)
-    frogpilotPlan.slcOverriddenSpeed = float(self.frogpilot_vcruise.overridden_speed)
-    frogpilotPlan.slcSpeedLimit = float(self.frogpilot_vcruise.slc_target) if self.frogpilot_vcruise.slc_target is not None else 0.0
-    frogpilotPlan.slcSpeedLimitOffset = self.frogpilot_vcruise.slc_offset
-    frogpilotPlan.slcSpeedLimitSource = self.frogpilot_vcruise.slc.source
-    frogpilotPlan.speedLimitChanged = self.frogpilot_vcruise.slc.speed_limit_changed
-    frogpilotPlan.unconfirmedSlcSpeedLimit = float(self.frogpilot_vcruise.slc.desired_speed_limit) if self.frogpilot_vcruise.slc.desired_speed_limit is not None else 0.0
-    frogpilotPlan.upcomingSLCSpeedLimit = self.frogpilot_vcruise.slc.upcoming_speed_limit
+    # PATCH: Safely handle all SLC fields in case they're None
+    slc = self.frogpilot_vcruise.slc
+    if slc is not None:
+      frogpilotPlan.slcMapSpeedLimit = float(getattr(slc, "map_speed_limit", 0.0) or 0.0)
+      frogpilotPlan.slcOverridden = bool(self.frogpilot_vcruise.override_slc)
+      frogpilotPlan.slcOverriddenSpeed = float(getattr(self.frogpilot_vcruise, "overridden_speed", 0.0) or 0.0)
+      frogpilotPlan.slcSpeedLimit = float(getattr(self.frogpilot_vcruise, "slc_target", 0.0) or 0.0)
+      frogpilotPlan.slcSpeedLimitOffset = float(getattr(self.frogpilot_vcruise, "slc_offset", 0.0) or 0.0)
+      frogpilotPlan.slcSpeedLimitSource = str(getattr(slc, "source", "") or "")
+      frogpilotPlan.speedLimitChanged = bool(getattr(slc, "speed_limit_changed", False))
+      desired_sl = getattr(slc, "desired_speed_limit", None)
+      frogpilotPlan.unconfirmedSlcSpeedLimit = float(desired_sl) if desired_sl is not None else 0.0
+      frogpilotPlan.upcomingSLCSpeedLimit = float(getattr(slc, "upcoming_speed_limit", 0.0) or 0.0)
+    else:
+      # If slc is None, set everything to safe defaults
+      frogpilotPlan.slcMapSpeedLimit = 0.0
+      frogpilotPlan.slcOverridden = False
+      frogpilotPlan.slcOverriddenSpeed = 0.0
+      frogpilotPlan.slcSpeedLimit = 0.0
+      frogpilotPlan.slcSpeedLimitOffset = 0.0
+      frogpilotPlan.slcSpeedLimitSource = ""
+      frogpilotPlan.speedLimitChanged = False
+      frogpilotPlan.unconfirmedSlcSpeedLimit = 0.0
+      frogpilotPlan.upcomingSLCSpeedLimit = 0.0
 
-    frogpilotPlan.togglesUpdated = toggles_updated
+    frogpilotPlan.togglesUpdated = bool(toggles_updated)
 
-    frogpilotPlan.vCruise = self.v_cruise
+    frogpilotPlan.vCruise = float(self.v_cruise)
 
     pm.send("frogpilotPlan", frogpilot_plan_send)
