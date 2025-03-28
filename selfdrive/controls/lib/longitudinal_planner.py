@@ -164,7 +164,12 @@ def calc_emergency_braking_factor(v_ego: float, lead_d_rel: float, lead_v: float
     return 0.0
 
   ttc = lead_d_rel / closing_speed
-  ttc_urgency = 1.0 / (1.0 + math.exp(1.5 * (ttc - 2.5)))
+
+  # PATCH (Overflow Fix): clamp exponent to avoid math range error
+  exp_val = 1.5 * (ttc - 2.5)
+  exp_val_clamped = clip(exp_val, -50.0, 50.0)
+  ttc_urgency = 1.0 / (1.0 + math.exp(exp_val_clamped))
+
   dv = max(0.0, v_ego - lead_v)
   dv_factor = dv**2 / (dv**2 + 9.0)
   dist_saturation = v_ego * 1.8 + 5.0
@@ -335,7 +340,7 @@ class LongitudinalPlanner:
       self.lead_two = sm['radarState'].leadTwo
 
     # Configure MPC
-    # PATCH: ensure these fields are float in case they could be None
+    # Ensure these fields are float in case they could be None
     accel_jerk = float(getattr(sm['frogpilotPlan'], 'accelerationJerk', 0.0))
     danger_jerk = float(getattr(sm['frogpilotPlan'], 'dangerJerk', 0.0))
     speed_jerk = float(getattr(sm['frogpilotPlan'], 'speedJerk', 0.0))
@@ -403,7 +408,6 @@ class LongitudinalPlanner:
         should_stop = True
         final_a_target = min(final_a_target, plan_a_target)
 
-    # PATCH: ensure self.a_desired is always float
     self.a_desired = float(final_a_target if final_a_target is not None else 0.0)
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.a_desired + a_prev) / 2.0
 
@@ -414,24 +418,21 @@ class LongitudinalPlanner:
     plan_send.init('longitudinalPlan')
     plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
 
-    # PATCH: Safely handle modelMonoTime and processingDelay
     model_mono_time = sm.logMonoTime.get('modelV2', 0) or 0
     plan_send.longitudinalPlan.modelMonoTime = int(model_mono_time)
     plan_send.longitudinalPlan.processingDelay = float(plan_send.logMonoTime - model_mono_time) / 1e9
 
     plan_send.longitudinalPlan.solverExecutionTime = float(self.mpc.solve_time or 0.0)
 
-    # PATCH: Ensure arrays are floats
     plan_send.longitudinalPlan.speeds = [float(x) for x in self.v_desired_trajectory]
     plan_send.longitudinalPlan.accels = [float(x) for x in self.a_desired_trajectory]
     plan_send.longitudinalPlan.jerks = [float(x) for x in self.j_desired_trajectory]
 
-    # PATCH: Ensure booleans/strings/floats are safe
     plan_send.longitudinalPlan.hasLead = bool(self.lead_one.status)
     plan_send.longitudinalPlan.longitudinalPlanSource = str(getattr(self.mpc, "source", "") or "")
     plan_send.longitudinalPlan.fcw = bool(self.fcw)
     plan_send.longitudinalPlan.aTarget = float(self.a_desired or 0.0)
-    plan_send.longitudinalPlan.shouldStop = bool(self.fcw)  # Or refine logic as needed
+    plan_send.longitudinalPlan.shouldStop = bool(self.fcw)
     plan_send.longitudinalPlan.allowBrake = True
     plan_send.longitudinalPlan.allowThrottle = bool(self.allow_throttle)
 
