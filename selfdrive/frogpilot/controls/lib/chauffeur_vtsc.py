@@ -13,7 +13,6 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
-
 # -----------------------
 #   LATERAL ACCELERATION
 # -----------------------
@@ -122,7 +121,6 @@ def early_approach_time_fn(apex_speed: float) -> float:
     """
     Start apex decel some seconds before apex. Tweak for earlier slowdown.
     """
-    # NEW OR CHANGED: Increase these if you want more comfortable, earlier slowdowns.
     return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=3.0, hi=4.0)
 
 
@@ -130,7 +128,6 @@ def early_spool_time_fn(apex_speed: float) -> float:
     """
     Ramp up again after the apex.
     """
-    # If you also want to spool up slower, you can bump these up a bit:
     return logistic_transition(x=apex_speed, center=15.0, scale=3.0, lo=1.5, hi=2.5)
 
 
@@ -144,18 +141,18 @@ def short_horizon_factor(horizon_time: float) -> float:
 # ---------------------------------------------------
 class SteeringTorqueSaturationPredictor:
     """
-    Data-driven approach that only truly clamps speeds if prior data in that
-    bin shows an actual saturation. If you want to be very strict about saturations,
-    ignore anything < 100%. That way, it "stays out of the front-line" unless
-    you're certain you'd exceed 409 Nm in that scenario.
+    Data-driven + partial physics approach:
+    - Bins data to track the highest torque we've seen for a given speed & curvature
+    - If we see torque saturations, we switch out of passive mode
+    - We also store a dynamic K-estimate that approximates torque ≈ K * v^2 * curvature
+    - We'll use that K to compute a "max speed for 409 Nm" if we see repeated saturations
     """
 
     def __init__(self, vehicle_params, debug=False):
         self.MAX_STEER_TORQUE = 409
 
         # We'll store *all* data, but only clamp if fraction > 1.0
-        self.saturation_threshold_pct = 0.95  # to detect "hard sat" events
-        # We can still track "near sat" if we want, but won't clamp for it.
+        self.saturation_threshold_pct = 0.95
 
         self.TORQUE_MARGIN = 1.0
 
@@ -166,9 +163,8 @@ class SteeringTorqueSaturationPredictor:
         self.max_curv_bin = 0.01
 
         self.observed_map = {}
-
         self.samples = deque(maxlen=2000)
-        self.passive_mode = True  # no speed-limiting from torque initially
+        self.passive_mode = True
 
         self.saturation_count = 0
         self.total_data_count = 0
@@ -178,6 +174,18 @@ class SteeringTorqueSaturationPredictor:
         self.log_frequency = 5.0
 
         self.param_path = "selfdrive/frogpilot/model_weights/torque_predictor.pkl"
+
+        # NEW OR CHANGED:
+        # We'll define a default 'K' from the basic formula: torque ~ K * v^2 * curvature
+        self.vehicle_params = vehicle_params
+        self.K_default = (
+            vehicle_params.mass *
+            vehicle_params.wheelbase /
+            vehicle_params.steerRatio
+        )
+        # Start with your default K
+        self.K_estimate = self.K_default
+
         self._load_model()
 
     def _load_model(self):
@@ -190,8 +198,10 @@ class SteeringTorqueSaturationPredictor:
                     self.saturation_count = data.get("saturation_count", 0)
                     self.total_data_count = data.get("total_data_count", 0)
                     self.TORQUE_MARGIN = data.get("torque_margin", 1.0)
+                    # NEW:
+                    self.K_estimate = data.get("vehicle_k_estimate", self.K_default)
                 if self.debug:
-                    print(f"[TorquePredictor] Loaded model: {len(self.observed_map)} bins stored")
+                    print(f"[TorquePredictor] Loaded model: {len(self.observed_map)} bins stored, K={self.K_estimate:.2f}")
             except Exception as e:
                 if self.debug:
                     print(f"[TorquePredictor] Error loading: {e}")
@@ -203,6 +213,8 @@ class SteeringTorqueSaturationPredictor:
             "saturation_count": self.saturation_count,
             "total_data_count": self.total_data_count,
             "torque_margin": self.TORQUE_MARGIN,
+            # NEW
+            "vehicle_k_estimate": self.K_estimate,
             "timestamp": time.time()
         }
         try:
@@ -227,25 +239,25 @@ class SteeringTorqueSaturationPredictor:
         self.observed_map[bin_idx] = new_val
         self.total_data_count += 1
 
-    def detect_saturation_event(self, actual_torque):
-        """
-        If torque > 95% of 409, count it as a saturation. If we see that for
-        the first time, we exit passive mode.
-        """
-        sat_threshold = self.MAX_STEER_TORQUE * self.saturation_threshold_pct
+        # NEW OR CHANGED:
+        # Update K_estimate from real torque data if speed and curvature are valid
+        # (This helps refine the torque ~ K * v^2 * curvature formula.)
+        if speed > 1.0 and abs(curvature) > 1e-6 and abs(actual_torque) > 1.0:
+            K_measured = abs(actual_torque) / max(speed**2 * abs(curvature), 1e-9)
+            # Weighted average so it doesn't jump around too fast
+            alpha = 0.1
+            self.K_estimate = (1.0 - alpha) * self.K_estimate + alpha * K_measured
 
+    def detect_saturation_event(self, actual_torque):
+        sat_threshold = self.MAX_STEER_TORQUE * self.saturation_threshold_pct
         if abs(actual_torque) >= sat_threshold:
             self.saturation_count += 1
             if self.passive_mode:
                 self.passive_mode = False
             return True
-
         return False
 
     def update_with_measurement(self, actual_torque, curvature, speed, road_bank=0.0):
-        """
-        Called regularly. We'll log all torque usage, but only treat >95% as saturations.
-        """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
 
@@ -265,10 +277,6 @@ class SteeringTorqueSaturationPredictor:
         })
 
     def driver_intervention_learn(self, intervention_torque, curvature, speed, road_bank=0.0):
-        """
-        If the driver forcibly intervenes, we treat that as important data.
-        We record it + switch out of passive mode if it's big enough.
-        """
         if speed < 1.0 or abs(curvature) < 1e-6:
             return
 
@@ -285,8 +293,8 @@ class SteeringTorqueSaturationPredictor:
 
     def predict_observed_torque(self, speed, curvature):
         """
-        Return the max torque we've seen in the bin.
-        If we have no data or are in passive mode, return 0 => no clamp.
+        Returns the max torque we've actually seen in that bin.
+        0 if no data or passive mode.
         """
         if self.passive_mode:
             return 0.0
@@ -308,11 +316,12 @@ class SteeringTorqueSaturationPredictor:
             torque_limited=torque_limited,
             passive_mode=self.passive_mode,
             saturation_count=self.saturation_count,
-            total_data_count=self.total_data_count
+            total_data_count=self.total_data_count,
+            K_estimate=self.K_estimate
         )
         if self.debug:
             print(f"[TorquePredictor] speed={speed:.1f} curv={curvature:.6f} pred_torque={predicted_torque:.1f} "
-                  f"avail={available_torque:.1f} limited={torque_limited} passive={self.passive_mode}")
+                  f"avail={available_torque:.1f} limited={torque_limited} passive={self.passive_mode} K={self.K_estimate:.2f}")
 
 
 # --------------------------
@@ -538,21 +547,32 @@ class VisionTurnSpeedController:
             c = max(curvature[i], eps)
             s = math.sqrt(lat_acc_limit / c)
 
-            # NEW OR CHANGED:
-            # Only clamp speed if we have *actual saturations* stored
+            # NEW or CHANGED: dynamic clamp if we've seen saturations
             observed_torque = self.torque_predictor.predict_observed_torque(s, c)
             torque_limited = False
 
             if not self.torque_predictor.passive_mode and observed_torque > 0.0:
                 torque_frac = observed_torque / max_torque
-                # We'll clamp only if fraction > 1.0 => actual saturation
                 if torque_frac > 1.0:
                     torque_limited = True
-                    # Example: forcibly clamp if we have actual data showing saturations
-                    s = min(s, 25.0)  # or some other approach
+                    # Instead of capping at 25 m/s, solve for speed at 409 Nm
+                    # torque ~ K_estimate * v^2 * c
+                    # => v ~ sqrt(torque / (K_estimate * c))
+                    margin_factor = 0.98  # keep a small safety margin
+                    K_here = self.torque_predictor.K_estimate
+                    if K_here < 1e-9:
+                        K_here = 1e-9
+                    s_torque_limited = math.sqrt((max_torque * margin_factor) / (K_here * c))
+                    s = min(s, s_torque_limited)
 
             if i == 0:
-                self.torque_predictor.log_telemetry(c, s, observed_torque, max_torque, torque_limited)
+                self.torque_predictor.log_telemetry(
+                    c,
+                    s,
+                    observed_torque,
+                    max_torque,
+                    torque_limited
+                )
 
             safe_speeds[i] = s
 
@@ -564,36 +584,36 @@ class VisionTurnSpeedController:
 
         for apex_i in apex_idxs:
             apex_speed = safe_speeds[apex_i]
-
-            # NEW OR CHANGED: more generous approach/spool times
-            decel_sec = early_approach_time_fn(apex_speed)  # default ~3-4s now
-            spool_sec = early_spool_time_fn(apex_speed)     # default ~1.5-2.5s
+            decel_sec = early_approach_time_fn(apex_speed)
+            spool_sec = early_spool_time_fn(apex_speed)
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
-            spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
-            if spool_start > decel_start:
+            # Smooth taper all the way into apex
+            if apex_i - decel_start < 2:
+                # Not enough room to taper; apply flat clamp for safety
+                for idx in range(decel_start, apex_i + 1):
+                    safe_speeds[idx] = min(safe_speeds[idx], apex_speed)
+            else:
                 v_decel_start = safe_speeds[decel_start]
-                steps_decel = spool_start - decel_start
-                for idx in range(decel_start, spool_start):
-                    f = (idx - decel_start) / float(steps_decel)
+                steps_approach = apex_i - decel_start
+                for idx in range(decel_start, apex_i + 1):
+                    f = (idx - decel_start) / float(steps_approach)
                     f_curve = f**1.5
                     decel_val = v_decel_start * (1 - f_curve) + apex_speed * f_curve
                     safe_speeds[idx] = min(safe_speeds[idx], decel_val)
 
-            for idx in range(spool_start, apex_i + 1):
-                safe_speeds[idx] = min(safe_speeds[idx], apex_speed)
-
+            # Spool ramp: apex_i -> spool_end
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
-                v_spool_end = safe_speeds[spool_end - 1]
+                v_spool_end = safe_speeds[spool_end - 1] if spool_end > 0 else apex_speed
                 for idx in range(apex_i, spool_end):
                     f = (idx - apex_i) / float(steps_spool)
                     f_curve = f**2
                     spool_val = apex_speed * (1 - f_curve) + v_spool_end * f_curve
                     spool_val *= spool_mult
-                    safe_speeds[idx] = max(safe_speeds[idx], spool_val)
+                    safe_speeds[idx] = min(safe_speeds[idx], spool_val)
 
         # 3) Standard backward pass (decel-limit)
         for i in range(n - 2, -1, -1):
@@ -606,9 +626,7 @@ class VisionTurnSpeedController:
 
         # 4) Margin-based backward pass
         base_margin = margin_time_fn(v_ego)
-
-        # NEW OR CHANGED: increase margin_factor to slow down *earlier*
-        margin_factor = 3.0  # was 2.2, now 3.0 => more lead time
+        margin_factor = 3.0  # slightly more lead time
         margin_t = base_margin * margin_factor
 
         for i in range(n - 2, -1, -1):

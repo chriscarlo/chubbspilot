@@ -188,7 +188,7 @@ def gen_long_ocp():
   # or other object. In e2e mode we can use x_position targets as a cost
   # instead.
   # costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
-  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.85),
+  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.88),
            x_ego,
            v_ego,
            a_ego,
