@@ -511,8 +511,11 @@ class LongitudinalPlanner:
 
     self.publish(radarless_model, sm, pm, frogpilot_toggles)
 
+
   def publish(self, classic_model, sm, pm, frogpilot_toggles):
     plan_send = messaging.new_message('longitudinalPlan')
+    plan_send.init('longitudinalPlan')
+
     longitudinalPlan = plan_send.longitudinalPlan
     plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
 
