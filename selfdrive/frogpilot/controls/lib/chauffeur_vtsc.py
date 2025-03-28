@@ -374,6 +374,11 @@ class VisionTurnSpeedController:
         self.current_road_bank = 0.0
         self.last_curvature = 0.0
 
+        # NEW: Initialize torque load tracking
+        self.torque_load_counter = 0
+        self.TORQUE_LOAD_THRESHOLD = 0.95 * 409
+        self.TORQUE_LOAD_SUSTAINED_CYCLES = 5
+
     def reset(self, speed: float) -> None:
         self.prev_target_speed = speed
         self.current_accel = 0.0
@@ -418,6 +423,11 @@ class VisionTurnSpeedController:
                     v_ego,
                     self.current_road_bank
                 )
+            # NEW: Track sustained high torque
+            if abs(car_state.steeringTorque) > self.TORQUE_LOAD_THRESHOLD:
+                self.torque_load_counter = min(self.torque_load_counter + 1, self.TORQUE_LOAD_SUSTAINED_CYCLES + 2)
+            else:
+                self.torque_load_counter = max(self.torque_load_counter - 1, 0)
 
         # If we resume from 0
         is_real_resume = (not self.last_cruise_nonzero) and (v_cruise_cluster > 1e-1)
@@ -666,6 +676,16 @@ class VisionTurnSpeedController:
                 desired_acc = clip(err / dt_i, -self.EMERGENCY_DECEL, self.EMERGENCY_DECEL)
                 feasible_speed = v_next - desired_acc * dt_i
                 safe_speeds[i] = min(safe_speeds[i], feasible_speed)
+
+        # After all smoothing passes (step 6), insert final torque-aware check
+        if self.torque_load_counter >= self.TORQUE_LOAD_SUSTAINED_CYCLES:
+            torque_limited_override_factor = 0.92
+            lookahead_horizon = min(n, 6)
+            for i in range(lookahead_horizon):
+                if i + 1 < n and curvature[i + 1] > curvature[i] * 1.1:
+                    reduced_speed = math.sqrt(nonlinear_lat_accel(velocity_pred[i]) / curvature[i])
+                    reduced_speed *= torque_limited_override_factor
+                    safe_speeds[i] = min(safe_speeds[i], reduced_speed)
 
         return safe_speeds
 
