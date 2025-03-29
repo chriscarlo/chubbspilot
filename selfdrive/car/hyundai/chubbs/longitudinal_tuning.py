@@ -183,9 +183,10 @@ class HKGLongitudinalTuning:
     # Positive accel logic is simpler; includes a speed-based ramp-up and a small boost.
     base_ramp_rate = 1.0 + 1.0 * math.exp(-0.3 * CS.out.vEgo)
 
-    # Smoothly fades from 0.7 to 0 between 0 and 10 m/s
-    def get_launch_boost(v_ego: float) -> float:
-      return 0.7 * max(0.0, 1.0 - (v_ego / 10.0))
+    def get_launch_boost(v_ego: float, accel_last: float) -> float:
+      accel_factor = max(0.0, 1.0 - accel_last * 2.0)  # Full boost when accel_last is low
+      speed_factor = max(0.0, 1.0 - v_ego / 10.0)  # Fades out by 10 m/s
+      return 0.7 * min(accel_factor, speed_factor)
 
     # Gives controller more freedom under 10 m/s
     def scale_jerk_limit_for_launch(v_ego: float, base_jerk_limit: float) -> float:

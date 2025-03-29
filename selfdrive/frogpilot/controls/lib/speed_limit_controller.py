@@ -48,10 +48,14 @@ class SpeedLimitController:
       self.ramp_desired_speed = self.desired_speed_limit
     else:
       # Set to default 'no data' state
-      self.desired_speed_limit = '--'  # Display '--' in the UI for no data
-      # Optionally, handle UI update here if needed
+      self.desired_speed_limit = 0.0  # Use 0.0 for no data instead of '--'
 
     self.experimental_mode = frogpilot_toggles.slc_fallback_experimental_mode and (self.speed_limit == 0)
+
+    self.desired_speed_limit = round(self.desired_speed_limit)
+    self.speed_limit = round(self.speed_limit)
+    self.map_speed_limit = round(self.map_speed_limit)
+    self.upcoming_speed_limit = round(self.upcoming_speed_limit)
 
   def get_desired_speed_limit(self):
     """
