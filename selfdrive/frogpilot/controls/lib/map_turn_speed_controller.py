@@ -19,6 +19,23 @@ TARGET_OFFSET = 1.0  # seconds - This controls how soon before the curve you rea
                      # time than specified depending on how much of a speed diffrential there is between v_ego and the
                      # target velocity.
 
+def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
+    """
+    Allows up to ~3.2 m/s^2 (≈0.33g) at higher speeds, with a smooth logistic
+    transition from ~1.4 m/s^2 at very low speeds. Tweak as needed if you suspect
+    the curve speeds are too low or too high from the base 'max lat accel' logic.
+    """
+    v_ego_mph = v_ego_ms * CV.MS_TO_MPH
+
+    base = 2.0      # Lower base value at very low speeds
+    span = 1.8      # Additional range to get close to 3.2
+    center = 20.0   # Speed (mph) around which the logistic is centered
+    k = 0.15        # Slope factor
+    lat_acc = base + span / (1 + math.exp(-k * (v_ego_mph - center)))
+    lat_acc = min(lat_acc, 3.2)  # Cap around 3.2 m/s²
+
+    return lat_acc * turn_aggressiveness
+
 def calculate_velocity(t, target_jerk, a_ego, v_ego):
   return v_ego + a_ego * t + target_jerk/2 * (t ** 2)
 
@@ -140,8 +157,12 @@ class MapTurnSpeedController:
     self.target_lat = target_lat
     self.target_lon = target_lon
 
-    # Scale the MTSC output from 2.0 m/s² lat accel to 3.2 m/s² lat accel
+    # Scale the MTSC output using the same nonlinear_lat_accel function as VTSC
     if self.target_v > 0.1:  # avoid weird low-speed scaling
-      self.target_v = self.target_v * math.sqrt(3.2 / 2.0)
+      # Calculate the scaling factor based on current speed
+      base_lat_acc = 2.0  # Base lat acc from mapd
+      current_lat_acc = nonlinear_lat_accel(v_ego, frogpilot_toggles.turn_aggressiveness)
+      scale_factor = math.sqrt(current_lat_acc / base_lat_acc)
+      self.target_v = self.target_v * scale_factor
 
     return self.target_v

@@ -24,7 +24,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
 
-    base = 1.4      # Lower base value at very low speeds
+    base = 2.0      # Lower base value at very low speeds
     span = 1.8      # Additional range to get close to 3.2
     center = 20.0   # Speed (mph) around which the logistic is centered
     k = 0.15        # Slope factor
@@ -557,7 +557,7 @@ class VisionTurnSpeedController:
             c = max(curvature[i], eps)
             s = math.sqrt(lat_acc_limit / c)
 
-            # NEW or CHANGED: dynamic clamp if we've seen saturations
+            # Dynamic clamp using observed data if available
             observed_torque = self.torque_predictor.predict_observed_torque(s, c)
             torque_limited = False
 
@@ -565,10 +565,7 @@ class VisionTurnSpeedController:
                 torque_frac = observed_torque / max_torque
                 if torque_frac > 1.0:
                     torque_limited = True
-                    # Instead of capping at 25 m/s, solve for speed at 409 Nm
-                    # torque ~ K_estimate * v^2 * c
-                    # => v ~ sqrt(torque / (K_estimate * c))
-                    margin_factor = 0.98  # keep a small safety margin
+                    margin_factor = 0.98  # small safety margin
                     K_here = self.torque_predictor.K_estimate
                     if K_here < 1e-9:
                         K_here = 1e-9
@@ -600,9 +597,8 @@ class VisionTurnSpeedController:
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
-            # Smooth taper all the way into apex
+            # Smooth taper into the apex
             if apex_i - decel_start < 2:
-                # Not enough room to taper; apply flat clamp for safety
                 for idx in range(decel_start, apex_i + 1):
                     safe_speeds[idx] = min(safe_speeds[idx], apex_speed)
             else:
@@ -614,7 +610,6 @@ class VisionTurnSpeedController:
                     decel_val = v_decel_start * (1 - f_curve) + apex_speed * f_curve
                     safe_speeds[idx] = min(safe_speeds[idx], decel_val)
 
-            # Spool ramp: apex_i -> spool_end
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
                 v_spool_end = safe_speeds[spool_end - 1] if spool_end > 0 else apex_speed
@@ -677,15 +672,25 @@ class VisionTurnSpeedController:
                 feasible_speed = v_next - desired_acc * dt_i
                 safe_speeds[i] = min(safe_speeds[i], feasible_speed)
 
-        # After all smoothing passes (step 6), insert final torque-aware check
-        if self.torque_load_counter >= self.TORQUE_LOAD_SUSTAINED_CYCLES:
-            torque_limited_override_factor = 0.92
-            lookahead_horizon = min(n, 6)
-            for i in range(lookahead_horizon):
-                if i + 1 < n and curvature[i + 1] > curvature[i] * 1.1:
-                    reduced_speed = math.sqrt(nonlinear_lat_accel(velocity_pred[i]) / curvature[i])
-                    reduced_speed *= torque_limited_override_factor
-                    safe_speeds[i] = min(safe_speeds[i], reduced_speed)
+        # 7) Final torque-aware override: babysit the trajectory
+        # Begin intervention when predicted torque exceeds 85% of max torque,
+        # and blend toward a target speed that would yield ~98% of max torque.
+        babysit_threshold = 0.85 * max_torque
+        target_threshold = 0.98 * max_torque
+        lookahead_horizon = min(n, 6)
+        for i in range(lookahead_horizon):
+            # Skip if curvature is negligible
+            if curvature[i] < 1e-6:
+                continue
+            # Predicted torque = K_estimate * v^2 * curvature
+            predicted_torque = self.torque_predictor.K_estimate * safe_speeds[i]**2 * curvature[i]
+            if predicted_torque > babysit_threshold:
+                # Compute target speed so that torque would be at target_threshold
+                v_target = math.sqrt(target_threshold / (self.torque_predictor.K_estimate * curvature[i]))
+                # Blend factor increases as predicted torque rises above babysit_threshold
+                blend_factor = min((predicted_torque - babysit_threshold) / (max_torque - babysit_threshold), 1.0)
+                adjusted_speed = (1 - blend_factor) * safe_speeds[i] + blend_factor * v_target
+                safe_speeds[i] = min(safe_speeds[i], adjusted_speed)
 
         return safe_speeds
 

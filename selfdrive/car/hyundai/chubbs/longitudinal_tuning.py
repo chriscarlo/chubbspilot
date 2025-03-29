@@ -182,7 +182,20 @@ class HKGLongitudinalTuning:
 
     # Positive accel logic is simpler; includes a speed-based ramp-up and a small boost.
     base_ramp_rate = 1.0 + 1.0 * math.exp(-0.3 * CS.out.vEgo)
-    start_boost = 0.7 * max(0.0, 1.0 - self.accel_last * 2.0)
+
+    # Smoothly fades from 0.7 to 0 between 0 and 10 m/s
+    def get_launch_boost(v_ego: float) -> float:
+      return 0.7 * max(0.0, 1.0 - (v_ego / 10.0))
+
+    # Gives controller more freedom under 10 m/s
+    def scale_jerk_limit_for_launch(v_ego: float, base_jerk_limit: float) -> float:
+      if v_ego < 10.0:
+        # Up to 30% higher jerk allowed under 10 m/s
+        scale = 1.0 + 0.3 * (1.0 - (v_ego / 10.0))
+        return base_jerk_limit * scale
+      return base_jerk_limit
+
+    start_boost = get_launch_boost(CS.out.vEgo)
     accel_boost = (accel ** 2) * 0.15
     accel_ramp_rate = base_ramp_rate + start_boost + accel_boost
     accel_accel_delta = clip(accel - self.accel_last, -10.0, accel_ramp_rate * self.DT_CTRL)
@@ -191,7 +204,7 @@ class HKGLongitudinalTuning:
     emergency_jerk_scale = 1.0 + 2.0 * emergency_factor
     emergency_jerk_scale = clip(emergency_jerk_scale, 1.0, 3.0)
     jerk_lower = self.jerk_lower_limit * emergency_jerk_scale
-    jerk_upper = self.jerk_upper_limit
+    jerk_upper = scale_jerk_limit_for_launch(CS.out.vEgo, self.jerk_upper_limit)
 
     # Blend final delta according to brake_blend, then clamp to jerk limits.
     final_delta = brake_blend * brake_accel_delta + (1.0 - brake_blend) * accel_accel_delta
