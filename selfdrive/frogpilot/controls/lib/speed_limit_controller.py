@@ -123,7 +123,7 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params
 class SpeedLimitController:
   def __init__(self):
     """
-    Initialize the speed limit controller with default values and ramping parameters.
+    # Initialize the speed limit controller with default values and ramping parameters.
     """
     self.experimental_mode = False
     self.speed_limit_changed = False
@@ -145,7 +145,7 @@ class SpeedLimitController:
 
   def update(self, dashboard_speed_limit, enabled, navigation_speed_limit, v_cruise, v_ego, frogpilot_toggles):
     """
-    Main update loop for computing the smoothed desired speed limit.
+    # Main update loop for computing the smoothed desired speed limit.
     """
     self.update_map_speed_limit(v_ego, frogpilot_toggles)
     max_speed_limit = v_cruise if enabled else 0
@@ -187,7 +187,7 @@ class SpeedLimitController:
 
   def update_map_speed_limit(self, v_ego, frogpilot_toggles):
     """
-    Updates map-based speed limit using GPS data and upcoming speed limits if available.
+    # Updates map-based speed limit using GPS data and upcoming speed limits if available.
     """
     position = json.loads(params_memory.get("LastGPSPosition") or "{}")
     if not position:
@@ -221,7 +221,7 @@ class SpeedLimitController:
 
   def get_offset(self, speed_limit, frogpilot_toggles):
     """
-    Returns the speed limit offset based on the magnitude of the speed limit.
+    # Returns the speed limit offset based on the magnitude of the speed limit.
     """
     if speed_limit < 13.5:
       return frogpilot_toggles.speed_limit_offset1
@@ -233,7 +233,7 @@ class SpeedLimitController:
 
   def get_speed_limit(self, dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles):
     """
-    Determines the speed limit using available sources based on user-configured priorities and fallbacks.
+    # Determines the speed limit using available sources based on user-configured priorities and fallbacks.
     """
     limits = {
       "Dashboard": dashboard_speed_limit,
@@ -272,8 +272,8 @@ class SpeedLimitController:
 
   def _ramp_towards_target(self, current: float, target: float) -> float:
     """
-    Incrementally adjusts the current smoothed speed toward the target speed
-    based on asymmetric acceleration and deceleration rates.
+    # Incrementally adjusts the current smoothed speed toward the target speed
+    # based on asymmetric acceleration and deceleration rates.
     """
     now = time.monotonic()
     dt = now - self.last_update_time
