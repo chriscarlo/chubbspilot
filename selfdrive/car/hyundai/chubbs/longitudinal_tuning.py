@@ -1,296 +1,306 @@
-import math
-from typing import Any
-
-from cereal import car
-from openpilot.common.numpy_fast import clip
+import numpy as np
+from cereal import car, messaging
+from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
-from openpilot.selfdrive.controls.lib.longitudinal_planner import calc_emergency_braking_factor
+from openpilot.common.realtime import DT_CTRL
+from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
+from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
+from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
 
+def akima_interp(x, xp, fp):
+    """Akima-inspired quintic polynomial interpolation using numpy."""
+    # Handle boundary conditions
+    if x <= xp[0]:
+        return fp[0]
+    elif x >= xp[-1]:
+        return fp[-1]
+
+    # Find the interval
+    i = np.searchsorted(xp, x) - 1
+    i = max(0, min(i, len(xp)-2))  # Safety bounds check
+
+    # Calculate normalized position within interval
+    t = (x - xp[i]) / float(xp[i+1] - xp[i])
+
+    # Modified quintic polynomial that approximates Akima behavior
+    # This provides smoother transitions with less possible overshoot
+    t2 = t*t
+    t3 = t2*t
+
+    # Quintic Hermite form with zero second derivatives at endpoints
+    return fp[i]*(1-10*t3+15*t2*t2-6*t3*t2) + fp[i+1]*(10*t3-15*t2*t2+6*t3*t2)
+
 class JerkOutput:
-  """
-  Holds computed jerk limits and blend curves used by the controller.
-  """
   def __init__(self, jerk_upper_limit, jerk_lower_limit, cb_upper, cb_lower):
     self.jerk_upper_limit = jerk_upper_limit
     self.jerk_lower_limit = jerk_lower_limit
     self.cb_upper = cb_upper
     self.cb_lower = cb_lower
 
-
 class HKGLongitudinalTuning:
-  """
-  Encapsulates brand-specific logic (HKG) for longitudinal tuning, including
-  ramp transitions, jerk calculations, and optional emergency braking factors.
-  """
-  def __init__(self, CP) -> None:
+  """Longitudinal tuning methodology for Hyundai vehicles."""
+  def __init__(self, CP: car.CarParams) -> None:
     self.CP = CP
     self._setup_controllers()
     self._init_state()
+    self._mode_setup()
+    self._setup_car_config()
 
   def _setup_controllers(self) -> None:
-    """Instantiate supporting modules and retrieve parameter toggles."""
-    self.mpc = LongitudinalMpc(mode='acc')
+    self.mpc = LongitudinalMpc
     self.long_control = LongControl(self.CP)
+    self.sm = messaging.SubMaster(['controlsState'])
     self.DT_CTRL = DT_CTRL
     self.params = Params()
-    self.hkg_tuning = self.params.get_bool('HKGtuning')
-    self.has_radar = self.params.get_bool("HyundaiRadarTracks")
 
   def _init_state(self) -> None:
-    """Initialize internal state variables for the tuning logic."""
     self.last_accel = 0.0
     self.brake_ramp = 0.0
     self.accel_last = 0.0
-    self.using_e2e = False
-    self.accel_raw = 0.0
     self.accel_last_jerk = 0.0
     self.jerk = 0.0
     self.jerk_count = 0.0
     self.jerk_upper_limit = 0.0
     self.jerk_lower_limit = 0.0
-    self.cb_upper = 0.0
-    self.cb_lower = 0.0
+    self.cb_upper = self.cb_lower = 0.0
+    self.last_decel_time = 0.0
+    self.min_cancel_delay = 0.1
 
-  def make_jerk(self, CS, accel, actuators):
-    """
-    Calculate instantaneous jerk and update jerk limits.
-    Adjusts different jerk parameters depending on CAN FD or legacy vehicle logic.
-    """
-    state = getattr(actuators, "longControlState", LongCtrlState.pid)
+  def _mode_setup(self) -> None:
+    self.prev_mode = 'acc'  # Default mode
+    self.current_mode = 'acc'
+    self.mode_transition_filter = FirstOrderFilter(0.0, 0.5, DT_CTRL)  # 0.5s time constant
+    self.mode_transition_timer = 0.0
+    self.mode_transition_duration = 1.5  # time to transition
+    self.transitioning = False
+
+  def _setup_car_config(self) -> None:
+    self.car_config = Cartuning.get_car_config(self.CP)
+
+  def update_mpc_mode(self, sm: messaging.SubMaster) -> None:
+    """Update MPC mode with transition handling."""
+    new_mode = 'blended' if self.sm['controlsState'].experimentalMode else 'acc'
+
+    # Detect mode change
+    if new_mode != self.current_mode:
+      self.prev_mode = self.current_mode
+      self.transitioning = True
+      self.mode_transition_timer = 0.0
+      self.mode_transition_filter.x = self.accel_last
+
+      # Update the MPC mode directly
+      self.mpc.mode = new_mode
+      self.current_mode = new_mode
+
+    # Update transition state
+    if self.transitioning:
+      self.mode_transition_timer += DT_CTRL
+      if self.mode_transition_timer >= self.mode_transition_duration:
+        self.transitioning = False
+
+  def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators) -> float:
+    self.jerk_count += 1
+    # Handle cancel state to prevent cruise fault
     if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
-      # Reset jerk constraints if cruise is not active.
+      self.accel_last_jerk = 0.0
+      self.jerk = 0.0
+      self.jerk_count = 0.0
       self.jerk_upper_limit = 0.0
       self.jerk_lower_limit = 0.0
       self.cb_upper = self.cb_lower = 0.0
-      self.accel_last_jerk = 0.0
       return 0.0
 
-    current_accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
-    self.jerk = (current_accel - self.accel_last_jerk) / self.DT_CTRL
-    self.accel_last_jerk = current_accel
+    if actuators.longControlState == LongCtrlState.stopping:
+      self.jerk = self.car_config.jerk_limits[0] / 2 - CS.out.aEgo
+    else:
+      current_accel = CS.out.aEgo
+      self.jerk = (current_accel - self.accel_last_jerk)
+      self.accel_last_jerk = current_accel
 
-    jerk_max = 6.0
-    v_error = abs(CS.out.vEgo - CS.out.cruiseState.speed)
+    # the jerk division by ΔT (delta time) leads to too high of values of jerk when ΔT is small, which is not realistic
+    # when calculating jerk as a time-based derivative this is a more accurate representation of jerk within OP.
+
+    base_jerk = self.jerk
+    xp = np.array([-3.5, -2.0, -1.0, 0.0, 1.0, 2.0])
+    fp = np.array([-2.5, -1.0, -0.5, 0.0, 0.5, 1.0])
+    self.jerk = akima_interp(base_jerk, xp, fp)
+    jerk_max = self.car_config.jerk_limits[1]
+
 
     if self.CP.flags & HyundaiFlags.CANFD.value:
-      # Slightly reduce max jerk as v_error changes.
-      jerk_reduction = 1.0 - (0.7 / (v_error + 1.0))
-      jerk_reduction = clip(jerk_reduction, 0.3, 1.0)
-      jerk_max *= jerk_reduction
-
-      self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
-      self.jerk_lower_limit = min(max(1.0, -self.jerk * 6.0), jerk_max)
+      self.jerk_upper_limit = min(max(self.car_config.jerk_limits[0], self.jerk * 2.0), jerk_max)
+      self.jerk_lower_limit = min(max(self.car_config.jerk_limits[0], -self.jerk * 4.0), jerk_max)
       self.cb_upper = self.cb_lower = 0.0
     else:
-      # Apply legacy jerk scaling for non-CAN FD vehicles.
-      error_factor = 1.0 / (1.0 + math.exp(-1.8 * (v_error - 2.5)))
-      error_factor = clip(error_factor, 0.0, 1.0)
-
-      self.jerk_upper_limit = min(max(0.5, self.jerk * 2.0), jerk_max)
-      self.jerk_lower_limit = min(max(1.0, -self.jerk * 6.0), jerk_max)
-
-      accel_abs = abs(accel)
-      accel_factor = 0.2 - 0.1 * (accel_abs / (accel_abs + 1.0))
-      accel_blend = 0.5 * (1.0 + accel / (accel_abs + 0.1))
-
-      cb_upper_pos = 0.8 * error_factor + accel * accel_factor
-      cb_upper_neg = 1.0 * error_factor + accel * accel_factor
-      cb_lower_pos = 0.6 * error_factor + accel * accel_factor
-      cb_lower_neg = 0.8 * error_factor + accel * accel_factor
-
-      self.cb_upper = clip(accel_blend * cb_upper_pos + (1.0 - accel_blend) * cb_upper_neg, 0.0, 1.2)
-      self.cb_lower = clip(accel_blend * cb_lower_pos + (1.0 - accel_blend) * cb_lower_neg, 0.0, 1.2)
+      self.jerk_upper_limit = min(max(self.car_config.jerk_limits[0], self.jerk * 2.0), jerk_max)
+      self.jerk_lower_limit = min(max(self.car_config.jerk_limits[0], -self.jerk * 2.0), jerk_max)
+      if self.CP.radarUnavailable:
+        self.cb_upper = self.cb_lower = 0.0
+      else:
+        if(not Params().get_bool("HKGBraking")) and (CS.out.vEgo > 5.0):
+          self.cb_upper = float(np.clip(0.20 + actuators.accel * 0.20, 0.0, 1.0))
+          self.cb_lower = float(np.clip(0.10 + actuators.accel * 0.20, 0.0, 1.0))
+        else:
+          # When at low speeds, or using smoother braking button, we don't want ComfortBands to be effecting stopping control.
+          self.cb_upper = self.cb_lower = 0.0
 
     return self.jerk
 
-  def handle_cruise_cancel(self, CS):
-    """
-    Check if cruise is canceled or driver inputs override.
-    Reset relevant state if so, and return True when cancellation occurs.
-    """
+  def handle_cruise_cancel(self, CS: car.CarState):
+    """Handle cruise control cancel to prevent faults."""
     if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
       self.accel_last = 0.0
+      self.last_accel = 0.0
       self.brake_ramp = 0.0
       return True
     return False
 
-  def calculate_limited_accel(self, accel, actuators, CS):
-    """
-    Compute brand-specific acceleration limit by applying ramp transitions and jerk constraints.
-    Scales negative jerk or transitions based on an emergency factor if closing speed is large.
-    """
+  def should_delay_cancel(self, CS: car.CarState):
+    """Check if cancel button press should be delayed based on recent deceleration."""
+    if CS.out.aEgo < -0.1:
+      self.last_decel_time = self.DT_CTRL * self.jerk_count
+    current_time = self.DT_CTRL * self.jerk_count
+    return (current_time - self.last_decel_time) < self.min_cancel_delay and CS.out.aEgo < 0
+
+  def calculate_limited_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState) -> float:
+    """Adaptive acceleration limiting."""
     if self.handle_cruise_cancel(CS):
-      return accel
+      return actuators.accel
+    self.make_jerk(CS, actuators)
+    self.update_mpc_mode(self.sm)
+    target_accel = actuators.accel
 
-    self.make_jerk(CS, accel, actuators)
-    accel_delta = accel - self.accel_last
+    # Apply transition smoothing when switching modes
+    if self.transitioning and self.prev_mode == 'acc' and self.current_mode == 'blended':
+      if CS.out.vEgo > 4.0 and target_accel < 0.0 and target_accel < self.accel_last:
+        #(hard brake threshold)
+        hard_brake_threshold = CarControllerParams.ACCEL_MIN * 0.7  # About -2.45 m/s² (70% of max decel)
 
-    # Calculate an emergency factor if closing on a lead at higher speed.
-    emergency_factor = 0.0
-    lead = getattr(CS.out, 'leadOne', None)
-    if lead and lead.status and CS.out.vEgo > lead.vLead:
-      d_rel = lead.dRel
-      v_lead = lead.vLead
-      emergency_factor = calc_emergency_braking_factor(CS.out.vEgo, d_rel, v_lead)
+        if target_accel < hard_brake_threshold:
+          # Hard braking case - allow faster response with minimal smoothing
+          progress = min(1.0, self.mode_transition_timer / (self.mode_transition_duration * 0.5))
+          target_accel = self.accel_last + (target_accel - self.accel_last) * progress
+        else:
+          progress = min(1.0, self.mode_transition_timer / self.mode_transition_duration)
+          brake_intensity = abs(target_accel / CarControllerParams.ACCEL_MIN)
 
-    # Decide how to blend brake vs. acceleration transitions.
-    brake_blend = 0.5 - 0.5 * accel / (abs(accel) + 0.2)
+          # Interpolation points
+          xp = np.array([0.0, 0.3, 0.6, 0.9, 1.0])
 
-    # Handle sign change from positive accel to negative accel.
-    if accel < 0 and self.accel_last >= 0:
-      initial_brake_level = clip(emergency_factor * 0.7, 0.0, 0.7)
-      self.accel_last = -initial_brake_level
-      accel_delta = accel - self.accel_last
-      self.brake_ramp = clip(emergency_factor * 0.8, 0.3, 0.8)
+          # Parabolic smoothing offsets
+          if brake_intensity < 0.3:  # Light braking
+            fp = np.array([0.0, 0.1, 0.3, 0.7, 1.0])
+          elif brake_intensity < 0.6:  # Moderate braking
+            fp = np.array([0.0, 0.2, 0.5, 0.8, 1.0])
+          else:  # Heavy braking
+            fp = np.array([0.0, 0.3, 0.6, 0.9, 1.0])
 
-    brake_ratio = clip(abs(accel / CarControllerParams.ACCEL_MIN), 0.0, 1.0)
-    brake_aggressiveness = brake_ratio
+          smooth_progress = akima_interp(progress, xp, fp)
+          target_accel = self.accel_last + (target_accel - self.accel_last) * smooth_progress
 
-    low_speed_ramp = 0.7 + 1.1 * brake_aggressiveness
-    high_speed_ramp = 0.5 + 1.1 * brake_aggressiveness
+    # For braking, vary rate based on braking intensity
+    if (CS.out.vEgo > 9.0 and target_accel < 0.01):
+      brake_ratio = np.clip(abs(target_accel / self.car_config.accel_limits[0]), 0.0, 1.0)
+      # Gentler for light braking, more responsive for harder braking
+      accel_rate_down = self.DT_CTRL * akima_interp( brake_ratio, np.array([0.25, 0.5, 0.75, 1.0]),
+                                                          np.array(self.car_config.brake_response))
+      accel = max(target_accel, self.accel_last - accel_rate_down)
+    else:
+      accel = actuators.accel
 
-    # Blend ramp rate according to vehicle speed (higher speed -> different ramp).
-    speed_blend = (CS.out.vEgo ** 2) / (CS.out.vEgo ** 2 + 20.0)
-    braking_ramp_rate = low_speed_ramp * (1.0 - speed_blend) + high_speed_ramp * speed_blend
+    self.accel_last = accel
+    return accel
 
-    # Scale ramp by emergency if factor is large.
-    emergency_scale = 1.0 + 1.2 * emergency_factor
-    emergency_scale = clip(emergency_scale, 1.0, 2.2)
-    braking_ramp_rate *= emergency_scale
-
-    # Slight bump in ramp rate if we're crossing from accel >= 0 to braking.
-    if self.accel_last >= 0:
-      transition_factor = 1.0 + 0.3 * emergency_factor
-      braking_ramp_rate *= transition_factor
-
-    # Increment the brake ramp up to a maximum of 1.0.
-    self.brake_ramp = min(1.0, self.brake_ramp + (braking_ramp_rate * self.DT_CTRL))
-
-    # Smooth negative acceleration transitions.
-    base_brake_smooth = 0.85
-    emergency_response = 0.5 + 0.5 * emergency_factor
-    brake_smooth_factor = base_brake_smooth - 0.45 * (abs(accel) / (abs(accel) + 0.4))
-    brake_smooth_factor *= (1.0 - 0.5 * emergency_response)
-    brake_accel_delta = accel_delta * (brake_smooth_factor * self.brake_ramp)
-
-    # Positive accel logic is simpler; includes a speed-based ramp-up and a small boost.
-    base_ramp_rate = 1.0 + 1.0 * math.exp(-0.3 * CS.out.vEgo)
-
-    def get_launch_boost(v_ego: float, accel_last: float) -> float:
-      accel_factor = max(0.0, 1.0 - accel_last * 2.0)  # Full boost when accel_last is low
-      speed_factor = max(0.0, 1.0 - v_ego / 10.0)  # Fades out by 10 m/s
-      return 0.7 * min(accel_factor, speed_factor)
-
-    # Gives controller more freedom under 10 m/s
-    def scale_jerk_limit_for_launch(v_ego: float, base_jerk_limit: float) -> float:
-      if v_ego < 10.0:
-        # Up to 30% higher jerk allowed under 10 m/s
-        scale = 1.0 + 0.3 * (1.0 - (v_ego / 10.0))
-        return base_jerk_limit * scale
-      return base_jerk_limit
-
-    start_boost = get_launch_boost(CS.out.vEgo)
-    accel_boost = (accel ** 2) * 0.15
-    accel_ramp_rate = base_ramp_rate + start_boost + accel_boost
-    accel_accel_delta = clip(accel - self.accel_last, -10.0, accel_ramp_rate * self.DT_CTRL)
-
-    # Jerk limits, scaled by emergency factor if needed.
-    emergency_jerk_scale = 1.0 + 2.0 * emergency_factor
-    emergency_jerk_scale = clip(emergency_jerk_scale, 1.0, 3.0)
-    jerk_lower = self.jerk_lower_limit * emergency_jerk_scale
-    jerk_upper = scale_jerk_limit_for_launch(CS.out.vEgo, self.jerk_upper_limit)
-
-    # Blend final delta according to brake_blend, then clamp to jerk limits.
-    final_delta = brake_blend * brake_accel_delta + (1.0 - brake_blend) * accel_accel_delta
-    final_delta = clip(final_delta, -jerk_lower * self.DT_CTRL, jerk_upper * self.DT_CTRL)
-
-    accel_out = self.accel_last + final_delta
-    self.accel_last = accel_out
-    return accel_out
-
-  def calculate_accel(self, accel, actuators, CS, frogpilot_toggles):
-    """
-    Compute the final (clamped) acceleration for HKG vehicles, applying brand-specific
-    constraints if HKG tuning is enabled.
-    """
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles) -> float:
+    """Calculate acceleration with cruise control status handling."""
     if self.handle_cruise_cancel(CS):
       return 0.0
-    accel = self.calculate_limited_accel(accel, actuators, CS)
-    return clip(
-      accel,
-      CarControllerParams.ACCEL_MIN,
-      min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX)
-    )
+    accel = self.calculate_limited_accel(actuators, CS)
+    # Use car config accel limits, but still respect frogpilot max acceleration setting
+    return float(np.clip(accel, self.car_config.accel_limits[0],
+               min(frogpilot_toggles.max_desired_acceleration, self.car_config.accel_limits[1])))
 
-  def apply_tune(self, CP: Any) -> None:
-    """
-    Set additional tuning parameters for HKGLongitudinalTuning objects.
-    Adjusts lower-level thresholds and starting conditions.
-    """
-    CP.vEgoStopping = 0.2
-    CP.vEgoStarting = 0.05
-    CP.stoppingDecelRate = 0.01
-    CP.startAccel = 3.5
+
+  def apply_tune(self, CP: car.CarParams) -> None:
+    config = self.car_config
+    CP.vEgoStopping = config.vego_stopping
+    CP.vEgoStarting = config.vego_starting
+    CP.stoppingDecelRate = config.stopping_decel_rate
+    CP.startAccel = config.start_accel
     CP.startingState = True
-
-  def get_jerk(self) -> JerkOutput:
-    """
-    Return the current jerk limits and blend curves.
-    Helpful for debugging or real-time display.
-    """
-    return JerkOutput(
-      self.jerk_upper_limit,
-      self.jerk_lower_limit,
-      self.cb_upper,
-      self.cb_lower,
-    )
-
-  def calculate_and_get_jerk(self, CS, accel, actuators):
-    """
-    Convenience method that updates jerk and returns the JerkOutput object.
-    If HKG tuning is disabled, uses a fallback calculation.
-    """
-    if self.hkg_tuning:
-      self.make_jerk(CS, accel, actuators)
-      return self.get_jerk()
-    else:
-      normal_jerk = self.calculate_normal_jerk(actuators.longControlState)
-      return JerkOutput(normal_jerk, normal_jerk, 0.0, 0.0)
-
-  def calculate_normal_jerk(self, long_control_state):
-    """
-    Provide a default jerk value when HKG tuning is disabled.
-    In PID mode, jerk is higher (3.0); otherwise it is 1.0.
-    """
-    return 3.0 if long_control_state == LongCtrlState.pid else 1.0
+    CP.longitudinalActuatorDelay = 0.5
 
 
 class HKGLongitudinalController:
-  """
-  Higher-level controller for HKG longitudinal tuning. Conditionally
-  uses HKGLongitudinalTuning based on user settings.
-  """
-  def __init__(self, CP):
-    """Wrapper controller that optionally instantiates HKG tuning if toggled."""
+  """Longitudinal controller which gets injected into CarControllerParams."""
+  @staticmethod
+  def param(key: str) -> bool:
+    val = Params().get(key)
+    return val in [b"1"]
+
+  def __init__(self, CP: car.CarParams):
     self.CP = CP
-    self.tuning = HKGLongitudinalTuning(CP) if Params().get_bool("HKGtuning") else None
+    self.tuning = HKGLongitudinalTuning(CP) if self.param("HKGtuning") else None
     self.jerk = None
+    self.jerk_upper_limit = 0.0
+    self.jerk_lower_limit = 0.0
+    self.cb_upper = 0.0
+    self.cb_lower = 0.0
 
-  def apply_tune(self, CP):
-    """Apply HKG tuning if available."""
-    if self.tuning:
+  def apply_tune(self, CP: car.CarParams):
+    if self.param("HKGtuning"):
       self.tuning.apply_tune(CP)
+    else:
+      CP.vEgoStopping = 0.5
+      CP.vEgoStarting = 0.1
+      CP.startingState = True
+      CP.startAccel = 1.0
+      CP.longitudinalActuatorDelay = 0.5
 
-  def calculate_normal_jerk(self, long_control_state):
-    """
-    Provide a fallback normal jerk value if the tuning object is not used.
-    In PID mode, jerk is higher (3.0); otherwise it is 1.0.
-    """
-    return 3.0 if long_control_state == LongCtrlState.pid else 1.0
+  def get_jerk(self) -> JerkOutput:
+    if self.tuning is not None:
+      return JerkOutput(
+        self.tuning.jerk_upper_limit,
+        self.tuning.jerk_lower_limit,
+        self.tuning.cb_upper,
+        self.tuning.cb_lower,
+      )
+    else:
+      return JerkOutput(
+        self.jerk_upper_limit,
+        self.jerk_lower_limit,
+        self.cb_upper,
+        self.cb_lower,
+      )
+
+  def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators, CS: car.CarState, long_control_state: LongCtrlState) -> JerkOutput:
+    """Calculate jerk based on tuning and return JerkOutput."""
+    if self.tuning is not None:
+      self.tuning.make_jerk(CS, actuators)
+    else:
+      jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
+
+      self.jerk_upper_limit = jerk_limit
+      self.jerk_lower_limit = jerk_limit
+      self.cb_upper = 0.0
+      self.cb_lower = 0.0
+    return self.get_jerk()
+
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles) -> float:
+    """Calculate acceleration based on tuning and return the value."""
+    if Params().get_bool("HKGBraking") and self.tuning is not None:
+      accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
+    elif Params().get_bool("HKGBraking") and self.tuning is not None and frogpilot_toggles.sport_plus:
+      accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
+      accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo))))
+    elif frogpilot_toggles.sport_plus:
+      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo))))
+    else:
+      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX)))
+
+    return accel
