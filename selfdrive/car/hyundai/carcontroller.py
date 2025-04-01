@@ -10,9 +10,7 @@ from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAMERA_SCC_CAR
 from openpilot.selfdrive.car.interfaces import CarControllerBase
-
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController, JerkOutput
+from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 LongCtrlState = car.CarControl.Actuators.LongControlState
@@ -66,7 +64,6 @@ class CarController(CarControllerBase, HKGLongitudinalController):
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     actuators = CC.actuators
     hud_control = CC.hudControl
-    accel = actuators.accel
 
     # steering torque
     new_steer = int(round(actuators.steer * self.params.STEER_MAX))
@@ -87,27 +84,13 @@ class CarController(CarControllerBase, HKGLongitudinalController):
 
     # Accel + Longitudinal control
 
-    if Params().get_bool("HKGBraking") and self.tuning is not None:
-      accel = self.tuning.calculate_accel(actuators.accel, actuators, CS, frogpilot_toggles)
-    elif Params().get_bool("HKGBraking") and self.tuning is not None and frogpilot_toggles.sport_plus:
-      accel = self.tuning.calculate_accel(actuators.accel, actuators, CS, frogpilot_toggles)
-    elif frogpilot_toggles.sport_plus:
-      accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo)))
-    else:
-      accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX))
-
+    accel = self.calculate_accel(actuators, CS, frogpilot_toggles)
     stopping = actuators.longControlState == LongCtrlState.stopping
     set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
-
+    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState)
     # HUD messages
     sys_warning, sys_state, left_lane_warning, right_lane_warning = process_hud_alert(CC.enabled, self.car_fingerprint,
                                                                                       hud_control)
-
-    if self.tuning is not None:
-      self.jerk = self.tuning.calculate_and_get_jerk(CS, accel, actuators)
-    else:
-      normal_jerk = self.calculate_normal_jerk(actuators.longControlState)
-      self.jerk = JerkOutput(normal_jerk, normal_jerk, 0.0, 0.0)
 
     can_sends = []
 
