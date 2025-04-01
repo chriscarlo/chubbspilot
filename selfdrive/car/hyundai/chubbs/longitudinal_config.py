@@ -335,10 +335,10 @@ CAR_SPECIFIC_CONFIGS = {
   ),
   CAR.KIA_EV6: CarTuningConfig(
     vego_stopping=0.025,
-    vego_starting=0.15,
+    vego_starting=0.35,
     stopping_decel_rate=0.25,
-    start_accel=1.6,
-    jerk_limits=(0.5, 5.0),
+    start_accel=2.8,
+    jerk_limits=(1.5, 5.0),
     brake_response=(1.0, 1.5, 2.25, 3.5),
     accel_limits=(-6.0, 5.0),
   ),

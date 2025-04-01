@@ -37,7 +37,7 @@ class FrogPilotPlanner:
 
     self.model_length = 0
     self.road_curvature = 1
-    self.v_cruise = 0
+    self.v_cruise = 0.0
 
   def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, radarless_model, radarState, frogpilot_toggles, sm):
     if radarless_model:
@@ -104,9 +104,10 @@ class FrogPilotPlanner:
     self.road_curvature_detected = (1 / self.road_curvature)**0.5 < v_ego
 
     self.tracking_lead = self.set_lead_status(carState, v_lead)
-    self.v_cruise = self.frogpilot_vcruise.update(carControl, carState, controlsState,
+    update_result = self.frogpilot_vcruise.update(carControl, carState, controlsState,
                                                   frogpilotCarControl, frogpilotCarState,
-                                                  frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles)
+                                                  frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles, sm)
+    self.v_cruise = float(update_result if update_result is not None else v_cruise)
 
   def set_lead_status(self, carState, v_lead):
     following_lead = self.lead_one.status

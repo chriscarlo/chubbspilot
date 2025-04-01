@@ -31,7 +31,7 @@ COST_E_DIM = 5
 COST_DIM = COST_E_DIM + 1
 CONSTR_DIM = 4
 
-X_EGO_OBSTACLE_COST = 3.
+X_EGO_OBSTACLE_COST = 4.5
 X_EGO_COST = 0.
 V_EGO_COST = 0.
 A_EGO_COST = 0.
@@ -189,7 +189,7 @@ def gen_long_ocp():
   # or other object. In e2e mode we can use x_position targets as a cost
   # instead.
   # costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
-  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.92),
+  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.88),
            x_ego,
            v_ego,
            a_ego,

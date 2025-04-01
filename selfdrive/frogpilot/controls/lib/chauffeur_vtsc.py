@@ -8,7 +8,6 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 
 CRUISING_SPEED = 5.0  # m/s
 
-
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
     """
     Compute lateral acceleration limit based on speed and an aggressiveness factor.
@@ -17,7 +16,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     """
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
     base = 1.5
-    span = 2.38
+    span = 2.18
     center = 25.0
     k = 0.10  # Flattened gain
 
@@ -47,7 +46,6 @@ def margin_time_fn(v_ego_ms: float) -> float:
         ratio = (v_ego_ms - v_med) / (v_high - v_med)
         return t_med + ratio * (t_high - t_med)
 
-
 def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     """
     Identify indices where curvature spikes above a threshold and is a local maximum.
@@ -71,16 +69,15 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
     Originally was 4.0 -> 1.0 from ~5 m/s to ~25 m/s.
     Now we double it for lower speeds: 8.0 -> 1.0.
     """
-    min_speed = 5.0   # below this speed => max scaling
-    max_speed = 25.0  # above this speed => 1.0
+    min_speed = 3.0   # below this speed => max scaling
+    max_speed = 35.0  # above this speed => 1.0
     if v_ego_ms <= min_speed:
-        return 8.0
+        return 9.0
     elif v_ego_ms >= max_speed:
         return 2.0
     else:
         ratio = (v_ego_ms - min_speed) / (max_speed - min_speed)
         return 8.0 + (1.0 - 8.0) * ratio
-
 
 def dynamic_jerk_scale(v_ego_ms: float) -> float:
     """
@@ -99,7 +96,7 @@ class VisionTurnSpeedController:
         reaccel_alpha=0.2,
         low_lat_acc=0.20,
         high_lat_acc=0.40,
-        max_decel=3.0,
+        max_decel=3.5,
         max_jerk=6.0,
         max_accel=None,
         max_jerk_accel=None
@@ -123,6 +120,26 @@ class VisionTurnSpeedController:
 
         self.prev_v_cruise_cluster = 0.0
 
+        # ------------------------------
+        # Additional state for curvature extrapolation
+        # and filtering/hysteresis (Recommendations 1 & 6)
+        # ------------------------------
+        # EMA (exponential moving average) for curvature filtering
+        self.curvature_ema_ratio = 0.3  # lower = more smoothing
+        self._filtered_curvature = None  # filtered maximum curvature value
+
+        # Hysteresis thresholds for curve detection:
+        # Enter curve control if filtered curvature exceeds enter threshold;
+        # exit only when it falls below exit threshold.
+        self.curv_thresh_enter = 5e-5  # same as apex detection threshold used elsewhere
+        self.curv_thresh_exit  = self.curv_thresh_enter * 0.7
+
+        self.curve_active = False  # state flag
+
+        # For speed smoothing: filter speed increases only (avoid overshoot when exiting curves)
+        self.speed_up_ema_ratio = 0.2
+        self._last_model_speed = None
+
     def reset(self, v_ego: float) -> None:
         """
         Reset internal state so the controller is ready for fresh speed planning.
@@ -130,6 +147,11 @@ class VisionTurnSpeedController:
         self.prev_target_speed = v_ego
         self.current_accel = 0.0
         self.planned_speeds[:] = v_ego
+
+        # Reset filtering state
+        self._filtered_curvature = None
+        self.curve_active = False
+        self._last_model_speed = None
 
     def update(self, v_ego: float, v_cruise_cluster: float, turn_aggressiveness=1.0) -> float:
         """
@@ -179,20 +201,60 @@ class VisionTurnSpeedController:
             eps = 1e-9
             curvature_33 = orientation_rate_33 / np.clip(velocity_pred_33, eps, None)
 
-            # Always use advanced planning (with fixed parameters)
-            is_bump_up = (
-                (v_cruise_cluster > self.prev_v_cruise_cluster)
-                or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
-            )
-            self.planned_speeds = self._plan_speed_trajectory(
-                orientation_rate_33,
-                velocity_pred_33,
-                times_33,
-                init_speed=self.prev_target_speed,
-                turn_aggressiveness=turn_aggressiveness,
-                skip_accel_limit=is_bump_up
-            )
-            raw_target = self.planned_speeds[0]
+            # ------------------------------
+            # New: Filtering & Hysteresis for curvature (Recommendation 6)
+            # ------------------------------
+            current_max_curvature = float(np.max(curvature_33))
+            if self._filtered_curvature is None:
+                self._filtered_curvature = current_max_curvature
+            else:
+                self._filtered_curvature = (1 - self.curvature_ema_ratio) * self._filtered_curvature + self.curvature_ema_ratio * current_max_curvature
+
+            # Use hysteresis to decide if we are in a curve control state.
+            if not self.curve_active and self._filtered_curvature >= self.curv_thresh_enter:
+                self.curve_active = True
+            elif self.curve_active and self._filtered_curvature <= self.curv_thresh_exit:
+                self.curve_active = False
+
+            # ------------------------------
+            # New: Curvature extrapolation (Recommendation 1)
+            # If the farthest point in curvature_33 still indicates a curve, assume the curvature persists.
+            if current_max_curvature >= self.curv_thresh_enter:
+                far_point_curvature = curvature_33[-1]
+                if far_point_curvature >= self.curv_thresh_enter:
+                    # Maintain curve control even if vision ends – assume curve continues.
+                    self.curve_active = True
+
+            # Use advanced planning only if curve control is active;
+            # otherwise, simply follow v_cruise_cluster.
+            if self.curve_active:
+                is_bump_up = (
+                    (v_cruise_cluster > self.prev_v_cruise_cluster)
+                    or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
+                )
+                self.planned_speeds = self._plan_speed_trajectory(
+                    orientation_rate_33,
+                    velocity_pred_33,
+                    times_33,
+                    init_speed=self.prev_target_speed,
+                    turn_aggressiveness=turn_aggressiveness,
+                    skip_accel_limit=is_bump_up
+                )
+                raw_target = self.planned_speeds[0]
+                # ------------------------------
+                # New: Speed filtering for smoothing (Recommendation 6)
+                # When exiting a curve (i.e. target speed increasing), smooth the speed increase.
+                if self._last_model_speed is None:
+                    self._last_model_speed = raw_target
+                if raw_target < self._last_model_speed:
+                    filtered_target = raw_target
+                else:
+                    filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
+                self._last_model_speed = filtered_target
+                raw_target = filtered_target
+            else:
+                # If not in a curve, just follow the cruise cluster speed.
+                raw_target = v_cruise_cluster
 
         # Always clamp raw_target to at most v_cruise_cluster
         raw_target = min(raw_target, v_cruise_cluster)
@@ -293,8 +355,9 @@ class VisionTurnSpeedController:
         margin_factor = 2.0      # increased to slow earlier
         decel_mult = 1.0
         accel_mult = 1.0
-        apex_decel_factor = 0.15
-        apex_spool_factor = 0.08
+        # Slightly more aggressive deceleration and acceleration factors
+        apex_decel_factor = 0.12
+        apex_spool_factor = 0.05
 
         planned = safe_speeds.copy()
 
@@ -305,28 +368,31 @@ class VisionTurnSpeedController:
             spool_sec = velocity_pred[apex_i] * apex_spool_factor
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
-            spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
-            # Ramp down to apex_speed (clamp downward)
-            if spool_start > decel_start:
+            # Introduce a small time offset before the apex for spooling to start
+            pre_apex_time_offset = 1.0  # seconds
+            pre_apex_idx = self._find_time_index(times, times[apex_i] - pre_apex_time_offset)
+
+            # Ramp down to apex_speed (clamp downward) until the pre-apex index
+            if pre_apex_idx > decel_start:
                 v_decel_start = planned[decel_start]
-                steps_decel = spool_start - decel_start
-                for idx in range(decel_start, spool_start):
+                steps_decel = pre_apex_idx - decel_start
+                for idx in range(decel_start, pre_apex_idx):
                     f = (idx - decel_start) / float(steps_decel)
                     decel_val = v_decel_start * (1 - f) + apex_speed * f
                     planned[idx] = min(planned[idx], decel_val)
 
-            # Ensure apex zone is clamped to apex_speed
-            for idx in range(spool_start, apex_i + 1):
+            # Ensure apex zone is clamped to apex_speed from pre-apex index to apex
+            for idx in range(pre_apex_idx, apex_i + 1):
                 planned[idx] = min(planned[idx], apex_speed)
 
-            # Spool up after apex (clamp upward)
-            if spool_end > apex_i:
-                steps_spool = spool_end - apex_i
+            # Spool up starting slightly before the apex (clamp upward)
+            if spool_end > pre_apex_idx:
+                steps_spool = spool_end - pre_apex_idx
                 v_spool_end = planned[spool_end - 1]
-                for idx in range(apex_i, spool_end):
-                    f = (idx - apex_i) / float(steps_spool)
+                for idx in range(pre_apex_idx, spool_end):
+                    f = (idx - pre_apex_idx) / float(steps_spool)
                     spool_val = apex_speed * (1 - f) + v_spool_end * f
                     planned[idx] = max(planned[idx], spool_val)
 
@@ -384,8 +450,8 @@ class VisionTurnSpeedController:
 
         # (7) "Emergency" decel override (final pass)
         EMERGENCY_DECEL_THRESHOLD = 6.0   # [m/s^2]
-        EMERGENCY_SPEED_TOLERANCE = 3.0   # [m/s] over safe speed triggers emergency
-        EMERGENCY_LOOKAHEAD_FRAMES = 8    # how far to check
+        EMERGENCY_SPEED_TOLERANCE = 2.0   # [m/s] over safe speed triggers emergency
+        EMERGENCY_LOOKAHEAD_FRAMES = 15    # how far to check
 
         emergency_braking = False
         for i in range(min(n, EMERGENCY_LOOKAHEAD_FRAMES)):

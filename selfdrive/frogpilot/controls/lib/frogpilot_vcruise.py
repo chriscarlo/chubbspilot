@@ -1,276 +1,286 @@
-import math
 import numpy as np
-
-# from openpilot.common.realtime import DT_MDL (already included below)
+from openpilot.common.realtime import DT_MDL   # model loop time constant (~0.05s)
 from openpilot.common.conversions import Conversions as CV
-from openpilot.common.numpy_fast import clip
-from openpilot.common.realtime import DT_MDL
-
-from openpilot.selfdrive.controls.controlsd import ButtonType
-from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_UNSET
-
+from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, params_memory
 from openpilot.selfdrive.frogpilot.controls.lib.map_turn_speed_controller import MapTurnSpeedController
 from openpilot.selfdrive.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, params_memory
+from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_UNSET
 
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_road_curvature
-
-# -------------------------------------------------------------------------
-#  Import the dedicated VTSC module
-# -------------------------------------------------------------------------
-from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import VisionTurnSpeedController
-
+# Constants for speed planning
+TARGET_LAT_A = 3.02  # lateral acceleration threshold for turn speed calculation
 
 class FrogPilotVCruise:
-    def __init__(self, FrogPilotPlanner):
-        self.frogpilot_planner = FrogPilotPlanner
+  def __init__(self, FrogPilotPlanner):
+    self.frogpilot_planner = FrogPilotPlanner
+    # Initialize sub-controllers
+    self.mtsc = MapTurnSpeedController()    # Map Turn Speed Controller
+    self.slc = SpeedLimitController()       # Speed Limit Controller
 
-        # Sub-controllers
-        self.mtsc = MapTurnSpeedController()
-        self.slc = SpeedLimitController()
+    # State variables
+    self.forcing_stop = False
+    self.override_force_stop = False
+    self.override_slc = False
+    self.force_stop_timer = 0.0
+    self.mtsc_target = 0.0
+    self.overridden_speed = 0.0
+    self.override_force_stop_timer = 0.0
+    self.slc_offset = 0.0
+    self.slc_target = 0.0
+    self.speed_limit_timer = 0.0
+    self.tracked_model_length = 0.0
+    self.vtsc_target = 0.0
 
-        # Force-stop logic
-        self.forcing_stop = False
-        self.override_force_stop = False
-        self.override_slc = False
-        self.speed_limit_changed = False
+    # New ramp state variables for SLC
+    self.slc_ramp_active = False
+    self.slc_ramp_start_speed = 0.0
+    self.slc_ramp_end_speed = 0.0
+    self.slc_ramp_speed = 0.0
 
-        # Timers
-        self.force_stop_timer = 0
-        self.override_force_stop_timer = 0
-        self.speed_limit_timer = 0
+  def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles, sm):
+    # Safely fetch toggles so we don't crash if any attribute is missing
+    force_stops = getattr(frogpilot_toggles, 'force_stops', False)
+    force_standstill = getattr(frogpilot_toggles, 'force_standstill', False)
+    map_turn_speed_controller = getattr(frogpilot_toggles, 'map_turn_speed_controller', False)
+    mtsc_curvature_check = getattr(frogpilot_toggles, 'mtsc_curvature_check', False)
+    speed_limit_controller = getattr(frogpilot_toggles, 'speed_limit_controller', False)
 
-        # Targets
-        self.mtsc_target = 0
-        self.slc_target = 0
-        self.vtsc_target = 0
-        self.overridden_speed = 0
+    # ---- Force Stop (red light/stop sign logic) ----
+    force_stop = force_stops and self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled
+    force_stop &= self.frogpilot_planner.model_length < 100
+    force_stop &= self.override_force_stop_timer <= 0
+    self.force_stop_timer = (self.force_stop_timer + DT_MDL) if force_stop else 0.0
+    force_stop_enabled = self.force_stop_timer >= 1.0
 
-        # Speed Limit tracking
-        self.previous_speed_limit = 0
-        self.tracked_model_length = 0
+    # Conditions to override (cancel) forced stop (e.g., user input)
+    self.override_force_stop |= (not force_standstill and carState.standstill and self.frogpilot_planner.tracking_lead)
+    self.override_force_stop |= carState.gasPressed or frogpilotCarControl.accelPressed
+    self.override_force_stop &= force_stop_enabled
+    if self.override_force_stop:
+      self.override_force_stop_timer = 10.0  # maintain override for a short duration
+    elif self.override_force_stop_timer > 0:
+      self.override_force_stop_timer -= DT_MDL
 
-        # Additional variable for the new SLC logic
-        self.slc_offset = 0
+    # Synchronize cruise speeds between cluster (display) and control
+    v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
+    v_cruise_diff = v_cruise_cluster - v_cruise
+    v_ego_cluster = max(carState.vEgoCluster, v_ego)
+    v_ego_diff = v_ego_cluster - v_ego
 
-        # Adjust turning threshold
-        self.turn_lat_acc_threshold = 0.3  # was 0.5
-        global CRUISING_SPEED
-        CRUISING_SPEED = 6.7  # ~15 mph in m/s
-        self.turn_smoothing_alpha = 0.3
+    # TODO: Revise MTSC to pull curvature data from stored maps with mapd
+    # source code and process speeds through chauffeur's vtsc logic
+    """
+    if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
+      # Calculate safe turn speed based on map curvature
+      mtsc_active = self.mtsc_target < v_cruise
+      map_curvature = self.mtsc.get_map_curvature(gps_position, v_ego)
+      if map_curvature * frogpilot_toggles.curve_sensitivity > 0:
+        mtsc_speed = ((TARGET_LAT_A * frogpilot_toggles.turn_aggressiveness) / (map_curvature * frogpilot_toggles.curve_sensitivity)) ** 0.5
+      else:
+        mtsc_speed = v_cruise  # no curvature data, keep current speed
+      # Clip MTSC target between a minimum safe speed and current cruise speed
+      self.mtsc_target = np.clip(mtsc_speed, CRUISING_SPEED, v_cruise)
+      if self.frogpilot_planner.road_curvature_detected and mtsc_active:
+        # If a turn was detected and MTSC was already active, maintain previous v_cruise to avoid sudden acceleration mid-turn
+        self.mtsc_target = self.frogpilot_planner.v_cruise
+      elif not self.frogpilot_planner.road_curvature_detected and frogpilot_toggles.mtsc_curvature_check:
+        # If turn ended and a curvature check is required, reset MTSC target to current cruise
+        self.mtsc_target = v_cruise
+      # else: self.mtsc_target remains as computed
+    else:
+      # MTSC inactive, no turn speed limitation
+      self.mtsc_target = v_cruise if v_cruise != 0 else 0.0
+    """
 
-        # Initialize the Vision Turn Speed Controller
-        self.vtsc = VisionTurnSpeedController(
-            turn_smoothing_alpha=self.turn_smoothing_alpha,
-            reaccel_alpha=0.2,
-            low_lat_acc=0.20,
-            high_lat_acc=0.40,
-            max_decel=2.0,
-            max_jerk=1.2
+    # ---- Map Turn Speed Controller (MTSC) ----
+    if map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
+        mtsc_active = self.mtsc_target < v_cruise
+        self.mtsc_target = clip(
+            self.mtsc.target_speed(v_ego, self._get_attr(carState, 'aEgo', 0.0), frogpilot_toggles),
+            CRUISING_SPEED, v_cruise
         )
 
-    def update(self, carControl, carState, controlsState,
-               frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
-               v_cruise, v_ego, frogpilot_toggles):
+        curve_detected = (1 / self.frogpilot_planner.road_curvature) ** 0.5 < v_ego
+        if curve_detected and mtsc_active:
+            self.mtsc_target = self.frogpilot_planner.v_cruise
+        elif not curve_detected and mtsc_curvature_check:
+            self.mtsc_target = v_cruise
 
-        # Safely fetch toggles so we don't crash if any attribute is missing
-        force_stops = getattr(frogpilot_toggles, 'force_stops', False)
-        force_standstill = getattr(frogpilot_toggles, 'force_standstill', False)
-        map_turn_speed_controller = getattr(frogpilot_toggles, 'map_turn_speed_controller', False)
-        mtsc_curvature_check = getattr(frogpilot_toggles, 'mtsc_curvature_check', False)
-        speed_limit_controller = getattr(frogpilot_toggles, 'speed_limit_controller', False)
-        show_speed_limits = getattr(frogpilot_toggles, 'show_speed_limits', False)
-        speed_limit_controller_override_manual = getattr(frogpilot_toggles, 'speed_limit_controller_override_manual', False)
-        speed_limit_controller_override_set_speed = getattr(frogpilot_toggles, 'speed_limit_controller_override_set_speed', False)
-        speed_limit_confirmation_lower = getattr(frogpilot_toggles, 'speed_limit_confirmation_lower', False)
-        speed_limit_confirmation_higher = getattr(frogpilot_toggles, 'speed_limit_confirmation_higher', False)
-        vision_turn_speed_controller = getattr(frogpilot_toggles, 'vision_turn_speed_controller', False)
-        turn_aggressiveness = getattr(frogpilot_toggles, 'turn_aggressiveness', 1.0)
+        if self.mtsc_target == CRUISING_SPEED:
+            self.mtsc_target = v_cruise
+    else:
+        self.mtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
-        # -------------------------------------------------------------
-        # Force Stop Logic
-        # -------------------------------------------------------------
-        from openpilot.common.realtime import DT_MDL
-
-        force_stop = (
-            force_stops
-            and self.frogpilot_planner.cem.stop_light_detected
-            and controlsState.enabled
-        )
-        force_stop &= self.frogpilot_planner.model_length < 100
-        force_stop &= self.override_force_stop_timer <= 0
-
-        self.force_stop_timer = self.force_stop_timer + DT_MDL if force_stop else 0
-        force_stop_enabled = self.force_stop_timer >= 1
-
-        self.override_force_stop |= (
-            (not force_standstill
-             and self._get_attr(carState, 'standstill', False)
-             and self.frogpilot_planner.tracking_lead)
-            or self._get_attr(carState, 'gasPressed', False)
-            or frogpilotCarControl.accelPressed
-        )
-        self.override_force_stop &= force_stop_enabled
-
-        if self.override_force_stop:
-            self.override_force_stop_timer = 10
-        elif self.override_force_stop_timer > 0:
-            self.override_force_stop_timer -= DT_MDL
-
-        # Keep cluster in sync
-        v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
-        v_cruise_diff = v_cruise_cluster - v_cruise
-
-        v_ego_cluster = max(self._get_attr(carState, 'vEgoCluster', v_ego), v_ego)
-        v_ego_diff = v_ego_cluster - v_ego
-
-        # -------------------------------------------------------------
-        # Map Turn Speed Controller
-        # -------------------------------------------------------------
-        if map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
-            mtsc_active = self.mtsc_target < v_cruise
-            self.mtsc_target = clip(
-                self.mtsc.target_speed(v_ego, self._get_attr(carState, 'aEgo', 0.0), frogpilot_toggles),
-                CRUISING_SPEED, v_cruise
-            )
-
-            curve_detected = (1 / self.frogpilot_planner.road_curvature) ** 0.5 < v_ego
-            if curve_detected and mtsc_active:
-                self.mtsc_target = self.frogpilot_planner.v_cruise
-            elif not curve_detected and mtsc_curvature_check:
-                self.mtsc_target = v_cruise
-
-            if self.mtsc_target == CRUISING_SPEED:
-                self.mtsc_target = v_cruise
+    # ---- Speed Limit Controller (SLC) ----
+    if speed_limit_controller or frogpilot_toggles.show_speed_limits:
+      # Update the SpeedLimitController with current data
+      self.slc.update(frogpilotCarState.dashboardSpeedLimit, controlsState.enabled,
+                      frogpilotNavigation.navigationSpeedLimit, v_cruise_cluster, v_ego, frogpilot_toggles)
+      desired_slc_target = self.slc.desired_speed_limit  # posted speed limit (m/s) if a change is detected, else 0
+      if self.slc.speed_limit_changed:
+        # Determine if user accepted or denied new limit (for confirmation mode)
+        speed_limit_accepted = (frogpilotCarControl.accelPressed and carControl.longActive) or params_memory.get_bool("SpeedLimitAccepted")
+        speed_limit_denied = (frogpilotCarControl.decelPressed and carControl.longActive) or (self.speed_limit_timer >= 30)
+        if speed_limit_accepted:
+          # User confirmed the new speed limit
+          self.slc_target = desired_slc_target
+          params_memory.remove("SpeedLimitAccepted")
+          # Start ramp towards new speed limit
+          if speed_limit_controller and controlsState.enabled and carControl.longActive:
+            self.slc_ramp_active = True
+            self.slc_ramp_start_speed = v_cruise
+            new_offset = self.slc.get_offset(desired_slc_target, frogpilot_toggles)
+            self.slc_ramp_end_speed = desired_slc_target + new_offset
+            self.slc_ramp_speed = self.slc_ramp_start_speed
+          else:
+            self.slc_ramp_active = False
+            self.slc_ramp_speed = 0.0
+        elif desired_slc_target < self.slc_target and not frogpilot_toggles.speed_limit_confirmation_lower:
+          # Automatically accept a lower speed limit (no confirmation needed)
+          self.slc_target = desired_slc_target
+          if speed_limit_controller and controlsState.enabled and carControl.longActive:
+            self.slc_ramp_active = True
+            self.slc_ramp_start_speed = v_cruise
+            new_offset = self.slc.get_offset(desired_slc_target, frogpilot_toggles)
+            self.slc_ramp_end_speed = desired_slc_target + new_offset
+            self.slc_ramp_speed = self.slc_ramp_start_speed
+          else:
+            self.slc_ramp_active = False
+            self.slc_ramp_speed = 0.0
+        elif desired_slc_target > self.slc_target and not frogpilot_toggles.speed_limit_confirmation_higher:
+          # Automatically accept a higher speed limit (no confirmation needed)
+          self.slc_target = desired_slc_target
+          if speed_limit_controller and controlsState.enabled and carControl.longActive:
+            self.slc_ramp_active = True
+            self.slc_ramp_start_speed = v_cruise
+            new_offset = self.slc.get_offset(desired_slc_target, frogpilot_toggles)
+            self.slc_ramp_end_speed = desired_slc_target + new_offset
+            self.slc_ramp_speed = self.slc_ramp_start_speed
+          else:
+            self.slc_ramp_active = False
+            self.slc_ramp_speed = 0.0
         else:
-            self.mtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
-
-        # -------------------------------------------------------------
-        # Speed Limit Controller (Swapped Logic)
-        # -------------------------------------------------------------
-        if show_speed_limits or speed_limit_controller:
-            self.slc.update(
-                frogpilotCarState.dashboardSpeedLimit,
-                controlsState.enabled,
-                frogpilotNavigation.navigationSpeedLimit,
-                v_cruise_cluster,
-                v_ego,
-                frogpilot_toggles
-            )
-            desired_slc_target = self.slc.desired_speed_limit
-
-            if self.slc.speed_limit_changed:
-                speed_limit_accepted = (
-                    (frogpilotCarControl.accelPressed and carControl.longActive)
-                    or params_memory.get_bool("SpeedLimitAccepted")
-                )
-                speed_limit_denied = (
-                    (frogpilotCarControl.decelPressed and carControl.longActive)
-                    or self.speed_limit_timer >= 30
-                )
-
-                if speed_limit_accepted:
-                    self.slc_target = desired_slc_target
-                    params_memory.remove("SpeedLimitAccepted")
-                elif desired_slc_target < self.slc_target and not speed_limit_confirmation_lower:
-                    self.slc_target = desired_slc_target
-                elif desired_slc_target > self.slc_target and not speed_limit_confirmation_higher:
-                    self.slc_target = desired_slc_target
-                else:
-                    self.speed_limit_timer += DT_MDL
-
-                self.slc.speed_limit_changed = (
-                    self.slc_target != desired_slc_target
-                    and not speed_limit_denied
-                )
-            elif self.slc_target == 0:
-                self.slc_target = desired_slc_target
-            else:
-                self.speed_limit_timer = 0
-
-            if speed_limit_controller:
-                self.override_slc = self.overridden_speed > self.slc_target + self.slc_offset
-                self.override_slc |= (self._get_attr(carState, 'gasPressed', False) and v_ego > self.slc_target + self.slc_offset)
-                self.override_slc &= controlsState.enabled
-
-                if self.override_slc:
-                    if speed_limit_controller_override_manual:
-                        if self._get_attr(carState, 'gasPressed', False):
-                            self.overridden_speed = v_ego_cluster
-                        self.overridden_speed = np.clip(
-                            self.overridden_speed,
-                            self.slc_target + self.slc_offset,
-                            v_cruise_cluster
-                        )
-                    elif speed_limit_controller_override_set_speed:
-                        self.overridden_speed = v_cruise_cluster
-                else:
-                    self.overridden_speed = 0
-            else:
-                self.override_slc = False
-                self.overridden_speed = 0
-
-            self.slc_offset = self.slc.get_offset(self.slc_target, frogpilot_toggles)
+          # Awaiting confirmation or denied; start/continue timer
+          self.speed_limit_timer += DT_MDL
+        # Update changed flag for next cycle (stays true if not yet accepted/denied)
+        self.slc.speed_limit_changed = (self.slc_target != desired_slc_target) and not speed_limit_denied
+      elif self.slc_target == 0:
+        # If no previous speed limit was set, initialize it
+        self.slc_target = desired_slc_target
+        if speed_limit_controller and controlsState.enabled and carControl.longActive:
+          self.slc_ramp_active = True
+          self.slc_ramp_start_speed = v_cruise
+          new_offset = self.slc.get_offset(desired_slc_target, frogpilot_toggles)
+          self.slc_ramp_end_speed = desired_slc_target + new_offset
+          self.slc_ramp_speed = self.slc_ramp_start_speed
         else:
-            self.slc_offset = 0
-            self.slc_target = 0
+          self.slc_ramp_active = False
+          self.slc_ramp_speed = 0.0
+      else:
+        # No change in speed limit; reset confirmation timer
+        self.speed_limit_timer = 0.0
 
-        # -------------------------------------------------------------
-        # Vision Turn Speed Controller
-        # -------------------------------------------------------------
-        if vision_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
-            self.vtsc_target = self.vtsc.update(
-                v_ego,
-                v_cruise,
-                turn_aggressiveness
-            )
+      if speed_limit_controller:
+        # Determine if the speed limit should be overridden (user acceleration)
+        self.override_slc = self.overridden_speed > (self.slc_target + self.slc_offset)
+        self.override_slc |= carState.gasPressed and v_ego > (self.slc_target + self.slc_offset)
+        self.override_slc &= controlsState.enabled
+        if self.override_slc:
+          # If overriding SLC, set overridden speed to either current speed or user set speed
+          if frogpilot_toggles.speed_limit_controller_override_manual:
+            if carState.gasPressed:
+              self.overridden_speed = v_ego_cluster
+            self.overridden_speed = np.clip(self.overridden_speed,
+                                            self.slc_target + self.slc_offset, v_cruise_cluster)
+          elif frogpilot_toggles.speed_limit_controller_override_set_speed:
+            self.overridden_speed = v_cruise_cluster
+          else:
+            self.overridden_speed = 0.0
         else:
-            self.vtsc.reset(v_ego)
-            self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
+          # Not overriding SLC
+          self.override_slc = False
+          self.overridden_speed = 0.0
+        # Compute the speed offset for the current speed limit target
+        self.slc_offset = self.slc.get_offset(self.slc_target, frogpilot_toggles)
 
-        # -------------------------------------------------------------
-        # Force Standstill / Stop
-        # -------------------------------------------------------------
-        if (force_standstill
-            and self._get_attr(carState, 'standstill', False)
-            and not self.override_force_stop
-            and controlsState.enabled):
-            # Hard standstill override
-            self.forcing_stop = True
-            v_cruise = -1
-        elif force_stop_enabled and not self.override_force_stop:
-            self.forcing_stop |= not self._get_attr(carState, 'standstill', False)
-            self.tracked_model_length = max(self.tracked_model_length - v_ego * DT_MDL, 0)
-            v_cruise = min((self.tracked_model_length // PLANNER_TIME), v_cruise)
+        # **Ramp logic**: smoothly adjust speed towards slc_target with acceleration limits
+        if self.slc_ramp_active:
+          # Choose acceleration limit based on whether increasing or decreasing speed
+          accel_limit = 1.5  # m/s^2 for accelerating
+          decel_limit = 0.67  # m/s^2 for decelerating
+          sign = 1.0 if self.slc_ramp_end_speed > self.slc_ramp_start_speed else -1.0
+          # Calculate allowed change this cycle (limit to ~2 mph per cycle)
+          delta_v = (accel_limit if sign > 0 else decel_limit) * DT_MDL * sign
+          if abs(delta_v) > 0.9:  # cap delta to ~0.9 m/s (~2 mph)
+            delta_v = 0.9 * sign
+          new_speed = self.slc_ramp_speed + delta_v
+          # Prevent overshooting the final target
+          if sign > 0 and new_speed > self.slc_ramp_end_speed:
+            new_speed = self.slc_ramp_end_speed
+          if sign < 0 and new_speed < self.slc_ramp_end_speed:
+            new_speed = self.slc_ramp_end_speed
+          # Round the ramp speed to nearest whole mph for smooth HUD display
+          current_mph = self.slc_ramp_speed * CV.MS_TO_MPH
+          new_mph = new_speed * CV.MS_TO_MPH
+          new_mph_round = round(new_mph)
+          last_mph_round = round(current_mph)
+          # Ensure we don't jump more than 2 mph from last displayed value
+          if sign > 0 and new_mph_round > last_mph_round + 2:
+            new_mph_round = last_mph_round + 2
+          if sign < 0 and new_mph_round < last_mph_round - 2:
+            new_mph_round = last_mph_round - 2
+          # Update ramp speed in m/s
+          self.slc_ramp_speed = new_mph_round * CV.MPH_TO_MS
+          # Check if ramp has completed
+          if self.slc_ramp_speed == self.slc_ramp_end_speed:
+            self.slc_ramp_active = False
         else:
-            if not self.frogpilot_planner.cem.stop_light_detected:
-                self.override_force_stop = False
-            self.forcing_stop = False
-            self.tracked_model_length = self.frogpilot_planner.model_length
+          # Not ramping, use the final target speed directly
+          self.slc_ramp_speed = self.slc_target + self.slc_offset
+      else:
+        # Speed Limit Controller is disabled; reset SLC-related outputs
+        self.slc_offset = 0.0
+        self.slc_target = 0.0
+        self.slc_ramp_active = False
+        self.slc_ramp_speed = 0.0
+    else:
+      # Neither SLC nor speed limits display is enabled
+      self.slc_target = 0.0
+      self.slc_offset = 0.0
+      self.slc_ramp_active = False
+      self.slc_ramp_speed = 0.0
 
-            # Choose final target among [MapTurn, SpeedLimit, VisionTurn]
-            if speed_limit_controller:
-                targets = [
-                    self.mtsc_target,
-                    max(self.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff,
-                    self.vtsc_target
-                ]
-            else:
-                targets = [self.mtsc_target, self.vtsc_target]
+    # ---- Vision Turn Speed Controller (VTSC) ----
+    if frogpilot_toggles.vision_turn_speed_controller and carControl.longActive and self.frogpilot_planner.road_curvature_detected:
+      # Compute desired turn speed based on vision curvature
+      curvature = abs(self.frogpilot_planner.road_curvature)
+      if curvature > 0:
+        self.vtsc_target = ((TARGET_LAT_A * frogpilot_toggles.turn_aggressiveness) / (curvature * frogpilot_toggles.curve_sensitivity)) ** 0.5
+      else:
+        self.vtsc_target = v_cruise  # no curvature, no change
+    else:
+      self.vtsc_target = v_cruise
 
-            # Don't drop below CRUISING_SPEED unless needed
-            v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets]))
+    # Clip VTSC target between a minimum safe speed and current cruise
+    self.vtsc_target = np.clip(self.vtsc_target, CRUISING_SPEED, v_cruise)
 
-        # Keep everything in sync w/ cluster differences
-        self.mtsc_target += v_cruise_diff
-        self.vtsc_target += v_cruise_diff
+    # ---- Final VCruise Determination ----
+    if speed_limit_controller:
+      # When SLC is active, include SLC (or override) in the targets list
+      targets = [
+        self.mtsc_target,
+        max(self.overridden_speed, self.slc_ramp_speed) - v_ego_diff,
+        self.vtsc_target
+      ]
+    else:
+      # SLC not active, only consider turn controllers
+      targets = [self.mtsc_target, self.vtsc_target]
+    # Pick the minimum target that's above the minimum cruising speed (or keep current v_cruise if target is 0)
+    v_cruise = float(min([target if target > CRUISING_SPEED else v_cruise for target in targets]))
+    # Account for any difference between cluster and actual cruise (smooth transition)
+    v_cruise += v_cruise_diff
 
-        return v_cruise
+    # Update the planner's cruise speed for output
+    self.frogpilot_planner.v_cruise = v_cruise
 
-    # Add a helper method to handle attribute access
-    def _get_attr(self, obj, attr, default=None):
-        """Helper to get attribute from an object with fallback to 'out' property"""
-        value = getattr(obj, attr, None)
-        if value is None and hasattr(obj, 'out'):
-            value = getattr(obj.out, attr, default)
-        return value if value is not None else default
+    # Always return a valid float, never None
+    return float(v_cruise)

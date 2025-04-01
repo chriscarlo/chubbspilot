@@ -82,11 +82,10 @@ def debug_queue_status():
 
 def get_azure_connection_string() -> str:
   """
-  Reads the Azure connection string from /data/persist/azure_conn_string
-  (or any other path you prefer).
+  Reads the Azure connection string from /persist/azure_conn_string
   """
   try:
-    with open("/data/persist/azure_conn_string", "r") as f:
+    with open("/persist/azure_conn_string", "r") as f:
       conn_str = f.read().strip()
       debug_print(f"Successfully read Azure connection string (length: {len(conn_str)})")
       return conn_str
