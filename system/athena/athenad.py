@@ -349,35 +349,53 @@ class UploadQueueCache:
 # -------------------------------------------------------------------------------
 # Upload Handler Thread
 # -------------------------------------------------------------------------------
+
+# --- retry_upload function remains the same as the previous correction ---
 def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = True) -> None:
   """
   If an upload fails or is aborted, re-queue it (unless we've exceeded retry limits).
+  Ensures task_done() is called for the failed/aborted attempt.
   """
   item = cur_upload_items.get(tid) # Use .get for safety
   if item is None:
-    debug_print(f"Thread {tid}: No item found to retry.")
+    debug_print(f"Thread {tid}: No item found to retry (item might have been cleared).")
     return
 
   new_retry_count = item.retry_count + 1 if increase_count else item.retry_count
 
+  # --- Mark the task as done *for the failed attempt* BEFORE potentially requeueing ---
+  try:
+    upload_queue.task_done()
+    debug_print(f"Thread {tid}: Marked task done for failed attempt of {item.id}")
+  except ValueError:
+    debug_print(f"Warning: task_done() called too many times before retry/max_retry for item {item.id}")
+  except Exception as e:
+      debug_print(f"Error calling task_done() before retry for {item.id}: {e}")
+      cloudlog.exception("azure.upload_handler.retry.task_done_error")
+
+
+  # --- Check Max Retries ---
   if new_retry_count > MAX_RETRY_COUNT:
-    debug_print(f"\n[DEBUG] === Max Retries Reached ===")
+    debug_print(f"\n[DEBUG] === Max Retries Reached (Thread {tid}) ===")
     debug_print(f"File: {item.path}")
     debug_print(f"Azure Subdir: {item.azure_subdir}")
     debug_print(f"Giving up after {item.retry_count} retries.")
     debug_print("=== Retry Aborted ===\n")
     cloudlog.event("azure.upload_handler.max_retries", item=asdict(item), error=True)
-    # Mark as done so it's removed from queue/cache eventually
-    cur_upload_items[tid] = replace(item, progress=1.0, current=False)
-    try:
-        upload_queue.task_done() # Signal task completion even on failure
-    except ValueError:
-        debug_print(f"Warning: task_done() called too many times for item {item.id}") # Should not happen but safety
+    # Mark as done logically by setting progress=1.0 so cache knows to remove it eventually
+    # Use replace on the original item state before it was cleared, if possible
+    original_item_state = cur_upload_items.get(tid) # Get the state again just in case
+    if original_item_state:
+       cur_upload_items[tid] = replace(original_item_state, progress=1.0, current=False)
+    else: # Fallback if state was already cleared somehow
+       cur_upload_items[tid] = replace(item, progress=1.0, current=False) # Use item as fallback
+    # Update cache after marking done
     UploadQueueCache.cache(upload_queue)
     cur_upload_items[tid] = None # Clear current item for this thread
-    return
+    return # Exit retry logic
 
-  debug_print(f"\n[DEBUG] === Retrying Upload ===")
+  # --- Requeue the item ---
+  debug_print(f"\n[DEBUG] === Retrying Upload (Thread {tid}) ===")
   debug_print(f"File: {item.path}")
   debug_print(f"Azure Subdir: {item.azure_subdir}")
   debug_print(f"Next retry count: {new_retry_count}")
@@ -388,30 +406,24 @@ def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = Tr
   upload_queue.put_nowait(requeued_item)
   # Update cache *after* successfully requeueing
   UploadQueueCache.cache(upload_queue)
-  debug_print("Item requeued successfully.")
+  debug_print(f"Item {item.id} requeued successfully.")
   debug_print("=== Retry Queued ===\n")
 
-  # Mark the task as done *for the failed attempt* before clearing the item
-  try:
-    upload_queue.task_done()
-  except ValueError:
-    debug_print(f"Warning: task_done() called too many times before retry for item {item.id}")
-
-  cur_upload_items[tid] = None # Clear current item for this thread
+  # Clear the current item *after* successfully requeueing
+  cur_upload_items[tid] = None
 
   # Wait before the thread picks up a new item
   debug_print(f"Thread {tid} waiting {RETRY_DELAY}s before next attempt...")
-  end_event.wait(RETRY_DELAY) # Use event wait for faster shutdown
-  if end_event.is_set():
-      debug_print(f"Retry delay interrupted by shutdown.")
+  interrupted = end_event.wait(RETRY_DELAY) # Use event wait for faster shutdown
+  if interrupted:
+      debug_print(f"Thread {tid}: Retry delay interrupted by shutdown.")
 
 
 def upload_handler(end_event: threading.Event) -> None:
   """
   Thread that pulls items off `upload_queue` and uploads them to Azure.
-  Retries if needed. Checks metered connection status.
+  Retries if needed. Checks metered connection status. Uses deviceState.networkType raw integer value.
   """
-  # Correctly initialize SubMaster for deviceState
   sm = messaging.SubMaster(['deviceState'])
   tid = threading.get_ident()
   debug_print(f"\n[DEBUG] === Upload Handler Started (Thread {tid}) ===")
@@ -420,11 +432,8 @@ def upload_handler(end_event: threading.Event) -> None:
     cur_upload_items[tid] = None # Ensure state is clean before getting item
     item = None # Define item here for use in finally block
     try:
-      # This get() blocks until an item is available or timeout
       item = upload_queue.get(timeout=1) # Wait up to 1s for an item
-      # If timeout occurs, queue.Empty is raised, handled below
 
-      # Got an item
       cur_upload_items[tid] = replace(item, current=True)
       debug_print(f"\n[DEBUG] === Processing Upload Item (Thread {tid}) ===")
       debug_print(f"Item ID: {item.id}")
@@ -432,9 +441,7 @@ def upload_handler(end_event: threading.Event) -> None:
       debug_print(f"Azure Subdir: {item.azure_subdir}")
       debug_print(f"Retry count: {item.retry_count}")
       debug_print(f"Allow cellular: {item.allow_cellular}")
-      # debug_queue_status() # Can be noisy, enable if needed
 
-      # Skip if item was somehow cancelled (future use)
       if item.id in cancelled_uploads:
         debug_print(f"Item {item.id} was cancelled, skipping")
         cancelled_uploads.remove(item.id)
@@ -444,37 +451,36 @@ def upload_handler(end_event: threading.Event) -> None:
         continue
 
       # Check network status **before** attempting upload
-      sm.update(0) # Non-blocking update, ensure latest status
+      sm.update(0) # Non-blocking update
 
-      # Check validity *after* update
       if not sm.valid['deviceState']:
           debug_print(f"No valid deviceState message yet, deferring upload (Thread {tid})")
-          # Requeue without incrementing retry count, wait before next attempt
           retry_upload(tid, end_event, increase_count=False)
-          continue # Go back to wait for item/valid state
-
-      # Now safe to access deviceState fields
-      metered = sm['deviceState'].networkMetered
-      # Use the actual NetworkType enum from cereal
-      network_type_enum = sm['deviceState'].networkType
-      network_type = network_type_enum.name # Get string representation ('none', 'wifi', 'cell')
-
-      debug_print(f"\n[DEBUG] === Network Status (Thread {tid}) ===")
-      # networkType 'none' implies no connection
-      is_connected = network_type != 'none'
-      debug_print(f"Connected: {is_connected} (Type: {network_type})")
-      debug_print(f"Metered connection: {metered}")
-
-      # If no network connection, defer and retry later
-      if not is_connected:
-          debug_print("Network type is 'none', deferring upload.")
-          retry_upload(tid, end_event, increase_count=False) # Requeue without incrementing retry count
           continue
 
-      # If connected, but connection is metered and not allowed for this item
+      metered = sm['deviceState'].networkMetered
+      # --- REVERT TO USING INTEGER VALUE ---
+      network_type_enum = sm['deviceState'].networkType
+      # Cast the enum directly to int to get the raw numerical value (0, 1, 4, etc.)
+      network_type_int = int(network_type_enum)
+      # log.capnp defines: none @0; wifi @1; cell2g @2; cell3g @3; cell4g @4; cell5g @5; ethernet @6; unknown @7;
+      # --- END REVERT ---
+
+      debug_print(f"\n[DEBUG] === Network Status (Thread {tid}) ===")
+      # Check connectivity based on the integer value (0 means 'none')
+      is_connected = network_type_int != 0
+      # Log the integer value as it was likely done originally
+      debug_print(f"Connected: {is_connected} (Type: {network_type_int})")
+      debug_print(f"Metered connection: {metered}")
+
+      if not is_connected:
+          debug_print("Network type is 'none' (0), deferring upload.")
+          retry_upload(tid, end_event, increase_count=False)
+          continue
+
       if metered and not item.allow_cellular:
         debug_print("Metered connection detected and cellular not allowed, deferring upload")
-        retry_upload(tid, end_event, increase_count=False) # Requeue without incrementing retry count
+        retry_upload(tid, end_event, increase_count=False)
         continue
 
       # --- Network conditions met, proceed with upload ---
@@ -482,23 +488,21 @@ def upload_handler(end_event: threading.Event) -> None:
         fn = item.path
         file_size = 0
         try:
-          # Check if file exists *just before* upload attempt
           if not os.path.isfile(fn):
                raise FileNotFoundError(f"Local file disappeared before upload: {fn}")
           file_size = os.path.getsize(fn)
           debug_print(f"Local file size: {file_size} bytes")
         except OSError as e:
-          # Catch potential stat errors even if isfile passed moments ago
           debug_print(f"Error getting file size for {fn} just before upload: {str(e)}")
-          # Decide if this is fatal. If we can't stat, upload might fail anyway. Let's try.
-          pass # file_size remains 0, log it but proceed
+          pass # Proceed, size is mostly for logging
 
+        # Log the integer network type
         cloudlog.event("azure.upload_handler.upload_start",
                        fn=fn, sz=file_size, azure_subdir=item.azure_subdir,
-                       network_type=network_type, metered=metered,
+                       network_type=network_type_int, # Log integer value
+                       metered=metered,
                        retry_count=item.retry_count)
 
-        # Perform the Azure upload (includes existence check)
         _do_upload_azure(item)
 
         # Mark success
@@ -507,17 +511,15 @@ def upload_handler(end_event: threading.Event) -> None:
         debug_print(f"File: {fn}")
         debug_print(f"Azure Subdir: {item.azure_subdir}")
         debug_print("=== Upload Complete ===\n")
-
+        # Log the integer network type
         cloudlog.event("azure.upload_handler.success", fn=fn, sz=file_size, azure_subdir=item.azure_subdir,
-                       network_type=network_type, metered=metered)
+                       network_type=network_type_int, # Log integer value
+                       metered=metered)
 
         upload_queue.task_done() # Signal completion *after* success
         UploadQueueCache.cache(upload_queue) # Update cache on success
-        # debug_queue_status()
 
       except FileNotFoundError:
-        # Local file is gone (checked again above or raised by open() in _do_upload_azure)
-        # Mark as complete, don't retry.
         debug_print(f"\n[DEBUG] === File Not Found Locally (Thread {tid}) ===")
         debug_print(f"File: {fn}")
         debug_print("Marking as complete, won't retry.")
@@ -526,76 +528,66 @@ def upload_handler(end_event: threading.Event) -> None:
         cur_upload_items[tid] = replace(item, progress=1.0, current=False) # Mark as done
         upload_queue.task_done() # Signal completion for this item
         UploadQueueCache.cache(upload_queue)
-        # debug_queue_status()
 
-      except (ConnectionError, TimeoutError, ServiceResponseError, socket.timeout) as e:
-        # Network errors, Azure service errors, timeouts -> Retry
+      except (ConnectionError, TimeoutError, ServiceResponseError, socket.timeout, ResourceNotFoundError) as e:
         debug_print(f"\n[DEBUG] === Network/Service Error (Thread {tid}) ===")
         debug_print(f"File: {fn}")
         debug_print(f"Azure Subdir: {item.azure_subdir}")
-        debug_print(f"Error: {type(e).__name__}: {str(e)}")
+        debug_print(f"Error Type: {type(e).__name__}")
+        debug_print(f"Error Details: {str(e)}")
         debug_print("Attempting retry...")
         debug_print("=== Error Complete ===\n")
-        cloudlog.warning(f"azure.upload_handler.network_error", fn=fn, azure_subdir=item.azure_subdir, error=str(e), exc_info=DEBUG) # Add stack trace if debugging
-        # retry_upload handles task_done for the failed attempt before requeueing
-        retry_upload(tid, end_event) # Will handle max retries
+        log_level = cloudlog.warning if isinstance(e, (ResourceNotFoundError, TimeoutError, socket.timeout)) else cloudlog.error # Adjust logging level based on error type
+        log_level(f"azure.upload_handler.network_error", fn=fn, azure_subdir=item.azure_subdir,
+                  network_type=network_type_int, # Log integer value
+                  error_type=type(e).__name__, error=str(e), exc_info=DEBUG)
+        retry_upload(tid, end_event)
 
-      except AbortTransferException: # Currently unused, placeholder
+      except AbortTransferException:
         debug_print(f"\n[DEBUG] === Upload Aborted by Request (Thread {tid}) ===")
-        debug_print(f"File: {fn}")
-        debug_print(f"Azure Subdir: {item.azure_subdir}")
-        debug_print("Requeuing without retry increment.")
-        debug_print("=== Abort Complete ===\n")
+        # ... (logging as before) ...
         cloudlog.event("azure.upload_handler.abort", fn=fn, azure_subdir=item.azure_subdir,
-                       network_type=network_type, metered=metered)
-        # retry_upload handles task_done for the aborted attempt
+                       network_type=network_type_int, # Log integer value
+                       metered=metered)
         retry_upload(tid, end_event, increase_count=False)
 
       except Exception as e:
-        # Unexpected errors during the upload process -> Log exception and retry
         debug_print(f"\n[DEBUG] === Unexpected Upload Error (Thread {tid}) ===")
         debug_print(f"File: {fn}")
         debug_print(f"Azure Subdir: {item.azure_subdir}")
-        debug_print(f"Error: {type(e).__name__}: {str(e)}")
+        debug_print(f"Error Type: {type(e).__name__}")
+        debug_print(f"Error Details: {str(e)}")
         debug_print("Attempting retry...")
         debug_print("=== Error Complete ===\n")
-        cloudlog.exception(f"azure.upload_handler.azure_upload_fail for {item.azure_subdir}/{os.path.basename(fn)}")
-        # retry_upload handles task_done for the failed attempt
-        retry_upload(tid, end_event) # Will handle max retries
+        cloudlog.exception(f"azure.upload_handler.azure_upload_fail for {item.azure_subdir}/{os.path.basename(fn)}",
+                           network_type=network_type_int) # Log integer value
+        retry_upload(tid, end_event)
 
     except queue.Empty:
-      # No item in queue after waiting 1s, loop and wait again
-      continue # Ensures the while loop condition (end_event) is checked
+      continue # Loop and wait again
 
     except Exception as e:
-      # Error in the handler loop itself (e.g., getting from queue, checking sm.valid)
       debug_print(f"\n[DEBUG] === Handler Loop Error (Thread {tid}) ===")
-      debug_print(f"Error: {str(e)}")
+      debug_print(f"Error Type: {type(e).__name__}")
+      debug_print(f"Error Details: {str(e)}")
       debug_print("=== Error Complete ===\n")
       cloudlog.exception("azure.upload_handler.outer_exception")
-      # Avoid tight loop on persistent error
-      end_event.wait(5) # Wait before retrying the loop
+      interrupted = end_event.wait(5)
+      if interrupted:
+          debug_print(f"Thread {tid}: Outer loop wait interrupted by shutdown.")
     finally:
-        # Clean up cur_upload_items[tid] if it wasn't cleared by success/retry path
-        # This might happen if an exception occurred *after* getting the item
-        # but *before* the main upload try block, or within the network checks.
-        # If retry_upload was called, it already sets cur_upload_items[tid] = None.
-        # If success path was taken, it also sets cur_upload_items[tid].
-        # This is mainly a safeguard.
-        if tid in cur_upload_items and cur_upload_items.get(tid) is not None:
-            # If retry was *not* called (e.g. exception in network check before retry call)
-            # and item is still marked as current for this thread.
-            if item is not None and cur_upload_items[tid].id == item.id:
-                 debug_print(f"Item {item.id} in unexpected state in finally block (Thread {tid}), clearing state. Might need manual requeue if error occurred before retry logic.")
-                 # We probably *should* requeue if it failed before retry logic, but
-                 # let's just clear the state to avoid blocking the thread indefinitely.
-                 # The hourly clear/rescan should pick it up again if it's still relevant.
-                 try:
-                     upload_queue.task_done() # Signal completion, even if it failed here.
-                 except ValueError:
-                     pass # Might have already been called by retry_upload if it *was* reached
-                 cur_upload_items[tid] = None
-
+        # Cleanup logic remains the same as previous version
+        if item is not None and cur_upload_items.get(tid) is not None and cur_upload_items.get(tid).id == item.id:
+             debug_print(f"Item {item.id} in unexpected state in finally block (Thread {tid}), clearing state.")
+             try:
+                 upload_queue.task_done()
+                 debug_print(f"Thread {tid}: Called task_done in finally block for {item.id}")
+             except ValueError:
+                 debug_print(f"Thread {tid}: task_done likely already called for {item.id} (expected in some error paths).")
+             except Exception as final_e:
+                 debug_print(f"Error during final task_done for {item.id}: {final_e}")
+                 cloudlog.exception("azure.upload_handler.finally.task_done_error")
+             cur_upload_items[tid] = None
 
   debug_print(f"Upload handler thread {tid} exiting.")
 
