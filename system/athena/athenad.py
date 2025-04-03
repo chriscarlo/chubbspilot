@@ -226,15 +226,15 @@ def _do_upload_azure(upload_item: UploadItem):
 @dataclass
 class UploadItem:
   path: str
-  url: str = ""                # Not used for Azure; provide default
-  headers: dict[str, str] = field(default_factory=dict) # Not used for Azure; provide default
-  created_at: int # Timestamp (ms) related to the item (e.g., source dir creation)
-  id: str | None           # Unique ID for tracking (e.g., "azure|src_dir|filename")
+  created_at: int  # required
+  id: str | None   # required
+  url: str = ""
+  headers: dict[str, str] = field(default_factory=dict)
   retry_count: int = 0
   current: bool = False
-  progress: float = 0.0    # Set to 1.0 on success or definite skip
-  allow_cellular: bool = True # Default to allowing cellular for these logs
-  azure_subdir: str | None = None # Azure-specific target subdirectory name (e.g., "YYMMDD--original_dir")
+  progress: float = 0.0
+  allow_cellular: bool = True
+  azure_subdir: str | None = None
 
   @classmethod
   def from_dict(cls, d: dict) -> UploadItem:
