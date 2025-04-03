@@ -15,7 +15,7 @@ import sys
 import tempfile
 import threading
 import time
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta
 from functools import partial
 from queue import Queue
