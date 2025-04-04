@@ -89,7 +89,16 @@ class HKGLongitudinalTuning:
         self.transitioning = False
 
   def make_jerk(self, desired_accel_plan, current_acc, radar_state, jerk_limits, accel_limits, dt):
-    desired_accel = float(desired_accel_plan)
+    # Convert to float and handle any access errors
+    if isinstance(desired_accel_plan, (int, float)):
+      desired_accel = float(desired_accel_plan)
+    else:
+      try:
+        desired_accel = float(desired_accel_plan)
+      except (AttributeError, TypeError, ValueError):
+        # If we can't get the value, use the last known acceleration
+        desired_accel = self.accel_last
+
     min_accel, max_accel = accel_limits
     ttc = None
     closing_speed = 0.0
@@ -140,7 +149,14 @@ class HKGLongitudinalTuning:
   def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles) -> float:
     if self.handle_cruise_cancel(CS):
       return 0.0
-    accel = actuators.accel
+
+    # Safely get accel value
+    try:
+      accel = actuators.accel
+    except (AttributeError, TypeError):
+      # Default to last known acceleration or 0.0
+      accel = self.accel_last
+
     return float(np.clip(accel, self.car_config.accel_limits[0],
                          min(frogpilot_toggles.max_desired_acceleration, self.car_config.accel_limits[1])))
 
@@ -176,6 +192,7 @@ class HKGLongitudinalController:
     self.jerk_lower_limit = 0.0
     self.cb_upper = 0.0
     self.cb_lower = 0.0
+    self._jerk_limited_accel = 0.0
 
   def apply_tune(self, CP: car.CarParams):
     if self.param("HKGtuning"):
@@ -212,7 +229,13 @@ class HKGLongitudinalController:
       accel_limits = (COMFORT_DECEL, self.tuning.car_config.accel_limits[1])
       dt = DT_CTRL
 
-      desired_accel = actuators.accel
+      # Safely get desired_accel
+      try:
+        desired_accel = actuators.accel
+      except (AttributeError, TypeError):
+        # Default to current acceleration or 0
+        desired_accel = CS.out.aEgo if hasattr(CS.out, 'aEgo') else 0.0
+
       current_acc = CS.out.aEgo
 
       # Fix: actually use the jerk-limited accel instead of discarding it
@@ -223,7 +246,11 @@ class HKGLongitudinalController:
                                                  accel_limits,
                                                  dt)
       # Update the actuators object so future code sees the jerk-limited accel
-      actuators.accel = jerk_limited_accel
+      try:
+        actuators.accel = jerk_limited_accel
+      except (AttributeError, TypeError):
+        # If we can't directly set the attribute, store it for later use
+        self._jerk_limited_accel = jerk_limited_accel
 
       self.jerk_upper_limit = jerk_limits[1]
       self.jerk_lower_limit = jerk_limits[0]
@@ -241,6 +268,12 @@ class HKGLongitudinalController:
   def calculate_accel(self, actuators: car.CarControl.Actuators,
                       CS: car.CarState,
                       frogpilot_toggles) -> float:
+    # Try to get accel from actuators, fall back to stored value if needed
+    try:
+      accel_value = actuators.accel
+    except (AttributeError, TypeError):
+      accel_value = getattr(self, '_jerk_limited_accel', 0.0)
+
     if Params().get_bool("HKGBraking") and self.tuning is not None:
       accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
     elif Params().get_bool("HKGBraking") and self.tuning is not None and frogpilot_toggles.sport_plus:
@@ -250,12 +283,12 @@ class HKGLongitudinalController:
                             min(frogpilot_toggles.max_desired_acceleration,
                                 get_max_allowed_accel(CS.out.vEgo))))
     elif frogpilot_toggles.sport_plus:
-      accel = float(np.clip(actuators.accel,
+      accel = float(np.clip(accel_value,
                             CarControllerParams.ACCEL_MIN,
                             min(frogpilot_toggles.max_desired_acceleration,
                                 get_max_allowed_accel(CS.out.vEgo))))
     else:
-      accel = float(np.clip(actuators.accel,
+      accel = float(np.clip(accel_value,
                             CarControllerParams.ACCEL_MIN,
                             min(frogpilot_toggles.max_desired_acceleration,
                                 CarControllerParams.ACCEL_MAX)))
