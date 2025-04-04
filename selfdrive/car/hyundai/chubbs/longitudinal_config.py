@@ -338,7 +338,7 @@ CAR_SPECIFIC_CONFIGS = {
     vego_starting=0.35,
     stopping_decel_rate=0.25,
     start_accel=2.8,
-    jerk_limits=(1.5, 5.0),
+    jerk_limits=(0.5, 5.0),
     brake_response=(1.0, 1.5, 2.25, 3.5),
     accel_limits=(-6.0, 5.0),
   ),
