@@ -39,13 +39,15 @@ def get_max_accel(v_ego):
 #############################
 def get_coast_accel(pitch):
   """
-  Returns coast acceleration based on pitch, but applies a small dead zone
-  around zero pitch so it doesn't constantly force decel on flat ground.
+  Returns coast acceleration based on pitch.
+  FIXED: Removed constant negative bias and increased dead zone to prevent unwanted deceleration.
   """
-  # If pitch is close to zero, return 0.0 to avoid permanent negative accel
-  if abs(pitch) < 0.01:
-    return 0.0
-  return np.sin(pitch) * -5.65 - 0.3
+  # Wider dead zone to prevent constant deceleration on slightly sloped but effectively flat roads
+  if abs(pitch) < 0.025:  # Increased from 0.01
+    return 0.0  # Zero acceleration on flat ground
+
+  # Calculate acceleration from pitch, removed the constant -0.3 bias
+  return np.sin(pitch) * -5.65  # Removed the -0.3 term that caused permanent deceleration
 #############################
 
 def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
