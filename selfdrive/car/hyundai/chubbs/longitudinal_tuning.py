@@ -44,7 +44,7 @@ class HKGLongitudinalTuning:
 
   def _setup_controllers(self) -> None:
     # Instantiate LongitudinalMpc so that self.mpc.mode can be set properly
-    self.mpc = LongitudinalMpc(self.CP)
+    self.mpc = LongitudinalMpc(mode='acc')
     self.long_control = LongControl(self.CP)
     self.sm = messaging.SubMaster(['controlsState'])
     self.DT_CTRL = DT_CTRL
