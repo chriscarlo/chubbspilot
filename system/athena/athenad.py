@@ -148,6 +148,51 @@ def ensure_azure_directory_exists(conn_str, share_name, azure_path):
             cloudlog.exception(f"Azure ensure_azure_directory_exists error for {current_path}", exc_info=e)
             raise
 
+def list_azure_directories(conn_str, share_name, dir_path):
+    """ Lists directories within a specified Azure File Share path. """
+    if ShareDirectoryClient is None:
+        raise Exception("Azure SDK not available for listing directories.")
+    try:
+        dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, dir_path)
+        # list_directories_and_files returns an iterator of dicts {'name': '...', 'is_directory': True/False}
+        return [item['name'] for item in dir_client.list_directories_and_files() if item['is_directory']]
+    except ResourceNotFoundError:
+        debug_print(f"Azure list directories: Path not found - {dir_path}")
+        return [] # Path doesn't exist, so no directories within it
+    except Exception as e:
+        debug_print(f"Azure list directories: Error listing {dir_path} - {str(e)}")
+        cloudlog.warning(f"Azure directory listing failed for {dir_path}: {str(e)}")
+        raise # Propagate other errors
+
+def rename_azure_directory(conn_str, share_name, old_dir_path, new_dir_path):
+    """ Renames a directory in Azure File Share. """
+    if ShareDirectoryClient is None:
+        raise Exception("Azure SDK not available for renaming directories.")
+    try:
+        dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, old_dir_path)
+        # Ensure the new parent directory exists (rename requires it)
+        new_parent_path = os.path.dirname(new_dir_path)
+        if new_parent_path and new_parent_path != '.': # Handle case where new path is in root
+             ensure_azure_directory_exists(conn_str, share_name, new_parent_path)
+
+        debug_print(f"Attempting to rename Azure directory from '{old_dir_path}' to '{new_dir_path}'")
+        # The destination path for rename_directory is the *full new path*
+        dir_client.rename_directory(new_dir_path)
+        debug_print(f"Successfully renamed Azure directory: '{old_dir_path}' -> '{new_dir_path}'")
+        return True
+    except ResourceNotFoundError:
+        debug_print(f"Azure rename directory: Source directory not found - {old_dir_path}")
+        return False # Source doesn't exist, cannot rename
+    except ResourceExistsError:
+        debug_print(f"Azure rename directory: Target directory already exists - {new_dir_path}")
+        # This could happen if rename was interrupted or run twice. Treat as success?
+        # Let's return True, assuming the desired state is achieved.
+        return True
+    except Exception as e:
+        debug_print(f"Azure rename directory: Error renaming {old_dir_path} to {new_dir_path} - {str(e)}")
+        cloudlog.warning(f"Azure directory rename failed for {old_dir_path} -> {new_dir_path}: {str(e)}")
+        raise # Propagate other errors
+
 def _do_upload_azure(upload_item: UploadItem):
   """ Upload a file to Azure File Share. Creates target directory. Skips if exists. """
   conn_str = get_azure_connection_string()
@@ -674,46 +719,95 @@ def realdata_handler(end_event: threading.Event) -> None:
         processed_dirs.add(subdir)
         found_count += 1
         creation_dt = datetime.fromtimestamp(creation_time_ts)
-        formatted_date = creation_dt.strftime("%y%m%d")
-        azure_target_subdir = f"{formatted_date}--{subdir}"
+        formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
+        azure_target_subdir_new_format = f"{formatted_date_time}--{subdir}"
+        segment_name = subdir # The part after '--' is just the original subdir name
 
+        # --- Check and Rename Logic ---
+        conn_str = get_azure_connection_string()
+        rename_performed_or_exists = False
+        if conn_str:
+            try:
+                azure_base_log_path = AZURE_BASE_DIR # e.g., "rlogs"
+                # List directories directly under AZURE_BASE_DIR
+                existing_azure_dirs = list_azure_directories(conn_str, AZURE_SHARE_NAME, azure_base_log_path)
+
+                old_format_dir_to_rename = None
+                for azure_dir in existing_azure_dirs:
+                    if '--' in azure_dir:
+                        prefix, existing_segment = azure_dir.split('--', 1)
+                        if existing_segment == segment_name:
+                            # Found a potential match based on segment name
+                            full_old_path = f"{azure_base_log_path}/{azure_dir}"
+                            full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
+                            if full_old_path != full_new_path:
+                                # It's a different prefix, likely the old format
+                                old_format_dir_to_rename = full_old_path
+                                break # Found the one we need to rename
+                            else:
+                                # Directory with the *new* format already exists, skip upload/rename
+                                debug_print(f"Directory {full_new_path} already exists with new format, skipping.")
+                                rename_performed_or_exists = True
+                                break
+
+                if old_format_dir_to_rename and not rename_performed_or_exists:
+                    full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
+                    debug_print(f"Found old format directory '{old_format_dir_to_rename}', attempting rename to '{full_new_path}'")
+                    if rename_azure_directory(conn_str, AZURE_SHARE_NAME, old_format_dir_to_rename, full_new_path):
+                        cloudlog.event("azure.realdata_handler.renamed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
+                        rename_performed_or_exists = True # Rename successful
+                    else:
+                        # Rename failed (e.g., source gone, permissions), log and proceed to upload
+                        cloudlog.warning("azure.realdata_handler.rename_failed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
+
+            except Exception as e:
+                # If listing/renaming fails, log it but fall back to standard upload logic
+                cloudlog.exception("azure.realdata_handler.rename_check_exception", segment=segment_name)
+                debug_print(f"Error during Azure rename check for {segment_name}: {e}")
+        # --- End Check and Rename Logic ---
+
+        # If rename was successful or dir already exists with new format, skip queueing
+        if rename_performed_or_exists:
+            continue # Move to the next directory in the local scan
+
+        # --- Original Queueing Logic ---
         files_to_upload = ['rlog', 'qlog', 'qcamera.ts']
         for filename in files_to_upload:
-          local_path = os.path.join(subdir_path, filename)
-          if not os.path.isfile(local_path):
-            continue
+            local_path = os.path.join(subdir_path, filename)
+            if not os.path.isfile(local_path):
+                continue
 
-          upload_id = f"azure|{subdir}|{filename}"
+            upload_id = f"azure|{subdir}|{filename}"
 
-          # Check if already active or queued more carefully
-          is_active_or_queued = False
-          # Check active uploads (thread-safe access via copy)
-          current_items_copy = dict(cur_upload_items)
-          if any(ci and ci.id == upload_id for ci in current_items_copy.values()):
-              is_active_or_queued = True
-          # Check queue (thread-safe access via lock)
-          if not is_active_or_queued:
-              with upload_queue.mutex:
-                  if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
-                      is_active_or_queued = True
+            # Check if already active or queued more carefully
+            is_active_or_queued = False
+            # Check active uploads (thread-safe access via copy)
+            current_items_copy = dict(cur_upload_items)
+            if any(ci and ci.id == upload_id for ci in current_items_copy.values()):
+                is_active_or_queued = True
+            # Check queue (thread-safe access via lock)
+            if not is_active_or_queued:
+                with upload_queue.mutex:
+                    if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
+                        is_active_or_queued = True
 
-          if is_active_or_queued:
-            # debug_print(f"Item {upload_id} already queued or active, skipping.")
-            continue
+            if is_active_or_queued:
+                # debug_print(f"Item {upload_id} already queued or active, skipping.")
+                continue
 
-          # Queue the upload item
-          item = UploadItem(
-            path=local_path,
-            created_at=int(creation_time_ts * 1000),
-            id=upload_id,
-            azure_subdir=azure_target_subdir,
-            allow_cellular=True
-          )
-          debug_print(f"Queueing item: {item.id} -> Azure: {azure_target_subdir}/{filename}")
-          upload_queue.put_nowait(item)
-          queued_count += 1
-          # Cache periodically or just let handler manage it? Let handler manage.
-          # UploadQueueCache.cache(upload_queue) # Potentially frequent writes
+            # Queue the upload item
+            item = UploadItem(
+                path=local_path,
+                created_at=int(creation_time_ts * 1000),
+                id=upload_id,
+                azure_subdir=azure_target_subdir_new_format, # Use the new format var
+                allow_cellular=True
+            )
+            debug_print(f"Queueing item: {item.id} -> Azure: {azure_target_subdir_new_format}/{filename}")
+            upload_queue.put_nowait(item)
+            queued_count += 1
+            # Cache periodically or just let handler manage it? Let handler manage.
+            # UploadQueueCache.cache(upload_queue) # Potentially frequent writes
 
       debug_print(f"Scan complete. Found {found_count} recent directories, queued {queued_count} new file uploads.")
       # Cache once after a full scan cycle if items were added
