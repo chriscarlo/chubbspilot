@@ -100,7 +100,7 @@ def manager_init() -> None:
   params.put("GitCommit", build_metadata.openpilot.git_commit)
   params.put("GitCommitDate", build_metadata.openpilot.git_commit_date)
   params.put("GitBranch", build_metadata.channel)
-  params.put("GitRemote", build_metadata.openpilot.git_origin)
+  params.put("GitRemote", build_metadata.openpilot.git_normalized_origin)
   params.put_bool("IsTestedBranch", build_metadata.tested_channel)
   params.put_bool("IsReleaseBranch", build_metadata.release_channel)
 
@@ -155,7 +155,7 @@ def manager_thread() -> None:
 
   ignore: list[str] = []
   if params.get("DongleId", encoding='utf8') in (None, UNREGISTERED_DONGLE_ID):
-    ignore += ["manage_athenad", "uploader"]
+    ignore += ["uploader"]  # Only ignore uploader, allow manage_athenad to run
   if os.getenv("NOBOARD") is not None:
     ignore.append("pandad")
   ignore += [x for x in os.getenv("BLOCK", "").split(",") if len(x) > 0]
