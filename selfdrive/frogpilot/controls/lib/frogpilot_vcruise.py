@@ -75,7 +75,7 @@ class FrogPilotVCruise:
 
     # Get targets from various controllers
     mtsc_target = self.get_mtsc_target(carControl, carState, map_turn_speed_controller, mtsc_curvature_check, v_cruise, v_ego, frogpilot_toggles)
-    slc_target = self.get_slc_target(carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles)
+    slc_target = self.get_slc_target(carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, v_ego_diff, frogpilot_toggles)
     vtsc_target = self.get_vtsc_target(carControl, frogpilot_toggles, v_cruise, v_ego)
 
     # Combine targets to get final cruise speed
@@ -140,7 +140,7 @@ class FrogPilotVCruise:
 
     return self.mtsc_target
 
-  def get_slc_target(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles):
+  def get_slc_target(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, v_ego_diff, frogpilot_toggles):
     # If we need acceleration and are under SLC speed + offset, prevent SLC from limiting acceleration
     need_accel = v_cruise > v_ego + 2.0
 
