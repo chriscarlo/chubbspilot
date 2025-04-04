@@ -1,6 +1,7 @@
 import numpy as np
 from openpilot.common.realtime import DT_MDL   # model loop time constant (~0.05s)
 from openpilot.common.conversions import Conversions as CV
+from openpilot.common.numpy_fast import clip
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, params_memory
 from openpilot.selfdrive.frogpilot.controls.lib.map_turn_speed_controller import MapTurnSpeedController
 from openpilot.selfdrive.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
@@ -74,7 +75,7 @@ class FrogPilotVCruise:
 
     # Get targets from various controllers
     mtsc_target = self.get_mtsc_target(carControl, carState, map_turn_speed_controller, mtsc_curvature_check, v_cruise, v_ego, frogpilot_toggles)
-    slc_target = self.get_slc_target(carControl, carState, controlsState, frogpilotCarControl, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles)
+    slc_target = self.get_slc_target(carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles)
     vtsc_target = self.get_vtsc_target(carControl, frogpilot_toggles, v_cruise, v_ego)
 
     # Combine targets to get final cruise speed
@@ -139,7 +140,7 @@ class FrogPilotVCruise:
 
     return self.mtsc_target
 
-  def get_slc_target(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles):
+  def get_slc_target(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, speed_limit_controller, v_cruise, v_cruise_cluster, v_ego, v_ego_cluster, frogpilot_toggles):
     # If we need acceleration and are under SLC speed + offset, prevent SLC from limiting acceleration
     need_accel = v_cruise > v_ego + 2.0
 
