@@ -5,11 +5,13 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
 from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
+from openpilot.selfdrive.car.hyundai.values import CarControllerParams
 from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
-LongCtrlState = car.CarControl.Actuators.LongControlState
+# Use the actual type for annotation
+# We don't need a separate alias if using the full type below
+# LongCtrlStateType = car.CarControl.Actuators.LongControlState
 
 COMFORT_DECEL = -2.5
 MAX_BRAKE_DECEL = -6.0
@@ -104,15 +106,6 @@ class HKGLongitudinalTuning:
 
     min_accel, max_accel = accel_limits
 
-    # CRITICAL FIX: Ensure the jerk limiter doesn't trap us in a low acceleration state
-    # If we're requesting more acceleration and current acceleration is low,
-    # we need to break out of any potential deadlock
-    accel_delta = desired_accel - current_acc
-    if accel_delta > 0 and current_acc < 0.3:  # If we want to accelerate from low/negative accel
-      # Apply direct acceleration with reduced jerk limiting
-      # This prevents the car from getting stuck in a state where it can't accelerate
-      return min(desired_accel, max_accel)  # Skip jerk limiting entirely when needed
-
     # For normal deceleration or when already accelerating, apply normal jerk limits
     ttc = None
     closing_speed = 0.0
@@ -190,21 +183,8 @@ def calculate_limited_accel(current_accel: float, desired_accel: float,
   desired_accel = max(min_accel, min(desired_accel, max_accel))
   accel_delta = desired_accel - current_accel
 
-  # CRITICAL FIX: Detect and handle acceleration deadlock
-  # If we're trying to accelerate from a very low or negative acceleration state,
-  # we need more aggressive jerk limits to escape the deadlock
-  if accel_delta > 0 and current_accel < 0.2:
-    # When we need to accelerate from low/negative acceleration:
-    # 1. Increase jerk limit to break free from the deadlock
-    # 2. Ensure a minimum acceleration step is applied
-    # This guarantees we can always start accelerating
-    max_delta = max(jerk_limits[1] * 3.0 * dt, 0.2)  # Always allow at least 0.2 m/s² increase
-
-    # Ensure we make meaningful progress toward desired acceleration
-    accel_delta = max(accel_delta, min(0.5, accel_delta))  # At least 0.5 m/s² or requested delta
-  else:
-    # Normal jerk limiting for deceleration or when already accelerating
-    max_delta = (-jerk_limits[0] if accel_delta < 0 else jerk_limits[1]) * dt
+  # Standard jerk calculation
+  max_delta = (-jerk_limits[0] if accel_delta < 0 else jerk_limits[1]) * dt
 
   # Apply the appropriate limit
   accel_delta = np.clip(accel_delta, -abs(max_delta), abs(max_delta))
@@ -216,7 +196,7 @@ def calculate_limited_accel(current_accel: float, desired_accel: float,
     # ensure we get at least a small positive value to prevent deadlock
     result = 0.1
 
-  return max(min_accel, min(result, max_accel))
+  return float(max(min_accel, min(result, max_accel)))
 
 class HKGLongitudinalController:
   @staticmethod
@@ -235,9 +215,11 @@ class HKGLongitudinalController:
     self._jerk_limited_accel = 0.0
 
   def apply_tune(self, CP: car.CarParams):
-    if self.param("HKGtuning"):
+    # Check if tuning exists before accessing its methods
+    if self.tuning is not None and self.param("HKGtuning"):
       self.tuning.apply_tune(CP)
     else:
+      # Default values if tuning is None or HKGtuning param is false
       CP.vEgoStopping = 0.5
       CP.vEgoStarting = 0.1
       CP.startingState = True
@@ -262,7 +244,8 @@ class HKGLongitudinalController:
 
   def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators,
                              CS: car.CarState,
-                             long_control_state: LongCtrlState,
+                             # Use the fully qualified type for the hint
+                             long_control_state: car.CarControl.Actuators.LongControlState,
                              radar_state) -> JerkOutput:
     if self.tuning is not None:
       jerk_limits = (3.0, 2.0)
@@ -297,7 +280,8 @@ class HKGLongitudinalController:
       self.cb_upper = 0.0
       self.cb_lower = 0.0
     else:
-      jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
+      # Use the imported type for comparison (car.CarControl.Actuators.LongControlState.pid)
+      jerk_limit = 3.0 if long_control_state == car.CarControl.Actuators.LongControlState.pid else 1.0
       self.jerk_upper_limit = jerk_limit
       self.jerk_lower_limit = jerk_limit
       self.cb_upper = 0.0
@@ -333,9 +317,10 @@ class HKGLongitudinalController:
       # Apply forced acceleration to overcome the issue
       forced_accel = min(0.5, (v_cruise - v_ego) / 4.0)  # Proportional to speed difference
       # Cap forced acceleration for safety
+      # Access car_config through self.tuning
+      max_accel_limit = self.tuning.car_config.accel_limits[1] if self.tuning is not None else CarControllerParams.ACCEL_MAX
       return float(np.clip(forced_accel, 0.1,
-                         min(frogpilot_toggles.max_desired_acceleration,
-                             self.car_config.accel_limits[1] if self.tuning is not None else CarControllerParams.ACCEL_MAX)))
+                         min(frogpilot_toggles.max_desired_acceleration, max_accel_limit)))
 
     # If we're at low speed but set speed is higher and we're not accelerating
     is_potential_deadlock = (
@@ -361,22 +346,28 @@ class HKGLongitudinalController:
                                CarControllerParams.ACCEL_MAX)))
 
     # Normal behavior when not in deadlock
-    if Params().get_bool("HKGBraking") and self.tuning is not None:
-      accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
-    elif Params().get_bool("HKGBraking") and self.tuning is not None and frogpilot_toggles.sport_plus:
-      accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
-      accel = float(np.clip(accel,
-                            CarControllerParams.ACCEL_MIN,
+    if self.tuning is not None and Params().get_bool("HKGBraking"):
+      # Use jerk-limited accel_value, apply tuning limits
+      accel = float(np.clip(accel_value,
+                            self.tuning.car_config.accel_limits[0], # Use tuned min accel
                             min(frogpilot_toggles.max_desired_acceleration,
-                                get_max_allowed_accel(CS.out.vEgo))))
+                                self.tuning.car_config.accel_limits[1]))) # Use tuned max accel
+      if frogpilot_toggles.sport_plus:
+        # Further clip for sport+ mode using dynamic max accel
+         accel = float(np.clip(accel,
+                             CarControllerParams.ACCEL_MIN, # Use standard min for sport+
+                             min(frogpilot_toggles.max_desired_acceleration,
+                                 get_max_allowed_accel(CS.out.vEgo))))
     elif frogpilot_toggles.sport_plus:
+      # Sport+ without HKGBraking/tuning
       accel = float(np.clip(accel_value,
                             CarControllerParams.ACCEL_MIN,
                             min(frogpilot_toggles.max_desired_acceleration,
                                 get_max_allowed_accel(CS.out.vEgo))))
     else:
+      # Standard ACC without HKGBraking/tuning or sport+
       accel = float(np.clip(accel_value,
                             CarControllerParams.ACCEL_MIN,
                             min(frogpilot_toggles.max_desired_acceleration,
-                                CarControllerParams.ACCEL_MAX)))
+                                CarControllerParams.ACCEL_MAX))) # Use standard max accel
     return accel
