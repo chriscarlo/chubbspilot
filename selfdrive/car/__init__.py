@@ -294,8 +294,7 @@ class PlatformConfig(Freezable):
 
 class PlatformsType(EnumType):
   def __new__(metacls, cls, bases, classdict, *, boundary=None, _simple=False, **kwds):
-    # Iterate directly over the list of member names
-    for key in classdict._member_names:
+    for key in classdict._member_names.keys():
       cfg: PlatformConfig = classdict[key]
       cfg.platform_str = key
       cfg.freeze()
