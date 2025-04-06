@@ -17,12 +17,12 @@ from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUIS
 from openpilot.common.swaglog import cloudlog
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
-A_CRUISE_MIN = -6.0
-A_CRUISE_MAX_VALS = [3.1, 2.0, 1.2, 0.8]
+A_CRUISE_MIN = -1.2
+A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.5
-MIN_ALLOW_THROTTLE_SPEED = 0.5
+MIN_ALLOW_THROTTLE_SPEED = 2.5
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
@@ -34,26 +34,14 @@ LEAD_KALMAN_SPEED, LEAD_KALMAN_ACCEL = 0, 1
 def get_max_accel(v_ego):
   return interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
-#############################
-# MINIMAL CHANGE HERE:
-#############################
 def get_coast_accel(pitch):
-  """
-  Returns coast acceleration based on pitch.
-  FIXED: Removed constant negative bias and increased dead zone to prevent unwanted deceleration.
-  """
-  # Wider dead zone to prevent constant deceleration on slightly sloped but effectively flat roads
-  if abs(pitch) < 0.025:  # Increased from 0.01
-    return 0.0  # Zero acceleration on flat ground
+  return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
-  # Calculate acceleration from pitch, removed the constant -0.3 bias
-  return np.sin(pitch) * -5.65  # Removed the -0.3 term that caused permanent deceleration
-#############################
 
 def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
   """
-  This function returns a limited long acceleration allowed, depending on the existing lateral acceleration.
-  This should avoid accelerating when losing the target in turns.
+  This function returns a limited long acceleration allowed, depending on the existing lateral acceleration
+  this should avoid accelerating when losing the target in turns
   """
   # FIXME: This function to calculate lateral accel is incorrect and should use the VehicleModel
   # The lookup table for turns should also be updated if we do this
@@ -62,6 +50,7 @@ def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
   a_x_allowed = math.sqrt(max(a_total_max ** 2 - a_y ** 2, 0.))
 
   return [a_target[0], min(a_target[1], a_x_allowed)]
+
 
 def get_accel_from_plan_classic(CP, speeds, accels, vEgoStopping):
   if len(speeds) == CONTROL_N:
@@ -83,6 +72,7 @@ def get_accel_from_plan_classic(CP, speeds, accels, vEgoStopping):
                  v_target_1sec < vEgoStopping)
   return a_target, should_stop
 
+
 def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
   if len(speeds) == CONTROL_N:
     v_now = speeds[0]
@@ -98,6 +88,7 @@ def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
   should_stop = (v_target < vEgoStopping and
                  v_target_1sec < vEgoStopping)
   return a_target, should_stop
+
 
 def lead_kf(v_lead: float, dt: float = 0.05):
   # Lead Kalman Filter params, calculating K from A, C, Q, R requires the control library.
@@ -121,6 +112,7 @@ def lead_kf(v_lead: float, dt: float = 0.05):
 
   kf = KF1D([[v_lead], [0.0]], A, C, K)
   return kf
+
 
 class Lead:
   def __init__(self):
@@ -163,6 +155,7 @@ class Lead:
     else:
       self.aLeadTau *= 0.9
 
+
 class LongitudinalPlanner:
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
     self.CP = CP
@@ -186,8 +179,8 @@ class LongitudinalPlanner:
   @staticmethod
   def parse_model(model_msg, model_error, v_ego, taco_tune):
     if (len(model_msg.position.x) == ModelConstants.IDX_N and
-        len(model_msg.velocity.x) == ModelConstants.IDX_N and
-        len(model_msg.acceleration.x) == ModelConstants.IDX_N):
+      len(model_msg.velocity.x) == ModelConstants.IDX_N and
+      len(model_msg.acceleration.x) == ModelConstants.IDX_N):
       x = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.position.x) - model_error * T_IDXS_MPC
       v = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.velocity.x) - model_error
       a = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.acceleration.x)
@@ -210,7 +203,7 @@ class LongitudinalPlanner:
       throttle_prob = 1.0
     return x, v, a, j, throttle_prob
 
-  def update(self, radarless_model, sm, frogpilot_toggles, pm):
+  def update(self, radarless_model, sm, frogpilot_toggles):
     self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
 
     if len(sm['carControl'].orientationNED) == 3:
@@ -226,7 +219,7 @@ class LongitudinalPlanner:
     long_control_off = sm['controlsState'].longControlState == LongCtrlState.off
     force_slow_decel = sm['controlsState'].forceDecel
 
-    # Reset current state when not engaged, or user is controlling speed
+    # Reset current state when not engaged, or user is controlling the speed
     reset_state = long_control_off if self.CP.openpilotLongitudinalControl else not sm['controlsState'].enabled
     # PCM cruise speed may be updated a few cycles later, check if initialized
     reset_state = reset_state or not v_cruise_initialized
@@ -244,7 +237,7 @@ class LongitudinalPlanner:
 
     if reset_state:
       self.v_desired_filter.x = v_ego
-      # Clip aEgo to cruise limits to prevent large accel jumps when becoming active
+      # Clip aEgo to cruise limits to prevent large accelerations when becoming active
       self.a_desired = clip(sm['carState'].aEgo, accel_limits[0], accel_limits[1])
 
     # Prevent divergence, smooth in current v_ego
@@ -257,8 +250,7 @@ class LongitudinalPlanner:
 
     if not self.allow_throttle:
       clipped_accel_coast = max(accel_coast, accel_limits_turns[0])
-      clipped_accel_coast_interp = interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2],
-                                          [accel_limits_turns[1], clipped_accel_coast])
+      clipped_accel_coast_interp = interp(v_ego, [MIN_ALLOW_THROTTLE_SPEED, MIN_ALLOW_THROTTLE_SPEED*2], [accel_limits_turns[1], clipped_accel_coast])
       accel_limits_turns[1] = min(accel_limits_turns[1], clipped_accel_coast_interp)
 
     if force_slow_decel:
@@ -269,37 +261,31 @@ class LongitudinalPlanner:
 
     if radarless_model:
       model_leads = list(sm['modelV2'].leadsV3)
+      # TODO lead state should be invalidated if its different point than the previous one
       lead_states = [self.lead_one, self.lead_two]
       for index in range(len(lead_states)):
         if len(model_leads) > index:
           distance_offset = max(frogpilot_toggles.increased_stopped_distance + min(10 - v_ego, 0), 0) if not sm['frogpilotCarState'].trafficModeActive else 0
           model_lead = model_leads[index]
-          lead_states[index].update(model_lead.x[0] - distance_offset, model_lead.y[0],
-                                    model_lead.v[0], model_lead.a[0], model_lead.prob)
+          lead_states[index].update(model_lead.x[0] - distance_offset, model_lead.y[0], model_lead.v[0], model_lead.a[0], model_lead.prob)
         else:
           lead_states[index].reset()
     else:
       self.lead_one = sm['radarState'].leadOne
       self.lead_two = sm['radarState'].leadTwo
 
-    self.mpc.set_weights(sm['frogpilotPlan'].accelerationJerk,
-                         sm['frogpilotPlan'].dangerJerk,
-                         sm['frogpilotPlan'].speedJerk,
-                         prev_accel_constraint,
-                         personality=sm['controlsState'].personality)
+    self.mpc.set_weights(sm['frogpilotPlan'].accelerationJerk, sm['frogpilotPlan'].dangerJerk, sm['frogpilotPlan'].speedJerk, prev_accel_constraint, personality=sm['controlsState'].personality)
     self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    self.mpc.update(self.lead_one, self.lead_two, sm['frogpilotPlan'].vCruise,
-                    x, v, a, j, radarless_model, sm['frogpilotPlan'].tFollow,
-                    sm['frogpilotCarState'].trafficModeActive,
-                    personality=sm['controlsState'].personality)
+    self.mpc.update(self.lead_one, self.lead_two, sm['frogpilotPlan'].vCruise, x, v, a, j, radarless_model, sm['frogpilotPlan'].tFollow,
+                    sm['frogpilotCarState'].trafficModeActive, personality=sm['controlsState'].personality)
 
     self.a_desired_trajectory_full = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.j_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC[:-1], self.mpc.j_solution)
 
-    # TODO: counter is only needed because radar is glitchy, remove once radar is gone
+    # TODO counter is only needed because radar is glitchy, remove once radar is gone
     self.fcw = self.mpc.crash_cnt > 2 and not sm['carState'].standstill
     if self.fcw:
       cloudlog.info("FCW triggered")
@@ -313,6 +299,7 @@ class LongitudinalPlanner:
     plan_send = messaging.new_message('longitudinalPlan')
 
     plan_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
+
     longitudinalPlan = plan_send.longitudinalPlan
     longitudinalPlan.modelMonoTime = sm.logMonoTime['modelV2']
     longitudinalPlan.processingDelay = (plan_send.logMonoTime / 1e9) - sm.logMonoTime['modelV2']
@@ -327,17 +314,11 @@ class LongitudinalPlanner:
     longitudinalPlan.fcw = self.fcw
 
     if classic_model:
-      a_target, should_stop = get_accel_from_plan_classic(
-        self.CP, longitudinalPlan.speeds, longitudinalPlan.accels,
-        vEgoStopping=frogpilot_toggles.vEgoStopping
-      )
+      a_target, should_stop = get_accel_from_plan_classic(self.CP, longitudinalPlan.speeds, longitudinalPlan.accels, vEgoStopping=frogpilot_toggles.vEgoStopping)
     else:
       action_t = self.CP.longitudinalActuatorDelay + DT_MDL
-      a_target, should_stop = get_accel_from_plan(
-        longitudinalPlan.speeds, longitudinalPlan.accels,
-        action_t=action_t, vEgoStopping=frogpilot_toggles.vEgoStopping
-      )
-
+      a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds, longitudinalPlan.accels,
+                                                  action_t=action_t, vEgoStopping=frogpilot_toggles.vEgoStopping)
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
     longitudinalPlan.allowBrake = True
