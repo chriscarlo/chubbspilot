@@ -326,8 +326,8 @@ class DesireHelper:
     right_clear = not getattr(carstate, 'rightBlindspot', False)
 
     # Also check front blindspots
-    left_clear = left_clear and not getattr(carstate, 'leftForwardBlindspot', False)
-    right_clear = right_clear and not getattr(carstate, 'rightForwardBlindspot', False)
+    # left_clear = left_clear and not getattr(carstate, 'leftForwardBlindspot', False)
+    # right_clear = right_clear and not getattr(carstate, 'rightForwardBlindspot', False)
 
     """
     # Use radar tracks to see if each lane is "advantageous"
