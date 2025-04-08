@@ -1,8 +1,5 @@
 from cereal import car
-import cereal.messaging as messaging
 from openpilot.common.conversions import Conversions as CV
-from openpilot.common.numpy_fast import clip, interp
-from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
 from opendbc.can.packer import CANPacker
 from openpilot.selfdrive.car import apply_driver_steer_torque_limits, common_fault_avoidance
@@ -10,6 +7,8 @@ from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAMERA_SCC_CAR
 from openpilot.selfdrive.car.interfaces import CarControllerBase
+from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
+
 from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -47,6 +46,25 @@ def process_hud_alert(enabled, fingerprint, hud_control):
 
 
 class CarController(CarControllerBase, HKGLongitudinalController):
+  """
+  CarController for Hyundai/Kia/Genesis vehicles.
+
+  NOTE ON CARSTATE COMPATIBILITY:
+  ------------------------------
+  OpenPilot has two different CarState object structures in different parts of the codebase:
+  1. A flat structure with direct attributes (used in modeld.py)
+  2. A nested structure with an 'out' property (used in CarController)
+
+  This can cause compatibility issues when sharing code between different modules.
+  Any code that interfaces with both systems should use accessor helpers (like in DesireHelper.get_attr)
+  to safely handle both formats.
+
+  For future development:
+  - Consider moving auto-passing logic to a location with consistent CarState format
+  - Or standardize on a single CarState format throughout the codebase
+  - When developing new features, consider where they should live to minimize these compatibility issues
+  """
+
   def __init__(self, dbc_name, CP, VM):
     self.CP = CP
     HKGLongitudinalController.__init__(self, CP)
@@ -61,9 +79,21 @@ class CarController(CarControllerBase, HKGLongitudinalController):
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
 
+    # Initialize DesireHelper for auto-passing blinker control
+    self.desire_helper = DesireHelper()
+
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     actuators = CC.actuators
     hud_control = CC.hudControl
+    accel = actuators.accel
+
+    # Update desire_helper for auto-passing feature
+    # lane_change_prob is normally calculated from model's desire predictions in modeld.py
+    # For auto-passing, exact value is less important as it only affects timing of lane change finishing
+    lane_change_prob = 0.0
+    self.desire_helper.update(CS, CC.latActive, lane_change_prob,
+                             frogpilotPlan=getattr(CS, 'frogpilotPlan', None),
+                             frogpilot_toggles=frogpilot_toggles)
 
     # steering torque
     new_steer = int(round(actuators.steer * self.params.STEER_MAX))
@@ -85,9 +115,13 @@ class CarController(CarControllerBase, HKGLongitudinalController):
     # Accel + Longitudinal control
 
     accel = self.calculate_accel(actuators, CS, frogpilot_toggles)
+
     stopping = actuators.longControlState == LongCtrlState.stopping
     set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
-    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState)
+
+    radar_state = None  # Initialize radar_state as None
+    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState, radar_state)
+
     # HUD messages
     sys_warning, sys_state, left_lane_warning, right_lane_warning = process_hud_alert(CC.enabled, self.car_fingerprint,
                                                                                       hud_control)
@@ -131,7 +165,15 @@ class CarController(CarControllerBase, HKGLongitudinalController):
 
       # blinkers
       if hda2 and self.CP.flags & HyundaiFlags.ENABLE_BLINKERS:
-        can_sends.extend(hyundaicanfd.create_spas_messages(self.packer, self.CAN, self.frame, CC.leftBlinker, CC.rightBlinker))
+        # Use desire_helper to get SPAS messages with auto-passing support
+        spas_messages = self.desire_helper.get_spas_blinker_messages(self.packer, self.CAN, self.frame, CS)
+
+        # Debug info - uncomment to log SPAS messages
+        # import json
+        # if CS.out.leftBlinker or CS.out.rightBlinker:
+        #   print(f"SPAS Messages: {json.dumps([str(msg) for msg in spas_messages])}")
+
+        can_sends.extend(spas_messages)
 
       if self.CP.openpilotLongitudinalControl:
         if hda2:

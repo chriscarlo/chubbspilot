@@ -3,9 +3,7 @@ import json
 import math
 
 from openpilot.common.conversions import Conversions as CV
-from openpilot.common.numpy_fast import clip
 
-from openpilot.common.numpy_fast import interp
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
 from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params_memory

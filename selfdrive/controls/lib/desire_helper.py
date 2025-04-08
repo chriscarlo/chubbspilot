@@ -5,6 +5,7 @@ from cereal import log
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
 from cereal.messaging import SubMaster
+from openpilot.selfdrive.car.hyundai import hyundaicanfd
 
 LaneChangeState = log.LaneChangeState
 LaneChangeDirection = log.LaneChangeDirection
@@ -18,7 +19,7 @@ AUTO_PASS_SPEED_MIN   = 40.0 * CV.MPH_TO_MS   # For auto‑passing
 
 # Advantage threshold: if the lead in the adjacent lane is not at least 2 mph faster,
 # no point in changing lanes (to avoid worthless merges).
-SPEED_DIFF_THRESHOLD = 2.0 * CV.MPH_TO_MS
+SPEED_DIFF_THRESHOLD = 5.0 * CV.MPH_TO_MS
 
 # Desire mappings
 DESIRES = {
@@ -299,7 +300,6 @@ class DesireHelper:
       - Must have a slower lead (by >2mph)
       - Must be above AUTO_PASS_SPEED_MIN
       - Not already changing lanes or blinking
-      - Check the adjacent lanes for advantage
       - If left is good, pick left; else if right is good, pick right
     """
     if not (frogpilot_toggles.auto_passing and lateral_active):
@@ -329,7 +329,9 @@ class DesireHelper:
     left_clear = left_clear and not getattr(carstate, 'leftForwardBlindspot', False)
     right_clear = right_clear and not getattr(carstate, 'rightForwardBlindspot', False)
 
+    """
     # Use radar tracks to see if each lane is "advantageous"
+    # Need to figure out wtf is wrong with radar tracks and front mando radar first 4/7/25
     if self.sm.valid['liveTracks'] and (self.v_lead > 0.0):
       from_radar = self.sm['liveTracks']
       current_lead_speed = self.v_lead
@@ -353,6 +355,7 @@ class DesireHelper:
           current_lead_speed,
           lead_id
         )
+    """
 
     # Also check lane detection if needed
     if frogpilot_toggles.lane_detection:
@@ -379,8 +382,21 @@ class DesireHelper:
 
   def get_spas_blinker_messages(self, packer, CAN, frame, carstate):
     """
-    Still no physical blinkers: return empty.
+    Generate SPAS blinker messages for turn signals.
+    ONLY used for automated lane changes through auto-passing,
+    NEVER for driver-initiated blinker activations.
     """
+    # Only send SPAS messages when auto-passing is active
+    if self.auto_passing_active:
+      # Determine blinker state based on auto-passing direction
+      left_blinker = (self.auto_passing_direction == LaneChangeDirection.left)
+      right_blinker = (self.auto_passing_direction == LaneChangeDirection.right)
+
+      # Generate SPAS messages for auto-passing
+      if left_blinker or right_blinker:
+        return hyundaicanfd.create_spas_messages(packer, CAN, frame, left_blinker, right_blinker)
+
+    # Empty list when not auto-passing
     return []
 
 
