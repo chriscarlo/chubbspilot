@@ -346,7 +346,8 @@ class VisionTurnSpeedController:
         map_safe_speeds = np.full(n, 70.0) # Default to high speed if no map profile
         if map_speed_profile is not None:
             map_dist, map_speeds = map_speed_profile
-            if len(map_dist) > 1 and len(map_speeds) > 1:
+            # Check if both map_dist and map_speeds are valid arrays before using them
+            if map_dist is not None and map_speeds is not None and len(map_dist) > 1 and len(map_speeds) > 1:
                 # Use numpy interp: interp(x_new, x_existing, y_existing)
                 # Ensure map speeds extend far enough, or handle extrapolation
                 # np.interp handles points outside range by using boundary values
