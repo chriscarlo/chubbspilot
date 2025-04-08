@@ -7,6 +7,7 @@ import numpy as np
 
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.params import Params
+from openpilot.common.numpy_fast import clip, interp
 
 # Import new mapd_py components
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import reader
@@ -259,38 +260,78 @@ class ChauffeurMtsc:
         """
         Main update loop for Chauffeur MTSC.
         Reads GPS, updates map path, calculates curvature/speed profile.
-        Now accepts turn_aggressiveness.
+        Also extracts and publishes map speed limit data.
         Returns tuple: (distance_profile_m, speed_profile_mps)
                       or (None, None) if map data unavailable or path invalid.
         """
         # Get current GPS position
         pos = self._get_current_position()
         if pos is None:
-            # print("MTSC: No valid GPS position.")
-            self.current_way_result = None # Reset state if GPS lost
+            # If GPS is lost, clear published speed limits
+            self.params_memory.put_float("MapSpeedLimit", 0.0)
+            self.params_memory.put("NextMapSpeedLimit", "{}")
+            self.current_way_result = None
             self.next_ways = []
             self.distance_profile = np.array([])
             self.speed_profile = np.array([])
             return None, None
 
-        # Update the map path if needed (e.g., new area, significant position change)
-        # For now, update every cycle if GPS is valid.
-        # TODO: Add logic to only update path when necessary (e.g., crossed into new area,
-        #       significant deviation from previous path, etc.)
+        # Update the map path if needed
         path_updated = self._update_map_path(pos)
 
-        # Calculate the speed profile based on the path
-        if path_updated or not self.speed_profile.any(): # Recalculate if path changed or no profile exists
-            # print("MTSC: Recalculating speed profile...") # Debug
-            self.distance_profile, self.speed_profile = self._calculate_path_profile(pos, turn_aggressiveness)
-        # else: use cached profile - but ensure it's still relevant based on distance travelled?
+        # --- Speed Limit Extraction and Publishing ---
+        current_limit_mps = 0.0
+        next_limit_info = {}
+        if self.current_way_result and self.current_way_result.way:
+            try:
+                # Access pre-parsed speed limit (assuming .maxSpeed attribute)
+                # Use a default of 0.0 if attribute missing or parsing failed during generation
+                current_limit_mps = getattr(self.current_way_result.way, 'maxSpeed', 0.0)
 
-        # Return the calculated profiles (distance_m, speed_mps)
+                # Iterate upcoming ways to find the next different speed limit
+                for next_way_res in self.next_ways:
+                    next_way = next_way_res.way
+                    next_limit_mps_cand = getattr(next_way, 'maxSpeed', 0.0)
+
+                    # Check if a valid limit was found and if it differs from the current
+                    if next_limit_mps_cand > 0 and abs(next_limit_mps_cand - current_limit_mps) > 1e-3:
+                        nodes, err = next_way.Nodes()
+                        if not err and nodes and nodes.Len() > 0:
+                            # Determine start node based on direction
+                            start_node_index = 0 if next_way_res.is_forward else nodes.Len() - 1
+                            start_node = nodes.At(start_node_index)
+                            next_limit_info = {
+                                'speedlimit': next_limit_mps_cand,
+                                'latitude': start_node.latitude,
+                                'longitude': start_node.longitude
+                            }
+                            break # Found the first change
+
+            except AttributeError as e:
+                print(f"MTSC: Error accessing Way attributes for speed limit: {e}")
+                # Fallback: clear limits if attributes are missing
+                current_limit_mps = 0.0
+                next_limit_info = {}
+            except Exception as e:
+                print(f"MTSC: Unexpected error during speed limit extraction: {e}")
+                current_limit_mps = 0.0
+                next_limit_info = {}
+
+        # Publish the found limits (or defaults)
+        self.params_memory.put_float("MapSpeedLimit", float(current_limit_mps))
+        self.params_memory.put("NextMapSpeedLimit", json.dumps(next_limit_info))
+        # --- End Speed Limit Logic ---
+
+        # Calculate the speed profile based on the path
+        if path_updated or not self.speed_profile.any():
+            self.distance_profile, self.speed_profile = self._calculate_path_profile(pos, turn_aggressiveness)
+
+        # Return the calculated curvature/speed profiles
         if self.distance_profile.any() and self.speed_profile.any():
-             # print(f"MTSC: Returning profile with {len(self.distance_profile)} points.") # Debug
              return self.distance_profile, self.speed_profile
         else:
-             # print("MTSC: No valid profile generated.") # Debug
+             # Even if profile calculation failed, speed limits might have been published
+             # Return None, None for the profile tuple
              return None, None
 
 # --- Old code removed ---
