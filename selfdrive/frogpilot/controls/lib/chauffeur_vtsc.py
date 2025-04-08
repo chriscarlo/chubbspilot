@@ -383,12 +383,12 @@ class VisionTurnSpeedController:
         # (3) Apex-based shaping pass (using fixed parameters)
         # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 2.0      # increased to slow earlier
+        margin_factor = 2.5      # increased from 2.0 to slow earlier
         decel_mult = 1.0
-        accel_mult = 1.0
+        accel_mult = 1.2         # increased from 1.0 for more aggressive accel out
         # Slightly more aggressive deceleration and acceleration factors
         apex_decel_factor = 0.12
-        apex_spool_factor = 0.05
+        apex_spool_factor = 0.10    # increased from 0.05 for faster spool-up
 
         planned = safe_speeds.copy()
 
