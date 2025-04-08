@@ -233,7 +233,16 @@ void FrogPilotMapsPanel::startDownload() {
 
   if (!process->waitForStarted(5000)) {
       qCritical() << "Failed to start downloader script!";
-      _set_error_progress("Failed to start downloader process.");
+      QJsonObject errorProgress;
+      errorProgress["current_action"] = "Error";
+      errorProgress["error_message"] = "Failed to start downloader process.";
+      errorProgress["total_files"] = 0;
+      errorProgress["downloaded_files"] = 0;
+      errorProgress["locations_to_download"] = QJsonArray();
+      errorProgress["location_details"] = QJsonObject();
+      QJsonDocument doc(errorProgress);
+      params.put("OSMDownloadProgress", doc.toJson(QJsonDocument::Compact).toStdString());
+
       downloadMapsButton->setText(tr("ERROR"));
       downloadMapsButton->setEnabled(false);
   } else {
