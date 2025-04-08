@@ -1,14 +1,21 @@
 import math
+import numpy as np
 
 # Constants based on mapd_source/math.go
 R = 6373000.0             # Approximate radius of Earth in meters
 TO_RADIANS = math.pi / 180.0
 TO_DEGREES = 180.0 / math.pi
 
+# Earth radius in meters (using WGS84 value)
+EARTH_RADIUS_M = 6378137.0
+
+# Padding constant, approximately 10 meters in degrees latitude
+# Used for bounding box expansion, etc. (Referenced by matcher.py)
+PADDING = 10.0 / EARTH_RADIUS_M * TO_DEGREES # Approx 0.00009 degrees
+
 # Consider adding other potentially useful constants from math.go if needed later
 # LANE_WIDTH = 3.7
 # QUERY_RADIUS = 3000.0
-# PADDING = 10 / R * TO_DEGREES
 # TARGET_LAT_ACCEL = 2.0 # This will likely be handled by VTSC/MTSC logic
 
 
