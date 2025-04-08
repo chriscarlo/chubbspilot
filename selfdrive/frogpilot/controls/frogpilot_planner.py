@@ -106,7 +106,7 @@ class FrogPilotPlanner:
     self.tracking_lead = self.set_lead_status(carState, v_lead)
     update_result = self.frogpilot_vcruise.update(carControl, carState, controlsState,
                                                   frogpilotCarControl, frogpilotCarState,
-                                                  frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles, sm)
+                                                  frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles)
     self.v_cruise = float(update_result if update_result is not None else v_cruise)
 
   def set_lead_status(self, carState, v_lead):
