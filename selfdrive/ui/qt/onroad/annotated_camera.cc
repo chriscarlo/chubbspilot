@@ -39,7 +39,7 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   map_settings_btn = new MapSettingsButton(this);
   main_layout->addWidget(map_settings_btn, 0, Qt::AlignBottom | Qt::AlignRight);
 
-  dm_img = loadPixmap("../assets/img_driver_face.png", {img_size + 5, img_size + 5});
+  // dm_img = loadPixmap("../assets/img_driver_face.png", {img_size + 5, img_size + 5});
 
   // Initialize FrogPilot widgets
   initializeFrogPilotWidgets();
@@ -96,16 +96,23 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   experimental_btn->updateState(s);
 
   // update DM icon
+  /*
   auto dm_state = sm["driverMonitoringState"].getDriverMonitoringState();
   dmActive = dm_state.getIsActiveMode();
   rightHandDM = dm_state.getIsRHD();
   // DM icon transition
   dm_fade_state = std::clamp(dm_fade_state+0.2*(0.5-dmActive), 0.0, 1.0);
+  */
+  dmActive = false; // Assume DM is always inactive
+  rightHandDM = false; // Default to LHD for layout purposes if needed elsewhere
+  dm_fade_state = 1.0; // Assume fully faded out
 
   // hide map settings button for alerts and flip for right hand DM
   if (map_settings_btn->isEnabled()) {
     map_settings_btn->setVisible(!hideBottomIcons && !hideMapIcon);
-    main_layout->setAlignment(map_settings_btn, (rightHandDM ? Qt::AlignLeft : Qt::AlignRight) | Qt::AlignBottom);
+    // main_layout->setAlignment(map_settings_btn, (rightHandDM ? Qt::AlignLeft : Qt::AlignRight) | Qt::AlignBottom);
+    // Default to right alignment since rightHandDM is now always false
+    main_layout->setAlignment(map_settings_btn, Qt::AlignRight | Qt::AlignBottom);
   }
 
   // Update FrogPilot widgets
@@ -761,6 +768,7 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
   painter.restore();
 }
 
+/*
 void AnnotatedCameraWidget::drawDriverState(QPainter &painter, const UIState *s) {
   const UIScene &scene = s->scene;
 
@@ -808,6 +816,7 @@ void AnnotatedCameraWidget::drawDriverState(QPainter &painter, const UIState *s)
 
   painter.restore();
 }
+*/
 
 void AnnotatedCameraWidget::drawLead(QPainter &painter, const cereal::RadarState::LeadData::Reader &lead_data, const QPointF &vd, float v_ego, const QColor &lead_marker_color, bool adjacent) {
   painter.save();
@@ -989,12 +998,6 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
         drawLead(painter, lead_right_far, s->scene.lead_vertices[5], v_ego, redColor(), true);
       }
     }
-  }
-
-  // DMoji
-  if (!hideBottomIcons && (sm.rcv_frame("driverStateV2") > s->scene.started_frame)) {
-    update_dmonitoring(s, sm["driverStateV2"].getDriverStateV2(), dm_fade_state, rightHandDM);
-    drawDriverState(painter, s);
   }
 
   drawHud(painter);
@@ -1237,10 +1240,6 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
 }
 
 void AnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &painter) {
-  if (cemStatus && !mapOpen && !hideBottomIcons) {
-    drawCEMStatus(painter);
-  }
-
   if (roadNameUI && !bigMapOpen) {
     drawRoadName(painter);
   }
@@ -1253,97 +1252,6 @@ void AnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &painter) {
   } else if (animationTimer->isActive()) {
     animationTimer->stop();
   }
-}
-
-void AnnotatedCameraWidget::drawCEMStatus(QPainter &p) {
-  if (dmIconPosition == QPoint(0, 0)) {
-    return;
-  }
-
-  p.save();
-  p.setOpacity(1.0);
-
-  QRect cemWidget(dmIconPosition.x() + (rightHandDM ? -img_size : img_size), dmIconPosition.y() - img_size / 2, img_size, img_size);
-  if (conditionalStatus == 1 || conditionalStatus == 3 || conditionalStatus == 5) {
-    p.setPen(QPen(QColor(bg_colors[STATUS_CONDITIONAL_OVERRIDDEN]), 10));
-  } else if (experimentalMode) {
-    p.setPen(QPen(QColor(bg_colors[STATUS_EXPERIMENTAL_MODE_ACTIVE]), 10));
-  } else {
-    p.setPen(QPen(blackColor(), 10));
-  }
-  p.setBrush(blackColor(166));
-  p.drawRoundedRect(cemWidget, 24, 24);
-
-  QSize iconSize(cemWidget.size().width() - 10, cemWidget.size().height() - 10);
-  QPixmap iconToDraw;
-  if (conditionalStatus == 1 || conditionalStatus == 3 || conditionalStatus == 5) {
-    iconToDraw = chillModeIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 2 || conditionalStatus == 4 || conditionalStatus == 6) {
-    iconToDraw = experimentalModeIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 7 || conditionalStatus == 8) {
-    iconToDraw = speedIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 9 || conditionalStatus == 11) {
-    iconToDraw = turnIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 10 || conditionalStatus == 15 || conditionalStatus == 16) {
-    iconToDraw = lightIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 12) {
-    iconToDraw = curveIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (conditionalStatus == 13 || conditionalStatus == 14) {
-    iconToDraw = leadIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else if (experimentalMode) {
-    iconToDraw = experimentalModeIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  } else {
-    iconToDraw = chillModeIcon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-  }
-  p.drawPixmap(QRect(cemWidget.center() - QPoint(iconToDraw.width() / 2, iconToDraw.height() / 2), iconToDraw.size()), iconToDraw);
-
-  p.restore();
-}
-
-PedalIcons::PedalIcons(QWidget *parent) : QWidget(parent) {
-  setFixedSize(btn_size, btn_size);
-
-  brake_pedal_img = loadPixmap("../frogpilot/assets/other_images/brake_pedal.png", {img_size, img_size});
-  gas_pedal_img = loadPixmap("../frogpilot/assets/other_images/gas_pedal.png", {img_size, img_size});
-}
-
-void PedalIcons::updateState(const UIScene &scene) {
-  acceleration = scene.acceleration;
-  brakeLightOn = scene.brake_lights_on;
-  dynamicPedals = scene.dynamic_pedals_on_ui;
-  standstill = scene.standstill;
-  staticPedals = scene.static_pedals_on_ui;
-
-  accelerating = acceleration > 0.25f;
-  decelerating = acceleration < -0.25f;
-}
-
-void PedalIcons::paintEvent(QPaintEvent *event) {
-  QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
-
-  int totalWidth = 2 * img_size;
-  int startX = (width() - totalWidth) / 2;
-
-  int brakeX = startX + img_size / 2;
-  int gasX = startX + img_size;
-
-  float brakeOpacity = 1.0f;
-  float gasOpacity = 1.0f;
-
-  if (dynamicPedals) {
-    brakeOpacity = standstill ? 1.0f : decelerating ? std::max(0.25f, std::abs(acceleration)) : 0.25f;
-    gasOpacity = accelerating ? std::max(0.25f, acceleration) : 0.25f;
-  } else if (staticPedals) {
-    brakeOpacity = standstill || brakeLightOn || acceleration < -0.5f ? 1.0f : 0.25f;
-    gasOpacity = !standstill && acceleration > 0 ? 1.0f : 0.25f;
-  }
-
-  p.setOpacity(brakeOpacity);
-  p.drawPixmap(brakeX, (height() - img_size) / 2, brake_pedal_img);
-
-  p.setOpacity(gasOpacity);
-  p.drawPixmap(gasX, (height() - img_size) / 2, gas_pedal_img);
 }
 
 void AnnotatedCameraWidget::drawRoadName(QPainter &p) {
