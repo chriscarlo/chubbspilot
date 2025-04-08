@@ -99,9 +99,9 @@ class FrogPilotVCruise:
 
         self.override_force_stop |= (
             (not force_standstill
-             and self._get_attr(carState, 'standstill', False)
+             and _get_attr(carState, 'standstill', False)
              and self.frogpilot_planner.tracking_lead)
-            or self._get_attr(carState, 'gasPressed', False)
+            or _get_attr(carState, 'gasPressed', False)
             or frogpilotCarControl.accelPressed
         )
         self.override_force_stop &= force_stop_enabled
@@ -115,7 +115,7 @@ class FrogPilotVCruise:
         v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
         v_cruise_diff = v_cruise_cluster - v_cruise
 
-        v_ego_cluster = max(self._get_attr(carState, 'vEgoCluster', v_ego), v_ego)
+        v_ego_cluster = max(_get_attr(carState, 'vEgoCluster', v_ego), v_ego)
         v_ego_diff = v_ego_cluster - v_ego
 
         # -------------------------------------------------------------
@@ -179,12 +179,12 @@ class FrogPilotVCruise:
 
             if speed_limit_controller:
                 self.override_slc = self.overridden_speed > self.slc_target + self.slc_offset
-                self.override_slc |= (self._get_attr(carState, 'gasPressed', False) and v_ego > self.slc_target + self.slc_offset)
+                self.override_slc |= (_get_attr(carState, 'gasPressed', False) and v_ego > self.slc_target + self.slc_offset)
                 self.override_slc &= controlsState.enabled
 
                 if self.override_slc:
                     if speed_limit_controller_override_manual:
-                        if self._get_attr(carState, 'gasPressed', False):
+                        if _get_attr(carState, 'gasPressed', False):
                             self.overridden_speed = v_ego_cluster
                             self.overridden_speed = np.clip(
                                 self.overridden_speed,
@@ -221,14 +221,14 @@ class FrogPilotVCruise:
         # Force Standstill / Stop
         # -------------------------------------------------------------
         if (force_standstill
-            and self._get_attr(carState, 'standstill', False)
+            and _get_attr(carState, 'standstill', False)
             and not self.override_force_stop
             and controlsState.enabled):
             # Hard standstill override
             self.forcing_stop = True
             v_cruise = -1
         elif force_stop_enabled and not self.override_force_stop:
-            self.forcing_stop |= not self._get_attr(carState, 'standstill', False)
+            self.forcing_stop |= not _get_attr(carState, 'standstill', False)
             self.tracked_model_length = max(self.tracked_model_length - v_ego * DT_MDL, 0)
             v_cruise = min((self.tracked_model_length // PLANNER_TIME), v_cruise)
         else:
@@ -257,7 +257,7 @@ class FrogPilotVCruise:
         return v_cruise
 
 # Add a helper method to handle attribute access
-def _get_attr(self, obj, attr, default=None):
+def _get_attr(obj, attr, default=None):
     """Helper to get attribute from an object with fallback to 'out' property"""
     value = getattr(obj, attr, None)
     if value is None and hasattr(obj, 'out'):
