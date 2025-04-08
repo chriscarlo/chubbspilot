@@ -2705,3 +2705,8 @@ test_data_field.py
 test_extract_can.py
 selfdrive/frogpilot/controls/lib/Untitled-1.ps1
 selfdrive/frogpilot/controls/lib/iisCryptoTroubleshoot.ps1.txt
+rlogs/parsed_rlogs/1569_drive_logs/1569_carOutput/1569_carOutput.txt
+rlogs/
+extracted_log_data_all.txt
+extracted_log_data.txt
+common/text_window.py
