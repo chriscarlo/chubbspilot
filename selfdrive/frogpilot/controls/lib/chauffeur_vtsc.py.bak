@@ -3,11 +3,8 @@ import numpy as np
 import cereal.messaging as messaging
 
 from openpilot.common.conversions import Conversions as CV
-from openpilot.common.numpy_fast import clip, interp
+from openpilot.common.numpy_fast import clip
 from openpilot.selfdrive.modeld.constants import ModelConstants
-
-# Import the curvature-based lat accel function from MTSC
-from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_mtsc import curvature_based_lat_accel
 
 CRUISING_SPEED = 5.0  # m/s
 
@@ -125,17 +122,19 @@ class VisionTurnSpeedController:
 
         # ------------------------------
         # Additional state for curvature extrapolation
-        # and filtering/hysteresis (Recommendations 1 & 6) - Hysteresis removed, planning always active
+        # and filtering/hysteresis (Recommendations 1 & 6)
         # ------------------------------
-        # EMA (exponential moving average) for curvature filtering - Keeping curvature filtering for potential future use/analysis
+        # EMA (exponential moving average) for curvature filtering
         self.curvature_ema_ratio = 0.3  # lower = more smoothing
         self._filtered_curvature = None  # filtered maximum curvature value
 
-        # Hysteresis thresholds removed - no longer needed
-        # self.curv_thresh_enter = 5e-5
-        # self.curv_thresh_exit  = self.curv_thresh_enter * 0.7
+        # Hysteresis thresholds for curve detection:
+        # Enter curve control if filtered curvature exceeds enter threshold;
+        # exit only when it falls below exit threshold.
+        self.curv_thresh_enter = 5e-5  # same as apex detection threshold used elsewhere
+        self.curv_thresh_exit  = self.curv_thresh_enter * 0.7
 
-        # self.curve_active = False  # state flag removed
+        self.curve_active = False  # state flag
 
         # For speed smoothing: filter speed increases only (avoid overshoot when exiting curves)
         self.speed_up_ema_ratio = 0.2
@@ -151,15 +150,15 @@ class VisionTurnSpeedController:
 
         # Reset filtering state
         self._filtered_curvature = None
-        # self.curve_active = False # Removed
+        self.curve_active = False
         self._last_model_speed = None
 
-    def update(self, v_ego: float, v_cruise_cluster: float,
-               map_speed_profile: tuple[np.ndarray, np.ndarray] | None = None,
-               turn_aggressiveness=1.0) -> float:
+    def update(self, v_ego: float, v_cruise_cluster: float, turn_aggressiveness=1.0) -> float:
         """
         Main entry point for the turn speed controller logic. Called every cycle.
-        Accepts an optional map_speed_profile (distances_m, speeds_mps).
+        All curvy road logic has been removed. The anticipatory slowing is now adjusted via a larger margin,
+        while resume events (e.g. when ACC is resumed) immediately jump to v_cruise_cluster,
+        bypassing the smoothing logic as before.
         """
         self.sm.update()
         modelData = self.sm['modelV2']
@@ -203,7 +202,7 @@ class VisionTurnSpeedController:
             curvature_33 = orientation_rate_33 / np.clip(velocity_pred_33, eps, None)
 
             # ------------------------------
-            # Optional: Keep filtering curvature for analysis or other features, but it no longer gates planning
+            # New: Filtering & Hysteresis for curvature (Recommendation 6)
             # ------------------------------
             current_max_curvature = float(np.max(curvature_33))
             if self._filtered_curvature is None:
@@ -211,47 +210,51 @@ class VisionTurnSpeedController:
             else:
                 self._filtered_curvature = (1 - self.curvature_ema_ratio) * self._filtered_curvature + self.curvature_ema_ratio * current_max_curvature
 
-            # Hysteresis logic removed. Planning always occurs if model data is valid.
-            # if not self.curve_active and self._filtered_curvature >= self.curv_thresh_enter:
-            #     self.curve_active = True
-            # elif self.curve_active and self._filtered_curvature <= self.curv_thresh_exit:
-            #     self.curve_active = False
-
-            # Curvature extrapolation logic removed - planning always active, so no need to force curve_active based on far point.
-            # if current_max_curvature >= self.curv_thresh_enter:
-            #     far_point_curvature = curvature_33[-1]
-            #     if far_point_curvature >= self.curv_thresh_enter:
-            #         # Maintain curve control even if vision ends – assume curve continues.
-            #         self.curve_active = True
-
-            # --- Always plan speed trajectory using vision and map data (if available) ---
-            is_bump_up = (
-                (v_cruise_cluster > self.prev_v_cruise_cluster)
-                or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
-            )
-            self.planned_speeds = self._plan_speed_trajectory(
-                orientation_rate_33,
-                velocity_pred_33,
-                times_33,
-                init_speed=self.prev_target_speed,
-                map_speed_profile=map_speed_profile,
-                turn_aggressiveness=turn_aggressiveness,
-                skip_accel_limit=is_bump_up
-            )
-            raw_target = self.planned_speeds[0]
+            # Use hysteresis to decide if we are in a curve control state.
+            if not self.curve_active and self._filtered_curvature >= self.curv_thresh_enter:
+                self.curve_active = True
+            elif self.curve_active and self._filtered_curvature <= self.curv_thresh_exit:
+                self.curve_active = False
 
             # ------------------------------
-            # Apply speed filtering for smoothing increases
-            # ------------------------------
-            if self._last_model_speed is None:
-                self._last_model_speed = raw_target
-            if raw_target < self._last_model_speed: # If target is decreasing, apply immediately
-                filtered_target = raw_target
-            else: # If target is increasing, smooth it
-                filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
-            self._last_model_speed = filtered_target
-            raw_target = filtered_target
-            # --- End of always-on planning block ---
+            # New: Curvature extrapolation (Recommendation 1)
+            # If the farthest point in curvature_33 still indicates a curve, assume the curvature persists.
+            if current_max_curvature >= self.curv_thresh_enter:
+                far_point_curvature = curvature_33[-1]
+                if far_point_curvature >= self.curv_thresh_enter:
+                    # Maintain curve control even if vision ends – assume curve continues.
+                    self.curve_active = True
+
+            # Use advanced planning only if curve control is active;
+            # otherwise, simply follow v_cruise_cluster.
+            if self.curve_active:
+                is_bump_up = (
+                    (v_cruise_cluster > self.prev_v_cruise_cluster)
+                    or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
+                )
+                self.planned_speeds = self._plan_speed_trajectory(
+                    orientation_rate_33,
+                    velocity_pred_33,
+                    times_33,
+                    init_speed=self.prev_target_speed,
+                    turn_aggressiveness=turn_aggressiveness,
+                    skip_accel_limit=is_bump_up
+                )
+                raw_target = self.planned_speeds[0]
+                # ------------------------------
+                # New: Speed filtering for smoothing (Recommendation 6)
+                # When exiting a curve (i.e. target speed increasing), smooth the speed increase.
+                if self._last_model_speed is None:
+                    self._last_model_speed = raw_target
+                if raw_target < self._last_model_speed:
+                    filtered_target = raw_target
+                else:
+                    filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
+                self._last_model_speed = filtered_target
+                raw_target = filtered_target
+            else:
+                # If not in a curve, just follow the cruise cluster speed.
+                raw_target = v_cruise_cluster
 
         # Always clamp raw_target to at most v_cruise_cluster
         raw_target = min(raw_target, v_cruise_cluster)
@@ -317,13 +320,13 @@ class VisionTurnSpeedController:
         velocity_pred: np.ndarray,
         times: np.ndarray,
         init_speed: float,
-        map_speed_profile: tuple[np.ndarray, np.ndarray] | None,
         turn_aggressiveness: float,
         skip_accel_limit: bool = False
     ) -> np.ndarray:
         """
         Build a future speed plan based on curvature.
-        Now incorporates map_speed_profile.
+        Curvy road detection has been removed so that a fixed set of shaping parameters is used.
+        The margin multiplier has been increased for earlier deceleration.
         """
         n = len(orientation_rate)
         eps = 1e-9
@@ -335,52 +338,19 @@ class VisionTurnSpeedController:
             for i in range(n)
         ], dtype=float)
 
-        # (1.5) Estimate distance at each time step based on velocity predictions
-        distances_m = np.zeros(n, dtype=float)
-        if n > 1:
-            # Calculate cumulative distance using trapezoidal rule on velocity profile
-            distances_m[1:] = np.cumsum((velocity_pred[:-1] + velocity_pred[1:]) / 2.0 * dt_array)
-        # distances_m[i] is the estimated distance travelled *at* times[i]
-
-        # (1.6) Interpolate map speed limits at these estimated distances
-        map_safe_speeds = np.full(n, 70.0) # Default to high speed if no map profile
-        if map_speed_profile is not None:
-            map_dist, map_speeds = map_speed_profile
-            if len(map_dist) > 1 and len(map_speeds) > 1:
-                # Use numpy interp: interp(x_new, x_existing, y_existing)
-                # Ensure map speeds extend far enough, or handle extrapolation
-                # np.interp handles points outside range by using boundary values
-                map_safe_speeds = interp(distances_m, map_dist, map_speeds)
-                # Clamp map speeds just in case interpolation gives weird values
-                map_safe_speeds = np.clip(map_safe_speeds, 0.0, 70.0)
-
-        # (2) Compute safe speeds from lateral accel AND map data
+        # (2) Compute safe speeds from lateral accel
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
-            # Calculate vision-based safe speed using curvature_based_lat_accel
-            abs_curv_vision = abs(curvature[i])
-            if abs_curv_vision < 1e-9:
-                vision_safe_speed = 70.0 # Max speed for straight
-            else:
-                # Get base lat accel from curvature
-                base_lat_accel = curvature_based_lat_accel(abs_curv_vision)
-                # Apply turn aggressiveness multiplier
-                lat_acc_limit = base_lat_accel * turn_aggressiveness
-                # Calculate speed limit v = sqrt(a / k)
-                vision_safe_speed = math.sqrt(lat_acc_limit / abs_curv_vision)
-
-            vision_safe_speed = clip(vision_safe_speed, 0.0, 70.0)
-            # Mild tweak around ~30-45 mph range - Keep this empirical tweak?
-            # If the goal is pure physics, maybe remove this?
-            # Let's keep it for now, as it might smooth behavior.
-            if 13.4 <= vision_safe_speed <= 20.1:
-                vision_safe_speed *= 0.93
-
-            # Final safe speed is the minimum of vision limit and map limit for this step
-            safe_speeds[i] = min(vision_safe_speed, map_safe_speeds[i])
+            lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
+            c = max(curvature[i], 1e-9)
+            s = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
+            s = clip(s, 0.0, 70.0)
+            # Mild tweak around ~30-45 mph range
+            if 13.4 <= s <= 20.1:
+                s *= 0.93
+            safe_speeds[i] = s
 
         # (3) Apex-based shaping pass (using fixed parameters)
-        # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         margin_factor = 2.0      # increased to slow earlier
         decel_mult = 1.0
@@ -521,35 +491,20 @@ class VisionTurnSpeedController:
     def _single_step_fallback(self, v_ego, curvature, turn_aggressiveness):
         """
         Fallback if model data isn't available.
-        Uses curvature_based_lat_accel now.
         """
-        # Original fallback using nonlinear_lat_accel - REMOVED
-        # lat_acc = nonlinear_lat_accel(v_ego, turn_aggressiveness)
-        # c = max(curvature, 1e-9)
-        # safe_speed = math.sqrt(lat_acc / c) if c > 1e-9 else 70.0
-        # safe_speed = clip(safe_speed, 0.0, 70.0)
-        # --- End REMOVED ---
-
-        # New fallback using curvature_based_lat_accel
-        abs_curv = abs(curvature)
-        if abs_curv < 1e-9:
-            safe_speed = 70.0
-        else:
-            base_lat_acc = curvature_based_lat_accel(abs_curv)
-            lat_acc = base_lat_acc * turn_aggressiveness
-            safe_speed = math.sqrt(lat_acc / abs_curv)
+        lat_acc = nonlinear_lat_accel(v_ego, turn_aggressiveness)
+        c = max(curvature, 1e-9)
+        safe_speed = math.sqrt(lat_acc / c) if c > 1e-9 else 70.0
         safe_speed = clip(safe_speed, 0.0, 70.0)
 
-        # Smoothing logic remains the same, using the calculated safe_speed
-        current_lat_acc = curvature * (v_ego ** 2) # Use actual measured curvature for smoothing trigger
+        current_lat_acc = curvature * (v_ego ** 2)
         if current_lat_acc > self.LOW_LAT_ACC:
             if current_lat_acc < self.HIGH_LAT_ACC:
-                alpha = 0.1 # Less smoothing when entering curve
+                alpha = 0.1
             else:
-                alpha = self.turn_smoothing_alpha # More smoothing when deep in curve
+                alpha = self.turn_smoothing_alpha
             raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
         else:
-            # Use reaccel alpha when not actively turning
             alpha = self.reaccel_alpha
             raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
 

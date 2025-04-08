@@ -631,15 +631,157 @@ def upload_handler(end_event: threading.Event) -> None:
 # -------------------------------------------------------------------------------
 # Automatic RLog Finder (realdata_handler - keeping previous corrected version)
 # -------------------------------------------------------------------------------
+def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed_dirs: set[str]) -> int:
+  """
+  Scans the base_path for recent directories and queues relevant log files.
+  Updates processed_dirs with the directories processed in this scan.
+  Returns the number of new files queued.
+  """
+  current_time = time.time()
+  debug_print(f"Scanning {base_path} for directories created within the last {age_limit_seconds / 3600:.1f} hours...")
+  one_day_ago_ts = current_time - age_limit_seconds
+  found_count = 0
+  queued_count = 0
+  # Note: processed_dirs is passed by reference (mutable set) and updated directly
+
+  if not os.path.isdir(base_path):
+      debug_print(f"Base path {base_path} not found, skipping scan.")
+      cloudlog.error(f"Realdata base path not found: {base_path}")
+      return 0 # Return 0 queued
+
+  try:
+    for subdir in os.listdir(base_path):
+      subdir_path = os.path.join(base_path, subdir)
+      if not os.path.isdir(subdir_path):
+        continue
+      if subdir in processed_dirs: # Avoid processing same dir multiple times
+          continue
+
+      try:
+        stat_info = os.stat(subdir_path)
+        creation_time_ts = stat_info.st_ctime
+      except OSError as e:
+        debug_print(f"Could not stat directory {subdir_path}: {e}")
+        continue
+
+      # Filter by CREATION time
+      if creation_time_ts < one_day_ago_ts:
+        continue
+
+      # --- Start processing this directory ---
+      found_count += 1
+      creation_dt = datetime.fromtimestamp(creation_time_ts)
+      formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
+      azure_target_subdir_new_format = f"{formatted_date_time}--{subdir}"
+      segment_name = subdir
+
+      # --- Check and Rename Logic ---
+      conn_str = get_azure_connection_string()
+      rename_performed_or_exists = False
+      if conn_str:
+          try:
+              azure_base_log_path = AZURE_BASE_DIR
+              existing_azure_dirs = list_azure_directories(conn_str, AZURE_SHARE_NAME, azure_base_log_path)
+              old_format_dir_to_rename = None
+              for azure_dir in existing_azure_dirs:
+                  if '--' in azure_dir:
+                      _, existing_segment = azure_dir.split('--', 1)
+                      if existing_segment == segment_name:
+                          full_old_path = f"{azure_base_log_path}/{azure_dir}"
+                          full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
+                          if full_old_path != full_new_path:
+                              old_format_dir_to_rename = full_old_path
+                              break
+                          else:
+                              debug_print(f"Directory {full_new_path} already exists with new format, skipping.")
+                              rename_performed_or_exists = True
+                              break
+              if old_format_dir_to_rename and not rename_performed_or_exists:
+                  full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
+                  debug_print(f"Found old format directory '{old_format_dir_to_rename}', attempting rename to '{full_new_path}'")
+                  if rename_azure_directory(conn_str, AZURE_SHARE_NAME, old_format_dir_to_rename, full_new_path):
+                      cloudlog.event("azure.realdata_handler.renamed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
+                      rename_performed_or_exists = True
+                  else:
+                      cloudlog.warning("azure.realdata_handler.rename_failed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
+          except Exception as e:
+              cloudlog.exception("azure.realdata_handler.rename_check_exception", segment=segment_name)
+              debug_print(f"Error during Azure rename check for {segment_name}: {e}")
+      # --- End Check and Rename Logic ---
+
+      # Mark directory as processed regardless of rename outcome to avoid re-processing locally
+      processed_dirs.add(subdir)
+
+      if rename_performed_or_exists:
+          continue # Skip queueing if renamed or already exists remotely
+
+      # --- Original Queueing Logic ---
+      files_to_upload = ['rlog', 'qlog', 'qcamera.ts']
+      for filename in files_to_upload:
+          local_path = os.path.join(subdir_path, filename)
+          if not os.path.isfile(local_path):
+              continue
+
+          upload_id = f"azure|{subdir}|{filename}"
+          is_active_or_queued = False
+          current_items_copy = dict(cur_upload_items)
+          if any(ci and ci.id == upload_id for ci in current_items_copy.values()):
+              is_active_or_queued = True
+          if not is_active_or_queued:
+              with upload_queue.mutex:
+                  if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
+                      is_active_or_queued = True
+
+          if is_active_or_queued:
+              continue
+
+          item = UploadItem(
+              path=local_path,
+              created_at=int(creation_time_ts * 1000),
+              id=upload_id,
+              azure_subdir=azure_target_subdir_new_format,
+              allow_cellular=True
+          )
+          debug_print(f"Queueing item: {item.id} -> Azure: {azure_target_subdir_new_format}/{filename}")
+          upload_queue.put_nowait(item)
+          queued_count += 1
+
+    debug_print(f"Scan complete. Found {found_count} recent directories locally, queued {queued_count} new file uploads.")
+    # Cache once after a full scan cycle if items were added
+    if queued_count > 0:
+         UploadQueueCache.cache(upload_queue)
+
+  except Exception as e:
+    cloudlog.exception("azure.realdata_handler.scan_exception")
+    debug_print(f"Error during realdata scan: {e}")
+
+  return queued_count
+
+
 def realdata_handler(end_event: threading.Event) -> None:
   """
   Scans /data/media/0/realdata/ for subdirectories CREATED within 24 hours.
   Queues 'rlog', 'qlog', 'qcamera.ts'. Performs hourly clear/re-scan.
+  Performs an initial scan immediately on startup.
   """
   global last_clear_time
   base_path = "/data/media/0/realdata"
   age_limit_seconds = 24 * 3600
   scan_interval = 300 # Scan every 5 minutes
+  processed_dirs = set() # Keep track of dirs processed across scans
+
+  # --- Perform initial scan ---
+  cloudlog.info("Performing initial realdata scan...")
+  debug_print("Performing initial realdata scan...")
+  try:
+    initial_queued_count = _scan_and_queue_realdata(base_path, age_limit_seconds, processed_dirs)
+    cloudlog.info(f"Initial scan queued {initial_queued_count} files.")
+    debug_print(f"Initial scan queued {initial_queued_count} files.")
+    UploadQueueCache.cache(upload_queue) # Cache after initial scan
+  except Exception as e:
+    cloudlog.exception("azure.realdata_handler.initial_scan_exception")
+    debug_print(f"Error during initial realdata scan: {e}")
+  # --- End initial scan ---
 
   while not end_event.is_set():
     current_time = time.time()
@@ -649,175 +791,28 @@ def realdata_handler(end_event: threading.Event) -> None:
       cloudlog.info("Performing hourly Azure queue clear and preparing for re-scan.")
       debug_print("Performing hourly Azure queue clear and preparing for re-scan.")
       try:
-        # 1. Clear persisted cache
         UploadQueueCache.clear_cache()
-
-        # 2. Clear in-memory queue
         drained_count = 0
-        with upload_queue.mutex: # Lock queue during drain
+        with upload_queue.mutex:
             while not upload_queue.empty():
                 try:
                     item = upload_queue.get_nowait()
-                    # Must call task_done even when discarding
                     upload_queue.task_done()
                     drained_count += 1
                 except queue.Empty:
-                    break # Should not happen with lock, but safe
-
-        # 3. Optionally signal active uploads? No, let them finish/fail naturally.
-        # Active uploads might re-queue if they fail, but the hourly scan
-        # should handle adding them again if needed.
-
-        debug_print(f"Cleared in-memory upload_queue (drained {drained_count} items).")
-        last_clear_time = current_time # Update time *after* successful clear
+                    break
+        processed_dirs = set() # Reset processed dirs after clear
+        debug_print(f"Cleared in-memory upload_queue (drained {drained_count} items) and reset processed_dirs set.")
+        last_clear_time = current_time
         cloudlog.info("Hourly Azure queue clear complete. Starting re-scan.")
         debug_print("Hourly Azure queue clear complete. Starting re-scan.")
-
       except Exception as e:
         cloudlog.exception("azure.realdata_handler.hourly_clear.exception")
         debug_print(f"Hourly clear failed: {e}. Retrying next cycle.")
-        # Don't update last_clear_time if clearing failed
 
-    # --- Scan for Recent Directories ---
-    try:
-      debug_print(f"Scanning {base_path} for directories created within the last 24 hours...")
-      one_day_ago_ts = current_time - age_limit_seconds
-      found_count = 0
-      queued_count = 0
-      processed_dirs = set() # Keep track of dirs processed in this scan cycle
-
-      if not os.path.isdir(base_path):
-          debug_print(f"Base path {base_path} not found, skipping scan.")
-          cloudlog.error(f"Realdata base path not found: {base_path}")
-          end_event.wait(scan_interval) # Wait before retrying scan
-          continue
-
-      for subdir in os.listdir(base_path):
-        # Basic check if it looks like an OP segment directory
-        # Adjust regex if format changes significantly
-        # if not re.match(r"^[0-9a-f]{8}--[0-9a-zA-Z-]+$", subdir):
-        #    continue # Skip files/dirs not matching expected format (optional)
-
-        subdir_path = os.path.join(base_path, subdir)
-        if not os.path.isdir(subdir_path):
-          continue
-        if subdir in processed_dirs: # Avoid processing same dir multiple times if listdir returns duplicates?
-            continue
-
-        try:
-          stat_info = os.stat(subdir_path)
-          # Use ctime (creation time on Unix/Linux) - relies on FS supporting it correctly
-          creation_time_ts = stat_info.st_ctime
-        except OSError as e:
-          debug_print(f"Could not stat directory {subdir_path}: {e}")
-          continue
-
-        # Filter by CREATION time
-        if creation_time_ts < one_day_ago_ts:
-          continue
-
-        processed_dirs.add(subdir)
-        found_count += 1
-        creation_dt = datetime.fromtimestamp(creation_time_ts)
-        formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
-        azure_target_subdir_new_format = f"{formatted_date_time}--{subdir}"
-        segment_name = subdir # The part after '--' is just the original subdir name
-
-        # --- Check and Rename Logic ---
-        conn_str = get_azure_connection_string()
-        rename_performed_or_exists = False
-        if conn_str:
-            try:
-                azure_base_log_path = AZURE_BASE_DIR # e.g., "rlogs"
-                # List directories directly under AZURE_BASE_DIR
-                existing_azure_dirs = list_azure_directories(conn_str, AZURE_SHARE_NAME, azure_base_log_path)
-
-                old_format_dir_to_rename = None
-                for azure_dir in existing_azure_dirs:
-                    if '--' in azure_dir:
-                        prefix, existing_segment = azure_dir.split('--', 1)
-                        if existing_segment == segment_name:
-                            # Found a potential match based on segment name
-                            full_old_path = f"{azure_base_log_path}/{azure_dir}"
-                            full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
-                            if full_old_path != full_new_path:
-                                # It's a different prefix, likely the old format
-                                old_format_dir_to_rename = full_old_path
-                                break # Found the one we need to rename
-                            else:
-                                # Directory with the *new* format already exists, skip upload/rename
-                                debug_print(f"Directory {full_new_path} already exists with new format, skipping.")
-                                rename_performed_or_exists = True
-                                break
-
-                if old_format_dir_to_rename and not rename_performed_or_exists:
-                    full_new_path = f"{azure_base_log_path}/{azure_target_subdir_new_format}"
-                    debug_print(f"Found old format directory '{old_format_dir_to_rename}', attempting rename to '{full_new_path}'")
-                    if rename_azure_directory(conn_str, AZURE_SHARE_NAME, old_format_dir_to_rename, full_new_path):
-                        cloudlog.event("azure.realdata_handler.renamed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
-                        rename_performed_or_exists = True # Rename successful
-                    else:
-                        # Rename failed (e.g., source gone, permissions), log and proceed to upload
-                        cloudlog.warning("azure.realdata_handler.rename_failed", old_dir=old_format_dir_to_rename, new_dir=full_new_path)
-
-            except Exception as e:
-                # If listing/renaming fails, log it but fall back to standard upload logic
-                cloudlog.exception("azure.realdata_handler.rename_check_exception", segment=segment_name)
-                debug_print(f"Error during Azure rename check for {segment_name}: {e}")
-        # --- End Check and Rename Logic ---
-
-        # If rename was successful or dir already exists with new format, skip queueing
-        if rename_performed_or_exists:
-            continue # Move to the next directory in the local scan
-
-        # --- Original Queueing Logic ---
-        files_to_upload = ['rlog', 'qlog', 'qcamera.ts']
-        for filename in files_to_upload:
-            local_path = os.path.join(subdir_path, filename)
-            if not os.path.isfile(local_path):
-                continue
-
-            upload_id = f"azure|{subdir}|{filename}"
-
-            # Check if already active or queued more carefully
-            is_active_or_queued = False
-            # Check active uploads (thread-safe access via copy)
-            current_items_copy = dict(cur_upload_items)
-            if any(ci and ci.id == upload_id for ci in current_items_copy.values()):
-                is_active_or_queued = True
-            # Check queue (thread-safe access via lock)
-            if not is_active_or_queued:
-                with upload_queue.mutex:
-                    if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
-                        is_active_or_queued = True
-
-            if is_active_or_queued:
-                # debug_print(f"Item {upload_id} already queued or active, skipping.")
-                continue
-
-            # Queue the upload item
-            item = UploadItem(
-                path=local_path,
-                created_at=int(creation_time_ts * 1000),
-                id=upload_id,
-                azure_subdir=azure_target_subdir_new_format, # Use the new format var
-                allow_cellular=True
-            )
-            debug_print(f"Queueing item: {item.id} -> Azure: {azure_target_subdir_new_format}/{filename}")
-            upload_queue.put_nowait(item)
-            queued_count += 1
-            # Cache periodically or just let handler manage it? Let handler manage.
-            # UploadQueueCache.cache(upload_queue) # Potentially frequent writes
-
-      debug_print(f"Scan complete. Found {found_count} recent directories, queued {queued_count} new file uploads.")
-      # Cache once after a full scan cycle if items were added
-      if queued_count > 0:
-           UploadQueueCache.cache(upload_queue)
-
-
-    except Exception as e:
-      cloudlog.exception("azure.realdata_handler.scan_exception")
-      debug_print(f"Error during realdata scan: {e}")
+    # --- Periodic Scan for Recent Directories ---
+    # The scan function now handles its own try/except block and logging
+    _scan_and_queue_realdata(base_path, age_limit_seconds, processed_dirs)
 
     # Wait before next scan or clear check
     end_event.wait(scan_interval)
