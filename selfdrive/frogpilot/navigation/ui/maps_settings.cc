@@ -2,6 +2,8 @@
 
 #include <QtConcurrent>
 
+#include <QProcess>
+
 #include "selfdrive/frogpilot/navigation/ui/maps_settings.h"
 
 FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent), mapsFolderPath{"/data/media/0/osm/offline"} {
@@ -160,34 +162,43 @@ void FrogPilotMapsPanel::cancelDownload() {
   downloadStatus->setText("Cancelling...");
   downloadTimeElapsed->setText("Cancelling...");
 
+  params_memory.putBool("OSMCancelDownload", true);
+
   params.remove("OSMDownloadProgress");
-  params_memory.remove("OSMDownloadLocations");
 
-  std::system("pkill mapd");
+  QDateTime cancelStartTime = QDateTime::currentDateTime();
 
-  QTimer::singleShot(2500, [this]() {
+  QTimer::singleShot(2500, [this, cancelStartTime]() {
+    std::string progress = params.get("OSMDownloadProgress");
+    bool scriptLikelyFinished = !progress.empty();
+
     cancellingDownload = false;
-
     downloadMapsButton->setEnabled(true);
 
-    downloadMapsButton->setText(tr("DOWNLOAD"));
+    if (!scriptLikelyFinished) {
+      downloadMapsButton->setText(tr("DOWNLOAD"));
+      downloadETA->setVisible(false);
+      downloadStatus->setVisible(false);
+      downloadTimeElapsed->setVisible(false);
+      lastMapsDownload->setVisible(true);
+      removeMapsButton->setVisible(QDir(mapsFolderPath).exists());
+    } else {
+      update();
+    }
 
-    downloadETA->setVisible(false);
-    downloadStatus->setVisible(false);
-    downloadTimeElapsed->setVisible(false);
-
-    lastMapsDownload->setVisible(true);
-    removeMapsButton->setVisible(QDir(mapsFolderPath).exists());
+    params_memory.remove("OSMCancelDownload");
 
     update();
   });
 }
 
 void FrogPilotMapsPanel::startDownload() {
-  downloadETA->setText("Calculating...");
+  params_memory.remove("OSMCancelDownload");
+
+  downloadETA->setText("Starting...");
   downloadMapsButton->setText(tr("CANCEL"));
-  downloadStatus->setText("Calculating...");
-  downloadTimeElapsed->setText("Calculating...");
+  downloadStatus->setText("Starting...");
+  downloadTimeElapsed->setText("00:00:00");
 
   downloadETA->setVisible(true);
   downloadStatus->setVisible(true);
@@ -199,47 +210,119 @@ void FrogPilotMapsPanel::startDownload() {
   elapsedTime.start();
   startTime = QDateTime::currentDateTime();
 
-  params_memory.put("OSMDownloadLocations", params.get("MapsSelected"));
+  params.put("OSMDownloadLocations", params.get("MapsSelected"));
+
+  QString program = "python";
+  QStringList arguments;
+  arguments << "-m" << "selfdrive.frogpilot.navigation.mapd_py.downloader.downloader";
+
+  QProcess *process = new QProcess(this);
+  process->setProcessChannelMode(QProcess::MergedChannels);
+
+  connect(process, &QProcess::readyReadStandardOutput, [=]() {
+      qDebug() << process->readAllStandardOutput();
+  });
+  connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+          [=](int exitCode, QProcess::ExitStatus exitStatus) {
+      qDebug() << "Downloader script finished with code" << exitCode << "status" << exitStatus;
+      process->deleteLater();
+  });
+
+  qDebug() << "Starting downloader script:" << program << arguments;
+  process->start(program, arguments);
+
+  if (!process->waitForStarted(5000)) {
+      qCritical() << "Failed to start downloader script!";
+      _set_error_progress("Failed to start downloader process.");
+      downloadMapsButton->setText(tr("ERROR"));
+      downloadMapsButton->setEnabled(false);
+  } else {
+      qDebug() << "Downloader script started successfully.";
+  }
 }
 
 void FrogPilotMapsPanel::updateDownloadLabels(std::string &osmDownloadProgress) {
-  static std::regex fileStatusRegex(R"("total_files":(\d+),.*"downloaded_files":(\d+))");
+  QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(osmDownloadProgress));
+  QJsonObject progressJson = doc.object();
 
-  std::smatch match;
-  if (std::regex_search(osmDownloadProgress, match, fileStatusRegex)) {
-    int totalFiles = std::stoi(match[1].str());
-    int downloadedFiles = std::stoi(match[2].str());
+  if (progressJson.isEmpty()) {
+    return;
+  }
 
-    if (downloadedFiles == totalFiles) {
-      downloadMapsButton->setText(tr("DOWNLOAD"));
-      lastMapsDownload->setText(formatCurrentDate());
+  int totalFiles = progressJson.value("total_files").toInt(0);
+  int downloadedFiles = progressJson.value("downloaded_files").toInt(0);
+  QString currentAction = progressJson.value("current_action").toString("Idle");
+  QString errorMessage = progressJson.value("error_message").toString("");
 
+  if (currentAction == "Error" || !errorMessage.isEmpty()) {
+      downloadMapsButton->setText(tr("ERROR"));
+      downloadStatus->setText(tr("Error: %1").arg(errorMessage.isEmpty() ? "Unknown download error" : errorMessage));
       downloadETA->setVisible(false);
-      downloadStatus->setVisible(false);
       downloadTimeElapsed->setVisible(false);
-
       lastMapsDownload->setVisible(true);
-      removeMapsButton->setVisible(true);
-
-      params.put("LastMapsUpdate", formatCurrentDate().toStdString());
+      removeMapsButton->setVisible(QDir(mapsFolderPath).exists());
       params.remove("OSMDownloadProgress");
-
+      downloadMapsButton->setEnabled(false);
       update();
-
       return;
-    }
+  }
 
-    static int previousDownloadedFiles = 0;
-    if (downloadedFiles != previousDownloadedFiles) {
-      std::thread([this]() {
-        mapsSize->setText(calculateDirectorySize(mapsFolderPath));
-      }).detach();
-    }
+  if (currentAction == "Complete" || (totalFiles > 0 && downloadedFiles == totalFiles)) {
+    downloadMapsButton->setText(tr("DOWNLOAD"));
+    lastMapsDownload->setText(formatCurrentDate());
 
-    downloadETA->setText(QString("%1").arg(formatETA(elapsedTime.elapsed(), downloadedFiles, previousDownloadedFiles, totalFiles, startTime)));
-    downloadStatus->setText(QString("%1 / %2 (%3%)").arg(downloadedFiles).arg(totalFiles).arg((downloadedFiles * 100) / totalFiles));
-    downloadTimeElapsed->setText(formatElapsedTime(elapsedTime.elapsed()));
+    downloadETA->setVisible(false);
+    downloadStatus->setVisible(false);
+    downloadTimeElapsed->setVisible(false);
 
-    previousDownloadedFiles = downloadedFiles;
+    lastMapsDownload->setVisible(true);
+    removeMapsButton->setVisible(true);
+
+    params.put("LastMapsUpdate", formatCurrentDate().toStdString());
+    params.remove("OSMDownloadProgress");
+
+    std::thread([this]() { mapsSize->setText(calculateDirectorySize(mapsFolderPath)); }).detach();
+
+    update();
+    return;
+  }
+
+  if (totalFiles > 0 && downloadedFiles >= 0 && downloadedFiles < totalFiles) {
+      downloadMapsButton->setText(tr("CANCEL"));
+
+      static int previousDownloadedFiles = -1;
+      if (downloadedFiles != previousDownloadedFiles) {
+        if (downloadedFiles % 5 == 0 || previousDownloadedFiles == -1) {
+            std::thread([this]() {
+                mapsSize->setText(calculateDirectorySize(mapsFolderPath));
+            }).detach();
+        }
+        previousDownloadedFiles = downloadedFiles;
+      }
+
+      downloadETA->setText(QString("%1").arg(formatETA(elapsedTime.elapsed(), downloadedFiles, previousDownloadedFiles, totalFiles, startTime)));
+      downloadStatus->setText(tr("%1 / %2 files (%3%) - %4")
+                                  .arg(downloadedFiles)
+                                  .arg(totalFiles)
+                                  .arg(totalFiles > 0 ? (downloadedFiles * 100) / totalFiles : 0)
+                                  .arg(currentAction));
+      downloadTimeElapsed->setText(formatElapsedTime(elapsedTime.elapsed()));
+
+      downloadETA->setVisible(true);
+      downloadStatus->setVisible(true);
+      downloadTimeElapsed->setVisible(true);
+      lastMapsDownload->setVisible(false);
+      removeMapsButton->setVisible(false);
+
+  } else if (currentAction == "Starting" || currentAction == "Idle" || currentAction == "Calculating") {
+      downloadMapsButton->setText(tr("CANCEL"));
+      downloadStatus->setText(tr(currentAction.toStdString().c_str()));
+      downloadETA->setVisible(true);
+      downloadETA->setText("Calculating...");
+      downloadTimeElapsed->setVisible(true);
+      downloadTimeElapsed->setText("00:00:00");
+      lastMapsDownload->setVisible(false);
+      removeMapsButton->setVisible(false);
+  } else {
   }
 }
