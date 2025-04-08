@@ -24,6 +24,10 @@ REROUTE_DISTANCE = 25
 MANEUVER_TRANSITION_THRESHOLD = 10
 REROUTE_COUNTER_MIN = 3
 
+# Mock Route Constants
+MOCK_ROUTE_DISTANCE_KM = 15.0  # Distance ahead for mock route (km)
+MOCK_ROUTE_RECALC_INTERVAL_SEC = 300 # How often to recalculate mock route (seconds)
+EARTH_RADIUS_KM = 6371.0
 
 class RouteEngine:
   def __init__(self, sm, pm):
@@ -75,6 +79,10 @@ class RouteEngine:
     self.stop_coord = []
     self.stop_signal = []
 
+    # Mock Route State
+    self.mock_route_active = False
+    self.mock_route_timer = 0 # Start timer at 0 to trigger initial calculation
+
   def update(self):
     self.sm.update(0)
 
@@ -107,24 +115,61 @@ class RouteEngine:
       self.last_bearing = math.degrees(location.calibratedOrientationNED.value[2])
       self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
 
+    # Decrement mock route timer (ensuring it doesn't go below zero)
+    # Assumes update() is called roughly once per second by Ratekeeper
+    self.mock_route_timer = max(0, self.mock_route_timer - 1)
+
   def recompute_route(self):
     if self.last_position is None:
       return
 
-    new_destination = coordinate_from_param("NavDestination", self.params)
-    if new_destination is None:
-      self.clear_route()
-      self.reset_recompute_limits()
+    # Don't recompute when GPS drifts in tunnels
+    if not self.gps_ok and self.step_idx is not None:
       return
 
+    new_destination = coordinate_from_param("NavDestination", self.params)
+
+    # --- Mock Route Logic ---
+    if new_destination is None:
+      if not self.mock_route_active and self.last_bearing is not None and self.gps_ok and self.localizer_valid:
+        # Start mock route if not active and conditions are met
+        self.mock_route_timer = 0 # Trigger immediate calculation
+        self.mock_route_active = True
+        cloudlog.info("No destination set, activating mock route.")
+
+      if self.mock_route_active and self.mock_route_timer == 0:
+        if self.last_bearing is None or not self.gps_ok or not self.localizer_valid:
+          cloudlog.warning("Mock route conditions lost (bearing/gps/localizer), deactivating.")
+          self.clear_route() # This also sets mock_route_active to False and resets timer
+          return
+
+        mock_dest = self.calculate_coordinate_ahead(self.last_position.latitude,
+                                                  self.last_position.longitude,
+                                                  self.last_bearing,
+                                                  MOCK_ROUTE_DISTANCE_KM)
+        if mock_dest:
+          cloudlog.info(f"Calculating mock route to {mock_dest}")
+          self.calculate_route(mock_dest)
+          # Reset timer for next recalculation
+          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC
+        else:
+          cloudlog.error("Failed to calculate mock destination.")
+          # Don't retry immediately, wait for next timer cycle or location update
+          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC / 10 # Retry sooner
+      return # Don't proceed to regular route logic if handling mock route
+
+    # --- Regular Route Logic ---
+    # If a destination is set, ensure mock route is deactivated
+    if self.mock_route_active:
+        cloudlog.info("Destination set, deactivating mock route.")
+        self.clear_route() # Deactivates mock route and clears existing route data
+        # Don't return here, let regular logic continue with the new destination
+
+    # Existing logic for handling NavDestination changes and recomputing
     should_recompute = self.should_recompute()
     if new_destination != self.nav_destination:
       cloudlog.warning(f"Got new destination from NavDestination param {new_destination}")
       should_recompute = True
-
-    # Don't recompute when GPS drifts in tunnels
-    if not self.gps_ok and self.step_idx is not None:
-      return
 
     if self.recompute_countdown == 0 and should_recompute:
       self.recompute_countdown = 2**self.recompute_backoff
@@ -427,6 +472,8 @@ class RouteEngine:
     self.route_geometry = None
     self.step_idx = None
     self.nav_destination = None
+    self.mock_route_active = False # Ensure mock route is deactivated
+    self.mock_route_timer = 0 # Reset timer
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
@@ -458,6 +505,22 @@ class RouteEngine:
       self.reroute_counter = 0
     return self.reroute_counter > REROUTE_COUNTER_MIN
     # TODO: Check for going wrong way in segment
+
+  def calculate_coordinate_ahead(self, lat_deg, lon_deg, bearing_deg, distance_km):
+    try:
+      lat_rad = math.radians(lat_deg)
+      lon_rad = math.radians(lon_deg)
+      bearing_rad = math.radians(bearing_deg)
+
+      lat2_rad = math.asin(math.sin(lat_rad) * math.cos(distance_km / EARTH_RADIUS_KM) +
+                           math.cos(lat_rad) * math.sin(distance_km / EARTH_RADIUS_KM) * math.cos(bearing_rad))
+      lon2_rad = lon_rad + math.atan2(math.sin(bearing_rad) * math.sin(distance_km / EARTH_RADIUS_KM) * math.cos(lat_rad),
+                                      math.cos(distance_km / EARTH_RADIUS_KM) - math.sin(lat_rad) * math.sin(lat2_rad))
+
+      return Coordinate(math.degrees(lat2_rad), math.degrees(lon2_rad))
+    except Exception as e:
+      cloudlog.error(f"Error calculating coordinate ahead: {e}")
+      return None
 
 
 def main():
