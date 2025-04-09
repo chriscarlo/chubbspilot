@@ -241,7 +241,7 @@ class VisionTurnSpeedController:
             raw_target = self.planned_speeds[0]
 
             # ------------------------------
-            # Apply speed filtering for smoothing increases - REMOVED FOR TESTING
+            # Apply speed filtering for smoothing increases - REMOVED to fix sluggish accel
             # if self._last_model_speed is None:
             #     self._last_model_speed = raw_target
             # if raw_target < self._last_model_speed: # If target is decreasing, apply immediately
@@ -384,12 +384,12 @@ class VisionTurnSpeedController:
         # (3) Apex-based shaping pass (using fixed parameters)
         # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 3.5      # Pushed higher from 3.0 to force earlier slowing
+        margin_factor = 2.2      # Small increase from original (2.0) for slightly earlier decel start
         decel_mult = 1.0
-        accel_mult = 1.2         # Reverted from 1.5
+        accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
         # Slightly more aggressive deceleration and acceleration factors
-        apex_decel_factor = 0.20   # Pushed higher from 0.18 to force earlier decel ramp
-        apex_spool_factor = 0.10    # increased from 0.05 for faster spool-up
+        apex_decel_factor = 0.12   # Keep original value for desired decel profile shape
+        apex_spool_factor = 0.10   # Increased from original (0.05) for faster apex exit spool-up
 
         planned = safe_speeds.copy()
 
