@@ -1,6 +1,12 @@
 import os
 import capnp
 import math
+import sys
+
+# Ensure the current directory is in the path for importing the compiled schema module
+script_dir_path = os.path.dirname(__file__)
+if script_dir_path not in sys.path:
+    sys.path.insert(0, script_dir_path)
 
 # Assuming the schema is compiled and available relative to this path or in PYTHONPATH
 # Adjust the import path as necessary based on where the compiled schema file (offline_capnp.py) will reside.
