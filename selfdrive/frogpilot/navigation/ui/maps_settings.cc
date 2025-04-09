@@ -210,7 +210,7 @@ void FrogPilotMapsPanel::startDownload() {
   elapsedTime.start();
   startTime = QDateTime::currentDateTime();
 
-  params.put("OSMDownloadLocations", params.get("MapsSelected"));
+  params_memory.put("OSMDownloadLocations", params.get("MapsSelected"));
 
   QString program = "python";
   QStringList arguments;
