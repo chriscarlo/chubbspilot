@@ -32,25 +32,26 @@ except ImportError:
 
 
 # Define constants based on the Go code (generate_offline.go and mapd.go)
-AREA_BOX_DEGREES = 1.0  # Degrees for individual area files
+AREA_BOX_DEGREES = 0.25  # Degrees for individual area files (Actual observed value)
 # GROUP_AREA_BOX_DEGREES = 10.0 # Degrees for grouping area files into directories (Seems unused in lookup?)
 BOUNDS_DIR = "/data/media/0/osm/offline" # Correct path based on generate_offline.go and UI code
 
 
-def get_bounds_filename(min_lat, min_lon, max_lat, max_lon):
-    # Mimics GenerateBoundsFileName from generate_offline.go but uses the simpler directory structure seen in FindWaysAroundLocation
-    # Note: The Go code has two different directory structures mentioned. FindWaysAroundLocation seems simpler.
-    # We might need to adjust this based on how the bounds files are actually generated and stored.
-    # Assuming the structure used by FindWaysAroundLocation: BOUNDS_DIR/lat/lon/file.bin
-    # Let's stick to the naming convention used in generate_offline.go for the filename itself for clarity.
-    lat_dir = int(math.floor(min_lat))
-    lon_dir = int(math.floor(min_lon))
-    # Ensure formatting matches the expected float representation if needed, Go might format differently.
-    filename = f"{min_lat}_{min_lon}_{max_lat}_{max_lon}.bin"
+def get_bounds_filename(lat, lon, min_lat_box, min_lon_box, max_lat_box, max_lon_box):
+    """Constructs the filename and path.
+    Directory path uses 1.0 degree floor(lat), floor(lon).
+    Filename uses the precise 0.25 degree box bounds.
+    """
+    # Directory based on 1.0 degree floor of original coords
+    lat_dir = int(math.floor(lat))
+    lon_dir = int(math.floor(lon))
+    # Filename based on the calculated 0.25 degree box bounds
+    # Use a consistent format specifier for precision, matching observed files
+    filename = f"{min_lat_box:.6f}_{min_lon_box:.6f}_{max_lat_box:.6f}_{max_lon_box:.6f}.bin"
     return os.path.join(BOUNDS_DIR, str(lat_dir), str(lon_dir), filename)
 
 def find_area_box(lat, lon):
-    # Determine the bounding box file coordinates based on latitude and longitude
+    """Determine the 0.25 degree bounding box file coordinates."""
     min_lat = math.floor(lat / AREA_BOX_DEGREES) * AREA_BOX_DEGREES
     min_lon = math.floor(lon / AREA_BOX_DEGREES) * AREA_BOX_DEGREES
     max_lat = min_lat + AREA_BOX_DEGREES
@@ -72,7 +73,8 @@ class MapReader:
         Caches the loaded data to avoid redundant reads.
         """
         min_lat, min_lon, max_lat, max_lon = find_area_box(lat, lon)
-        filename = get_bounds_filename(min_lat, min_lon, max_lat, max_lon)
+        # Pass original lat/lon too for directory calculation
+        filename = get_bounds_filename(lat, lon, min_lat, min_lon, max_lat, max_lon)
 
         # Check cache first
         if filename == self.current_filename and self.current_offline_data is not None:
@@ -191,10 +193,10 @@ if __name__ == '__main__':
              offline_capnp = type('obj', (object,), {'Offline': DummyOffline})()
 
 
-    # Test coordinates (replace with actual test coordinates)
-    # Example: Somewhere in California
-    test_lat = 34.0522
-    test_lon = -118.2437
+    # Example: Somewhere in California within an existing tile
+    # Tile 34/-118 contains 34.000000_-118.000000_34.250000_-117.750000.bin
+    test_lat = 34.1
+    test_lon = -117.9
 
     print(f"\nTesting MapReader with coordinates: Lat={test_lat}, Lon={test_lon}")
     reader = MapReader()
@@ -219,5 +221,5 @@ if __name__ == '__main__':
         print("Failed to load map data for the given coordinates. (This might be normal if the file doesn't exist)." )
         # Double check the expected path based on the coordinates:
         min_lat_test, min_lon_test, max_lat_test, max_lon_test = find_area_box(test_lat, test_lon)
-        expected_file = get_bounds_filename(min_lat_test, min_lon_test, max_lat_test, max_lon_test)
+        expected_file = get_bounds_filename(test_lat, test_lon, min_lat_test, min_lon_test, max_lat_test, max_lon_test)
         print(f"  (Checked path: {expected_file})")
