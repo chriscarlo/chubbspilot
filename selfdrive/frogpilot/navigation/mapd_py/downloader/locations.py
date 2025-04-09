@@ -6,7 +6,8 @@ import os
 # Assuming this script is run relative to the mapd_py directory
 # Adjust paths if necessary based on execution context
 MODULE_DIR = os.path.dirname(__file__)
-SOURCE_DIR = os.path.abspath(os.path.join(MODULE_DIR, "..", "..", "navigation", "mapd_source")) # Go up to frogpilot, then down
+# Go up three levels (downloader -> mapd_py -> navigation -> frogpilot) then down
+SOURCE_DIR = os.path.abspath(os.path.join(MODULE_DIR, "..", "..", "..", "navigation", "mapd_source"))
 
 NATION_BOXES_FILE = os.path.join(SOURCE_DIR, "nation_bounding_boxes.json")
 STATE_BOXES_FILE = os.path.join(SOURCE_DIR, "us_states_bounding_boxes.json")
