@@ -1,0 +1,58 @@
+# SConstruct for generating Python bindings for offline.capnp
+import os
+from SCons.Script import Environment, Dir, File, Glob
+
+# Setup environment (could potentially inherit from parent)
+env = Environment()
+
+# Define source and target directory
+offline_schema = File('offline.capnp')
+target_dir = Dir('.')
+
+# --- C++ Header Generation ---
+# Needed for Cython compilation
+cpp_targets = [target_dir.File('offline.capnp.h'), target_dir.File('offline.capnp.c++')]
+# Assuming capnpc is in PATH for scons environment
+# Assuming '.' is implicitly searched for includes or using --src-prefix
+cpp_command = env.Command(cpp_targets, offline_schema,
+                         f"capnpc --src-prefix=. $SOURCE -oc++:{target_dir.path}")
+
+# --- Cython Source Generation ---
+# Needs paths to capnp includes and cython plugin. These might need adjustment.
+# Assuming paths discovered during manual testing are available/correct here.
+# Using pycapnp 1.2.1 requires cython < 3.0
+# TODO: Verify these paths within the scons build environment
+cython_plugin_path = '/usr/local/pyenv/shims/capnpc-cython'
+capnp_include_path = '/usr/local/pyenv/versions/3.11.4/lib/python3.11/site-packages/capnp'
+
+cython_targets = [target_dir.File('offline_capnp_cython.pyx'), target_dir.File('setup_capnp.py')]
+cython_command_str = f"capnp compile -I{capnp_include_path} -o{cython_plugin_path}:{target_dir.path} $SOURCE"
+cython_command = env.Command(cython_targets, offline_schema, cython_command_str)
+
+# --- Cython Extension Build ---
+# The target .so name depends on python version and architecture.
+# Using a Glob to find it might be more robust if the name isn't fixed.
+# For now, assuming the name found during manual testing.
+# TODO: Make target_so detection more robust
+target_so_name = 'offline_capnp_cython.cpython-311-aarch64-linux-gnu.so'
+target_so = target_dir.File(target_so_name)
+
+# Build depends on C++ headers and Cython sources
+build_deps = cpp_targets + cython_targets
+build_command_str = 'python setup_capnp.py build_ext --inplace'
+build_command = env.Command(target_so, build_deps, build_command_str)
+# Explicitly depend on the setup script itself
+env.Depends(build_command, target_dir.File('setup_capnp.py'))
+
+# --- Cleanup ---
+# Define what 'scons -c' should remove
+cleanup_targets = cpp_targets + cython_targets + [target_so, target_dir.Dir('build')]
+env.Clean(target_so, cleanup_targets) # Clean all when target_so is cleaned
+# Also explicitly clean the .so file(s)
+env.Clean(target_so, Glob('*.so'))
+
+# Optional: Define an alias to build this specifically
+# Alias('mapd_py_bindings', target_so)
+
+# Return the main target so parent SConstructs can depend on it if needed
+Return('target_so')
