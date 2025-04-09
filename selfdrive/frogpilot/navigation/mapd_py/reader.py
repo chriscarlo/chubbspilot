@@ -111,7 +111,8 @@ if __name__ == '__main__':
     # and the 'offline.capnp' file from the mapd_source directory.
     script_dir = os.path.dirname(__file__)
     schema_py_path = os.path.join(script_dir, 'offline_capnp.py')
-    schema_capnp_rel_path = '../mapd_source/offline.capnp' # Relative path from reader.py
+    # Expect offline.capnp in the *same* directory as this script
+    schema_capnp_rel_path = 'offline.capnp' # <-- CHANGED
     schema_capnp_abs_path = os.path.abspath(os.path.join(script_dir, schema_capnp_rel_path))
 
     if not os.path.exists(schema_py_path):
@@ -119,13 +120,8 @@ if __name__ == '__main__':
         if os.path.exists(schema_capnp_abs_path):
             print(f"Attempting to generate schema from '{schema_capnp_abs_path}'...")
             # Construct the command carefully. Ensure output path is correct.
-            # Running from the mapd_source directory simplifies include paths for capnp tool.
-            mapd_source_dir = os.path.dirname(schema_capnp_abs_path)
-            # Output path relative to mapd_source dir needs to point back to mapd_py dir
-            output_py_rel_to_source = os.path.relpath(schema_py_path, start=mapd_source_dir)
-
-            # Command: cd into source dir, compile schema, output back to mapd_py dir
-            compile_cmd = f"cd \"{mapd_source_dir}\" && capnp compile -opy offline.capnp -o \"{output_py_rel_to_source}\""
+            # Generate python module (-opy) from the schema (last arg), output to schema_py_path (-o).
+            compile_cmd = f"capnp compile -opy \\"{schema_capnp_abs_path}\\" -o \\"{schema_py_path}\\"" # <-- CHANGED
 
             print(f"Executing: {compile_cmd}")
             try:
