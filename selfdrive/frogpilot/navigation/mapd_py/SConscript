@@ -13,9 +13,9 @@ target_dir = Dir('.')
 # Needed for Cython compilation
 cpp_targets = [target_dir.File('offline.capnp.h'), target_dir.File('offline.capnp.c++')]
 # Assuming capnpc is in PATH for scons environment
-# Assuming '.' is implicitly searched for includes or using --src-prefix
+# Change directory first, then run capnp compile with relative source path
 cpp_command = env.Command(cpp_targets, offline_schema,
-                         f"capnpc --src-prefix=. $SOURCE -oc++:{target_dir.path}")
+                         f"cd {target_dir.path} && capnpc -oc++ {offline_schema.name}")
 
 # --- Cython Source Generation ---
 # Needs paths to capnp includes and cython plugin. These might need adjustment.
