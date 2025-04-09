@@ -41,6 +41,10 @@ for ext in ext_modules:
     if not hasattr(ext, 'include_dirs'):
         ext.include_dirs = []
     ext.include_dirs.append('.')
+    # Add libraries to link against (Cap'n Proto C++ libs)
+    if not hasattr(ext, 'libraries'):
+        ext.libraries = []
+    ext.libraries.extend(['kj', 'capnp'])
 
 setup(
     name="{'id': 15724895971861741615, 'filename': 'offline_capnp', 'imports': []}",
