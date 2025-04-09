@@ -379,12 +379,14 @@ class VisionTurnSpeedController:
                 vision_safe_speed *= 0.93
 
             # Final safe speed is the minimum of vision limit and map limit for this step
+            # NOTE: If map data seems ignored, check the incoming map_speed_profile from MTSC
+            # or log vision_safe_speed vs map_safe_speeds[i] here.
             safe_speeds[i] = min(vision_safe_speed, map_safe_speeds[i])
 
         # (3) Apex-based shaping pass (using fixed parameters)
         # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 2.2      # Small increase from original (2.0) for slightly earlier decel start
+        margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
         # Slightly more aggressive deceleration and acceleration factors
