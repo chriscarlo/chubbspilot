@@ -45,6 +45,10 @@ for ext in ext_modules:
     if not hasattr(ext, 'libraries'):
         ext.libraries = []
     ext.libraries.extend(['kj', 'capnp'])
+    # Add directory where to find the libraries
+    if not hasattr(ext, 'library_dirs'):
+        ext.library_dirs = []
+    ext.library_dirs.append('/usr/local/lib')
 
 setup(
     name="{'id': 15724895971861741615, 'filename': 'offline_capnp', 'imports': []}",
