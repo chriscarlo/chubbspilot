@@ -241,20 +241,19 @@ class VisionTurnSpeedController:
             raw_target = self.planned_speeds[0]
 
             # ------------------------------
-            # Apply speed filtering for smoothing increases
-            # ------------------------------
-            if self._last_model_speed is None:
-                self._last_model_speed = raw_target
-            if raw_target < self._last_model_speed: # If target is decreasing, apply immediately
-                filtered_target = raw_target
-            else: # If target is increasing, smooth it
-                filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
-            self._last_model_speed = filtered_target
-            raw_target = filtered_target
+            # Apply speed filtering for smoothing increases - REMOVED FOR TESTING
+            # if self._last_model_speed is None:
+            #     self._last_model_speed = raw_target
+            # if raw_target < self._last_model_speed: # If target is decreasing, apply immediately
+            #     filtered_target = raw_target
+            # else: # If target is increasing, smooth it
+            #     filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
+            # self._last_model_speed = filtered_target
+            # raw_target = filtered_target
             # --- End of always-on planning block ---
 
         # Always clamp raw_target to at most v_cruise_cluster
-        raw_target = min(raw_target, v_cruise_cluster)
+        raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
         dt = 0.05  # ~20Hz
 
         # Resume events: when ACC is resumed (or target speed changes), skip smoothing.
@@ -262,8 +261,8 @@ class VisionTurnSpeedController:
             final_target_speed = v_cruise_cluster
             self.current_accel = 0.0  # reset current acceleration
         else:
-            scale_decel = dynamic_decel_scale(v_ego)
-            scale_jerk = dynamic_jerk_scale(v_ego)
+            scale_decel = dynamic_decel_scale(v_ego) # Keep for deceleration limit
+            scale_jerk = dynamic_jerk_scale(v_ego) # Keep for jerk limits
 
             # Compute acceleration command
             accel_cmd = (raw_target - self.prev_target_speed) / dt
@@ -277,8 +276,9 @@ class VisionTurnSpeedController:
             else:
                 boost_factor = 1.0
 
-            pos_limit = self.MAX_ACCEL * scale_decel * boost_factor
-            neg_limit = self.MAX_DECEL * scale_decel
+            # Apply limits: Use scale_decel ONLY for negative limit
+            pos_limit = self.MAX_ACCEL * boost_factor # Removed scale_decel multiplication here
+            neg_limit = self.MAX_DECEL * scale_decel # Keep scale_decel here
             accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
 
             # Jerk-limit the change in acceleration
@@ -286,13 +286,14 @@ class VisionTurnSpeedController:
             accel_diff = accel_cmd - self.current_accel
 
             if accel_diff > 0:
+                # Use scale_jerk for positive jerk limit? Assume yes for symmetry.
                 max_delta = (self.MAX_JERK_ACCEL * scale_jerk * boost_factor * jerk_mult) * dt
                 if accel_diff > max_delta:
                     self.current_accel += max_delta
                 else:
                     self.current_accel = accel_cmd
             elif accel_diff < 0:
-                max_delta = (self.MAX_JERK * scale_jerk * boost_factor * jerk_mult) * dt
+                max_delta = (self.MAX_JERK * scale_jerk * boost_factor * jerk_mult) * dt # Keep scale_jerk here
                 if accel_diff < -max_delta:
                     self.current_accel -= max_delta
                 else:
@@ -383,11 +384,11 @@ class VisionTurnSpeedController:
         # (3) Apex-based shaping pass (using fixed parameters)
         # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 2.5      # increased from 2.0 to slow earlier
+        margin_factor = 3.5      # Pushed higher from 3.0 to force earlier slowing
         decel_mult = 1.0
-        accel_mult = 1.2         # increased from 1.0 for more aggressive accel out
+        accel_mult = 1.2         # Reverted from 1.5
         # Slightly more aggressive deceleration and acceleration factors
-        apex_decel_factor = 0.12
+        apex_decel_factor = 0.20   # Pushed higher from 0.18 to force earlier decel ramp
         apex_spool_factor = 0.10    # increased from 0.05 for faster spool-up
 
         planned = safe_speeds.copy()
