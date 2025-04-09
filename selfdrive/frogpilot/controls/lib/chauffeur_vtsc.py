@@ -391,7 +391,7 @@ class VisionTurnSpeedController:
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
         # Slightly more aggressive deceleration and acceleration factors
         apex_decel_factor = 0.12   # Keep original value for desired decel profile shape
-        apex_spool_factor = 0.10   # Increased from original (0.05) for faster apex exit spool-up
+        apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
 
         planned = safe_speeds.copy()
 
@@ -439,9 +439,10 @@ class VisionTurnSpeedController:
             feasible_speed = v_next - desired_acc * dt_i
             planned[i] = min(planned[i], feasible_speed)
 
-        # (5) Margin-based backward pass with increased margin for earlier slowing
+        # (5) Margin-based backward pass prioritizing comfort decel
+        COMFORT_DECEL = 1.0 # Target comfortable deceleration magnitude (m/s^2)
         base_margin = margin_time_fn(init_speed)
-        margin_t = base_margin * margin_factor
+        margin_t = base_margin * margin_factor # Use the large margin_factor (e.g., 3.5)
 
         for i in range(n - 2, -1, -1):
             j = self._find_time_index(times, times[i] + margin_t, clip_high=True)
@@ -453,7 +454,11 @@ class VisionTurnSpeedController:
 
             v_future = planned[j]
             err = planned[i] - v_future
-            desired_acc = clip(err / dt_ij, -self.MAX_DECEL * decel_mult, self.MAX_DECEL * decel_mult)
+            # Clip required acceleration between -COMFORT_DECEL and MAX_ACCEL for this long-horizon check
+            # This encourages gentle deceleration planning initiated early.
+            # MAX_DECEL is still enforced by Step 4 and Step 7 if comfort plan is insufficient.
+            # Use accel_mult consistent with forward pass (Step 6).
+            desired_acc = clip(err / dt_ij, -COMFORT_DECEL, self.MAX_ACCEL * accel_mult)
             feasible_speed = v_future - desired_acc * dt_ij
             planned[i] = min(planned[i], feasible_speed)
 
