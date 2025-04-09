@@ -29,6 +29,8 @@ cython_targets = [target_dir.File('offline_capnp_cython.pyx'), target_dir.File('
 # Change directory first, then run capnp compile with relative source path
 cython_command_str = f"cd {target_dir.path} && capnp compile -I{capnp_include_path} -o{cython_plugin_path}:. {offline_schema.name}"
 cython_command = env.Command(cython_targets, offline_schema, cython_command_str)
+# Explicitly make the Cython generation depend on C++ generation completion
+env.Depends(cython_command, cpp_targets)
 
 # --- Cython Extension Build ---
 # The target .so name depends on python version and architecture.
@@ -38,8 +40,8 @@ cython_command = env.Command(cython_targets, offline_schema, cython_command_str)
 target_so_name = 'offline_capnp_cython.cpython-311-aarch64-linux-gnu.so'
 target_so = target_dir.File(target_so_name)
 
-# Build depends on C++ headers and Cython sources
-build_deps = cpp_targets + cython_targets
+# Build depends primarily on the Cython targets (pyx and setup script)
+build_deps = cython_targets # Simplified, relying on explicit Depends below
 # Use the full path to the pyenv python3 and cd into the target directory first
 build_command_str = f'cd {target_dir.path} && /usr/local/pyenv/versions/3.11.4/bin/python3 setup_capnp.py build_ext --inplace'
 build_command = env.Command(target_so, build_deps, build_command_str)
