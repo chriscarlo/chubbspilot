@@ -39,8 +39,8 @@ target_so = target_dir.File(target_so_name)
 
 # Build depends on C++ headers and Cython sources
 build_deps = cpp_targets + cython_targets
-# Use python3 explicitly and cd into the target directory first
-build_command_str = f'cd {target_dir.path} && python3 setup_capnp.py build_ext --inplace'
+# Use the full path to the pyenv python3 and cd into the target directory first
+build_command_str = f'cd {target_dir.path} && /usr/local/pyenv/versions/3.11.4/bin/python3 setup_capnp.py build_ext --inplace'
 build_command = env.Command(target_so, build_deps, build_command_str)
 # Explicitly depend on the setup script itself
 env.Depends(build_command, target_dir.File('setup_capnp.py'))
