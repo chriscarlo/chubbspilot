@@ -147,8 +147,8 @@ def _download_and_extract_file(lat_group, lon_group, location_name):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        # Add verify=False and headers to the request
-        with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT, verify=False, headers=headers) as r:
+        # Remove verify=False from the request
+        with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT, headers=headers) as r:
             print(f"--> requests.get successful, status code: {r.status_code}") # DEBUG
             r.raise_for_status() # Check for HTTP errors
 
