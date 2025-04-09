@@ -45,6 +45,8 @@ build_command_str = f'cd {target_dir.path} && /usr/local/pyenv/versions/3.11.4/b
 build_command = env.Command(target_so, build_deps, build_command_str)
 # Explicitly depend on the setup script itself
 env.Depends(build_command, target_dir.File('setup_capnp.py'))
+# Explicitly make the build command depend on the C++ generation command completion
+env.Depends(build_command, cpp_command)
 
 # --- Cleanup ---
 # Define what 'scons -c' should remove
