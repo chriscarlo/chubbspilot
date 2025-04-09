@@ -26,7 +26,8 @@ cython_plugin_path = '/usr/local/pyenv/shims/capnpc-cython'
 capnp_include_path = '/usr/local/pyenv/versions/3.11.4/lib/python3.11/site-packages/capnp'
 
 cython_targets = [target_dir.File('offline_capnp_cython.pyx'), target_dir.File('setup_capnp.py')]
-cython_command_str = f"capnp compile -I{capnp_include_path} -o{cython_plugin_path}:{target_dir.path} $SOURCE"
+# Change directory first, then run capnp compile with relative source path
+cython_command_str = f"cd {target_dir.path} && capnp compile -I{capnp_include_path} -o{cython_plugin_path}:. {offline_schema.name}"
 cython_command = env.Command(cython_targets, offline_schema, cython_command_str)
 
 # --- Cython Extension Build ---
