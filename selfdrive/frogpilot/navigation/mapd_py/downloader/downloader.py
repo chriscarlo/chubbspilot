@@ -143,11 +143,22 @@ def _download_and_extract_file(lat_group, lon_group, location_name):
     print(f"Downloading: {url} to {download_path}")
 
     try:
+        print(f"--> Attempting requests.get for {url}") # DEBUG
         with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT) as r:
+            print(f"--> requests.get successful, status code: {r.status_code}") # DEBUG
             r.raise_for_status() # Check for HTTP errors
+
+            print(f"--> Opening {download_path} for writing.") # DEBUG
             with open(download_path, 'wb') as f:
+                print(f"--> Opened {download_path}, iterating content...") # DEBUG
+                chunk_count = 0
                 for chunk in r.iter_content(chunk_size=8192):
+                    # print(f"--> Writing chunk {chunk_count}") # Optional: very verbose
                     f.write(chunk)
+                    chunk_count += 1
+                print(f"--> Finished iterating content ({chunk_count} chunks).") # DEBUG
+            print(f"--> Closed {download_path}.") # DEBUG
+
         print(f"Downloaded: {filename}")
 
         # Extract
@@ -173,7 +184,8 @@ def _download_and_extract_file(lat_group, lon_group, location_name):
         return True
 
     except requests.exceptions.RequestException as e:
-        print(f"Error downloading {url}: {e}")
+        print(f"--> requests.get FAILED for {url}: {e}") # DEBUG
+        print(f"Error downloading {url}: {e}") # Original print
         _set_error_progress(f"Download failed: {url} ({e})")
         return False
     except (tarfile.TarError, gzip.BadGzipFile, EOFError) as e:
