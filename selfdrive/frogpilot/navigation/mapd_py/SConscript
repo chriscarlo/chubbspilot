@@ -5,60 +5,25 @@ from SCons.Script import Environment, Dir, File, Glob
 # Setup environment (could potentially inherit from parent)
 env = Environment()
 
-# Define source and target directory
-offline_schema = File('offline.capnp')
-target_dir = Dir('.')
+# --- REMOVED ALL OFFLINE.CAPNP COMPILATION RULES ---
+# offline_schema = File('offline.capnp')
+# target_dir = Dir('.')
+# cpp_targets = [...]
+# cpp_command = ...
+# cython_plugin_path = ...
+# capnp_include_path = ...
+# cython_targets = [...]
+# cython_command = ...
+# env.Depends(cython_command, cpp_targets)
+# target_so_name = ...
+# target_so = ...
+# build_deps = ...
+# build_command_str = ...
+# build_command = ...
+# env.Depends(build_command, ...)
+# cleanup_targets = ...
+# env.Clean(...)
+# Alias(...)
 
-# --- C++ Header Generation ---
-# Needed for Cython compilation
-cpp_targets = [target_dir.File('offline.capnp.h'), target_dir.File('offline.capnp.c++')]
-# Assuming capnpc is in PATH for scons environment
-# Change directory first, then run capnp compile with relative source path
-cpp_command = env.Command(cpp_targets, offline_schema,
-                         f"cd {target_dir.path} && capnpc -oc++ {offline_schema.name}")
-
-# --- Cython Source Generation ---
-# Needs paths to capnp includes and cython plugin. These might need adjustment.
-# Assuming paths discovered during manual testing are available/correct here.
-# Using pycapnp 1.2.1 requires cython < 3.0
-# TODO: Verify these paths within the scons build environment
-cython_plugin_path = '/usr/local/pyenv/shims/capnpc-cython'
-capnp_include_path = '/usr/local/pyenv/versions/3.11.4/lib/python3.11/site-packages/capnp'
-
-cython_targets = [target_dir.File('offline_capnp_cython.pyx'), target_dir.File('setup_capnp.py')]
-# Change directory first, then run capnp compile with relative source path
-cython_command_str = f"cd {target_dir.path} && capnp compile -I{capnp_include_path} -o{cython_plugin_path}:. {offline_schema.name}"
-cython_command = env.Command(cython_targets, offline_schema, cython_command_str)
-# Explicitly make the Cython generation depend on C++ generation completion
-env.Depends(cython_command, cpp_targets)
-
-# --- Cython Extension Build ---
-# The target .so name depends on python version and architecture.
-# Using a Glob to find it might be more robust if the name isn't fixed.
-# For now, assuming the name found during manual testing.
-# TODO: Make target_so detection more robust
-target_so_name = 'offline_capnp_cython.cpython-311-aarch64-linux-gnu.so'
-target_so = target_dir.File(target_so_name)
-
-# Build depends primarily on the Cython targets (pyx and setup script)
-build_deps = cython_targets # Simplified, relying on explicit Depends below
-# Use the full path to the pyenv python3 and cd into the target directory first
-build_command_str = f'cd {target_dir.path} && /usr/local/pyenv/versions/3.11.4/bin/python3 setup_capnp.py build_ext --inplace'
-build_command = env.Command(target_so, build_deps, build_command_str)
-# Explicitly depend on the setup script itself
-env.Depends(build_command, target_dir.File('setup_capnp.py'))
-# Explicitly make the build command depend on the C++ generation output file
-env.Depends(build_command, target_dir.File('offline.capnp.c++'))
-
-# --- Cleanup ---
-# Define what 'scons -c' should remove
-cleanup_targets = cpp_targets + cython_targets + [target_so, target_dir.Dir('build')]
-env.Clean(target_so, cleanup_targets) # Clean all when target_so is cleaned
-# Also explicitly clean the .so file(s)
-env.Clean(target_so, Glob('*.so'))
-
-# Optional: Define an alias to build this specifically
-# Alias('mapd_py_bindings', target_so)
-
-# Return the main target so parent SConstructs can depend on it if needed
-Return('target_so')
+# Return nothing or a placeholder if required by parent scripts
+Return([])

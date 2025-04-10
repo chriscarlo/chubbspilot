@@ -116,6 +116,10 @@ pyaudio = "*"
 libusb1 = "*"
 spidev = { version = "*", platform = "linux" }
 
+# mapd_py dependencies
+rtree = "*"
+shapely = "*" # Explicitly add, though might be dependency of others
+
 # modeld
 onnx = ">=1.14.0"
 onnxruntime = { version = ">=1.16.3", platform = "linux", markers = "platform_machine == 'aarch64'" }

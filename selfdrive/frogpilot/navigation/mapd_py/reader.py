@@ -6,43 +6,9 @@ from rtree import index # For spatial indexing
 from shapely.geometry import Point, LineString # For geometry operations
 
 # Ensure the current directory is in the path for importing the compiled schema module
-script_dir_path = os.path.dirname(__file__)
-if script_dir_path not in sys.path:
-    sys.path.insert(0, script_dir_path)
-
-# Assuming the schema is compiled and available relative to this path or in PYTHONPATH
-# Adjust the import path as necessary based on where the compiled schema file (offline_capnp.py) will reside.
-# It might need to be generated first using 'capnp compile -opy' on the offline.capnp file from the mapd_source directory.
-# For now, let's assume it's generated in the same directory as this reader.py.
-try:
-    # Attempt to import the generated Cap'n Proto schema
-    # This requires 'offline_capnp_cython.so' (or similar) to exist in the Python path,
-    # generated via 'capnp compile' with cython plugin and 'python setup_capnp.py build_ext --inplace'.
-    import offline_capnp_cython as offline_capnp
-except ImportError:
-    print("Warning: offline_capnp_cython Python schema module not found.")
-    print("Please generate it from 'selfdrive/frogpilot/navigation/mapd_py/offline.capnp' using:")
-    print("  capnp compile -I<path_to_pycapnp_includes> -o<path_to_capnpc_cython>:. offline.capnp")
-    print("  capnp compile -I<path_to_pycapnp_includes> -oc++:. offline.capnp")
-    print("  python setup_capnp.py build_ext --inplace")
-    print("Providing a dummy schema to allow development to proceed.")
-    # Provide a dummy class if import fails to avoid errors during development
-    class DummyOffline:
-        minLat = 0.0
-        minLon = 0.0
-        ways = []
-        @staticmethod
-        def read_packed(f):
-            print("Dummy read_packed called")
-            return None # Return None or a dummy object matching the schema structure
-    # Alias the dummy under the expected name for the rest of the code
-    offline_capnp = type('obj', (object,), {'Offline': DummyOffline})()
-
-
-# Define constants based on the Go code (generate_offline.go and mapd.go)
-# AREA_BOX_DEGREES = 0.25  # Degrees for individual area files (Actual observed value)
-# GROUP_AREA_BOX_DEGREES = 10.0 # Degrees for grouping area files into directories (Seems unused in lookup?)
-# BOUNDS_DIR = "/data/media/0/osm/offline" # Correct path based on generate_offline.go and UI code
+# script_dir_path = os.path.dirname(__file__)
+# if script_dir_path not in sys.path:
+#     sys.path.insert(0, script_dir_path)
 
 # Define path to our custom capnp file and schema relative to openpilot root
 # Adjust these paths if necessary
@@ -195,9 +161,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Specify the data file path explicitly for testing
-    # test_data_path = DEFAULT_SPEED_LIMIT_DATA_PATH # Use California data instead
     test_data_path = "map_data/california-speedlimits.capnp"
-    print(f"Using test data path: {test_data_path}") # Added print
+    print(f"Using test data path: {test_data_path}")
 
     if not os.path.exists(test_data_path):
         print(f"Test data file '{test_data_path}' not found.")
