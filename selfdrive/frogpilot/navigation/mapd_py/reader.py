@@ -2,6 +2,8 @@ import os
 import capnp
 import math
 import sys
+from rtree import index # For spatial indexing
+from shapely.geometry import Point, LineString # For geometry operations
 
 # Ensure the current directory is in the path for importing the compiled schema module
 script_dir_path = os.path.dirname(__file__)
@@ -38,194 +40,202 @@ except ImportError:
 
 
 # Define constants based on the Go code (generate_offline.go and mapd.go)
-AREA_BOX_DEGREES = 0.25  # Degrees for individual area files (Actual observed value)
+# AREA_BOX_DEGREES = 0.25  # Degrees for individual area files (Actual observed value)
 # GROUP_AREA_BOX_DEGREES = 10.0 # Degrees for grouping area files into directories (Seems unused in lookup?)
-BOUNDS_DIR = "/data/media/0/osm/offline" # Correct path based on generate_offline.go and UI code
+# BOUNDS_DIR = "/data/media/0/osm/offline" # Correct path based on generate_offline.go and UI code
 
+# Define path to our custom capnp file and schema relative to openpilot root
+# Adjust these paths if necessary
+DEFAULT_SPEED_LIMIT_DATA_PATH = "map_data/nevada-speedlimits.capnp" # Hardcoded for now
+SCHEMA_PATH = "tools/map_processing/osm_speed_data.capnp"
 
-def get_bounds_filename(lat, lon, min_lat_box, min_lon_box, max_lat_box, max_lon_box):
-    """Constructs the filename and path.
-    Directory path uses 1.0 degree floor(lat), floor(lon).
-    Filename uses the precise 0.25 degree box bounds.
-    """
-    # Directory based on 1.0 degree floor of original coords
-    lat_dir = int(math.floor(lat))
-    lon_dir = int(math.floor(lon))
-    # Filename based on the calculated 0.25 degree box bounds
-    # Use a consistent format specifier for precision, matching observed files
-    filename = f"{min_lat_box:.6f}_{min_lon_box:.6f}_{max_lat_box:.6f}_{max_lon_box:.6f}.bin"
-    return os.path.join(BOUNDS_DIR, str(lat_dir), str(lon_dir), filename)
+# Load our custom Cap'n Proto schema
+try:
+    osm_speed_data_capnp = capnp.load(SCHEMA_PATH)
+except Exception as e:
+    print(f"Fatal Error: Could not load speed limit schema '{SCHEMA_PATH}': {e}")
+    # Depending on context, might want sys.exit(1) or raise
+    # Create a dummy if needed for basic operation
+    osm_speed_data_capnp = None # Indicate failure
 
-def find_area_box(lat, lon):
-    """Determine the 0.25 degree bounding box file coordinates."""
-    min_lat = math.floor(lat / AREA_BOX_DEGREES) * AREA_BOX_DEGREES
-    min_lon = math.floor(lon / AREA_BOX_DEGREES) * AREA_BOX_DEGREES
-    max_lat = min_lat + AREA_BOX_DEGREES
-    max_lon = min_lon + AREA_BOX_DEGREES
-    return min_lat, min_lon, max_lat, max_lon
+# Remove old helper functions
+# def get_bounds_filename(...)
+# def find_area_box(...)
 
 class MapReader:
-    def __init__(self, bounds_dir=BOUNDS_DIR):
-        self.bounds_dir = bounds_dir
-        self.current_offline_data = None
-        self.current_filename = None
-        # Ensure the capnp library is loaded
-        capnp.remove_import_hook() # Recommended practice if using pycapnp dynamically
+    def __init__(self, data_path=DEFAULT_SPEED_LIMIT_DATA_PATH):
+        self.data_path = data_path
+        self.segments_data = [] # Store segment data (e.g., {id: osm_id, speed: mps, geom: LineString})
+        self.idx = index.Index() # R-tree spatial index
 
-    def load_map_data(self, lat, lon):
-        """
-        Finds and loads the appropriate map data file based on GPS coordinates.
-        Returns the parsed Cap'n Proto Offline object.
-        Caches the loaded data to avoid redundant reads.
-        """
-        min_lat, min_lon, max_lat, max_lon = find_area_box(lat, lon)
-        # Pass original lat/lon too for directory calculation
-        filename = get_bounds_filename(lat, lon, min_lat, min_lon, max_lat, max_lon)
+        if osm_speed_data_capnp is None:
+            print("Error: Speed limit schema not loaded. MapReader will be non-functional.")
+            return # Cannot proceed without schema
 
-        # Check cache first
-        if filename == self.current_filename and self.current_offline_data is not None:
-            # print(f"Using cached map data: {filename}") # Optional: for debugging
-            return self.current_offline_data
+        self._load_and_index_data()
 
-        # print(f"Attempting to load map data from: {filename}") # Optional: for debugging
+    def _load_and_index_data(self):
+        print(f"Attempting to load streamed speed limit data from: {self.data_path}")
+        segment_count = 0 # Initialize counter
         try:
-            # Ensure parent directories exist before trying to open file
-            # This might not be necessary if the generator guarantees structure
-            # os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(self.data_path, 'rb') as f:
+                # Wrap the file handle in a PackedInputStream using the correct path
+                stream = capnp.lib.capnp.PackedInputStream(f)
+                print("Reading segments sequentially using PackedInputStream and building spatial index...")
 
-            with open(filename, 'rb') as f:
-                # Use read_packed for compressed capnp data
-                offline_data = offline_capnp.Offline.read_packed(f)
-                self.current_offline_data = offline_data
-                self.current_filename = filename
-                # print(f"Successfully loaded map data: {filename}") # Optional: for debugging
-                return offline_data
+                # Iterate through messages loaded from the stream
+                # Use enumerate to get the index for R-tree insertion
+                for i, segment in enumerate(stream.iter_load(osm_speed_data_capnp.SpeedLimitSegment, traversal_limit_in_words=2**63-1)):
+                    # Remove the manual try/except EOFError/Exception for reading here, as iter_load handles it.
+
+                    # Convert Cap'n Proto points to Shapely LineString
+                    coords = [(p.longitude, p.latitude) for p in segment.geometry]
+                    if len(coords) < 2:
+                        # print(f"Warning: Skipping segment {i} with < 2 coordinates.")
+                        continue # Skip invalid geometries
+                    line = LineString(coords)
+
+                    # Read curvatures (convert from capnp list reader to Python list)
+                    segment_curvatures = list(segment.curvatures) if segment.curvatures else []
+
+                    # Store segment info for later retrieval
+                    segment_info = {
+                        'id': segment.osmWayId,
+                        'speed_mps': segment.speedLimitMps,
+                        'geom': line,
+                        'curvatures': segment_curvatures,
+                        'highway': segment.highwayType,
+                        'lanes': segment.lanes,
+                        'oneway': segment.oneway,
+                        'name': segment.name,
+                        'ref': segment.ref,
+                        'surface': segment.surface,
+                        'is_bridge': segment.isBridge,
+                        'is_tunnel': segment.isTunnel,
+                    }
+                    # Use index `i` from enumerate for self.segments_data
+                    self.segments_data.append(segment_info)
+
+                    # Insert into R-tree index using index `i`
+                    self.idx.insert(i, line.bounds)
+
+                    segment_count = i + 1 # Keep track of the count for final message
+
+                    # Optional: Add progress indicator if loading takes long
+                    if segment_count % 50000 == 0:
+                        print(f"  ... processed {segment_count} segments ...")
+
+            print(f"Spatial index built successfully with {segment_count} segments.")
+
         except FileNotFoundError:
-            # This is expected if the map area hasn't been downloaded/generated
-            # print(f"Map data file not found: {filename}")
-            self.current_offline_data = None
-            self.current_filename = None
-            return None
+            print(f"Error: Speed limit data file not found: {self.data_path}")
+            # Handle error appropriately - maybe raise or log
         except Exception as e:
-            # Catch other potential errors (permissions, capnp decoding issues, etc.)
-            print(f"Error reading map data file {filename}: {e}")
-            self.current_offline_data = None
-            self.current_filename = None
+            print(f"Error reading or indexing speed limit data {self.data_path}: {e}")
+            # Handle error appropriately
+
+    def get_segment_data_at(self, lat, lon):
+        """
+        Finds the closest map segment to the given coordinates and returns its data.
+        Returns a dictionary: {'id': osm_id, 'speed_mps': speed, 'geom': LineString, ['curvatures': list_of_floats]}
+        Returns None if no data is loaded or no segment is found nearby.
+        """
+        if not self.segments_data:
+             print("Warning: No map data loaded, cannot get segment data.")
+             return None # No data loaded
+
+        current_point = Point(lon, lat)
+
+        # print(f"Querying segment data for Lat={lat}, Lon={lon}") # Debug
+        try:
+            # Query index for nearest bounding box. Increase num_results if needed.
+            # Using 1 for now, assuming we only care about the single closest way
+            nearest_indices = list(self.idx.nearest((lon, lat, lon, lat), 1))
+            if not nearest_indices:
+                # print("No nearby segments found in R-tree.") # Debug
+                return None # No segments nearby
+
+            # Find the segment whose geometry is actually closest to the point
+            # Since we query for 1 nearest, we just check that one if needed,
+            # but usually the R-tree nearest is sufficient unless geometries overlap significantly.
+            closest_segment_info = None
+            min_dist = float('inf')
+
+            # We only expect one index from nearest(..., 1)
+            if nearest_indices:
+                index = nearest_indices[0]
+                segment_info = self.segments_data[index]
+                distance = segment_info['geom'].distance(current_point)
+
+                # Optional: Add a threshold for max distance?
+                MAX_RELEVANT_DISTANCE_DEGREES = 0.001 # Approx 111m at equator. Tune this.
+                if distance < MAX_RELEVANT_DISTANCE_DEGREES:
+                    closest_segment_info = segment_info
+                    # print(f"Found closest segment {closest_segment_info['id']} at distance {distance:.6f}") # Debug
+                # else:
+                    # print(f"Nearest segment distance {distance:.6f} > threshold {MAX_RELEVANT_DISTANCE_DEGREES}") # Debug
+
+            return closest_segment_info # Return the whole dict or None
+
+        except Exception as e:
+            print(f"Error during spatial query: {e}")
             return None
 
-# Example usage section
+    # Remove old load_map_data method
+    # def load_map_data(self, lat, lon):
+    #     ...
+
+# Example usage section (modified for new structure)
 if __name__ == '__main__':
-    # Note: Generating the schema requires the 'capnp' command-line tool
-    # and the 'offline.capnp' file from the mapd_source directory.
-    script_dir = os.path.dirname(__file__)
-    # Check for the compiled module, not the .py file
-    module_ext = '.so' # Simplification, actual extension varies
-    schema_module_found = any(f.startswith('offline_capnp_cython') and f.endswith(module_ext) for f in os.listdir(script_dir))
-    schema_capnp_abs_path = os.path.abspath(os.path.join(script_dir, 'offline.capnp'))
+    print("\n--- Testing Custom MapReader ---")
 
+    # Check if schema loaded
+    if osm_speed_data_capnp is None:
+        print("Schema failed to load. Exiting test.")
+        sys.exit(1)
 
-    # We don't generate a .py file anymore, so checking for it isn't useful.
-    # Instead, we check if the module was found above.
-    if not schema_module_found:
-        print(f"Compiled schema module 'offline_capnp_cython*.so' not found.")
-        if os.path.exists(schema_capnp_abs_path):
-            print(f"Attempting to generate schema from '{schema_capnp_abs_path}'...")
-            # We can't easily replicate the multi-step build process here.
-            # Provide instructions instead.
-            print("\\n--- Schema Generation Instructions ---")
-            print("Please run the following commands in this directory:")
-            print("1. Find pycapnp include path (e.g., /path/to/site-packages/capnp)")
-            print("   $ python -c \"import capnp; import os; print(os.path.dirname(capnp.__file__))\"")
-            print("2. Find capnpc-cython plugin path (e.g., /path/to/bin/capnpc-cython)")
-            print("   $ which capnpc-cython")
-            print("3. Compile Cython sources:")
-            print("   $ capnp compile -I<include_path> -o<plugin_path>:. offline.capnp")
-            print("4. Compile C++ sources:")
-            print("   $ capnp compile -I<include_path> -oc++:. offline.capnp")
-            print("5. Build the Python extension module:")
-            print("   $ python setup_capnp.py build_ext --inplace")
-            print("--- End Instructions ---\\n")
+    # Specify the data file path explicitly for testing
+    # test_data_path = DEFAULT_SPEED_LIMIT_DATA_PATH # Use California data instead
+    test_data_path = "map_data/california-speedlimits.capnp"
+    print(f"Using test data path: {test_data_path}") # Added print
 
-            # Exit or handle inability to auto-generate gracefully
-            print("Cannot automatically generate schema here. Please follow instructions above.")
-            # We might still try to import the dummy below, but generation won't happen.
+    if not os.path.exists(test_data_path):
+        print(f"Test data file '{test_data_path}' not found.")
+        print("Please ensure you have run the processing script first:")
+        # Updated example command in error message
+        print(f"  python3 tools/map_processing/process_osm.py map_data/california-exported.geojsonl {test_data_path}")
+        sys.exit(1)
 
+    print(f"Initializing MapReader with data: {test_data_path}")
+    reader = MapReader(data_path=test_data_path)
+
+    # Example coordinates (somewhere in California now, e.g., near SF)
+    # test_lat = 39.16 # Approx Reno
+    # test_lon = -119.75
+    test_lat = 37.77 # Approx SF
+    test_lon = -122.41
+
+    if reader.segments_data: # Check if data was loaded and indexed
+        print(f"\nQuerying segment data near Lat={test_lat}, Lon={test_lon}")
+        segment_data = reader.get_segment_data_at(test_lat, test_lon)
+
+        if segment_data is not None:
+            MPH_CONVERSION = 2.23694
+            speed_limit = segment_data.get('speed_mps', 0.0)
+            osm_id = segment_data.get('id', 'N/A')
+            curvatures = segment_data.get('curvatures', [])
+            highway = segment_data.get('highway', 'N/A')
+            lanes = segment_data.get('lanes', '?')
+            oneway = segment_data.get('oneway', '?')
+            print(f"Found Segment ID: {osm_id}")
+            print(f"  Highway: {highway}")
+            print(f"  Lanes: {lanes}")
+            print(f"  Oneway: {oneway}")
+            print(f"  Speed Limit: {speed_limit:.2f} m/s (~{speed_limit * MPH_CONVERSION:.1f} mph)")
+            print(f"  Curvatures available: {len(curvatures) > 0} (Count: {len(curvatures)})")
         else:
-            print(f"Original schema file '{schema_capnp_abs_path}' not found. Cannot generate Python schema.")
-
-
-    # Reload the module to ensure the potentially newly generated schema is used
-    try:
-        import importlib
-        # Ensure the top-level package structure is recognized if running as script
-        if __package__ is None or __package__ == '':
-             # If run directly, adjust path to allow relative import (might not always work)
-             import sys
-             sys.path.insert(0, os.path.abspath(os.path.join(script_dir, '.'))) # Add current dir
-             import offline_capnp_cython as offline_capnp # Import with alias
-        else:
-             # This relative import might need adjustment depending on final structure
-             from . import offline_capnp_cython as offline_capnp # Import with alias
-        importlib.reload(offline_capnp)
-    except ImportError:
-        print("Could not import or reload offline_capnp_cython schema.")
-        # Attempt to use the dummy if import failed
-        if 'offline_capnp' not in locals() or not hasattr(offline_capnp, 'Offline'):
-             print("Falling back to dummy schema defined earlier.")
-             # Re-define/ensure dummy is aliased if initial import failed completely
-             class DummyOffline:
-                 minLat = 0.0
-                 minLon = 0.0
-                 ways = []
-                 @staticmethod
-                 def read_packed(f):
-                     print("Dummy read_packed called")
-                     return None
-             offline_capnp = type('obj', (object,), {'Offline': DummyOffline})()
-
-    except NameError:
-        # offline_capnp might not be defined if initial import and generation failed
-        print("offline_capnp_cython not defined, likely import failed.")
-        if 'offline_capnp' not in locals() or not hasattr(offline_capnp, 'Offline'):
-             print("Falling back to dummy schema defined earlier.")
-             class DummyOffline:
-                 minLat = 0.0
-                 minLon = 0.0
-                 ways = []
-                 @staticmethod
-                 def read_packed(f):
-                     print("Dummy read_packed called")
-                     return None
-             offline_capnp = type('obj', (object,), {'Offline': DummyOffline})()
-
-
-    # Example: Somewhere in California within an existing tile
-    # Tile 34/-118 contains 34.000000_-118.000000_34.250000_-117.750000.bin
-    test_lat = 34.1
-    test_lon = -117.9
-
-    print(f"\nTesting MapReader with coordinates: Lat={test_lat}, Lon={test_lon}")
-    reader = MapReader()
-    map_data = reader.load_map_data(test_lat, test_lon)
-
-    if map_data:
-        print(f"Successfully loaded map data.")
-        print(f"  Area Bounds: MinLat={map_data.minLat:.4f}, MinLon={map_data.minLon:.4f}, MaxLat={map_data.maxLat:.4f}, MaxLon={map_data.maxLon:.4f}")
-        ways = map_data.ways
-        print(f"  Number of ways in this area: {len(ways)}")
-        if len(ways) > 0:
-             # Accessing fields safely using try-except or checking existence might be needed depending on schema generation
-             try:
-                 print(f"  Example Way 0 Name: '{ways[0].name}'")
-             except Exception as e:
-                 print(f"  Could not access Way 0 Name: {e}")
-             try:
-                 print(f"  Example Way 0 Nodes Count: {len(ways[0].nodes)}")
-             except Exception as e:
-                 print(f"  Could not access Way 0 Nodes: {e}")
+            print("No relevant segment data found nearby.")
     else:
-        print("Failed to load map data for the given coordinates. (This might be normal if the file doesn't exist)." )
-        # Double check the expected path based on the coordinates:
-        min_lat_test, min_lon_test, max_lat_test, max_lon_test = find_area_box(test_lat, test_lon)
-        expected_file = get_bounds_filename(test_lat, test_lon, min_lat_test, min_lon_test, max_lat_test, max_lon_test)
-        print(f"  (Checked path: {expected_file})")
+        print("MapReader did not load data successfully. Cannot perform query.")
+
+    print("--- Test Complete ---")

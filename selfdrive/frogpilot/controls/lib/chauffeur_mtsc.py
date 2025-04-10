@@ -71,14 +71,16 @@ class ChauffeurMtsc:
         self.params = Params()
         self.params_memory = Params("/dev/shm/params")
 
-        # State variables for map matching
-        self.current_way_result = None
-        self.next_ways = []
+        # State variables - Simplified, as path is now just the current segment
+        self.current_segment_data = None # Store dict from MapReader
+        # self.current_way_result = None # Old
+        # self.next_ways = [] # Old
         self.last_gps_pos = None
 
         # Cached speed profile
         self.distance_profile = np.array([], dtype=np.float64)
         self.speed_profile = np.array([], dtype=np.float64)
+        self.curvature_valid = False # Flag if curvature data is usable
 
     def _get_current_position(self):
         """Safely reads the last GPS position from params_memory."""
@@ -99,170 +101,160 @@ class ChauffeurMtsc:
             print(f"Error reading or parsing LastGPSPosition: {e}")
         return None
 
-    def _update_map_path(self, pos: matcher.Position):
-        """Loads map data, finds current way, and determines the path ahead."""
-        # Load map data for current position
-        offline_data = self.map_reader.load_map_data(pos.latitude, pos.longitude)
-        if not offline_data:
-            # print("MTSC: No map data loaded.")
-            self.current_way_result = None
-            self.next_ways = []
-            return False
-
-        # Find the current way
-        # Pass previous results for continuity
-        current_way_candidate = self.current_way_result.way if self.current_way_result else None
-        self.current_way_result = matcher.get_current_way(
-            current_way_candidate, self.next_ways, offline_data, pos
-        )
-
-        if not self.current_way_result:
-            # print("MTSC: Could not find current way.")
-            self.next_ways = []
-            return False
-
-        # Get the sequence of next ways
-        self.next_ways = matcher.get_next_ways(pos, self.current_way_result, offline_data)
-        # print(f"MTSC: Found {len(self.next_ways)} next ways.") # Debug
-        return True
-
-    def _calculate_path_profile(self, pos: matcher.Position, turn_aggressiveness: float):
+    def _update_current_segment(self, pos: matcher.Position):
         """
-        Calculates curvature and speed profile along the determined path.
-        Now accepts turn_aggressiveness to apply to the curvature-based lat accel.
+        Gets the current road segment data using the new MapReader.
+        Updates self.current_segment_data and self.curvature_valid (placeholder).
+        Returns True if segment data was found, False otherwise.
         """
-        if not self.current_way_result or not self.current_way_result.way:
-            return np.array([]), np.array([])
-
-        path_nodes_lat = []
-        path_nodes_lon = []
-        cumulative_distance = 0.0
-        distances = [0.0]
-
-        # Start from the projected position on the current way segment
-        on_way_res = self.current_way_result.on_way_result
-        if not on_way_res or not on_way_res.distance_result:
-             return np.array([]), np.array([])
-
-        line_start_node = on_way_res.distance_result.line_start_node
-        line_end_node = on_way_res.distance_result.line_end_node
-        is_fwd = on_way_res.is_forward
-
-        proj_lat, proj_lon = geometry.point_on_line(
-            line_start_node.latitude, line_start_node.longitude,
-            line_end_node.latitude, line_end_node.longitude,
-            pos.latitude, pos.longitude
-        )
-        path_nodes_lat.append(proj_lat)
-        path_nodes_lon.append(proj_lon)
-        last_lat_rad = proj_lat * geometry.TO_RADIANS
-        last_lon_rad = proj_lon * geometry.TO_RADIANS
-
-        # Add remaining nodes from the current way
         try:
-            nodes, err = self.current_way_result.way.Nodes()
-            if not err and nodes:
-                start_idx = -1
-                for i in range(nodes.Len()): # Find index of the segment's end node
-                    node = nodes.At(i)
-                    if abs(node.latitude - line_end_node.latitude) < 1e-9 and abs(node.longitude - line_end_node.longitude) < 1e-9:
-                        start_idx = i
-                        break
-
-                if start_idx != -1:
-                    node_indices = range(start_idx + 1, nodes.Len()) if is_fwd else range(start_idx - 1, -1, -1)
-                    for i in node_indices:
-                        node = nodes.At(i)
-                        curr_lat_rad = node.latitude * geometry.TO_RADIANS
-                        curr_lon_rad = node.longitude * geometry.TO_RADIANS
-                        dist = geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
-                        cumulative_distance += dist
-                        distances.append(cumulative_distance)
-                        path_nodes_lat.append(node.latitude)
-                        path_nodes_lon.append(node.longitude)
-                        last_lat_rad, last_lon_rad = curr_lat_rad, curr_lon_rad
+            segment_data = self.map_reader.get_segment_data_at(pos.latitude, pos.longitude)
+            if segment_data:
+                self.current_segment_data = segment_data
+                # print(f"MTSC: Updated current segment ID {segment_data.get('id', 'N/A')}") # Debug
+                # TODO: Check if curvature data exists in segment_data once added
+                # self.curvature_valid = 'curvatures' in segment_data and len(segment_data['curvatures']) > 0
+                self.curvature_valid = False # Placeholder until curvatures are added
+                return True
+            else:
+                self.current_segment_data = None
+                self.curvature_valid = False
+                return False
         except Exception as e:
-            print(f"Error processing current way nodes: {e}")
+            print(f"MTSC: Error getting segment data: {e}")
+            self.current_segment_data = None
+            self.curvature_valid = False
+            return False
 
-        # Add nodes from next ways
-        for next_way_res in self.next_ways:
-            try:
-                way = next_way_res.way
-                is_fwd_next = next_way_res.is_forward
-                nodes, err = way.Nodes()
-                if not err and nodes:
-                    node_indices = range(nodes.Len()) if is_fwd_next else range(nodes.Len() - 1, -1, -1)
-                    for i in node_indices:
-                        node = nodes.At(i)
-                        curr_lat_rad = node.latitude * geometry.TO_RADIANS
-                        curr_lon_rad = node.longitude * geometry.TO_RADIANS
-                        dist = geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
-                        cumulative_distance += dist
-                        distances.append(cumulative_distance)
-                        path_nodes_lat.append(node.latitude)
-                        path_nodes_lon.append(node.longitude)
-                        last_lat_rad, last_lon_rad = curr_lat_rad, curr_lon_rad
-            except Exception as e:
-                 print(f"Error processing next way nodes: {e}")
-                 break # Stop adding nodes if error occurs
-
-        if len(path_nodes_lat) < 3:
+    def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, turn_aggressiveness: float):
+        """
+        Calculates a speed profile based on the geometry (and later, curvature)
+        of the current road segment.
+        """
+        if not self.current_segment_data or 'geom' not in self.current_segment_data:
             return np.array([]), np.array([])
 
-        # Calculate curvatures along the path
-        curvatures, _ = geometry.get_curvatures(path_nodes_lat, path_nodes_lon)
+        segment_geom = self.current_segment_data['geom'] # Shapely LineString
+        if not isinstance(segment_geom, LineString) or len(segment_geom.coords) < 3:
+            return np.array([]), np.array([]) # Need at least 3 points for curvature
 
-        # Calculate target speeds based on curvature using the new curvature-dependent lat accel function
-        # Use VTSC's nonlinear_lat_accel for consistency - REMOVED
-        # We need v_ego estimate for this... maybe use current v_ego? Or profile max? - REMOVED
-        # Let's use a fixed estimate or make it adaptable later. - REMOVED
-        # Assumed v_ego for lat_accel calculation (can be improved) - REMOVED
-        # assumed_v_ego = 20.0 # m/s
-        # turn_aggression = 1.0 # Get from params later if needed
-        # max_lat_accel = nonlinear_lat_accel(assumed_v_ego, turn_aggression)
+        # Extract coordinates in degrees (Shapely coords are lon, lat)
+        coords_lon_lat = list(segment_geom.coords)
+        path_nodes_lon = [c[0] for c in coords_lon_lat]
+        path_nodes_lat = [c[1] for c in coords_lon_lat]
 
+        # Calculate curvatures along the *entire* segment's geometry
+        # We will later figure out where the car is along this path
+        # TODO: Use pre-calculated curvatures when available in self.current_segment_data
+        curvatures = self.current_segment_data.get('curvatures', [])
+
+        if not curvatures:
+            self.curvature_valid = False
+            return np.array([]), np.array([])
+
+        # Calculate distances along the segment corresponding to curvature points
+        # Curvature[i] corresponds to the curve defined by nodes i, i+1, i+2
+        # We need cumulative distance up to the *start* of the curve (point i+1).
+        # Let's recalculate the segment lengths needed for distances, as arc_lengths isn't stored.
+        cumulative_distances = [0.0] * len(curvatures)
+        current_dist = 0.0
+        # Calculate distance to the start of the first curve (point 1)
+        if len(path_nodes_lat) > 1:
+             dist_to_pt1 = geometry.distance_to_point(path_nodes_lat[0] * geometry.TO_RADIANS,
+                                                      path_nodes_lon[0] * geometry.TO_RADIANS,
+                                                      path_nodes_lat[1] * geometry.TO_RADIANS,
+                                                      path_nodes_lon[1] * geometry.TO_RADIANS)
+             current_dist = dist_to_pt1
+
+        for i in range(len(curvatures)):
+             cumulative_distances[i] = current_dist
+             # Add length of segment i+1 -> i+2 for next curvature point
+             if (i + 2) < len(path_nodes_lat): # Check index exists for point i+2
+                  segment_len = geometry.distance_to_point(path_nodes_lat[i+1] * geometry.TO_RADIANS,
+                                                          path_nodes_lon[i+1] * geometry.TO_RADIANS,
+                                                          path_nodes_lat[i+2] * geometry.TO_RADIANS,
+                                                          path_nodes_lon[i+2] * geometry.TO_RADIANS)
+                  current_dist += segment_len
+             # else: We are at the last curvature point, no more segments to add length from
+
+        # Calculate target speeds based on curvature
         target_speeds = []
-        # Define a very small curvature threshold to treat as straight
         ZERO_CURVATURE_THRESHOLD = 1e-5
-        # Define a maximum speed for effectively straight sections
-        STRAIGHT_SPEED_LIMIT = 70.0 # m/s (~156 mph)
+        STRAIGHT_SPEED_LIMIT = 70.0 # m/s
 
         for k in curvatures:
             abs_k = abs(k)
-            if abs_k < ZERO_CURVATURE_THRESHOLD: # Treat near-zero curvature as straight
+            if abs_k < ZERO_CURVATURE_THRESHOLD:
                 target_speed = STRAIGHT_SPEED_LIMIT
             else:
-                # Determine target lateral accel based purely on curvature
+                # Use the original MTSC curvature-based lateral accel logic
                 target_lat_accel_base = curvature_based_lat_accel(abs_k)
-                # Apply turn aggressiveness multiplier
                 target_lat_accel = target_lat_accel_base * turn_aggressiveness
-                # v = sqrt(a / k)
-                # Ensure we don't divide by zero if abs_k is somehow exactly zero despite the check
                 target_speed = math.sqrt(target_lat_accel / abs_k) if abs_k > 1e-9 else STRAIGHT_SPEED_LIMIT
+            target_speeds.append(min(target_speed, STRAIGHT_SPEED_LIMIT))
 
-            target_speeds.append(min(target_speed, STRAIGHT_SPEED_LIMIT)) # Cap speed
-
-        # The curvature/speed applies starting from the *second* node of the triplet used.
-        # Align speeds with distances: speed[i] corresponds to distance[i+1]
-        if len(distances) > len(target_speeds):
-             distance_points = np.array(distances[1:len(target_speeds)+1])
-        else:
-             # Handle edge case if distances is shorter than target_speeds
-             distance_points = np.array(distances[1:])
-             target_speeds = target_speeds[:len(distance_points)]
-
+        distance_points = np.array(cumulative_distances)
         speed_points = np.array(target_speeds)
+        self.curvature_valid = True # Mark as valid since we calculated curvatures
 
-        # print(f"MTSC: Calculated profile - {len(distance_points)} points.") # Debug
-        return distance_points, speed_points
+        # Now, find where the car is along this segment's profile
+        current_point = Point(pos.longitude, pos.latitude)
+        # Project the car's position onto the segment geometry
+        car_dist_along_segment = segment_geom.project(current_point)
+
+        # Shift the distance profile so that the car's position is at distance 0
+        distance_profile_shifted = distance_points - car_dist_along_segment
+
+        # --- Generate profile matching VTSC/Planner output format ---
+        # Target distances ahead based on current speed and profile times
+        lookahead_distances = np.array(PROFILE_TIMES) * v_ego
+
+        # Ensure distance_profile_shifted covers the range needed for interpolation
+        # We need points both before and after the lookahead_distances
+        # Add a point at the start (car's projected position) if needed
+        interp_distances = distance_profile_shifted
+        interp_speeds = speed_points
+
+        if len(interp_distances) == 0:
+            # If no curvature points (straight road), return empty profile?
+            # Or return profile with high speed? Let's return empty for now.
+            self.curvature_valid = False
+            return np.array([]), np.array([])
+
+        # Ensure distance_profile_shifted is monotonically increasing for interp
+        sort_indices = np.argsort(interp_distances)
+        distance_profile_sorted = interp_distances[sort_indices]
+        speed_points_sorted = interp_speeds[sort_indices]
+
+        # Remove duplicate distances which can break interpolation
+        unique_distances, unique_indices = np.unique(distance_profile_sorted, return_index=True)
+        speed_points_unique = speed_points_sorted[unique_indices]
+
+        if len(unique_distances) < 1:
+            self.curvature_valid = False
+            return np.array([]), np.array([])
+        elif len(unique_distances) < 2:
+            # Only one point, use constant speed
+            final_speeds = np.full(PROFILE_LENGTH, speed_points_unique[0])
+        else:
+            # Interpolate speeds at the desired lookahead distances
+            # Use bounds_error=False and fill_value=(first_speed, last_speed) for extrapolation
+            first_speed = speed_points_unique[0]
+            last_speed = speed_points_unique[-1]
+            final_speeds = np.interp(lookahead_distances, unique_distances, speed_points_unique,
+                                     left=first_speed, right=last_speed)
+
+        # Final distance profile corresponds to PROFILE_TIMES * v_ego
+        final_distances = lookahead_distances
+
+        # print(f"MTSC: Generated profile: {len(final_distances)} dist, {len(final_speeds)} speed") # Debug
+        return final_distances, final_speeds
 
     def update(self, v_ego, a_ego, frogpilot_toggles, turn_aggressiveness=1.0) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
         """
         Main update loop for Chauffeur MTSC.
-        Reads GPS, updates map path, calculates curvature/speed profile.
-        Also extracts and publishes map speed limit data.
-        Returns tuple: (distance_profile_m, speed_profile_mps)
-                      or (None, None) if map data unavailable or path invalid.
+        Reads GPS, finds current road segment, calculates curvature-based speed profile,
+        and publishes the tagged speed limit.
         """
         # Get current GPS position
         pos = self._get_current_position()
@@ -270,71 +262,61 @@ class ChauffeurMtsc:
             # If GPS is lost, clear published speed limits
             self.params_memory.put_float("MapSpeedLimit", 0.0)
             self.params_memory.put("NextMapSpeedLimit", "{}")
-            self.current_way_result = None
-            self.next_ways = []
+            # Clear internal state as well
+            self.current_segment_data = None
+            self.curvature_valid = False # Ensure flag is cleared
             self.distance_profile = np.array([])
             self.speed_profile = np.array([])
             return None, None
 
-        # Update the map path if needed
-        path_updated = self._update_map_path(pos)
+        # Find the current road segment
+        segment_updated = self._update_current_segment(pos)
 
-        # --- Speed Limit Extraction and Publishing ---
+        # --- Speed Limit Publishing (Using segment data) ---
         current_limit_mps = 0.0
-        next_limit_info = {}
-        if self.current_way_result and self.current_way_result.way:
+        next_limit_info = {} # Still not implemented
+
+        # TODO: Reimplement logic to find the *next* speed limit change downstream.
+        #       The old version iterated through `self.next_ways` (if available)
+        #       to find the first way with a different speed limit and its start point.
+        #       This will require adapting the logic to work with the current MapReader
+        #       approach, potentially involving querying segments further along the path
+        #       or enhancing MapReader to provide lookahead data.
+
+        if self.current_segment_data:
             try:
-                # Access pre-parsed speed limit (assuming .maxSpeed attribute)
-                # Use a default of 0.0 if attribute missing or parsing failed during generation
-                current_limit_mps = getattr(self.current_way_result.way, 'maxSpeed', 0.0)
-
-                # Iterate upcoming ways to find the next different speed limit
-                for next_way_res in self.next_ways:
-                    next_way = next_way_res.way
-                    next_limit_mps_cand = getattr(next_way, 'maxSpeed', 0.0)
-
-                    # Check if a valid limit was found and if it differs from the current
-                    if next_limit_mps_cand > 0 and abs(next_limit_mps_cand - current_limit_mps) > 1e-3:
-                        nodes, err = next_way.Nodes()
-                        if not err and nodes and nodes.Len() > 0:
-                            # Determine start node based on direction
-                            start_node_index = 0 if next_way_res.is_forward else nodes.Len() - 1
-                            start_node = nodes.At(start_node_index)
-                            next_limit_info = {
-                                'speedlimit': next_limit_mps_cand,
-                                'latitude': start_node.latitude,
-                                'longitude': start_node.longitude
-                            }
-                            break # Found the first change
-
-            except AttributeError as e:
-                print(f"MTSC: Error accessing Way attributes for speed limit: {e}")
-                # Fallback: clear limits if attributes are missing
-                current_limit_mps = 0.0
-                next_limit_info = {}
+                # Get speed limit from the current segment data
+                current_limit_mps = self.current_segment_data.get('speed_mps', 0.0)
+                # TODO: Add logic for next speed limit if we enhance the reader later
             except Exception as e:
-                print(f"MTSC: Unexpected error during speed limit extraction: {e}")
+                print(f"MTSC: Error reading speed limit from segment data: {e}")
                 current_limit_mps = 0.0
-                next_limit_info = {}
+        else:
+             # If no segment found, ensure limit is 0
+             current_limit_mps = 0.0
 
         # Publish the found limits (or defaults)
+        # print(f"MTSC: Publishing MapSpeedLimit = {current_limit_mps:.2f}") # Debug
         self.params_memory.put_float("MapSpeedLimit", float(current_limit_mps))
         self.params_memory.put("NextMapSpeedLimit", json.dumps(next_limit_info))
-        # --- End Speed Limit Logic ---
+        # --- End Speed Limit Publishing ---
 
-        # Calculate the speed profile based on the path
-        if path_updated or not self.speed_profile.any():
-            self.distance_profile, self.speed_profile = self._calculate_path_profile(pos, turn_aggressiveness)
-
-        # Return the calculated curvature/speed profiles
-        if self.distance_profile.any() and self.speed_profile.any():
-             return self.distance_profile, self.speed_profile
+        # --- Curvature-Based Speed Profile Calculation ---
+        if self.current_segment_data:
+            # Calculate profile based on current segment's geometry
+            # Pass v_ego which is needed for the final profile generation
+            self.distance_profile, self.speed_profile = self._calculate_speed_profile_from_segment(
+                pos, v_ego, turn_aggressiveness
+            )
+            # self.curvature_valid is set within _calculate_speed_profile_from_segment
         else:
-             # Even if profile calculation failed, speed limits might have been published
-             # Return None, None for the profile tuple
-             return None, None
+            # No segment, clear profile
+            self.distance_profile = np.array([])
+            self.speed_profile = np.array([])
+            self.curvature_valid = False
+
+        # Return the calculated profiles (or empty if invalid)
+        return self.distance_profile, self.speed_profile
 
 # --- Old code removed ---
 # TARGET_JERK, TARGET_ACCEL, TARGET_OFFSET
-# calculate_velocity, calculate_distance
-# Old target_speed method logic
