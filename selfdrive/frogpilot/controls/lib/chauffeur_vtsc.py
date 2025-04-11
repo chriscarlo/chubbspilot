@@ -253,7 +253,7 @@ class VisionTurnSpeedController:
             # --- End of always-on planning block ---
 
         # Always clamp raw_target to at most v_cruise_cluster
-        raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
+        # raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
         dt = 0.05  # ~20Hz
 
         # Resume events: when ACC is resumed (or target speed changes), skip smoothing.
@@ -384,12 +384,10 @@ class VisionTurnSpeedController:
             safe_speeds[i] = min(vision_safe_speed, map_safe_speeds[i])
 
         # (3) Apex-based shaping pass (using fixed parameters)
-        # This pass now operates on the combined vision+map safe speeds
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
-        # Slightly more aggressive deceleration and acceleration factors
         apex_decel_factor = 0.12   # Keep original value for desired decel profile shape
         apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
 
@@ -401,32 +399,33 @@ class VisionTurnSpeedController:
             decel_sec = velocity_pred[apex_i] * apex_decel_factor
             spool_sec = velocity_pred[apex_i] * apex_spool_factor
 
-            decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
-            spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
+            # New logic: shift the deceleration window earlier without squishing the profile.
+            # early_apex_margin is the time before apex at which we want to reach apex_speed.
+            early_apex_margin = 1.5  # seconds
+            # Compute ramp end and a new deceleration start shifted earlier by the same margin.
+            ramp_end = self._find_time_index(times, times[apex_i] - early_apex_margin)
+            new_decel_start = self._find_time_index(times, times[apex_i] - decel_sec - early_apex_margin)
 
-            # Introduce a small time offset before the apex for spooling to start
-            pre_apex_time_offset = 1.0  # seconds
-            pre_apex_idx = self._find_time_index(times, times[apex_i] - pre_apex_time_offset)
-
-            # Ramp down to apex_speed (clamp downward) until the pre-apex index
-            if pre_apex_idx > decel_start:
-                v_decel_start = planned[decel_start]
-                steps_decel = pre_apex_idx - decel_start
-                for idx in range(decel_start, pre_apex_idx):
-                    f = (idx - decel_start) / float(steps_decel)
+            # Ramp down to apex_speed (clamp downward) from new_decel_start to ramp_end
+            if ramp_end > new_decel_start:
+                v_decel_start = planned[new_decel_start]
+                steps_decel = ramp_end - new_decel_start
+                for idx in range(new_decel_start, ramp_end):
+                    f = (idx - new_decel_start) / float(steps_decel)
                     decel_val = v_decel_start * (1 - f) + apex_speed * f
                     planned[idx] = min(planned[idx], decel_val)
 
-            # Ensure apex zone is clamped to apex_speed from pre-apex index to apex
-            for idx in range(pre_apex_idx, apex_i + 1):
+            # Ensure apex zone is clamped to apex_speed from ramp_end to apex_i
+            for idx in range(ramp_end, apex_i + 1):
                 planned[idx] = min(planned[idx], apex_speed)
 
-            # Spool up starting slightly before the apex (clamp upward)
-            if spool_end > pre_apex_idx:
-                steps_spool = spool_end - pre_apex_idx
+            # Spool up starting from ramp_end (clamp upward)
+            spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
+            if spool_end > ramp_end:
+                steps_spool = spool_end - ramp_end
                 v_spool_end = planned[spool_end - 1]
-                for idx in range(pre_apex_idx, spool_end):
-                    f = (idx - pre_apex_idx) / float(steps_spool)
+                for idx in range(ramp_end, spool_end):
+                    f = (idx - ramp_end) / float(steps_spool)
                     spool_val = apex_speed * (1 - f) + v_spool_end * f
                     planned[idx] = max(planned[idx], spool_val)
 
@@ -440,7 +439,7 @@ class VisionTurnSpeedController:
             planned[i] = min(planned[i], feasible_speed)
 
         # (5) Margin-based backward pass prioritizing comfort decel
-        COMFORT_DECEL = 1.0 # Target comfortable deceleration magnitude (m/s^2)
+        COMFORT_DECEL = 0.7 # Changed from 1.0 to 0.7 m/s^2 for a gentler (or tunable) deceleration during acceleration phase
         base_margin = margin_time_fn(init_speed)
         margin_t = base_margin * margin_factor # Use the large margin_factor (e.g., 3.5)
 
