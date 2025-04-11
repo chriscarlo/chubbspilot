@@ -4,6 +4,7 @@
 import json
 import math
 import numpy as np
+from shapely.geometry import LineString, Point
 
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.params import Params

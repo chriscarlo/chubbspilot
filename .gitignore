@@ -2717,3 +2717,4 @@ common/text_window.py
 /map_data/map_data_notes/
 /map_data/*.osm.pbf
 /map_data/*.geojsonl
+map_data/california-highway-ways.geojsonseq
