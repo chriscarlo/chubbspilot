@@ -173,7 +173,19 @@ class Track:
     """
     Return a dictionary for radarState.leadOne / leadTwo, with *filtered* velocity.
     We'll store `vLead` and `vRel` as the filtered versions so the planner uses them.
+    Calculates TTC based on filtered dRel_K and vRel_K.
     """
+    # Calculate TTC using filtered values (positive if closing, negative if opening)
+    ttc = float('inf')
+    # if self.vRel_K < -0.1: # REMOVED Condition
+    try:
+      # Ensure vRel_K isn't extremely close to zero before dividing
+      if abs(self.vRel_K) > 1e-6:
+        ttc = self.dRel_K / -self.vRel_K
+      # else ttc remains infinity
+    except ZeroDivisionError: # Should be caught by abs check, but keep for safety
+      ttc = float('inf')
+
     return {
       "dRel": float(self.dRel_K),   # use filtered distance
       "yRel": float(self.yRel),     # lateral remains unfiltered
@@ -182,6 +194,7 @@ class Track:
       "vLeadK": float(self.vLeadK), # same as above, for debugging if you like
       "aLeadK": float(self.aLeadK),
       "aLeadTau": float(self.aLeadTau),
+      "ttc": float(ttc),          # added calculated ttc
       "status": True,
       "fcw": self.is_potential_fcw(model_prob),
       "modelProb": model_prob,
@@ -251,14 +264,28 @@ def match_vision_to_track(v_ego: float, lead: capnp._DynamicStructReader, tracks
 
 def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: float, model_v_ego: float):
   lead_v_rel_pred = lead_msg.v[0] - model_v_ego
+  d_rel_vision = float(lead_msg.x[0] - RADAR_TO_CAMERA)
+
+  # Calculate TTC using vision-based relative values (positive if closing, negative if opening)
+  ttc = float('inf')
+  # if lead_v_rel_pred < -0.1: # REMOVED Condition
+  try:
+    # Ensure lead_v_rel_pred isn't extremely close to zero before dividing
+    if abs(lead_v_rel_pred) > 1e-6:
+      ttc = d_rel_vision / -lead_v_rel_pred
+    # else ttc remains infinity
+  except ZeroDivisionError: # Should be caught by abs check, but keep for safety
+    ttc = float('inf')
+
   return {
-    "dRel": float(lead_msg.x[0] - RADAR_TO_CAMERA),
+    "dRel": d_rel_vision,
     "yRel": float(-lead_msg.y[0]),
     "vRel": float(lead_v_rel_pred),
     "vLead": float(v_ego + lead_v_rel_pred),
     "vLeadK": float(v_ego + lead_v_rel_pred),
     "aLeadK": float(lead_msg.a[0]),
     "aLeadTau": 0.3,
+    "ttc": float(ttc), # added calculated ttc
     "fcw": False,
     "modelProb": float(lead_msg.prob),
     "status": True,

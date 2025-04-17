@@ -234,23 +234,24 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, car_s
 
 def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, jerk_upper, jerk_lower,
                       stopping, gas_override, set_speed, hud_control):
-  jerk = 5
-  jn = jerk / 50
+  jerk = 10.0 # Hardcoded safety jerk limit (m/s^3), aligned with tuner's max
+  jn = jerk * 0.02 # Jerk scaled by DT (0.02s), yielding max accel change per step (0.2 m/s^2)
   if not enabled or gas_override:
     a_val, a_raw = 0, 0
   else:
     a_raw = accel
+    # Apply hardcoded jerk limit locally to a_val, just in case ECU prioritizes it
     a_val = clip(accel, accel_last - jn, accel_last + jn)
 
   values = {
     "ACCMode": 0 if not enabled else (2 if gas_override else 1),
     "MainMode_ACC": 1 if CS.out.cruiseState.available else 0,
     "StopReq": 1 if stopping else 0,
-    "aReqValue": a_val,
-    "aReqRaw": a_raw,
+    "aReqValue": a_val, # Locally rate-limited value (max rate)
+    "aReqRaw": a_raw,   # Tuner's calculated value (already rate-limited)
     "VSetDis": set_speed,
-    "JerkLowerLimit": jerk_lower if enabled else 1,
-    "JerkUpperLimit": jerk_upper,
+    "JerkLowerLimit": jerk_lower if enabled else 1, # Tuner's dynamic lower limit
+    "JerkUpperLimit": jerk_upper, # Tuner's dynamic upper limit
 
     "ACC_ObjDist": 1,
     "ObjValid": 0,

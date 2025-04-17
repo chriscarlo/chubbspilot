@@ -644,6 +644,7 @@ struct RadarState @0x9a185389d6fdd05f {
     modelProb @13 :Float32;
     radar @14 :Bool;
     radarTrackId @15 :Int32 = -1;
+    ttc @16 :Float32; # Added Time To Collision field
 
     aLeadDEPRECATED @5 :Float32;
   }

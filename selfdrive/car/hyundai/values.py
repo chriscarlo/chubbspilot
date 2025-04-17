@@ -17,8 +17,8 @@ from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request,
 Ecu = car.CarParams.Ecu
 
 class CarControllerParams:
-  ACCEL_MIN = -6.0 # m/s
-  ACCEL_MAX = 5.0 # m/s
+  ACCEL_MIN = -6.0 # m/s2; NOTE: Chubbs longitudinal tuning assumes the platform can achieve this.
+  ACCEL_MAX = 5.0 # m/s2
 
   def __init__(self, CP):
     self.STEER_DELTA_UP = 7
