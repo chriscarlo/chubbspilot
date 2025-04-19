@@ -2713,7 +2713,7 @@ common/text_window.py
 .ruff_cache/
 
 # Map data processing artifacts (not needed at runtime)
-/tools/map_processing/
+# /tools/map_processing/
 /map_data/map_data_notes/
 /map_data/*.osm.pbf
 /map_data/*.geojsonl
