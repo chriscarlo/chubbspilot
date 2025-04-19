@@ -4,6 +4,8 @@ import struct # Added for size prefix reading
 import math
 import sys
 import json
+import sys # Add sys import
+import os # Add os import
 from openpilot.common.params import Params
 from rtree import index as rtree_index
 from shapely.geometry import Point, LineString
@@ -15,6 +17,10 @@ from tools.map_processing import osm_speed_data_pb2
 # We need to go up 5 levels to reach the repo root (/home/chris/openpilot/)
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 _repo_root = os.path.abspath(os.path.join(_script_dir, "../../../../..")) # Adjusted levels
+
+# Add repo root to Python path BEFORE attempting the import
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 # Define paths relative to the repository root found above
 MAP_DATA_DIR = os.path.join(_repo_root, "map_data")
