@@ -175,20 +175,8 @@ class Track:
     We'll store `vLead` and `vRel` as the filtered versions so the planner uses them.
     Calculates TTC based on filtered dRel_K and vRel_K.
     """
-    # Calculate TTC using filtered values (positive if closing, negative if opening)
-    ttc = float('inf')
-    try:
-      # Check types before calculation
-      if isinstance(self.dRel_K, float) and isinstance(self.vRel_K, float):
-        # Ensure vRel_K isn't extremely close to zero before dividing
-        if abs(self.vRel_K) > 1e-6:
-          ttc = self.dRel_K / -self.vRel_K
-        # else ttc remains infinity
-    except ZeroDivisionError: # Should be caught by abs check, but keep for safety
-      ttc = float('inf')
-    except TypeError: # Catch potential issues if inputs aren't floats
-      cloudlog.warning(f"radard: Invalid types for TTC calculation in Track: dRel={self.dRel_K}, vRel={self.vRel_K}")
-      ttc = float('inf')
+    # Calculate TTC using filtered values, clipped to reasonable range
+    ttc = safe_ttc(self.dRel_K, self.vRel_K)
 
     return {
       "dRel": float(self.dRel_K),   # use filtered distance
@@ -198,7 +186,7 @@ class Track:
       "vLeadK": float(self.vLeadK), # same as above, for debugging if you like
       "aLeadK": float(self.aLeadK),
       "aLeadTau": float(self.aLeadTau),
-      "ttc": float(ttc),          # added calculated ttc
+      "ttc": float(ttc),
       "status": True,
       "fcw": self.is_potential_fcw(model_prob),
       "modelProb": model_prob,
@@ -270,20 +258,8 @@ def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: floa
   lead_v_rel_pred = lead_msg.v[0] - model_v_ego
   d_rel_vision = float(lead_msg.x[0] - RADAR_TO_CAMERA)
 
-  # Calculate TTC using vision-based relative values (positive if closing, negative if opening)
-  ttc = float('inf')
-  try:
-    # Check types before calculation
-    if isinstance(d_rel_vision, float) and isinstance(lead_v_rel_pred, float):
-      # Ensure lead_v_rel_pred isn't extremely close to zero before dividing
-      if abs(lead_v_rel_pred) > 1e-6:
-        ttc = d_rel_vision / -lead_v_rel_pred
-      # else ttc remains infinity
-  except ZeroDivisionError: # Should be caught by abs check, but keep for safety
-    ttc = float('inf')
-  except TypeError: # Catch potential issues if inputs aren't floats
-    cloudlog.warning(f"radard: Invalid types for TTC calculation from Vision: dRel={d_rel_vision}, vRel={lead_v_rel_pred}")
-    ttc = float('inf')
+  # Calculate TTC using vision relative values
+  ttc = safe_ttc(d_rel_vision, lead_v_rel_pred)
 
   return {
     "dRel": d_rel_vision,
@@ -293,7 +269,7 @@ def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: floa
     "vLeadK": float(v_ego + lead_v_rel_pred),
     "aLeadK": float(lead_msg.a[0]),
     "aLeadTau": 0.3,
-    "ttc": float(ttc), # added calculated ttc
+    "ttc": float(ttc),
     "fcw": False,
     "modelProb": float(lead_msg.prob),
     "status": True,
@@ -539,6 +515,29 @@ class RadarD:
         "vRel": float(self.points[tid][2]),
       }
     return tracks_msg
+
+# ---------------------------------------------------------------------------
+# TTC helper
+# ---------------------------------------------------------------------------
+
+
+def safe_ttc(d_rel: float, v_rel: float, ttc_max: float = 30.0) -> float:
+  """Return a finite, clipped Time‑To‑Collision.
+
+  If the relative speed is not closing (v_rel >= -0.1 m/s) or inputs are not
+  finite, returns ``float('inf')``.  Otherwise ``d_rel / -v_rel`` is computed
+  and clipped to ``[0, ttc_max]`` seconds to avoid pathological large values.
+  """
+
+  if not (math.isfinite(d_rel) and math.isfinite(v_rel)):
+    return float('inf')
+
+  # Only consider closing targets
+  if v_rel >= -0.1:  # not closing or moving away
+    return float('inf')
+
+  ttc = d_rel / -v_rel
+  return float(min(max(ttc, 0.0), ttc_max))
 
 def main():
   config_realtime_process(5, Priority.CTRL_LOW)
