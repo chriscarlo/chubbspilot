@@ -177,13 +177,17 @@ class Track:
     """
     # Calculate TTC using filtered values (positive if closing, negative if opening)
     ttc = float('inf')
-    # if self.vRel_K < -0.1: # REMOVED Condition
     try:
-      # Ensure vRel_K isn't extremely close to zero before dividing
-      if abs(self.vRel_K) > 1e-6:
-        ttc = self.dRel_K / -self.vRel_K
-      # else ttc remains infinity
+      # Check types before calculation
+      if isinstance(self.dRel_K, float) and isinstance(self.vRel_K, float):
+        # Ensure vRel_K isn't extremely close to zero before dividing
+        if abs(self.vRel_K) > 1e-6:
+          ttc = self.dRel_K / -self.vRel_K
+        # else ttc remains infinity
     except ZeroDivisionError: # Should be caught by abs check, but keep for safety
+      ttc = float('inf')
+    except TypeError: # Catch potential issues if inputs aren't floats
+      cloudlog.warning(f"radard: Invalid types for TTC calculation in Track: dRel={self.dRel_K}, vRel={self.vRel_K}")
       ttc = float('inf')
 
     return {
@@ -268,13 +272,17 @@ def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: floa
 
   # Calculate TTC using vision-based relative values (positive if closing, negative if opening)
   ttc = float('inf')
-  # if lead_v_rel_pred < -0.1: # REMOVED Condition
   try:
-    # Ensure lead_v_rel_pred isn't extremely close to zero before dividing
-    if abs(lead_v_rel_pred) > 1e-6:
-      ttc = d_rel_vision / -lead_v_rel_pred
-    # else ttc remains infinity
+    # Check types before calculation
+    if isinstance(d_rel_vision, float) and isinstance(lead_v_rel_pred, float):
+      # Ensure lead_v_rel_pred isn't extremely close to zero before dividing
+      if abs(lead_v_rel_pred) > 1e-6:
+        ttc = d_rel_vision / -lead_v_rel_pred
+      # else ttc remains infinity
   except ZeroDivisionError: # Should be caught by abs check, but keep for safety
+    ttc = float('inf')
+  except TypeError: # Catch potential issues if inputs aren't floats
+    cloudlog.warning(f"radard: Invalid types for TTC calculation from Vision: dRel={d_rel_vision}, vRel={lead_v_rel_pred}")
     ttc = float('inf')
 
   return {
