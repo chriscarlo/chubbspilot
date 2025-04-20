@@ -358,7 +358,6 @@ def create_adrv_messages(packer, CAN, frame):
     values = {
       'SET_ME_E1': 0xe1,
       'SET_ME_3A': 0x3a,
-      'TauGapSet' : 1,
     }
     ret.append(packer.make_can_msg("ADRV_0x200", CAN.ECAN, values))
 
