@@ -202,24 +202,43 @@ class HKGLongitudinalTuning:
 
         # Check for lead and calculate TTC if closing
         if CS.leadOne.status and CS.leadOne.vRel < -0.1 and CS.leadOne.dRel > 0.1:
-            try:
-                ttc = CS.leadOne.dRel / -CS.leadOne.vRel
-            except ZeroDivisionError:
-                ttc = float('inf') # Avoid division by zero
+            lead_ttc = getattr(CS.leadOne, 'ttc', float('inf')) # Get TTC, default to infinity if missing
+
+            # Check if lead_ttc is a valid finite number and positive
+            if isinstance(lead_ttc, float) and math.isfinite(lead_ttc) and lead_ttc > 0:
+                 ttc = lead_ttc # Use the valid TTC from radarState
+            else:
+                 ttc = float('inf') # Treat invalid/non-positive TTC as infinite
 
             # If TTC is below threshold and planner wants more braking:
             if ttc < TTC_RESPONSIVENESS_THRESHOLD and accel_request < self.accel_last:
-                # Calculate the jerk magnitude required to reach accel_request in one step
-                jerk_needed_for_target = abs((accel_request - self.accel_last) / self.DT_CTRL)
-                # Use the max of baseline and required jerk, capped by the absolute max
-                effective_jerk = min(max(baseline_jerk, jerk_needed_for_target), MAX_ALLOWABLE_JERK)
-                # Optional logging:
-                # print(f"TTC={ttc:.2f}, ReqA={accel_request:.2f}, LastA={self.accel_last:.2f}, ReqJ={jerk_needed_for_target:.2f}, EffJ={effective_jerk:.2f}")
+                # Ensure inputs are valid floats before calculating jerk
+                if isinstance(accel_request, float) and math.isfinite(accel_request) and \
+                   isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
+                    # Calculate the jerk magnitude required to reach accel_request in one step
+                    jerk_needed_for_target = abs((accel_request - self.accel_last) / self.DT_CTRL)
+                    # Use the max of baseline and required jerk, capped by the absolute max
+                    effective_jerk = min(max(baseline_jerk, jerk_needed_for_target), MAX_ALLOWABLE_JERK)
+                    # Optional logging:
+                    # print(f"TTC={ttc:.2f}, ReqA={accel_request:.2f}, LastA={self.accel_last:.2f}, ReqJ={jerk_needed_for_target:.2f}, EffJ={effective_jerk:.2f}")
+                else:
+                    cloudlog.warning(f"long_tuning: Invalid accel values for jerk calc: req={accel_request}, last={self.accel_last}")
+                    # Keep effective_jerk at baseline if inputs are invalid
 
         # Apply the effective jerk limit
-        max_delta_accel = effective_jerk * self.DT_CTRL
-        # Limit the rate of change from last step's accel
-        accel = max(accel_request, self.accel_last - max_delta_accel)
+        # Ensure effective_jerk is valid before calculating max_delta_accel
+        if isinstance(effective_jerk, float) and math.isfinite(effective_jerk):
+            max_delta_accel = effective_jerk * self.DT_CTRL
+            # Limit the rate of change from last step's accel
+            # Also ensure self.accel_last is valid before the subtraction
+            if isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
+                 accel = max(accel_request, self.accel_last - max_delta_accel)
+            else:
+                 cloudlog.warning(f"long_tuning: Invalid self.accel_last={self.accel_last}, using accel_request={accel_request}")
+                 accel = accel_request # Fallback if accel_last is invalid
+        else:
+            cloudlog.warning(f"long_tuning: Invalid effective_jerk={effective_jerk}, using accel_request={accel_request}")
+            accel = accel_request # Fallback if jerk is invalid
         # --- END DYNAMIC JERK MODIFICATION ---
 
     else:
