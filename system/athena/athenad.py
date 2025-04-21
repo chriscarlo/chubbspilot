@@ -1,4 +1,3 @@
-@@ -1,908 +1,753 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
@@ -46,14 +45,6 @@ except ImportError:
   ServiceResponseError = None
   ResourceNotFoundError = None
   ResourceExistsError = None
-
-
-
-
-
-
-
-
 
 
 # Constants
@@ -218,10 +209,6 @@ def _do_upload_azure(upload_item: UploadItem):
   filename = os.path.basename(local_path)
   azure_target_dir = f"{AZURE_BASE_DIR}/{upload_item.azure_subdir}"
 
-
-
-
-
   debug_print(f"\n[DEBUG] === Starting Azure Upload Attempt ===")
   debug_print(f"Local path: {local_path}")
   debug_print(f"Target Azure directory: {azure_target_dir}")
@@ -263,8 +250,6 @@ def _do_upload_azure(upload_item: UploadItem):
     debug_print("=== Azure Upload Attempt Complete ===\n")
 
     cloudlog.event("azure._do_upload_azure.success", subdir=upload_item.azure_subdir, local_path=local_path, azure_path=f"{azure_target_dir}/{filename}")
-
-
 
   except (ResourceNotFoundError, FileNotFoundError) as e:
       # Re-raise FileNotFoundError specifically if local file vanished
@@ -772,65 +757,6 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
          UploadQueueCache.cache(upload_queue)
 
   except Exception as e:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     cloudlog.exception("azure.realdata_handler.scan_exception")
     debug_print(f"Error during realdata scan: {e}")
 
@@ -919,10 +845,6 @@ def main():
       return
 
   # Initialize queue from stored cache
-
-
-
-
   UploadQueueCache.initialize(upload_queue)
   debug_print(f"Initial queue size after load: {upload_queue.qsize()}")
   debug_queue_status()
