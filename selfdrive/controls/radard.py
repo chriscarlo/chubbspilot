@@ -551,7 +551,7 @@ def main():
 
   can_sock = messaging.sub_sock('can')
   RI = RadarInterface(CP)
-  rk = Ratekeeper(1.0 / CP.radarTimeStep, print_delay_threshold=None)
+  rk = Ratekeeper(1.0 / CP.radarTimeStep, print_delay_threshold=0.1)
 
   frogpilot_toggles = get_frogpilot_toggles()
   RD = RadarD(frogpilot_toggles, CP.radarTimeStep, RI.delay)
