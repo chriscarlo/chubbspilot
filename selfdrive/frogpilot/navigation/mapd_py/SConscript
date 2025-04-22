@@ -54,6 +54,10 @@ protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, proto
 
 # Optional: Alias if this generated file needs to be referred to elsewhere
 # Alias('frogpilot_proto', protobuf_py_file)
+
+# --- START ADDITION: Add to default build ---
+# Ensure this generated file is considered part of the default build
+Alias('default', protobuf_py_file)
 # --- END ADDITION ---
 
 # Return nothing specific; the env.Command defines the build rule.
