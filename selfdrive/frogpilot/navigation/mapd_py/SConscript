@@ -25,5 +25,36 @@ env = Environment()
 # env.Clean(...)
 # Alias(...)
 
-# Return nothing or a placeholder if required by parent scripts
-Return([])
+# --- START ADDITION: FrogPilot Protobuf Compilation ---
+Import('env') # Import the main environment from parent SConstruct
+
+# Define paths relative to the SConstruct root (#) or this SConscript file
+proto_out_dir_rel = '.' # Output relative to this SConscript
+proto_out_dir_abs = '#selfdrive/frogpilot/navigation/mapd_py' # Absolute path from repo root
+proto_src_dir_abs = '#tools/map_processing' # Absolute path from repo root
+
+# Define source and target files using absolute paths for clarity
+proto_src = proto_src_dir_abs + '/osm_speed_data.proto'
+proto_target_name = 'osm_speed_data_pb2.py'
+proto_target = os.path.join(proto_out_dir_rel, proto_target_name)
+protoc_binary = '#tools/bin/protoc' # Use the checked-in binary
+init_file_target = os.path.join(proto_out_dir_rel, '__init__.py')
+
+# Ensure the __init__.py exists (needed for relative imports)
+# Using env.Command ensures it's part of the build graph
+env.Command(init_file_target, None, f'touch $TARGET') # Simple touch should be fine here
+
+# Define the rule to compile the FrogPilot protobuf schema
+# Note: Using absolute paths for clarity in the command string parts
+protoc_command = f'{protoc_binary} --proto_path={proto_src_dir_abs} --python_out={proto_out_dir_rel} {proto_src}'
+
+# Create the build command, depending on the source, binary, and init file
+# SCons should handle path conversions (# -> absolute path)
+protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, protoc_binary], protoc_command)
+
+# Optional: Alias if this generated file needs to be referred to elsewhere
+# Alias('frogpilot_proto', protobuf_py_file)
+# --- END ADDITION ---
+
+# Return the generated file so other SConscripts can depend on it if necessary
+Return([protobuf_py_file])
