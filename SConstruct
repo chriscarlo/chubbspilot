@@ -403,7 +403,7 @@ if Dir('#tools/cabana/').exists() and GetOption('extras'):
 # Ensure the output directory exists before trying to generate
 proto_out_dir = 'selfdrive/frogpilot/navigation/mapd_py'
 proto_src_dir = 'tools/map_processing'
-env.Command(proto_out_dir + '/__init__.py', None, 'mkdir -p $(dirname ${TARGET}) && touch ${TARGET}')
+env.Command(proto_out_dir + '/__init__.py', None, f'mkdir -p {proto_out_dir} && touch $TARGET')
 
 # Define the rule to compile the FrogPilot protobuf schema
 proto_src = proto_src_dir + '/osm_speed_data.proto'
