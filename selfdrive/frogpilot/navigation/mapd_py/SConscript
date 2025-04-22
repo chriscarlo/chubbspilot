@@ -62,16 +62,17 @@ def run_protoc(target, source, env):
     # Split the substituted command string into parts
     cmd_parts_raw = cmd_str_subst.split()
 
-    # --- START FIX: Resolve executable path ---
-    # The first part should be the executable path, potentially starting with #
-    # Use env.File().abspath to get the absolute path SCons knows about
-    executable_path_node = env.File(cmd_parts_raw[0])
-    executable_path_abs = executable_path_node.abspath
-    # Rebuild the command list with the resolved absolute path for the executable
-    cmd_parts_resolved = [executable_path_abs] + cmd_parts_raw[1:]
+    # --- START FIX: Resolve ALL #-prefixed paths ---
+    # Iterate through each part and resolve if it starts with #
+    cmd_parts_resolved = []
+    for part in cmd_parts_raw:
+        # Use env.subst on each part individually to resolve #
+        # This should handle files, dirs, and flags correctly
+        resolved_part = env.subst(part)
+        cmd_parts_resolved.append(resolved_part)
     # --- END FIX ---
 
-    print(f"Executing: {cmd_parts_resolved}") # Print the resolved list
+    print(f"Executing: {cmd_parts_resolved}") # Print the fully resolved list
     try:
         # Execute command using the resolved list, capture output
         # Run from repo root for consistency with SCons default behavior
