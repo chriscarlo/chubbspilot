@@ -2736,3 +2736,10 @@ selfdrive/frogpilot/navigation/mapd_py/__pycache__/
 
 # Downloaded Binaries / Build Tools
 tools/bin/
+
+# Custom FrogPilot/User Data
+selfdrive/frogpilot/tunes/
+*.zip
+digital_lichen.py
+test_lichen_input.txt
+map_data_tiles_protobuf/
