@@ -32,17 +32,17 @@ def get_radar_can_parser(CP):
 def get_corner_radar_can_parser(CP):
   # TODO: investigate radar_track DBC for corner radar messages
   messages_fd = [
-    # Metadata on FD bus (129) - Removed as not in DBC
-    # ("RADAR_POINTS_METADATA_0x100", 50),  # Left metadata
-    # ("RADAR_POINTS_METADATA_0x200", 50),  # Right metadata
-    # Checksum on FD bus (129) - Removed as not in DBC
-    # ("RADAR_POINTS_CHECKSUM_0x104", 50),  # Left checksum
-    # ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
+    # Metadata on FD bus (129)
+    ("RADAR_POINTS_METADATA_0x100", 50),  # Left metadata
+    ("RADAR_POINTS_METADATA_0x200", 50),  # Right metadata
+    # Checksum on FD bus (129)
+    ("RADAR_POINTS_CHECKSUM_0x104", 50),  # Left checksum
+    ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
   ]
   messages_pt = [
-    # Points on PT bus (0) - Removed as not in DBC
-    # ("RADAR_POINTS_0x101", 50),  # Left corner points
-    # ("RADAR_POINTS_0x201", 50),  # Right corner points
+    # Points on PT bus (0)
+    ("RADAR_POINTS_0x101", 50),  # Left corner points
+    ("RADAR_POINTS_0x201", 50),  # Right corner points
   ]
   # Add messages for front corner radar from CANFD DBC
   messages_canfd = [

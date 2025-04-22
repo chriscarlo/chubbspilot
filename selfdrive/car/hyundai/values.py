@@ -846,5 +846,6 @@ NON_SCC_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_FCA)
 NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
-DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_track.dbc')
+# Use the generated DBC which contains the RADAR_POINTS messages for EV6 corner radar
+DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
 DBC[CAR.KIA_EV6]['front_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_front_radar_point.dbc')
