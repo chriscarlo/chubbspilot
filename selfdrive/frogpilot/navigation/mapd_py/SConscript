@@ -56,5 +56,5 @@ protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, proto
 # Alias('frogpilot_proto', protobuf_py_file)
 # --- END ADDITION ---
 
-# Return the generated file so other SConscripts can depend on it if necessary
-Return([proto_target]) # Return the string path, not the Node object
+# Return nothing specific; the env.Command defines the build rule.
+Return([])
