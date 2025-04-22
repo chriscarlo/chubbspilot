@@ -9,8 +9,14 @@ import os # Add os import
 from openpilot.common.params import Params
 from rtree import index as rtree_index
 from shapely.geometry import Point, LineString
-# Import generated protobuf classes
-from tools.map_processing import osm_speed_data_pb2
+# Import generated protobuf classes - now relative
+# from tools.map_processing import osm_speed_data_pb2
+from . import osm_speed_data_pb2
+# Import specific protobuf error
+from google.protobuf.message import DecodeError
+
+# Print the path of the imported module for verification
+print(f"osm_speed_data_pb2 imported from: {osm_speed_data_pb2.__file__}")
 
 # Find the repository root relative to this file
 # __file__ is selfdrive/frogpilot/navigation/mapd_py/reader.py
@@ -67,11 +73,22 @@ def get_tile_id(lat_deg, lon_deg, tile_size_deg):
     return f"{lat_part}_{lon_part}"
 
 # Assuming script runs on device where OP_ROOT is standard
-OP_ROOT = "/data/openpilot"
+# OP_ROOT = "/data/openpilot"
 # Base directory for tiles - USE THIS OR RELATIVE PATH depending on context
 # TILE_DATA_BASE_DIR = os.path.join(OP_ROOT, "map_data_tiles")
 # --- OR --- Using relative path for simulation context based on previous steps:
-TILE_DATA_BASE_DIR = os.path.join(_repo_root, "map_data_tiles_protobuf") # Updated dir name
+# TILE_DATA_BASE_DIR = os.path.join(_repo_root, "map_data_tiles_protobuf") # Updated dir name
+
+# Define base directory for tiles - check device path first
+OP_ROOT_ON_DEVICE = "/data/openpilot"
+if os.path.exists(OP_ROOT_ON_DEVICE):
+    # Use standard path on device
+    TILE_DATA_BASE_DIR = os.path.join(OP_ROOT_ON_DEVICE, "map_data_tiles_protobuf")
+else:
+    # Fallback to relative path for simulation/development
+    TILE_DATA_BASE_DIR = os.path.join(_repo_root, "map_data_tiles_protobuf")
+print(f"MapReader: Using tile base directory: {TILE_DATA_BASE_DIR}") # Add confirmation print
+
 # SCHEMA_DIR = os.path.join(_repo_root, "tools/map_processing") # No longer needed
 # SCHEMA_PATH = os.path.join(SCHEMA_DIR, "osm_speed_data.capnp") # No longer needed
 
@@ -220,8 +237,20 @@ class MapReader:
                     message_bytes = f.read(message_size)
                     if len(message_bytes) < message_size: break
 
+                    # Debug: Print size info
+                    print(f"Debug {tile_id}: Expected size {message_size}, Read size {len(message_bytes)}")
+
                     segment = osm_speed_data_pb2.SpeedLimitSegment()
-                    segment.ParseFromString(message_bytes)
+                    try:
+                        segment.ParseFromString(message_bytes)
+                    except DecodeError as de:
+                        print(f"Protobuf DecodeError in {tile_path}: {de}")
+                        # Optionally, log message_size and first few bytes of message_bytes for debugging
+                        # print(f"  Message size: {message_size}, Bytes: {message_bytes[:20]}...")
+                        break # Stop processing this tile on decode error
+                    except Exception as e_parse:
+                        print(f"Unexpected error parsing segment in {tile_path}: {e_parse}")
+                        break # Stop processing this tile on other errors
 
                     coords = [(p.longitude, p.latitude) for p in segment.geometry]
                     if len(coords) < 2: continue
@@ -234,19 +263,30 @@ class MapReader:
                          continue
 
                     # Extract core data + defaults for others
+                    # Only include fields that are actually defined in the proto schema
                     self.segments_data[osm_id] = {
                        'id': osm_id,
                        'speed_mps': segment.speed_limit_mps,
                        'geom': line,
                        'curvatures': list(segment.curvatures),
-                       'highway': segment.highway_type,
-                       'lanes': segment.lanes,
-                       'oneway': segment.oneway,
-                       'name': segment.name,
-                       'ref': segment.ref,
-                       'surface': segment.surface,
-                       'is_bridge': segment.is_bridge,
-                       'is_tunnel': segment.is_tunnel,
+                       # --- Fields NOT in current schema - REMOVED ---
+                       # 'highway': segment.highway_type,
+                       # 'lanes': segment.lanes,
+                       # 'oneway': segment.oneway,
+                       # 'name': segment.name,
+                       # 'ref': segment.ref,
+                       # 'surface': segment.surface,
+                       # 'is_bridge': segment.is_bridge,
+                       # 'is_tunnel': segment.is_tunnel,
+                       # --- Add placeholders if needed by downstream code ---
+                       'highway': '', # Placeholder
+                       'lanes': 0,    # Placeholder
+                       'oneway': 0,   # Placeholder (0=no, 1=yes, -1=reverse? needs definition)
+                       'name': '',    # Placeholder
+                       'ref': '',     # Placeholder
+                       'surface': '', # Placeholder
+                       'is_bridge': False, # Placeholder
+                       'is_tunnel': False, # Placeholder
                     }
                     self.segment_tile_map[osm_id] = tile_id
                     self.rtree_idx.insert(osm_id, line.bounds, obj=osm_id)

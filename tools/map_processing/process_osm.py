@@ -120,137 +120,163 @@ def main(input_geojsonl, output_basedir):
                 try: feature = json.loads(line)
                 except json.JSONDecodeError as e: skipped_json_error += 1; print(f"Warning: Skipping malformed JSON on line {line_num}: {e}"); continue
 
-                if feature.get('type') != 'Feature': skipped_not_feature += 1; continue
-                geom = feature.get('geometry', {})
-                if geom.get('type') != 'LineString': skipped_not_linestring += 1; continue
-
-                props = feature.get('properties', {})
-                coords = geom.get('coordinates', [])
-                if len(coords) < 2: skipped_coords_len += 1; continue
-
-                # --- Extract OSM ID ---
-                # Try top-level 'id' first (common osmium geojson format, e.g., "way/12345")
-                # Then fall back to 'properties.@id'
-                osm_id_val = feature.get('id')
-                current_osm_id = None
-                # Handle IDs like "w12345" or "way/12345"
-                if isinstance(osm_id_val, str):
-                    if osm_id_val.startswith('w') and len(osm_id_val) > 1:
-                        try:
-                            current_osm_id = int(osm_id_val[1:]) # Get int part after 'w'
-                        except ValueError:
-                            pass # Handled below
-                    elif osm_id_val.startswith('way/'): # Keep old check just in case
-                        try:
-                            current_osm_id = int(osm_id_val.split('/')[1])
-                        except (ValueError, IndexError):
-                            pass # Handled below
-                elif isinstance(osm_id_val, (int, float)): # Sometimes it might be numeric directly
-                     try:
-                        current_osm_id = int(osm_id_val)
-                     except (ValueError, TypeError):
-                         pass # Handled below
-
-                # Fallback to properties if top-level 'id' didn't yield a valid ID
-                if current_osm_id is None:
-                    osm_id_val_prop = props.get('@id')
-                    if osm_id_val_prop is not None:
-                        try:
-                            current_osm_id = int(osm_id_val_prop)
-                        except (ValueError, TypeError):
-                            print(f"Warning: Invalid OSM ID {osm_id_val_prop} in properties on line {line_num}. Skipping.")
-                            skipped_bad_id += 1; continue # Skip if prop ID is bad
-                    else:
-                        # If neither feature['id'] nor props['@id'] provided a usable ID
-                        skipped_no_id += 1; continue # Skip if no ID found
-
-                # Final check if ID extraction failed somehow (should be rare)
-                if current_osm_id is None:
-                     print(f"Warning: Could not extract valid OSM ID on line {line_num}. Skipping.")
-                     skipped_no_id += 1; continue
-
-                # --- Assign segment to tile AND determine sub-directory ---
-                start_lon, start_lat = coords[0]
-                tile_id = get_tile_id(start_lat, start_lon, TILE_SIZE_DEG)
-
-                # Determine sub-directory based on region and latitude
-                sub_dir_name = None
-                if region_name == "california":
-                    if start_lat >= 35.8:
-                        sub_dir_name = "NorCal"
-                    else:
-                        sub_dir_name = "SoCal"
-
-                # Construct final output directory for the tile
-                if sub_dir_name:
-                    tile_output_dir = os.path.join(region_base_output_dir, sub_dir_name)
-                else:
-                    tile_output_dir = region_base_output_dir # No subdir for other regions
-
-                # Ensure the specific tile output directory exists
-                # Creating directories within the loop might be slow, but ensures correctness
-                # Consider optimizing later if it becomes a bottleneck
+                # --- Wrap segment processing in a try-except ---
                 try:
-                    os.makedirs(tile_output_dir, exist_ok=True)
-                except OSError as e:
-                     print(f"Error creating tile output directory {tile_output_dir}: {e}")
-                     continue # Skip segment if dir creation fails
+                    if feature.get('type') != 'Feature': skipped_not_feature += 1; continue
+                    geom = feature.get('geometry', {})
+                    if geom.get('type') != 'LineString': skipped_not_linestring += 1; continue
 
-                # --- Get or Open Tile File Handle (using full path) ---
-                # Use a tuple (tile_output_dir, tile_id) as key if needed, or just tile_id if unique across subdirs
-                # Sticking with tile_id as key for now, assuming it implies location
-                outfile = tile_file_handles.get(tile_id)
-                if outfile is None:
-                    tile_filename = f"{tile_id}.protobuf"
-                    tile_filepath = os.path.join(tile_output_dir, tile_filename) # Use the determined output dir
+                    props = feature.get('properties', {})
+                    coords = geom.get('coordinates', [])
+                    if len(coords) < 2: skipped_coords_len += 1; continue
+
+                    # --- Extract OSM ID ---
+                    # Try top-level 'id' first (common osmium geojson format, e.g., "w12345")
+                    # Then fall back to 'properties.@id'
+                    osm_id_val = feature.get('id')
+                    current_osm_id = None
+                    # Handle IDs like "w12345" or "way/12345"
+                    if isinstance(osm_id_val, str):
+                        if osm_id_val.startswith('w') and len(osm_id_val) > 1:
+                            try:
+                                current_osm_id = int(osm_id_val[1:]) # Get int part after 'w'
+                            except ValueError:
+                                pass # Handled below
+                        elif osm_id_val.startswith('way/'): # Keep old check just in case
+                            try:
+                                current_osm_id = int(osm_id_val.split('/')[1])
+                            except (ValueError, IndexError):
+                                pass # Handled below
+                    elif isinstance(osm_id_val, (int, float)): # Sometimes it might be numeric directly
+                         try:
+                            current_osm_id = int(osm_id_val)
+                         except (ValueError, TypeError):
+                             pass # Handled below
+
+                    # Fallback to properties if top-level 'id' didn't yield a valid ID
+                    if current_osm_id is None:
+                        osm_id_val_prop = props.get('@id')
+                        if osm_id_val_prop is not None:
+                            try:
+                                current_osm_id = int(osm_id_val_prop)
+                            except (ValueError, TypeError):
+                                print(f"Warning: Invalid OSM ID {osm_id_val_prop} in properties on line {line_num}. Skipping.")
+                                skipped_bad_id += 1; continue # Skip if prop ID is bad
+                        else:
+                            # If neither feature['id'] nor props['@id'] provided a usable ID
+                            skipped_no_id += 1; continue # Skip if no ID found
+
+                    # Final check if ID extraction failed somehow (should be rare)
+                    if current_osm_id is None:
+                         print(f"Warning: Could not extract valid OSM ID on line {line_num}. Skipping.")
+                         skipped_no_id += 1; continue
+
+                    # --- Process segment if it's a valid LineString with an ID ---
+                    processed_way_count += 1
+
+                    # --- Assign segment to tile AND determine sub-directory ---
+                    start_lon, start_lat = coords[0]
+                    tile_id = get_tile_id(start_lat, start_lon, TILE_SIZE_DEG)
+
+                    # Determine sub-directory based on region and latitude
+                    sub_dir_name = None
+                    if region_name == "california":
+                        if start_lat >= 35.8:
+                            sub_dir_name = "NorCal"
+                        else:
+                            sub_dir_name = "SoCal"
+
+                    # Construct final output directory for the tile
+                    if sub_dir_name:
+                        tile_output_dir = os.path.join(region_base_output_dir, sub_dir_name)
+                    else:
+                        tile_output_dir = region_base_output_dir # No subdir for other regions
+
+                    # Ensure the specific tile output directory exists
+                    # Creating directories within the loop might be slow, but ensures correctness
+                    # Consider optimizing later if it becomes a bottleneck
                     try:
-                        outfile = open(tile_filepath, 'ab')
-                        tile_file_handles[tile_id] = outfile
-                        tile_segment_counts[tile_id] = 0
-                    except IOError as e:
-                        print(f"Error opening tile file {tile_filepath}: {e}")
-                        continue
+                        os.makedirs(tile_output_dir, exist_ok=True)
+                    except OSError as e:
+                         print(f"Error creating tile output directory {tile_output_dir}: {e}")
+                         continue # Skip segment if dir creation fails
 
-                # DEBUG: Are we reaching the processing point?
-                print(f"DEBUG: Reached processing point for line {line_num}, OSM ID {current_osm_id}")
+                    # --- Get or Open Tile File Handle (using full path) ---
+                    outfile = tile_file_handles.get(tile_id)
+                    if outfile is None:
+                        tile_filename = f"{tile_id}.protobuf"
+                        tile_filepath = os.path.join(tile_output_dir, tile_filename) # Use the determined output dir
+                        try:
+                            outfile = open(tile_filepath, 'ab')
+                            tile_file_handles[tile_id] = outfile
+                            tile_segment_counts[tile_id] = 0
+                        except IOError as e:
+                            print(f"Error opening tile file {tile_filepath}: {e}")
+                            continue
 
-                # --- Process Required Data (ID, Geometry, Curvature) ---
-                processed_way_count += 1
+                    # DEBUG: Are we reaching the processing point?
+                    # print(f"DEBUG: Reached processing point for line {line_num}, OSM ID {current_osm_id}")
 
-                segment_curvatures = []
-                coords_lon = [c[0] for c in coords]
-                coords_lat = [c[1] for c in coords]
-                if len(coords) >= 3:
-                    curvatures_list, _ = geometry.get_curvatures(coords_lat, coords_lon)
-                    segment_curvatures = curvatures_list if curvatures_list else []
+                    # --- Process Required Data (ID, Geometry, Curvature) ---
+                    segment_curvatures = []
+                    coords_lon = [c[0] for c in coords]
+                    coords_lat = [c[1] for c in coords]
+                    if len(coords) >= 3:
+                        curvatures_list, _ = geometry.get_curvatures(coords_lat, coords_lon)
+                        segment_curvatures = curvatures_list if curvatures_list else []
 
-                # --- Build Protobuf Message (Focus on ID, Geometry, Curvature) ---
-                segment_msg = osm_speed_data_pb2.SpeedLimitSegment()
-                segment_msg.osm_way_id = current_osm_id
+                    # --- Build Protobuf Message (Focus on ID, Geometry, Curvature) ---
+                    segment_msg = osm_speed_data_pb2.SpeedLimitSegment()
+                    segment_msg.osm_way_id = current_osm_id
 
-                # Populate geometry
-                for lon, lat in coords:
-                    point = segment_msg.geometry.add()
-                    point.latitude = lat
-                    point.longitude = lon
-                # Populate curvatures
-                segment_msg.curvatures.extend(segment_curvatures)
+                    # Populate geometry, skipping non-finite and (0,0) points
+                    points_added = 0
+                    for lon, lat in coords:
+                        # Check for finite *and* non-zero coordinates
+                        if math.isfinite(lat) and math.isfinite(lon) and not (lat == 0.0 and lon == 0.0):
+                            point = segment_msg.geometry.add()
+                            point.latitude = lat
+                            point.longitude = lon
+                            points_added += 1
+                        else:
+                            # Keep the warning for non-finite, but maybe silence for (0,0)? - Keeping warning for now.
+                            print(f"Warning: Skipping invalid coordinate (Lat: {lat}, Lon: {lon}) in segment {current_osm_id}, line {line_num}", file=sys.stderr)
 
-                # Populate speed limit with default value (required by reader)
-                segment_msg.speed_limit_mps = 0.0
+                    # --- Ensure geometry is not empty before proceeding ---
+                    if points_added < 2: # Need at least 2 valid points for a line segment
+                        print(f"Warning: Skipping segment {current_osm_id} on line {line_num} due to insufficient valid points ({points_added} found).", file=sys.stderr)
+                        processed_way_count -= 1 # Decrement because we are skipping after incrementing
+                        continue # Skip to next line in geojsonl
 
-                # --- Write Size-Prefixed Message to Tile File ---
-                try:
+                    # Populate curvatures - Ensure they are standard, finite floats
+                    valid_curvatures = [float(c) for c in segment_curvatures if math.isfinite(float(c))]
+                    segment_msg.curvatures.extend(valid_curvatures)
+
+                    # Populate speed limit with default value (required by reader)
+                    # segment_msg.speed_limit_mps = 0.0 <-- Remove old default
+
+                    # --- Get and Parse Speed Limit ---
+                    maxspeed_str = props.get('maxspeed')
+                    parsed_speed_mps = parse_speed_limit(maxspeed_str)
+                    segment_msg.speed_limit_mps = parsed_speed_mps if parsed_speed_mps is not None else 0.0
+
+                    # --- DEBUG: Print message state before writing ---
+                    print(f"DEBUG WRITE Line {line_num}: ID={segment_msg.osm_way_id}, GeomLen={len(segment_msg.geometry)}, CurvLen={len(segment_msg.curvatures)}, Speed={segment_msg.speed_limit_mps:.1f}", file=sys.stderr)
+
+                    # --- Write Size-Prefixed Message to Tile File ---
                     write_message(outfile, segment_msg)
                     tile_segment_counts[tile_id] += 1
-                except IOError as e:
-                    print(f"Error writing to tile file for {tile_id}: {e}")
-                    continue
 
-                # Update overall progress
-                if processed_way_count % 100000 == 0: # Reduce progress frequency
-                     elapsed = time.time() - start_time
-                     print(f"Processed {processed_way_count} ways ({len(tile_file_handles)} tiles active)... ({elapsed:.1f}s)")
+                    # Update overall progress
+                    if processed_way_count % 100000 == 0: # Reduce progress frequency
+                         elapsed = time.time() - start_time
+                         print(f"Processed {processed_way_count} ways ({len(tile_file_handles)} tiles active)... ({elapsed:.1f}s)")
+
+                # --- Catch errors during processing of a single segment ---
+                except Exception as e_proc:
+                    print(f"Error processing segment data on line {line_num}: {e_proc}")
+                    # Decide whether to skip (continue) or abort (raise/sys.exit)
+                    continue # Skip this segment and move to the next line
 
     except FileNotFoundError:
          print(f"Error: Input GeoJSON Lines file not found: {input_geojsonl}")
@@ -264,6 +290,7 @@ def main(input_geojsonl, output_basedir):
         closed_count = 0
         for tile_id, handle in tile_file_handles.items():
             try:
+                handle.flush() # Explicitly flush buffers
                 handle.close()
                 closed_count += 1
             except IOError as e:
