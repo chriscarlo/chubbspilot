@@ -496,7 +496,10 @@ def download_azure_directory_recursive(conn_str: str, share_name: str, remote_di
                             params_memory.put(error_param, f"Error downloading {item_name}: {file_e}")
                             # Optionally delete partial file?
                             if local_item_path.exists():
-                                try: local_item_path.unlink() catch: pass
+                                try:
+                                    local_item_path.unlink()
+                                except Exception: # Catch any exception during unlink
+                                    pass
 
             except Exception as list_e:
                  print(f"Error listing contents of Azure directory {current_dir_client.directory_path}: {list_e}")
