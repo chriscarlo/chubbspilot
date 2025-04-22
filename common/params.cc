@@ -429,6 +429,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"PromptDistractedVolume", PERSISTENT},
     {"PromptVolume", PERSISTENT},
     {"ProtobufMapDownloadProgress", CLEAR_ON_MANAGER_START},
+    {"ProtobufMapDownloadError", CLEAR_ON_MANAGER_START},
     {"QOLLateral", PERSISTENT},
     {"QOLLongitudinal", PERSISTENT},
     {"QOLVisuals", PERSISTENT},
