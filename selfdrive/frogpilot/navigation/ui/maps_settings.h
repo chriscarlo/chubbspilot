@@ -20,6 +20,8 @@ private:
   void startDownload();
   void updateDownloadLabels(std::string &osmDownloadProgress);
   void updateState(const UIState &s);
+  QString calculateDirectorySize(const QString &directoryPath);
+  QString formatCurrentDate();
 
   bool cancellingDownload;
   bool hasMapsSelected;
