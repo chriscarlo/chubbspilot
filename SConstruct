@@ -408,8 +408,9 @@ env.Command(proto_out_dir + '/__init__.py', None, f'mkdir -p {proto_out_dir} && 
 # Define the rule to compile the FrogPilot protobuf schema
 proto_src = proto_src_dir + '/osm_speed_data.proto'
 proto_target = proto_out_dir + '/osm_speed_data_pb2.py'
+protoc_binary = '#tools/bin/protoc'
 # Depend on the __init__.py target to ensure directory exists
-env.Command(proto_target, [proto_src, proto_out_dir + '/__init__.py'], f'protoc --proto_path={proto_src_dir} --python_out={proto_out_dir} {proto_src}')
+env.Command(proto_target, [proto_src, proto_out_dir + '/__init__.py', protoc_binary], f'{protoc_binary} --proto_path={proto_src_dir} --python_out={proto_out_dir} {proto_src}')
 
 # Optional: Add dependency if another target needs this generated file.
 # For now, just defining the rule should allow scons to build it when needed.
