@@ -55,16 +55,27 @@ def run_protoc(target, source, env):
     # target, source, env are standard arguments for SCons actions
     # We use the command string defined above
     print(f"--- Running SCons Python Action for {str(target[0])} ---")
-    # Substitute SCons variables like #
+    # Substitute SCons variables like # in the whole command string first
     cmd_str_subst = env.subst(protoc_command_str)
     print(f"Command: {cmd_str_subst}")
-    # Split command for subprocess.run (basic split should work if no quoted args)
-    cmd_parts = cmd_str_subst.split()
-    print(f"Executing: {cmd_parts}")
+
+    # Split the substituted command string into parts
+    cmd_parts_raw = cmd_str_subst.split()
+
+    # --- START FIX: Resolve executable path ---
+    # The first part should be the executable path, potentially starting with #
+    # Use env.File().abspath to get the absolute path SCons knows about
+    executable_path_node = env.File(cmd_parts_raw[0])
+    executable_path_abs = executable_path_node.abspath
+    # Rebuild the command list with the resolved absolute path for the executable
+    cmd_parts_resolved = [executable_path_abs] + cmd_parts_raw[1:]
+    # --- END FIX ---
+
+    print(f"Executing: {cmd_parts_resolved}") # Print the resolved list
     try:
-        # Execute command, capture output
-        # Use cwd='.' explicitly if needed, though absolute paths should work
-        result = subprocess.run(cmd_parts, check=True, capture_output=True, text=True, cwd=Dir('#').abspath)
+        # Execute command using the resolved list, capture output
+        # Run from repo root for consistency with SCons default behavior
+        result = subprocess.run(cmd_parts_resolved, check=True, capture_output=True, text=True, cwd=Dir('#').abspath)
         print("STDOUT:\\n" + result.stdout)
         print("STDERR:\\n" + result.stderr)
         print("--- SCons Action Completed Successfully ---")
@@ -81,7 +92,7 @@ def run_protoc(target, source, env):
         raise SCons.Errors.BuildError(node=target[0], errstr=f"protoc failed with stderr:\\n{e.stderr}")
     except FileNotFoundError as e:
         print(f"!!! SCons Action FAILED (FileNotFound) !!!")
-        print(f"Failed command: {cmd_parts}")
+        print(f"Failed command: {cmd_parts_resolved}")
         print(str(e))
         raise SCons.Errors.BuildError(node=target[0], errstr=f"protoc command not found or path issue: {str(e)}")
     except Exception as e:
