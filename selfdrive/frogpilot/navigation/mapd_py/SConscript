@@ -46,10 +46,11 @@ env.Command(init_file_target, None, f'touch $TARGET') # Simple touch should be f
 
 # Define the rule to compile the FrogPilot protobuf schema
 # Note: Using absolute paths for clarity in the command string parts
-protoc_command = f'{protoc_binary} --proto_path={proto_src_dir_abs} --python_out={proto_out_dir_rel} {proto_src}'
+protoc_command = f'{protoc_binary} --proto_path={proto_src_dir_abs} --python_out={proto_out_dir_abs} {proto_src}'
 
 # Create the build command, depending on the source, binary, and init file
 # SCons should handle path conversions (# -> absolute path)
+print(">>> EXECUTING mapd_py SConscript Rule <<<") # DEBUG PRINT
 protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, protoc_binary], protoc_command)
 
 # Optional: Alias if this generated file needs to be referred to elsewhere
