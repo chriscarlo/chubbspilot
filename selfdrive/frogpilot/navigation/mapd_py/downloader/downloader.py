@@ -92,16 +92,35 @@ def main():
   cloudlog.info("Starting map downloader trigger service (mapd_py.downloader)")
   sentry.init(sentry.SentryProject.SELFDRIVE) # Or appropriate project
 
-  # params = Params() # Not directly needed here if update_maps handles all param access
+  params = Params() # Need params instance to check/put the trigger
   rk = Ratekeeper(1.0 / UPDATE_CHECK_INTERVAL_SECONDS, print_delay_threshold=None)
 
   while True:
+    # Initialize check_triggered to False at the start of each loop iteration
+    check_triggered = False
     try:
-      now = datetime.now()
-      cloudlog.info(f"Map downloader trigger service checking for updates at {now}")
-      # Call the existing update_maps function.
-      # It contains the logic to check MapsSelected, schedule, LastMapsUpdate, etc.
-      update_maps(now)
+      # Check for the trigger parameter first
+      if params.get_bool("TriggerMapDownloadCheck"):
+        cloudlog.info("Map download check manually triggered.")
+        params.put_bool("TriggerMapDownloadCheck", False) # Reset trigger
+        check_triggered = True
+        now = datetime.now()
+        update_maps(now) # Run the check immediately
+        # Reset Ratekeeper timer to prevent immediate timed check after triggered check
+        rk.monitor_time = time.monotonic() # Reset monitor start time
+        rk.last_monitor_time = rk.monitor_time # Ensure next keep_time waits full interval
+
+      # Let Ratekeeper handle the timed check *only if not manually triggered*
+      # keep_time() will call update_maps if the interval has passed since the last check
+      # (which we reset above if manually triggered)
+      if rk.keep_time() and not check_triggered:
+        now = datetime.now()
+        cloudlog.info(f"Map downloader trigger service checking for updates (scheduled) at {now}")
+        update_maps(now)
+      elif not check_triggered:
+        # If keep_time() returned False and wasn't triggered, it means the interval hasn't passed.
+        # We can sleep briefly to avoid busy-waiting, Ratekeeper handles the main interval.
+        time.sleep(1) # Sleep 1 second if no trigger and not time for scheduled check
 
     except Exception as e:
       cloudlog.exception("mapd_py.downloader.service_loop_exception")
@@ -109,8 +128,8 @@ def main():
       # Avoid rapid error loops, wait before retrying
       time.sleep(60)
 
-    # Wait for the next check interval
-    rk.keep_time()
+    # No longer need rk.keep_time() here as it's handled conditionally above
+    # rk.keep_time()
 
 # --- END MODIFICATION ---
 

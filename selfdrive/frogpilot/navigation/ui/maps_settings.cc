@@ -14,6 +14,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   ButtonControl *downloadCaliforniaButton = new ButtonControl(tr("Download California Map"), tr("DOWNLOAD"));
   QObject::connect(downloadCaliforniaButton, &ButtonControl::clicked, [this, downloadCaliforniaButton] {
     params.putNonBlocking("MapsSelected", "california");
+    params.putBoolNonBlocking("TriggerMapDownloadCheck", true);
     downloadCaliforniaButton->setText(tr("REQUEST SENT"));
     QTimer::singleShot(2000, [downloadCaliforniaButton]() { downloadCaliforniaButton->setText(tr("DOWNLOAD")); });
     ConfirmationDialog::alert(tr("Request sent to download California map data. Monitor progress via logs or future UI element."), this);
@@ -23,6 +24,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   ButtonControl *downloadNevadaButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
   QObject::connect(downloadNevadaButton, &ButtonControl::clicked, [this, downloadNevadaButton] {
     params.putNonBlocking("MapsSelected", "nevada");
+    params.putBoolNonBlocking("TriggerMapDownloadCheck", true);
     downloadNevadaButton->setText(tr("REQUEST SENT"));
     QTimer::singleShot(2000, [downloadNevadaButton]() { downloadNevadaButton->setText(tr("DOWNLOAD")); });
     ConfirmationDialog::alert(tr("Request sent to download Nevada map data. Monitor progress via logs or future UI element."), this);

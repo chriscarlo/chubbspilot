@@ -513,6 +513,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"TestingSound", CLEAR_ON_MANAGER_START},
     {"TetheringEnabled", PERSISTENT},
     {"ThemeDownloadProgress", CLEAR_ON_MANAGER_START},
+    {"TriggerMapDownloadCheck", CLEAR_ON_MANAGER_START},
     {"ToyotaDoors", PERSISTENT},
     {"TrafficFollow", PERSISTENT},
     {"TrafficJerkAcceleration", PERSISTENT},
