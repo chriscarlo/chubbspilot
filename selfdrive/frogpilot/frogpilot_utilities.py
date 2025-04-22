@@ -11,6 +11,7 @@ import zipfile
 import os
 
 import openpilot.system.sentry as sentry
+from openpilot.common.swaglog import cloudlog
 
 from pathlib import Path
 from urllib.error import HTTPError
@@ -251,6 +252,7 @@ def update_maps(now):
        return
 
   if not needs_download:
+      cloudlog.info("update_maps: Download not needed based on schedule/existence check.")
       return
 
   # --- END MODIFICATION ---
@@ -280,14 +282,17 @@ def update_maps(now):
   #  - Handle errors
   #  - Update progress param (e.g., ProtobufMapDownloadProgress)
   # --- START REPLACEMENT ---
-  print(f"Initiating Azure map download for region: {target_region}")
+  cloudlog.info(f"update_maps: Initiating Azure map download for region: {target_region}")
   params_memory.put("ProtobufMapDownloadProgress", "Starting...") # Initial progress state
   params_memory.remove("ProtobufMapDownloadError") # Clear previous errors
 
   download_success = False
+  cloudlog.info("update_maps: Attempting to get Azure connection string...")
   conn_str = get_azure_connection_string(CONN_STRING_PATH)
+  cloudlog.info(f"update_maps: Connection string obtained: {'Yes' if conn_str else 'No'}")
 
   if conn_str and ShareDirectoryClient is not None:
+      cloudlog.info("update_maps: Connection string and SDK OK, proceeding with download attempt.")
       # Define remote and local paths
       remote_region_path = f"{AZURE_BASE_DIR}/{target_region}" # e.g., protobuf_tiles/california
       local_region_path = Path(PROTOBUF_MAPS_PATH) / target_region # e.g., /data/media/0/.../california
@@ -305,16 +310,17 @@ def update_maps(now):
               local_region_path
           )
       except Exception as e:
-          print(f"Error during map download process initiation: {e}")
+          cloudlog.exception(f"update_maps: Error during map download process initiation: {e}")
           sentry.capture_exception(e)
           params_memory.put("ProtobufMapDownloadError", f"Download failed: {e}")
           params_memory.remove("ProtobufMapDownloadProgress") # Remove progress on setup error
           download_success = False
   elif ShareDirectoryClient is None:
-       print("Azure SDK missing, download cannot proceed.")
+       cloudlog.warning("update_maps: Azure SDK missing, download cannot proceed.")
        params_memory.put("ProtobufMapDownloadError", "Azure SDK missing")
        params_memory.remove("ProtobufMapDownloadProgress")
   else:
+       cloudlog.warning("update_maps: Connection string error (likely missing or unreadable), download cannot proceed.")
        # Connection string error already printed by helper
        params_memory.put("ProtobufMapDownloadError", "Connection string error")
        params_memory.remove("ProtobufMapDownloadProgress")
@@ -332,9 +338,9 @@ def update_maps(now):
       suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
       todays_date = now.strftime(f"%B {day}{suffix}, %Y")
       params.put("LastMapsUpdate", todays_date)
-      print(f"Map download/update process completed successfully for {target_region}. Updated LastMapsUpdate.")
+      cloudlog.info(f"update_maps: Map download/update process completed successfully for {target_region}. Updated LastMapsUpdate.")
   else:
-      print(f"Map download/update process failed for {target_region}. LastMapsUpdate not changed.")
+      cloudlog.warning(f"update_maps: Map download/update process failed for {target_region}. LastMapsUpdate not changed.")
   # --- END MODIFICATION ---
 
 def update_openpilot(manually_updated, frogpilot_toggles):
