@@ -33,8 +33,8 @@ def main():
         params.put_bool("TriggerMapDownloadCheck", False)
         check_triggered = True
         update_maps(datetime.now())
-        rk.monitor_time = time.monotonic()
-        rk.last_monitor_time = rk.monitor_time
+        rk._last_monitor_time = time.monotonic()      # reset the moving average
+        rk._next_frame_time  = rk._last_monitor_time + rk._interval
 
       if rk.keep_time() and not check_triggered:
         cloudlog.info(f"Scheduled map download check at {datetime.now()}")
