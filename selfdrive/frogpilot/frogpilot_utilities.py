@@ -8,6 +8,7 @@ import threading
 import time
 import urllib.request
 import zipfile
+import os
 
 import openpilot.system.sentry as sentry
 
@@ -21,6 +22,26 @@ from openpilot.system.hardware import HARDWARE
 from panda import Panda
 
 from openpilot.selfdrive.frogpilot.frogpilot_variables import EARTH_RADIUS, MAPD_PATH, MAPS_PATH, params, params_memory
+
+# --- START ADDITION ---
+try:
+    from azure.storage.fileshare import ShareFileClient, ShareDirectoryClient
+    from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError
+except ImportError:
+    # Allow the script to run but downloads will fail if Azure SDK isn't present
+    ShareFileClient = None
+    ShareDirectoryClient = None
+    ResourceNotFoundError = None
+    ResourceExistsError = None
+    print("WARNING: Azure SDK not installed. Map downloads will fail. Install with: pip install azure-storage-file-share")
+# --- END ADDITION ---
+
+# --- START ADDITION ---
+PROTOBUF_MAPS_PATH = "/data/media/0/map_data_tiles_protobuf" # New path for our Protobuf tiles
+AZURE_SHARE_NAME = "mapdata"
+AZURE_BASE_DIR = "protobuf_tiles"
+CONN_STRING_PATH = "/persist/azure_conn_string"
+# --- END ADDITION ---
 
 running_threads = {}
 
@@ -174,8 +195,10 @@ def run_cmd(cmd, success_message, fail_message):
     sentry.capture_exception(error)
 
 def update_maps(now):
-  while not MAPD_PATH.exists():
-    time.sleep(60)
+  # --- START REMOVAL ---
+  # while not MAPD_PATH.exists():
+  #   time.sleep(60)
+  # --- END REMOVAL ---
 
   maps_selected = json.loads(params.get("MapsSelected", encoding="utf-8") or "{}")
   if not (maps_selected.get("nations") or maps_selected.get("states")):
@@ -186,23 +209,133 @@ def update_maps(now):
   is_Sunday = now.weekday() == 6
   schedule = params.get_int("PreferredSchedule")
 
-  maps_downloaded = MAPS_PATH.exists()
-  if maps_downloaded and (schedule == 0 or (schedule == 1 and not is_Sunday) or (schedule == 2 and not is_first)):
-    return
+  # --- START MODIFICATION ---
+  # Check if the *protobuf* map base directory exists, then check for specific regions later
+  protobuf_maps_base_exists = Path(PROTOBUF_MAPS_PATH).is_dir()
+  # For now, assume we only handle single state selection for simplicity in download logic
+  # We'll need to refine this to handle multiple states/nations if maps_selected can contain them
+  selected_regions = maps_selected.get("states", []) + maps_selected.get("nations", []) # Combine for now
+  target_region = selected_regions[0].lower() if selected_regions else None # Example: 'california'
+  region_path_exists = False
+  if protobuf_maps_base_exists and target_region:
+      region_path_exists = (Path(PROTOBUF_MAPS_PATH) / target_region).is_dir()
 
-  suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
-  todays_date = now.strftime(f"%B {day}{suffix}, %Y")
+  # Determine if download is needed:
+  # 1. Region is selected but corresponding directory doesn't exist (Initial download)
+  # 2. Directory exists, but update is scheduled
+  needs_download = False
+  if target_region and not region_path_exists:
+      print(f"Protobuf map data for selected region '{target_region}' not found locally. Triggering download.")
+      needs_download = True
+  elif target_region and region_path_exists:
+      # Existing logic for scheduled updates
+      if schedule == 0: # Daily check
+          pass # Handled below by checking LastMapsUpdate
+      elif schedule == 1 and is_Sunday: # Weekly check
+          pass # Handled below by checking LastMapsUpdate
+      elif schedule == 2 and is_first: # Monthly check
+          pass # Handled below by checking LastMapsUpdate
+      else: # Schedule doesn't require update today
+          return
 
-  if maps_downloaded and params.get("LastMapsUpdate", encoding="utf-8") == todays_date:
-    return
+      # Check if already updated today
+      suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
+      todays_date = now.strftime(f"%B {day}{suffix}, %Y")
+      if params.get("LastMapsUpdate", encoding="utf-8") == todays_date:
+          return # Already updated today
+      else:
+          print(f"Scheduled map update required for region '{target_region}'.")
+          needs_download = True
+  else:
+       # No region selected or other condition
+       return
 
-  if params.get("OSMDownloadProgress", encoding="utf-8") is None:
-    params_memory.put("OSMDownloadLocations", json.dumps(maps_selected))
+  if not needs_download:
+      return
 
-  while params.get("OSMDownloadProgress", encoding="utf-8") is not None:
-    time.sleep(60)
+  # --- END MODIFICATION ---
 
-  params.put("LastMapsUpdate", todays_date)
+  # --- START REMOVAL ---
+  # suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
+  # todays_date = now.strftime(f"%B {day}{suffix}, %Y")
+
+  # if maps_downloaded and params.get("LastMapsUpdate", encoding="utf-8") == todays_date:
+  #   return
+
+  # if params.get("OSMDownloadProgress", encoding="utf-8") is None:
+  #   params_memory.put("OSMDownloadLocations", json.dumps(maps_selected))
+
+  # while params.get("OSMDownloadProgress", encoding="utf-8") is not None:
+  #   time.sleep(60)
+  # --- END REMOVAL ---
+
+  # --- START PLACEHOLDER for Azure Download Logic ---
+  # print(f"Placeholder: Would initiate Azure download for region: {target_region} now...")
+  # TODO: Implement Azure download logic here
+  #  - Read connection string
+  #  - Connect to Azure ShareFileClient/ShareDirectoryClient
+  #  - Determine remote path (e.g., protobuf_tiles/california)
+  #  - Create local path (e.g., /data/media/0/map_data_tiles_protobuf/california)
+  #  - Download files/directories recursively
+  #  - Handle errors
+  #  - Update progress param (e.g., ProtobufMapDownloadProgress)
+  # --- START REPLACEMENT ---
+  print(f"Initiating Azure map download for region: {target_region}")
+  params_memory.put("ProtobufMapDownloadProgress", "Starting...") # Initial progress state
+  params_memory.remove("ProtobufMapDownloadError") # Clear previous errors
+
+  download_success = False
+  conn_str = get_azure_connection_string(CONN_STRING_PATH)
+
+  if conn_str and ShareDirectoryClient is not None:
+      # Define remote and local paths
+      remote_region_path = f"{AZURE_BASE_DIR}/{target_region}" # e.g., protobuf_tiles/california
+      local_region_path = Path(PROTOBUF_MAPS_PATH) / target_region # e.g., /data/media/0/.../california
+
+      try:
+          # Ensure the parent directory exists locally (/data/media/0/map_data_tiles_protobuf)
+          ensure_local_directory_exists(Path(PROTOBUF_MAPS_PATH))
+
+          # Perform the recursive download
+          # The helper function handles creating subdirs and updating progress/error params
+          download_success = download_azure_directory_recursive(
+              conn_str,
+              AZURE_SHARE_NAME,
+              remote_region_path,
+              local_region_path
+          )
+      except Exception as e:
+          print(f"Error during map download process initiation: {e}")
+          sentry.capture_exception(e)
+          params_memory.put("ProtobufMapDownloadError", f"Download failed: {e}")
+          params_memory.remove("ProtobufMapDownloadProgress") # Remove progress on setup error
+          download_success = False
+  elif ShareDirectoryClient is None:
+       print("Azure SDK missing, download cannot proceed.")
+       params_memory.put("ProtobufMapDownloadError", "Azure SDK missing")
+       params_memory.remove("ProtobufMapDownloadProgress")
+  else:
+       # Connection string error already printed by helper
+       params_memory.put("ProtobufMapDownloadError", "Connection string error")
+       params_memory.remove("ProtobufMapDownloadProgress")
+
+  # --- END REPLACEMENT ---
+
+  # Simulate download completion for now
+  # time.sleep(5) # Placeholder delay -- REMOVED
+
+  # --- END PLACEHOLDER ---
+
+  # --- START MODIFICATION ---
+  # Update LastMapsUpdate param ONLY on successful completion
+  if download_success:
+      suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
+      todays_date = now.strftime(f"%B {day}{suffix}, %Y")
+      params.put("LastMapsUpdate", todays_date)
+      print(f"Map download/update process completed successfully for {target_region}. Updated LastMapsUpdate.")
+  else:
+      print(f"Map download/update process failed for {target_region}. LastMapsUpdate not changed.")
+  # --- END MODIFICATION ---
 
 def update_openpilot(manually_updated, frogpilot_toggles):
   if not frogpilot_toggles.automatic_updates or manually_updated:
@@ -228,6 +361,7 @@ def update_openpilot(manually_updated, frogpilot_toggles):
     time.sleep(60)
 
   HARDWARE.reboot()
+
 def get_carstate_attr(carstate, attr, default=None):
   """
   Safely retrieves attributes from CarState objects, handling different data structures.
@@ -263,4 +397,134 @@ def get_carstate_attr(carstate, attr, default=None):
 
   # Return either the found value or default
   return value if value is not None else default
+
+# --- START ADDITION: Azure Helpers ---
+def get_azure_connection_string(path: str) -> str | None:
+    """Reads the Azure connection string from the specified file path."""
+    try:
+        with open(path, "r") as f:
+            conn_str = f.read().strip()
+        if not conn_str:
+            print(f"Error: Connection string file '{path}' is empty.")
+            return None
+        # print(f"Successfully read connection string from {path}") # Too verbose for on-device
+        return conn_str
+    except FileNotFoundError:
+        print(f"Error: Connection string file not found at '{path}'. Download cannot proceed.")
+        return None
+    except Exception as e:
+        print(f"Error reading connection string from '{path}': {e}")
+        sentry.capture_exception(e)
+        return None
+
+def ensure_local_directory_exists(local_path: Path):
+    """Ensures a local directory exists, creating it if necessary."""
+    try:
+        local_path.mkdir(parents=True, exist_ok=True)
+        # print(f"Ensured local directory exists: {local_path}") # Too verbose
+    except Exception as e:
+        print(f"Error creating local directory {local_path}: {e}")
+        sentry.capture_exception(e)
+        raise # Propagate error as we can't download without the dir
+
+def download_azure_directory_recursive(conn_str: str, share_name: str, remote_dir_path: str, local_base_path: Path):
+    """Recursively downloads files from an Azure directory to a local path."""
+    if ShareDirectoryClient is None:
+        print("Azure SDK not available, cannot download directory.")
+        raise Exception("Azure SDK required for download.")
+
+    print(f"Starting recursive download from Azure: {share_name}/{remote_dir_path} to {local_base_path}")
+    total_files = 0
+    downloaded_files = 0
+    error_files = 0
+    progress_param = "ProtobufMapDownloadProgress"
+    error_param = "ProtobufMapDownloadError"
+
+    try:
+        # Base directory client for the starting remote path
+        base_dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, remote_dir_path)
+        items_to_process = [(base_dir_client, local_base_path)] # Queue of (ShareDirectoryClient, local_path)
+
+        # First pass to count total files (optional, but good for progress)
+        # This could be slow for very large directories. Consider skipping if performance is an issue.
+        print("Counting total files in remote directory...")
+        count_queue = [base_dir_client]
+        while count_queue:
+            current_dir_client_for_count = count_queue.pop(0)
+            try:
+                 for item in current_dir_client_for_count.list_directories_and_files():
+                     if item['is_directory']:
+                         count_queue.append(current_dir_client_for_count.get_subdirectory_client(item['name']))
+                     else:
+                         total_files += 1
+            except Exception as e:
+                 print(f"Warning: Error listing contents of {current_dir_client_for_count.directory_path} during count: {e}")
+                 # Continue counting other parts if possible
+        print(f"Found approximately {total_files} files to download.")
+        params_memory.put(progress_param, f"0/{total_files}") # Initial progress
+
+        # Start processing the download queue
+        while items_to_process:
+            current_dir_client, current_local_path = items_to_process.pop(0)
+            ensure_local_directory_exists(current_local_path)
+
+            try:
+                for item in current_dir_client.list_directories_and_files():
+                    item_name = item['name']
+                    item_is_directory = item['is_directory']
+                    local_item_path = current_local_path / item_name
+
+                    if item_is_directory:
+                        print(f"  Found remote directory: {item_name}")
+                        items_to_process.append((current_dir_client.get_subdirectory_client(item_name), local_item_path))
+                    else: # It's a file
+                        print(f"  Downloading file: {item_name} to {local_item_path}")
+                        try:
+                            file_client = current_dir_client.get_file_client(item_name)
+                            with open(local_item_path, "wb") as local_file:
+                                download_stream = file_client.download_file()
+                                local_file.write(download_stream.readall())
+                            downloaded_files += 1
+                            print(f"    Downloaded {item_name} successfully.")
+                            # Update progress
+                            if total_files > 0:
+                                params_memory.put(progress_param, f"{downloaded_files}/{total_files}")
+                        except Exception as file_e:
+                            print(f"    Error downloading file {item_name}: {file_e}")
+                            sentry.capture_exception(file_e)
+                            error_files += 1
+                            params_memory.put(error_param, f"Error downloading {item_name}: {file_e}")
+                            # Optionally delete partial file?
+                            if local_item_path.exists():
+                                try: local_item_path.unlink() catch: pass
+
+            except Exception as list_e:
+                 print(f"Error listing contents of Azure directory {current_dir_client.directory_path}: {list_e}")
+                 sentry.capture_exception(list_e)
+                 params_memory.put(error_param, f"Error listing Azure dir {current_dir_client.directory_path}")
+                 # Potentially stop or try to continue?
+                 # For now, let loop continue if possible, but this might leave partial downloads.
+
+    except ResourceNotFoundError:
+        print(f"Error: Remote Azure directory not found: {share_name}/{remote_dir_path}")
+        params_memory.put(error_param, f"Remote directory not found: {remote_dir_path}")
+        return False # Indicate failure
+    except Exception as e:
+        print(f"An unexpected error occurred during Azure download: {e}")
+        sentry.capture_exception(e)
+        params_memory.put(error_param, f"Unexpected download error: {e}")
+        return False # Indicate failure
+    finally:
+        # Clean up progress param on exit (success or failure)
+        # Keep error param on failure
+        if error_files == 0:
+             params_memory.remove(progress_param)
+             params_memory.remove(error_param) # Clear previous errors on success
+        else:
+             # Maybe set progress to error state?
+             params_memory.put(progress_param, f"Error ({downloaded_files}/{total_files})")
+
+    print(f"Recursive download finished. Downloaded: {downloaded_files}, Errors: {error_files}")
+    return error_files == 0 # Return True if successful
+# --- END ADDITION: Azure Helpers ---
 

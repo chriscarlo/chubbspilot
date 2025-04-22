@@ -81,9 +81,15 @@ def get_tile_id(lat_deg, lon_deg, tile_size_deg):
 
 # Define base directory for tiles - check device path first
 OP_ROOT_ON_DEVICE = "/data/openpilot"
-if os.path.exists(OP_ROOT_ON_DEVICE):
-    # Use standard path on device
+MEDIA_ROOT_ON_DEVICE = "/data/media/0" # Define the media path
+if os.path.exists(MEDIA_ROOT_ON_DEVICE): # Check for media partition first
+    # Use path on media partition if available
+    TILE_DATA_BASE_DIR = os.path.join(MEDIA_ROOT_ON_DEVICE, "map_data_tiles_protobuf")
+elif os.path.exists(OP_ROOT_ON_DEVICE):
+    # Fallback to old path if media path doesn't exist but /data/openpilot does
+    # This might be useful for some testing scenarios or older setups.
     TILE_DATA_BASE_DIR = os.path.join(OP_ROOT_ON_DEVICE, "map_data_tiles_protobuf")
+    print("MapReader: WARNING - Using fallback path on /data/openpilot as media partition not found.")
 else:
     # Fallback to relative path for simulation/development
     TILE_DATA_BASE_DIR = os.path.join(_repo_root, "map_data_tiles_protobuf")
