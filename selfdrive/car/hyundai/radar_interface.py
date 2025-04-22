@@ -30,11 +30,14 @@ def get_radar_can_parser(CP):
   return CANParser(DBC[CP.carFingerprint]['radar'], messages, 1)
 
 def get_corner_radar_can_parser(CP):
+  # TODO: investigate radar_track DBC for corner radar messages
   messages_fd = [
-    ("RADAR_POINTS_METADATA_0x100", 50),  # Left corner metadata
-    ("RADAR_POINTS_METADATA_0x200", 50),  # Right corner metadata
-    ("RADAR_POINTS_CHECKSUM_0x104", 50),  # Left checksum
-    ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
+    # Metadata on FD bus (129) - Removed as not in DBC
+    # ("RADAR_POINTS_METADATA_0x100", 50),  # Left metadata
+    # ("RADAR_POINTS_METADATA_0x200", 50),  # Right metadata
+    # Checksum on FD bus (129) - Removed as not in DBC
+    # ("RADAR_POINTS_CHECKSUM_0x104", 50),  # Left checksum
+    # ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
   ]
   messages_pt = [
     ("RADAR_POINTS_0x101", 50),  # Left corner points
