@@ -1,9 +1,11 @@
 # SConstruct for generating Python bindings for offline.capnp
 import os
+import subprocess
 from SCons.Script import Environment, Dir, File, Glob
+import SCons.Errors # Import SCons Errors
 
 # Setup environment (could potentially inherit from parent)
-env = Environment()
+# env = Environment() # Commented out - should use Imported 'env'
 
 # --- REMOVED ALL OFFLINE.CAPNP COMPILATION RULES ---
 # offline_schema = File('offline.capnp')
@@ -46,12 +48,52 @@ env.Command(init_file_target, None, f'touch $TARGET') # Simple touch should be f
 
 # Define the rule to compile the FrogPilot protobuf schema
 # Note: Using absolute paths for clarity in the command string parts
-protoc_command = f'{protoc_binary} --proto_path={proto_src_dir_abs} --python_out={proto_out_dir_abs} {proto_src}'
+protoc_command_str = f'{protoc_binary} --proto_path={proto_src_dir_abs} --python_out={proto_out_dir_abs} {proto_src}'
+
+# --- START Python Action Function ---
+def run_protoc(target, source, env):
+    # target, source, env are standard arguments for SCons actions
+    # We use the command string defined above
+    print(f"--- Running SCons Python Action for {str(target[0])} ---")
+    # Substitute SCons variables like #
+    cmd_str_subst = env.subst(protoc_command_str)
+    print(f"Command: {cmd_str_subst}")
+    # Split command for subprocess.run (basic split should work if no quoted args)
+    cmd_parts = cmd_str_subst.split()
+    print(f"Executing: {cmd_parts}")
+    try:
+        # Execute command, capture output
+        # Use cwd='.' explicitly if needed, though absolute paths should work
+        result = subprocess.run(cmd_parts, check=True, capture_output=True, text=True, cwd=Dir('#').abspath)
+        print("STDOUT:\\n" + result.stdout)
+        print("STDERR:\\n" + result.stderr)
+        print("--- SCons Action Completed Successfully ---")
+        # Must touch the target file explicitly since SCons doesn't know the action created it
+        # open(str(target[0]), 'a').close() # This causes issues if action fails but file exists
+        # SCons should handle timestamp update if command succeeds
+    except subprocess.CalledProcessError as e:
+        print(f"!!! SCons Action FAILED !!!")
+        print(f"Return Code: {e.returncode}")
+        print("STDOUT:\\n" + e.stdout)
+        print("STDERR:\\n" + e.stderr)
+        # Raise an exception to signal failure to SCons
+        # Use errstr for the message
+        raise SCons.Errors.BuildError(node=target[0], errstr=f"protoc failed with stderr:\\n{e.stderr}")
+    except FileNotFoundError as e:
+        print(f"!!! SCons Action FAILED (FileNotFound) !!!")
+        print(f"Failed command: {cmd_parts}")
+        print(str(e))
+        raise SCons.Errors.BuildError(node=target[0], errstr=f"protoc command not found or path issue: {str(e)}")
+    except Exception as e:
+        print(f"!!! SCons Action FAILED (Unknown Error) !!!")
+        print(str(e))
+        raise SCons.Errors.BuildError(node=target[0], errstr=f"protoc failed: {str(e)}")
+# --- END Python Action Function ---
 
 # Create the build command, depending on the source, binary, and init file
-# SCons should handle path conversions (# -> absolute path)
-print(">>> EXECUTING mapd_py SConscript Rule <<<") # DEBUG PRINT
-protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, protoc_binary], protoc_command)
+# Use the Python function 'run_protoc' as the action instead of the command string
+print(">>> DEFINING mapd_py SConscript Rule using Python Action <<<")
+protobuf_py_file = env.Command(proto_target, [proto_src, init_file_target, protoc_binary], run_protoc) # Pass function handle
 
 # Optional: Alias if this generated file needs to be referred to elsewhere
 # Alias('frogpilot_proto', protobuf_py_file)
