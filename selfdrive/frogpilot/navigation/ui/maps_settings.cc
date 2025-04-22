@@ -12,7 +12,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   mainLayout->addWidget(new ScrollView(settingsList, this));
 
   ButtonControl *downloadCaliforniaButton = new ButtonControl(tr("Download California Map"), tr("DOWNLOAD"));
-  QObject::connect(downloadCaliforniaButton, &ButtonControl::clicked, [this] {
+  QObject::connect(downloadCaliforniaButton, &ButtonControl::clicked, [this, downloadCaliforniaButton] {
     params.putNonBlocking("MapsSelected", "california");
     downloadCaliforniaButton->setText(tr("REQUEST SENT"));
     QTimer::singleShot(2000, [downloadCaliforniaButton]() { downloadCaliforniaButton->setText(tr("DOWNLOAD")); });
@@ -21,7 +21,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   settingsList->addItem(downloadCaliforniaButton);
 
   ButtonControl *downloadNevadaButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
-  QObject::connect(downloadNevadaButton, &ButtonControl::clicked, [this] {
+  QObject::connect(downloadNevadaButton, &ButtonControl::clicked, [this, downloadNevadaButton] {
     params.putNonBlocking("MapsSelected", "nevada");
     downloadNevadaButton->setText(tr("REQUEST SENT"));
     QTimer::singleShot(2000, [downloadNevadaButton]() { downloadNevadaButton->setText(tr("DOWNLOAD")); });
@@ -33,7 +33,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   mapsFolderPath = "/data/media/0/map_data_tiles_protobuf/";
   settingsList->addItem(mapsSize = new LabelControl(tr("Downloaded Maps Size"), calculateDirectorySize(mapsFolderPath)));
 
-  QObject::connect(parent, &FrogPilotSettingsWindow::closeMapSelection, [this] {
+  QObject::connect(parent, &FrogPilotSettingsWindow::closeMapSelection, [] {
   });
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotMapsPanel::updateState);
 }
