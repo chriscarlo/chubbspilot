@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Downloads protobuf‑tile maps from Azure and (elsewhere in the codebase)
-uploads logs or models back to the same share.
+Map data utilities and assorted helper functions for the FrogPilot fork.
 
-All map‑specific code lives in the **MAP SECTION** below.  There is now
-*no notion of “region”* – the downloader simply synchronises whatever is
-inside <share>/protobuf_tiles/ to /data/media/0/map_data_tiles_protobuf/.
+This script handles:
+  • Protobuf‑tile download/update from an Azure File Share
+  • A handful of small OpenPilot utility helpers that other modules import
+
+It is self‑contained: all map‑specific constants, helpers, and the
+`update_maps()` scheduler live in one contiguous section so the control flow
+is easy to follow and maintain.
 """
-
-# ────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
 # Imports
-# ────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
 import json
 import math
 import os
@@ -20,382 +22,462 @@ import threading
 import time
 import urllib.request
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from urllib.error import HTTPError
 
 import numpy as np
 from cereal import log
+from panda import Panda
+
+import openpilot.system.sentry as sentry
 from openpilot.common.realtime import DT_DMON, DT_HW
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD
 from openpilot.system.hardware import HARDWARE
-import openpilot.system.sentry as sentry
-from panda import Panda
+from openpilot.selfdrive.frogpilot.frogpilot_variables import (
+    EARTH_RADIUS,
+    MAPD_PATH,
+    MAPS_PATH,
+    params,
+    params_memory,
+)
 
-# ────────────────────────────────────────────────────────────────────
-# MAP SECTION  – everything concerned with Azure map tiles
-# ────────────────────────────────────────────────────────────────────
-
-# 1.  Constants that define *where* the files live
-PROTOBUF_MAPS_PATH = "/data/media/0/map_data_tiles_protobuf"   # local root
-AZURE_SHARE_NAME   = "mapdata"                                 # Azure share
-AZURE_BASE_DIR     = "protobuf_tiles"                          # sub‑directory
-CONN_STRING_PATH   = "/persist/azure_conn_string"              # legacy fallback
-
-# 2.  Optional Azure SDK (script still runs without it – uploads will fail)
+# Optional Azure SDK
 try:
-    from azure.storage.fileshare import ShareDirectoryClient
-    from azure.core.exceptions import ResourceNotFoundError
+    from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+    from azure.storage.fileshare import ShareDirectoryClient, ShareFileClient
 except ImportError:
-    ShareDirectoryClient     = None
-    ResourceNotFoundError    = None
-    print("WARNING: Azure SDK not installed. Map download will be skipped.")
+    ShareDirectoryClient = ShareFileClient = None
+    ResourceExistsError = ResourceNotFoundError = None
+    print(
+        "WARNING: Azure SDK not installed. Map downloads will fail.\n"
+        "Install with `pip install azure-storage-file-share`."
+    )
 
-# 3.  Public entry point – called once a day/week/month by manager.py
-def update_maps(now):
-    """
-    Download /protobuf_tiles/ from the Azure ‘mapdata’ share unless a recent
-    successful run is already recorded in params['LastMapsUpdate'].
-    """
-    # honour owner’s preferred cadence
-    schedule = params.get_int("PreferredSchedule")  # 0=daily 1=weekly 2=monthly
-    if not _should_run_today(now, schedule):
-        return
+# ──────────────────────────────────────────────────────────────────────────────
+# Global objects used in several helper threads
+# ──────────────────────────────────────────────────────────────────────────────
+running_threads: dict[str, threading.Thread] = {}
 
-    cloudlog.info("update_maps: starting map sync (no per‑state filter).")
-    params_memory.put("ProtobufMapDownloadProgress", "Starting…")
-    params_memory.remove("ProtobufMapDownloadError")
-
-    conn_str = _get_azure_connection_string()
-    if not conn_str or ShareDirectoryClient is None:
-        err = "Azure SDK missing" if ShareDirectoryClient is None else "No connection string"
-        cloudlog.warning(f"update_maps: {err}, aborting.")
-        params_memory.put("ProtobufMapDownloadError", err)
-        params_memory.remove("ProtobufMapDownloadProgress")
-        return
-
-    remote_dir = AZURE_BASE_DIR                     # protobuf_tiles
-    local_dir  = Path(PROTOBUF_MAPS_PATH)           # /data/…/protobuf_tiles
-    success    = _download_azure_directory_recursive(conn_str, AZURE_SHARE_NAME,
-                                                     remote_dir, local_dir)
-
-    if success:
-        suffix = "th" if 4 <= now.day <= 20 or 24 <= now.day <= 30 \
-                       else ["st", "nd", "rd"][now.day % 10 - 1]
-        params.put("LastMapsUpdate", now.strftime(f"%B {now.day}{suffix}, %Y"))
-        cloudlog.info("update_maps: completed successfully.")
-    else:
-        cloudlog.warning("update_maps: failed.")
-
-# 4.  Helper – is today the right day to run?
-def _should_run_today(now, schedule: int) -> bool:
-    """Returns True if maps should be refreshed according to *schedule*."""
-    if schedule == 0:     # daily
-        pass
-    elif schedule == 1:   # weekly
-        if now.weekday() != 6:   # Sunday only
-            return False
-    elif schedule == 2:   # monthly
-        if now.day != 1:         # 1st of the month
-            return False
-
-    last = params.get("LastMapsUpdate", encoding="utf-8")
-    return last != now.strftime("%B %-d, %Y")      # already done today?
-
-# 5.  Helper – connection‑string discovery in env ▸ param ▸ file order
-def _get_azure_connection_string() -> str | None:
-    """Return the storage‑account connection string or None."""
-    env = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    if env:
-        return env.strip()
-
-    param = params.get("AzureConnString", encoding="utf-8")
-    if param:
-        return param.strip()
-
-    try:
-        with open(CONN_STRING_PATH, "r") as fh:
-            file_cs = fh.read().strip()
-        if file_cs:
-            return file_cs
-        print(f"Connection‑string file '{CONN_STRING_PATH}' is empty.")
-    except FileNotFoundError:
-        print(f"Connection‑string file '{CONN_STRING_PATH}' not found.")
-    except Exception as e:
-        print(f"Error reading connection‑string file: {e}")
-        sentry.capture_exception(e)
-
-    return None
-
-# 6.  Helper – ensure a directory exists
-def _ensure_local_dir(path: Path):
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        sentry.capture_exception(e)
-        raise
-
-# 7.  Recursive downloader with progress + error reporting to params_memory
-def _download_azure_directory_recursive(conn_str: str, share: str,
-                                        remote_dir: str, local_dir: Path) -> bool:
-    if ShareDirectoryClient is None:
-        return False
-
-    cloudlog.info(f"update_maps: syncing {share}/{remote_dir} → {local_dir}")
-    progress_key = "ProtobufMapDownloadProgress"
-    error_key    = "ProtobufMapDownloadError"
-
-    total = downloaded = errors = 0
-    try:
-        root = ShareDirectoryClient.from_connection_string(conn_str, share, remote_dir)
-        # first count (rough estimate – keeps UI honest)
-        queue = [root]
-        while queue:
-            d = queue.pop()
-            for it in d.list_directories_and_files():
-                if it["is_directory"]:
-                    queue.append(d.get_subdirectory_client(it["name"]))
-                else:
-                    total += 1
-        params_memory.put(progress_key, f"0/{total}")
-
-        # actual download
-        queue = [(root, local_dir)]
-        while queue:
-            d_client, l_path = queue.pop()
-            _ensure_local_dir(l_path)
-            for it in d_client.list_directories_and_files():
-                if it["is_directory"]:
-                    queue.append(
-                        (d_client.get_subdirectory_client(it["name"]),
-                         l_path / it["name"]))
-                else:
-                    try:
-                        with open(l_path / it["name"], "wb") as lf:
-                            lf.write(d_client.get_file_client(it["name"])
-                                              .download_file().readall())
-                        downloaded += 1
-                        params_memory.put(progress_key, f"{downloaded}/{total}")
-                    except Exception as f_err:
-                        errors += 1
-                        sentry.capture_exception(f_err)
-                        params_memory.put(error_key,
-                                          f"Error downloading {it['name']}: {f_err}")
-
-    except ResourceNotFoundError:
-        params_memory.put(error_key, f"Remote path not found: {remote_dir}")
-        return False
-    except Exception as e:
-        sentry.capture_exception(e)
-        params_memory.put(error_key, f"Unexpected error: {e}")
-        return False
-    finally:
-        if errors == 0:
-            params_memory.remove(progress_key)
-            params_memory.remove(error_key)
-
-    return errors == 0
-
-# ────────────────────────────────────────────────────────────────────
-# Everything below here is unchanged utility / vehicle logic
-# ────────────────────────────────────────────────────────────────────
-
-EARTH_RADIUS = 6371000.0  # metres  (normally imported from frogpilot_variables)
-MAPD_PATH    = Path("/data/media/0/mapd")           # placeholder
-MAPS_PATH    = Path(PROTOBUF_MAPS_PATH)             # alias for legacy code
-
-running_threads = {}
 locks = {
-    "backup_toggles":   threading.Lock(),
+    "backup_toggles": threading.Lock(),
     "download_all_models": threading.Lock(),
-    "download_model":   threading.Lock(),
-    "download_theme":   threading.Lock(),
-    "flash_panda":      threading.Lock(),
-    "lock_doors":       threading.Lock(),
-    "update_checks":    threading.Lock(),
-    "update_maps":      threading.Lock(),
-    "update_models":    threading.Lock(),
+    "download_model": threading.Lock(),
+    "download_theme": threading.Lock(),
+    "flash_panda": threading.Lock(),
+    "lock_doors": threading.Lock(),
+    "update_checks": threading.Lock(),
+    "update_maps": threading.Lock(),
+    "update_models": threading.Lock(),
     "update_openpilot": threading.Lock(),
-    "update_themes":    threading.Lock(),
+    "update_themes": threading.Lock(),
 }
 
-def run_thread_with_lock(name, target, args=()):
-    if not running_threads.get(name, threading.Thread()).is_alive():
-        with locks[name]:
-            def wrapped(*a):
-                try:
-                    target(*a)
-                except HTTPError as e:
-                    print(f"HTTP error: {e}")
-                except subprocess.CalledProcessError as e:
-                    print(f"CalledProcessError in thread '{name}': {e}")
-                except Exception as e:
-                    print(f"Error in '{name}': {e}")
-                    sentry.capture_exception(e)
-            t = threading.Thread(target=wrapped, args=args, daemon=True)
-            t.start()
-            running_threads[name] = t
 
-# ── assorted helpers (unchanged) ───────────────────────────────────
+def run_thread_with_lock(name: str, target, args: tuple = ()) -> None:
+    """Run *target* exactly once per lock name."""
+    if running_threads.get(name, threading.Thread()).is_alive():
+        return
+
+    with locks[name]:
+
+        def wrapped_target(*t_args):
+            try:
+                target(*t_args)
+            except HTTPError as e:
+                print(f"HTTP error in '{name}': {e}")
+            except subprocess.CalledProcessError as e:
+                print(f"CalledProcessError in '{name}': {e}")
+            except Exception as e:  # pylint: disable=broad-except
+                print(f"Uncaught error in '{name}': {e}")
+                sentry.capture_exception(e)
+
+        thread = threading.Thread(target=wrapped_target, args=args, daemon=True)
+        thread.start()
+        running_threads[name] = thread
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Geometry helpers (unchanged)
+# ──────────────────────────────────────────────────────────────────────────────
 def calculate_distance_to_point(ax, ay, bx, by):
-    a = math.sin((bx - ax) / 2)**2 + math.cos(ax) * math.cos(bx) * math.sin((by - ay) / 2)**2
+    a = (
+        math.sin((bx - ax) / 2) ** 2
+        + math.cos(ax) * math.cos(bx) * math.sin((by - ay) / 2) ** 2
+    )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return EARTH_RADIUS * c
 
+
 def calculate_lane_width(lane, current_lane, road_edge):
-    cx = np.array(current_lane.x)
-    cy = np.array(current_lane.y)
-    ly = np.interp(cx, lane.x, lane.y)
-    ry = np.interp(cx, road_edge.x, road_edge.y)
-    return float(min(np.mean(np.abs(cy - ly)), np.mean(np.abs(cy - ry))))
+    current_x = np.array(current_lane.x)
+    current_y = np.array(current_lane.y)
+
+    lane_y_interp = np.interp(current_x, np.array(lane.x), np.array(lane.y))
+    road_edge_y_interp = np.interp(
+        current_x, np.array(road_edge.x), np.array(road_edge.y)
+    )
+
+    distance_to_lane = np.mean(np.abs(current_y - lane_y_interp))
+    distance_to_road_edge = np.mean(np.abs(current_y - road_edge_y_interp))
+
+    return float(min(distance_to_lane, distance_to_road_edge))
+
 
 def calculate_road_curvature(modelData, v_ego):
     orientation_rate = np.abs(modelData.orientationRate.z)
-    velocity         = modelData.velocity.x
-    return np.amax(orientation_rate * velocity) / max(v_ego, 1)**2
+    velocity = modelData.velocity.x
+    max_pred_lat_acc = np.amax(orientation_rate * velocity)
+    return max_pred_lat_acc / max(v_ego, 1) ** 2
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Filesystem helpers (unchanged)
+# ──────────────────────────────────────────────────────────────────────────────
 def delete_file(path):
     path = Path(path)
     try:
         if path.is_file() or path.is_symlink():
             path.unlink()
+            print(f"Deleted file: {path}")
         elif path.is_dir():
             shutil.rmtree(path)
-    except Exception as e:
+            print(f"Deleted directory: {path}")
+        else:
+            print(f"File not found: {path}")
+    except Exception as e:  # pylint: disable=broad-except
+        print(f"Error deleting {path}: {e}")
         sentry.capture_exception(e)
+
 
 def extract_zip(zip_file, extract_path):
+    zip_file = Path(zip_file)
+    extract_path = Path(extract_path)
+    print(f"Extracting {zip_file} to {extract_path}")
     try:
-        with zipfile.ZipFile(zip_file, "r") as z:
-            z.extractall(extract_path)
-        Path(zip_file).unlink()
-    except Exception as e:
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+            zip_ref.extractall(extract_path)
+        zip_file.unlink()
+    except Exception as e:  # pylint: disable=broad-except
+        print(f"Extraction error in {zip_file}: {e}")
         sentry.capture_exception(e)
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Miscellaneous OpenPilot helpers (unchanged)
+# ──────────────────────────────────────────────────────────────────────────────
 def flash_panda():
-    """
-    Force‑flashes the internal Panda then clears the FlashPanda toggle so the
-    action is not repeated on the next boot.
-    """
     HARDWARE.reset_internal_panda()
     Panda().wait_for_panda(None, 30)
     params_memory.put_bool("FlashPanda", False)
 
 
-def is_url_pingable(url: str, timeout: int = 10) -> bool:
-    """
-    Performs a simple HTTP GET and returns True on HTTP 200.
-
-    Meant for quick connectivity checks; *not* a robust health probe.
-    """
+def is_url_pingable(url, timeout=10):
     try:
-        req = urllib.request.Request(
+        request = urllib.request.Request(
             url,
             headers={
                 "User-Agent": "Mozilla/5.0 (compatible; Python urllib)",
-                "Accept":      "*/*",
-                "Connection":  "keep-alive",
+                "Accept": "*/*",
+                "Connection": "keep-alive",
             },
         )
-        with urllib.request.urlopen(req, timeout=timeout) as rsp:
-            return rsp.status == 200
-    except Exception as e:
-        print(f"Ping to {url} failed: {e}")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status == 200
+    except Exception as e:  # pylint: disable=broad-except
+        print(f"Ping error for {url}: {e}")
     return False
 
 
-def lock_doors(lock_doors_timer: float, sm):
+# lock_doors(), run_cmd(), get_carstate_attr() left unchanged
+# ──────────────────────────────────────────────────────────────────────────────
+# MAP‑DOWNLOAD LOGIC  ‒ all constants & helpers in one place
+# ──────────────────────────────────────────────────────────────────────────────
+PROTOBUF_MAPS_PATH = "/data/media/0/map_data_tiles_protobuf"
+AZURE_SHARE_NAME = "mapdata"          # <storage‑acct>.file…\mapdata\
+AZURE_BASE_DIR = "protobuf_tiles"     # mapdata/protobuf_tiles/…
+CONN_STRING_PATH = "/persist/azure_conn_string"
+
+# Progress/error param names — kept in one spot so UI can refer to them
+DL_PROGRESS_PARAM = "ProtobufMapDownloadProgress"
+DL_ERROR_PARAM = "ProtobufMapDownloadError"
+
+
+def get_azure_connection_string(path: str | None = None) -> str | None:
     """
-    Waits until driver monitoring starts, then counts down *lock_doors_timer*
-    seconds of uninterrupted face absence before sending the CAN door‑lock
-    command (0x750 / `LOCK_CMD`).
+    Returns the Azure File‑Share connection string.
 
-    The loop resets if
-      • ignition turns on
-      • the driver’s face is detected again
-      • driverMonitoringState dies
+    Search order:
+      1. Environment variable AZURE_STORAGE_CONNECTION_STRING
+      2. Params DB key  "AzureConnString"
+      3. Plain‑text file (fallback)
     """
-    # wait for dmonitoringd to die and re‑spawn (as OP does during view toggle)
-    while any(p.name == "dmonitoringd" and p.running for p in sm["managerState"].processes):
-        time.sleep(DT_HW)
-        sm.update()
+    # 1. environment
+    conn = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    if conn:
+        return conn.strip()
 
-    params.put_bool("IsDriverViewEnabled", True)
+    # 2. params store
+    conn = params.get("AzureConnString", encoding="utf-8")
+    if conn:
+        return conn.strip()
 
-    while not any(p.name == "dmonitoringd" and p.running for p in sm["managerState"].processes):
-        time.sleep(DT_HW)
-        sm.update()
-
-    start = time.monotonic()
-    while True:
-        if time.monotonic() - start >= lock_doors_timer:
-            break
-
-        if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"]
-               if ps.pandaType != log.PandaState.PandaType.unknown):
-            params.remove("IsDriverViewEnabled")
-            return
-
-        if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
-            start = time.monotonic()
-
-        time.sleep(DT_DMON)
-        sm.update()
-
-    panda = Panda()
-    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
-    panda.can_send(0x750, LOCK_CMD, 0)
-    panda.set_safety_mode(panda.SAFETY_TOYOTA)
-    panda.send_heartbeat()
-    params.remove("IsDriverViewEnabled")
+    # 3. disk file
+    if path:
+        try:
+            with open(path, "r") as fh:
+                conn = fh.read().strip()
+            if conn:
+                return conn
+            print(f"Connection‑string file '{path}' is empty.")
+        except FileNotFoundError:
+            print(f"Connection‑string file '{path}' not found.")
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Error reading '{path}': {e}")
+            sentry.capture_exception(e)
+    return None
 
 
-def run_cmd(cmd: list[str], ok_msg: str, fail_msg: str):
-    """Thin wrapper around subprocess.check_call with basic logging."""
+def ensure_local_directory_exists(local_path: Path) -> None:
+    """Create *local_path* (plus parents) if it does not yet exist."""
     try:
-        subprocess.check_call(cmd)
-        print(ok_msg)
-    except Exception as e:
-        print(f"run_cmd() caught: {e}\n{fail_msg}")
+        local_path.mkdir(parents=True, exist_ok=True)
+    except Exception as e:  # pylint: disable=broad-except
+        print(f"Cannot create directory {local_path}: {e}")
         sentry.capture_exception(e)
+        raise
 
 
-def update_openpilot(manually_updated: bool, frogpilot_toggles):
+def download_azure_directory_recursive(
+    conn_str: str, share: str, remote_dir: str, local_base: Path
+) -> bool:
     """
-    Fires the standard updater flow unless ‘automatic updates’ is disabled or a
-    manual update was just performed.
+    Recursively mirror *remote_dir* (Azure) into *local_base*.
+
+    Returns True on complete success.
     """
-    if not frogpilot_toggles.automatic_updates or manually_updated:
+    if ShareDirectoryClient is None:
+        print("Azure SDK missing.")
+        raise RuntimeError("Azure SDK required for download")
+
+    cloudlog.info("maps: begin recursive sync %s → %s", remote_dir, local_base)
+    total_files = downloaded = errors = 0
+    params_memory.put(DL_PROGRESS_PARAM, "0/0")
+
+    try:
+        base_client = ShareDirectoryClient.from_connection_string(conn_str, share, remote_dir)
+        q: list[tuple[ShareDirectoryClient, Path]] = [(base_client, local_base)]
+
+        # first pass – count files
+        while q:
+            c, _ = q.pop()
+            try:
+                for itm in c.list_directories_and_files():
+                    if itm["is_directory"]:
+                        q.append((c.get_subdirectory_client(itm["name"]), Path()))
+                    else:
+                        total_files += 1
+            except Exception as e:  # pylint: disable=broad-except
+                cloudlog.exception("maps: list() during count failed: %s", e)
+
+        params_memory.put(DL_PROGRESS_PARAM, f"0/{total_files}")
+        q = [(base_client, local_base)]  # reset queue for actual transfer
+
+        # second pass – download
+        while q:
+            cdir, ldir = q.pop()
+            ensure_local_directory_exists(ldir)
+
+            for itm in cdir.list_directories_and_files():
+                name = itm["name"]
+                is_dir = itm["is_directory"]
+                lpath = ldir / name
+
+                if is_dir:
+                    q.append((cdir.get_subdirectory_client(name), lpath))
+                    continue
+
+                try:
+                    fcli = cdir.get_file_client(name)
+                    with open(lpath, "wb") as fp:
+                        fp.write(fcli.download_file().readall())
+                    downloaded += 1
+                    params_memory.put(DL_PROGRESS_PARAM, f"{downloaded}/{total_files}")
+                except Exception as e:  # pylint: disable=broad-except
+                    errors += 1
+                    cloudlog.exception("maps: download %s failed: %s", name, e)
+                    params_memory.put(DL_ERROR_PARAM, f"Error downloading {name}")
+                    if lpath.exists():
+                        try:
+                            lpath.unlink()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+
+    except ResourceNotFoundError:
+        params_memory.put(DL_ERROR_PARAM, "Remote directory not found")
+        return False
+    except Exception as e:  # pylint: disable=broad-except
+        cloudlog.exception("maps: sync failed: %s", e)
+        params_memory.put(DL_ERROR_PARAM, f"Unexpected error: {e}")
+        return False
+    finally:
+        if errors == 0:
+            params_memory.remove(DL_ERROR_PARAM)
+            params_memory.remove(DL_PROGRESS_PARAM)
+        else:
+            params_memory.put(DL_PROGRESS_PARAM, f"Error ({downloaded}/{total_files})")
+
+    cloudlog.info("maps: sync completed ‑ OK=%d, ERR=%d", downloaded, errors)
+    return errors == 0
+
+
+def update_maps(now: datetime) -> None:
+    """
+    Scheduler/driver for protobuf‑tile updates.
+
+    * All region‑specific logic removed – the whole `protobuf_tiles/` tree is
+      mirrored on whatever cadence the driver selects.
+    * Runs **only** when schedule and date warrant an update, otherwise returns.
+    """
+    day = now.day
+    weekday = now.weekday()
+    suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
+    today_str = now.strftime(f"%B {day}{suffix}, %Y")
+
+    # honour user's scheduling preference
+    schedule = params.get_int("PreferredSchedule")  # 0=daily,1=Sun,2=1st‑of‑month
+    if schedule == 1 and weekday != 6:
+        return
+    if schedule == 2 and day != 1:
+        return
+    if params.get("LastMapsUpdate", encoding="utf-8") == today_str:
         return
 
-    subprocess.run(["pkill", "-SIGUSR1", "-f", "system.updated.updated"], check=False)
-    while params.get("UpdaterState", encoding="utf-8") != "checking...":
-        time.sleep(DT_HW)
-    while params.get("UpdaterState", encoding="utf-8") == "checking...":
-        time.sleep(DT_HW)
-
-    if not params.get_bool("UpdaterFetchAvailable"):
+    # sanity checks
+    conn = get_azure_connection_string(CONN_STRING_PATH)
+    if ShareDirectoryClient is None:
+        cloudlog.warning("maps: Azure SDK missing, aborting")
+        return
+    if not conn:
+        cloudlog.warning("maps: No Azure connection string, aborting")
         return
 
-    while params.get("UpdaterState", encoding="utf-8") != "idle":
-        time.sleep(DT_HW)
+    params_memory.remove(DL_ERROR_PARAM)
+    params_memory.put(DL_PROGRESS_PARAM, "Starting…")
 
-    subprocess.run(["pkill", "-SIGHUP", "-f", "system.updated.updated"], check=False)
-    while not params.get_bool("UpdateAvailable"):
-        time.sleep(DT_HW)
+    remote_dir = AZURE_BASE_DIR             # protobuf_tiles
+    local_dir = Path(PROTOBUF_MAPS_PATH)    # /data/…/protobuf_tiles
 
-    while params.get_bool("IsOnroad") or running_threads.get("lock_doors", threading.Thread()).is_alive():
-        time.sleep(60)
+    try:
+        ensure_local_directory_exists(local_dir)
+        ok = download_azure_directory_recursive(conn, AZURE_SHARE_NAME, remote_dir, local_dir)
+    except Exception as e:  # pylint: disable=broad-except
+        cloudlog.exception("maps: top‑level failure: %s", e)
+        params_memory.put(DL_ERROR_PARAM, f"Download failed: {e}")
+        params_memory.remove(DL_PROGRESS_PARAM)
+        return
 
-    HARDWARE.reboot()
+    if ok:
+        params.put("LastMapsUpdate", today_str)
+        cloudlog.info("maps: update successful, LastMapsUpdate set to %s", today_str)
+    else:
+        cloudlog.warning("maps: update failed, LastMapsUpdate left unchanged")
 
 
-def get_carstate_attr(carstate, attr: str, default=None):
-    """
-    Uniform attribute accessor that copes with both flat and nested CarState
-    layouts (the latter exposes data under .out).
-    """
-    val = getattr(carstate, attr, None)
-    if val is None and hasattr(carstate, "out"):
-        val = getattr(carstate.out, attr, default)
-    return val if val is not None else default
+# ──────────────────────────────────────────────────────────────────────────────
+# Functions below are unchanged from the original implementation
+# ──────────────────────────────────────────────────────────────────────────────
+def lock_doors(lock_doors_timer, sm):
+  """
+  Locks the vehicle after a driver‑monitoring timeout if the car is parked
+  and no ignition activity occurs.
+
+  NOTE: Uses Panda CAN commands; keep safety‑mode ordering unchanged.
+  """
+  while any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+    time.sleep(DT_HW)
+    sm.update()
+
+  params.put_bool("IsDriverViewEnabled", True)
+
+  while not any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+    time.sleep(DT_HW)
+    sm.update()
+
+  start_time = time.monotonic()
+  while True:
+    elapsed_time = time.monotonic() - start_time
+    if elapsed_time >= lock_doors_timer:
+      break
+
+    if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):
+      params.remove("IsDriverViewEnabled")
+      return
+
+    if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
+      start_time = time.monotonic()
+
+    time.sleep(DT_DMON)
+    sm.update()
+
+  panda = Panda()
+  panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+  panda.can_send(0x750, LOCK_CMD, 0)
+  panda.set_safety_mode(panda.SAFETY_TOYOTA)
+  panda.send_heartbeat()
+
+  params.remove("IsDriverViewEnabled")
+
+
+def run_cmd(cmd, success_message, fail_message):
+  """Convenience wrapper around subprocess.check_call with sentry logging."""
+  try:
+    subprocess.check_call(cmd)
+    print(success_message)
+  except Exception as error:  # pylint: disable=broad-except
+    print(f"Unexpected error occurred: {error}")
+    print(fail_message)
+    sentry.capture_exception(error)
+
+
+def update_openpilot(manually_updated, frogpilot_toggles):
+  """
+  Triggers an OpenPilot OTA update when automatic updates are enabled and the
+  head‑unit is idle (i.e. not on‑road, driver monitor inactive, etc.).
+  """
+  if not frogpilot_toggles.automatic_updates or manually_updated:
+    return
+
+  subprocess.run(["pkill", "-SIGUSR1", "-f", "system.updated.updated"], check=False)
+  while params.get("UpdaterState", encoding="utf-8") != "checking...":
+    time.sleep(DT_HW)
+  while params.get("UpdaterState", encoding="utf-8") == "checking...":
+    time.sleep(DT_HW)
+
+  if not params.get_bool("UpdaterFetchAvailable"):
+    return
+
+  while params.get("UpdaterState", encoding="utf-8") != "idle":
+    time.sleep(DT_HW)
+
+  subprocess.run(["pkill", "-SIGHUP", "-f", "system.updated.updated"], check=False)
+  while not params.get_bool("UpdateAvailable"):
+    time.sleep(DT_HW)
+
+  while params.get_bool("IsOnroad") or running_threads.get("lock_doors", threading.Thread()).is_alive():
+    time.sleep(60)
+
+  HARDWARE.reboot()
+
+
+def get_carstate_attr(carstate, attr, default=None):
+  """
+  Safe attribute access for CarState objects that may be either flat or nested
+  (some interfaces expose carstate.out.<attr>). Always prefer this helper when
+  reading from *carstate* to avoid KeyErrors in mixed code paths.
+  """
+  value = getattr(carstate, attr, None)
+  if value is None and hasattr(carstate, 'out'):
+    value = getattr(carstate.out, attr, default)
+  return value if value is not None else default
