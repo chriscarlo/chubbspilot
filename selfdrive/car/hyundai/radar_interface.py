@@ -40,8 +40,9 @@ def get_corner_radar_can_parser(CP):
     # ("RADAR_POINTS_CHECKSUM_0x204", 50),  # Right checksum
   ]
   messages_pt = [
-    ("RADAR_POINTS_0x101", 50),  # Left corner points
-    ("RADAR_POINTS_0x201", 50),  # Right corner points
+    # Points on PT bus (0) - Removed as not in DBC
+    # ("RADAR_POINTS_0x101", 50),  # Left corner points
+    # ("RADAR_POINTS_0x201", 50),  # Right corner points
   ]
   # Add messages for front corner radar from CANFD DBC
   messages_canfd = [
