@@ -71,16 +71,18 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
     """
     Originally was 4.0 -> 1.0 from ~5 m/s to ~25 m/s.
     Now we double it for lower speeds: 8.0 -> 1.0.
+    Clamped maximum to 3.0 for more proactive planning.
     """
     min_speed = 3.0   # below this speed => max scaling
     max_speed = 35.0  # above this speed => 1.0
-    if v_ego_ms <= min_speed:
-        return 9.0
-    elif v_ego_ms >= max_speed:
-        return 2.0
-    else:
+    scale = 9.0 # Default for v_ego <= min_speed
+    if v_ego_ms >= max_speed:
+        scale = 2.0
+    elif v_ego_ms > min_speed: # Only calculate if between min and max
         ratio = (v_ego_ms - min_speed) / (max_speed - min_speed)
-        return 8.0 + (1.0 - 8.0) * ratio
+        scale = 8.0 + (1.0 - 8.0) * ratio
+
+    return min(scale, 3.0) # Clamp the final scale
 
 def dynamic_jerk_scale(v_ego_ms: float) -> float:
     """
@@ -92,6 +94,8 @@ def dynamic_jerk_scale(v_ego_ms: float) -> float:
 # --------------------------
 #   MAIN TURN SPEED CONTROLLER
 # --------------------------
+N_POINTS_TARGET = 50 # Increased planning horizon
+
 class VisionTurnSpeedController:
     def __init__(
         self,
@@ -118,7 +122,7 @@ class VisionTurnSpeedController:
         self.current_accel = 0.0
         self.prev_target_speed = 0.0
 
-        self.planned_speeds = np.zeros(33, dtype=float)
+        self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
 
         self.prev_v_cruise_cluster = 0.0
@@ -186,26 +190,33 @@ class VisionTurnSpeedController:
             velocity_pred = np.array(velocity_pred_raw, dtype=float)
 
             n_points = min(len(orientation_rate), len(velocity_pred))
-            # Interpolate or slice to exactly 33 points
-            if n_points < 33:
+            # Interpolate or slice to exactly N_POINTS_TARGET points
+            target_indices = np.linspace(0, n_points - 1, N_POINTS_TARGET)
+            if n_points < N_POINTS_TARGET:
                 src_indices = np.linspace(0, n_points - 1, n_points)
-                dst_indices = np.linspace(0, n_points - 1, 33)
-                orientation_rate_33 = np.interp(dst_indices, src_indices, orientation_rate[:n_points])
-                velocity_pred_33 = np.interp(dst_indices, src_indices, velocity_pred[:n_points])
+                orientation_rate_target = np.interp(target_indices, src_indices, orientation_rate[:n_points])
+                velocity_pred_target = np.interp(target_indices, src_indices, velocity_pred[:n_points])
             else:
-                orientation_rate_33 = orientation_rate[:33]
-                velocity_pred_33 = velocity_pred[:33]
+                # If we have enough points, interpolate from the source array directly
+                src_indices = np.linspace(0, len(orientation_rate) - 1, len(orientation_rate)) # Assume lengths match or take min
+                orientation_rate_target = np.interp(target_indices, src_indices, orientation_rate)
+                src_indices_vel = np.linspace(0, len(velocity_pred) - 1, len(velocity_pred))
+                velocity_pred_target = np.interp(target_indices, src_indices_vel, velocity_pred)
+                # Ensure we don't exceed original length if interpolating slice
+                orientation_rate_target = orientation_rate_target[:N_POINTS_TARGET]
+                velocity_pred_target = velocity_pred_target[:N_POINTS_TARGET]
 
-            times_33 = np.array(ModelConstants.T_IDXS[:33], dtype=float)
+            # Ensure times corresponds to the target number of points
+            times_target = np.array(ModelConstants.T_IDXS[:N_POINTS_TARGET], dtype=float)
 
             # Compute curvature array
             eps = 1e-9
-            curvature_33 = orientation_rate_33 / np.clip(velocity_pred_33, eps, None)
+            curvature_target = orientation_rate_target / np.clip(velocity_pred_target, eps, None)
 
             # ------------------------------
             # Optional: Keep filtering curvature for analysis or other features, but it no longer gates planning
             # ------------------------------
-            current_max_curvature = float(np.max(curvature_33))
+            current_max_curvature = float(np.max(curvature_target)) # Use target array
             if self._filtered_curvature is None:
                 self._filtered_curvature = current_max_curvature
             else:
@@ -229,10 +240,15 @@ class VisionTurnSpeedController:
                 (v_cruise_cluster > self.prev_v_cruise_cluster)
                 or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)
             )
+            # Resize planned_speeds if it doesn't match the target size
+            if len(self.planned_speeds) != N_POINTS_TARGET:
+                self.planned_speeds = np.resize(self.planned_speeds, N_POINTS_TARGET)
+                self.planned_speeds[:] = self.prev_target_speed # Re-initialize with current speed
+
             self.planned_speeds = self._plan_speed_trajectory(
-                orientation_rate_33,
-                velocity_pred_33,
-                times_33,
+                orientation_rate_target, # Use target array
+                velocity_pred_target,  # Use target array
+                times_target,          # Use target array
                 init_speed=self.prev_target_speed,
                 map_speed_profile=map_speed_profile,
                 turn_aggressiveness=turn_aggressiveness,
@@ -388,7 +404,7 @@ class VisionTurnSpeedController:
         margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
-        apex_decel_factor = 0.12   # Keep original value for desired decel profile shape
+        apex_decel_factor = 0.25   # Increased from 0.12 to broaden decel window before apex
         apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
 
         planned = safe_speeds.copy()
@@ -396,54 +412,61 @@ class VisionTurnSpeedController:
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
 
+            # Calculate decel/spool duration based on velocity at apex
             decel_sec = velocity_pred[apex_i] * apex_decel_factor
             spool_sec = velocity_pred[apex_i] * apex_spool_factor
 
-            # New logic: shift the deceleration window earlier without squishing the profile.
-            # early_apex_margin is the time before apex at which we want to reach apex_speed.
-            early_apex_margin = 1.5  # seconds
-            # Compute ramp end and a new deceleration start shifted earlier by the same margin.
-            ramp_end = self._find_time_index(times, times[apex_i] - early_apex_margin)
-            new_decel_start = self._find_time_index(times, times[apex_i] - decel_sec - early_apex_margin)
+            # Find start of decel ramp relative to apex time
+            decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
 
-            # Ramp down to apex_speed (clamp downward) from new_decel_start to ramp_end
-            if ramp_end > new_decel_start:
-                v_decel_start = planned[new_decel_start]
-                steps_decel = ramp_end - new_decel_start
-                for idx in range(new_decel_start, ramp_end):
-                    f = (idx - new_decel_start) / float(steps_decel)
-                    decel_val = v_decel_start * (1 - f) + apex_speed * f
-                    planned[idx] = min(planned[idx], decel_val)
+            # Ramp down to apex_speed (clamp downward) from decel_start to apex_i
+            if apex_i > decel_start:
+                v_decel_start = planned[decel_start]
+                steps_decel = apex_i - decel_start
+                if steps_decel > 0: # Avoid division by zero
+                    for idx in range(decel_start, apex_i): # Ramp up to apex_i
+                        f = (idx - decel_start) / float(steps_decel)
+                        decel_val = v_decel_start * (1 - f) + apex_speed * f
+                        planned[idx] = min(planned[idx], decel_val)
 
-            # Ensure apex zone is clamped to apex_speed from ramp_end to apex_i
-            for idx in range(ramp_end, apex_i + 1):
-                planned[idx] = min(planned[idx], apex_speed)
+            # Ensure apex is clamped
+            planned[apex_i] = min(planned[apex_i], apex_speed)
 
-            # Spool up starting from ramp_end (clamp upward)
+            # Spool up starting from apex_i (clamp upward)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
-            if spool_end > ramp_end:
-                steps_spool = spool_end - ramp_end
-                v_spool_end = planned[spool_end - 1]
-                for idx in range(ramp_end, spool_end):
-                    f = (idx - ramp_end) / float(steps_spool)
-                    spool_val = apex_speed * (1 - f) + v_spool_end * f
-                    planned[idx] = max(planned[idx], spool_val)
+            if spool_end > apex_i:
+                steps_spool = spool_end - apex_i
+                v_spool_end = planned[spool_end -1] if spool_end > 0 else apex_speed # Handle edge case spool_end=0? Should not happen.
+                if steps_spool > 0: # Avoid division by zero
+                    for idx in range(apex_i, spool_end): # Start spool from apex_i
+                        f = (idx - apex_i) / float(steps_spool)
+                        spool_val = apex_speed * (1 - f) + v_spool_end * f
+                        planned[idx] = max(planned[idx], spool_val)
 
         # (4) Standard backward pass to avoid abrupt decel
+        # Limit decel based on COMFORT_DECEL as well
+        COMFORT_DECEL = 1.0 # Define COMFORT_DECEL here, before it's used in Step 4 limit
+        COMFORT_DECEL_STEP4_FACTOR = 1.5
         for i in range(n - 2, -1, -1):
-            dt_i = dt_array[i] if i < len(dt_array) else 0.05
+            # Robust dt calculation
+            dt_i = dt_array[i] if i < len(dt_array) else (times[i+1] - times[i] if i+1 < n else 0.05)
+            if dt_i < 1e-5: dt_i = 0.05 # Avoid division by zero
+
             v_next = planned[i + 1]
             err = planned[i] - v_next
-            desired_acc = clip(err / dt_i, -self.MAX_DECEL * decel_mult, self.MAX_DECEL * decel_mult)
+            # Apply combined decel limit correctly using COMFORT_DECEL defined above
+            max_neg_accel = -min(self.MAX_DECEL * decel_mult, COMFORT_DECEL_STEP4_FACTOR * COMFORT_DECEL)
+            desired_acc = clip(err / dt_i, max_neg_accel, self.MAX_DECEL * decel_mult)
             feasible_speed = v_next - desired_acc * dt_i
             planned[i] = min(planned[i], feasible_speed)
 
         # (5) Margin-based backward pass prioritizing comfort decel
-        COMFORT_DECEL = 0.7 # Changed from 1.0 to 0.7 m/s^2 for a gentler (or tunable) deceleration during acceleration phase
+        # COMFORT_DECEL = 1.0 # No need to redefine here
         base_margin = margin_time_fn(init_speed)
         margin_t = base_margin * margin_factor # Use the large margin_factor (e.g., 3.5)
 
         for i in range(n - 2, -1, -1):
+            # Original Step 5 logic based on margin time
             j = self._find_time_index(times, times[i] + margin_t, clip_high=True)
             if j <= i:
                 continue
@@ -454,16 +477,15 @@ class VisionTurnSpeedController:
             v_future = planned[j]
             err = planned[i] - v_future
             # Clip required acceleration between -COMFORT_DECEL and MAX_ACCEL for this long-horizon check
-            # This encourages gentle deceleration planning initiated early.
-            # MAX_DECEL is still enforced by Step 4 and Step 7 if comfort plan is insufficient.
-            # Use accel_mult consistent with forward pass (Step 6).
             desired_acc = clip(err / dt_ij, -COMFORT_DECEL, self.MAX_ACCEL * accel_mult)
             feasible_speed = v_future - desired_acc * dt_ij
             planned[i] = min(planned[i], feasible_speed)
+            # Removed the incorrect re-application of Step 4 logic from here
 
         # (6) Forward pass for accel limit (skip positive limit if skip_accel_limit is True)
         planned[0] = min(planned[0], safe_speeds[0])
-        dt_0 = dt_array[0] if len(dt_array) > 0 else 0.05
+        dt_0 = dt_array[0] if len(dt_array) > 0 else (times[1] - times[0] if n > 1 else 0.05) # Robust dt_0
+        if dt_0 < 1e-5: dt_0 = 0.05
         err0 = planned[0] - init_speed
 
         if skip_accel_limit and err0 > 0:
@@ -474,7 +496,9 @@ class VisionTurnSpeedController:
         planned[0] = init_speed + accel0 * dt_0
 
         for i in range(1, n):
-            dt_i = dt_array[i - 1] if (i - 1 < len(dt_array)) else 0.05
+            # Robust dt calculation
+            dt_i = dt_array[i - 1] if (i - 1 < len(dt_array)) else (times[i] - times[i-1] if i > 0 else 0.05)
+            if dt_i < 1e-5: dt_i = 0.05
             v_prev = planned[i - 1]
             err = planned[i] - v_prev
 
@@ -489,17 +513,20 @@ class VisionTurnSpeedController:
         # (7) "Emergency" decel override (final pass)
         EMERGENCY_DECEL_THRESHOLD = 6.0   # [m/s^2]
         EMERGENCY_SPEED_TOLERANCE = 2.0   # [m/s] over safe speed triggers emergency
-        EMERGENCY_LOOKAHEAD_FRAMES = 15    # how far to check
+        EMERGENCY_LOOKAHEAD_FRAMES = 15    # how far to check (relative to N_POINTS_TARGET)
 
         emergency_braking = False
-        for i in range(min(n, EMERGENCY_LOOKAHEAD_FRAMES)):
+        lookahead_limit = min(n, EMERGENCY_LOOKAHEAD_FRAMES) # Ensure lookahead doesn't exceed actual plan length
+        for i in range(lookahead_limit):
             if planned[i] > (safe_speeds[i] + EMERGENCY_SPEED_TOLERANCE):
                 emergency_braking = True
                 break
 
         if emergency_braking:
             for i in range(n - 2, -1, -1):
-                dt_i = dt_array[i] if i < len(dt_array) else 0.05
+                # Robust dt calculation
+                dt_i = dt_array[i] if i < len(dt_array) else (times[i+1] - times[i] if i+1 < n else 0.05)
+                if dt_i < 1e-5: dt_i = 0.05
                 v_next = planned[i + 1]
                 err = planned[i] - v_next
                 desired_acc = clip(err / dt_i, -EMERGENCY_DECEL_THRESHOLD, EMERGENCY_DECEL_THRESHOLD)
