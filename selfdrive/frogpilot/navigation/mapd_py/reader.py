@@ -166,16 +166,8 @@ class MapReader:
         # Base directory for the determined region
         region_base_dir = os.path.join(TILE_DATA_BASE_DIR, determined_region)
 
-        # Determine sub-directory
-        sub_dir = ""
-        if determined_region == "california":
-            if lat_deg >= 35.8:
-                 sub_dir = "NorCal"
-            else:
-                 sub_dir = "SoCal"
-
         # Construct final path
-        tile_output_dir = os.path.join(region_base_dir, sub_dir) if sub_dir else region_base_dir
+        tile_output_dir = region_base_dir # Use region base directly
         return os.path.join(tile_output_dir, f"{tile_id}.protobuf")
 
     def _load_tile(self, tile_id):
@@ -210,19 +202,7 @@ class MapReader:
         # Check if file exists AND is effectively empty (e.g., < 4 bytes for size prefix)
         file_exists = os.path.exists(tile_path)
         if not file_exists or (file_exists and os.path.getsize(tile_path) < 4):
-            # Check alternate California subdir if the first guess failed
-            if self.current_region == "california" and not file_exists:
-                alt_sub_dir = "SoCal" if temp_lat >= 35.8 else "NorCal"
-                alt_region_base_dir = os.path.join(TILE_DATA_BASE_DIR, self.current_region)
-                alt_tile_output_dir = os.path.join(alt_region_base_dir, alt_sub_dir)
-                alt_tile_path = os.path.join(alt_tile_output_dir, f"{tile_id}.protobuf")
-                alt_file_exists = os.path.exists(alt_tile_path)
-                if alt_file_exists and os.path.getsize(alt_tile_path) >= 4:
-                    print(f"Found tile {tile_id} in alternate subdir: {alt_tile_path}")
-                    tile_path = alt_tile_path # Use the path we found
-                    file_exists = True # Update status
-                # else:
-                     # print(f"Tile {tile_id} not found or empty in either subdir.") # Too noisy
+            pass # No alternate check needed anymore
 
         # Final check before trying to load
         if not file_exists or (file_exists and os.path.getsize(tile_path) < 4):
