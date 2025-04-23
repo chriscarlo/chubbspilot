@@ -3,7 +3,7 @@
 Map data utilities and assorted helper functions for the FrogPilot fork.
 
 This script handles:
-  • Protobuf‑tile download/update from an Azure File Share
+  • Protobuf‑tile download/update from an Azure File Share
   • A handful of small OpenPilot utility helpers that other modules import
 
 It is self‑contained: all map‑specific constants, helpers, and the
@@ -192,7 +192,7 @@ def is_url_pingable(url, timeout=10):
 
 # lock_doors(), run_cmd(), get_carstate_attr() left unchanged
 # ──────────────────────────────────────────────────────────────────────────────
-# MAP‑DOWNLOAD LOGIC  ‒ all constants & helpers in one place
+# MAP‑DOWNLOAD LOGIC  ‒ all constants & helpers in one place
 # ──────────────────────────────────────────────────────────────────────────────
 PROTOBUF_MAPS_PATH = "/data/media/0/map_data_tiles_protobuf"
 AZURE_SHARE_NAME = "mapdata"          # <storage‑acct>.file…\mapdata\
@@ -206,33 +206,28 @@ DL_ERROR_PARAM = "ProtobufMapDownloadError"
 
 def get_azure_connection_string(path: str | None = None) -> str | None:
     """
-    Returns the Azure File‑Share connection string.
+    Get Azure connection string.
 
-    Search order:
-      1. Environment variable AZURE_STORAGE_CONNECTION_STRING
-      2. Params DB key  "AzureConnString"
-      3. Plain‑text file (fallback)
+    This implementation prioritizes the connection string found in the specified
+    file path.
+
+    Parameters:
+        path: Optional file path to check for the connection string. Defaults to
+              the value specified during the function call.
+
+    Returns:
+        The connection string if found, otherwise None.
     """
-    # 1. environment
-    conn = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    if conn:
-        return conn.strip()
-
-    # 2. params store
-    conn = params.get("AzureConnString", encoding="utf-8")
-    if conn:
-        return conn.strip()
-
-    # 3. disk file
+    # Only check the disk file
     if path:
         try:
             with open(path, "r") as fh:
                 conn = fh.read().strip()
             if conn:
                 return conn
-            print(f"Connection‑string file '{path}' is empty.")
+            print(f"Connection-string file '{path}' is empty.")
         except FileNotFoundError:
-            print(f"Connection‑string file '{path}' not found.")
+            print(f"Connection-string file '{path}' not found.")
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error reading '{path}': {e}")
             sentry.capture_exception(e)
