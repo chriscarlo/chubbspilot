@@ -9,6 +9,12 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 # Import the curvature-based lat accel function from MTSC
 from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_mtsc import curvature_based_lat_accel
 
+# Determine actual available points from ModelConstants and set target
+AVAILABLE_POINTS = len(ModelConstants.T_IDXS)
+N_POINTS_TARGET = min(50, AVAILABLE_POINTS) # Use up to 50 points, but no more than available
+# Print the determined target points for debugging if needed
+# print(f"[VTSC] Using N_POINTS_TARGET = {N_POINTS_TARGET} based on available {AVAILABLE_POINTS} points.")
+
 CRUISING_SPEED = 5.0  # m/s
 
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
@@ -94,7 +100,6 @@ def dynamic_jerk_scale(v_ego_ms: float) -> float:
 # --------------------------
 #   MAIN TURN SPEED CONTROLLER
 # --------------------------
-N_POINTS_TARGET = 50 # Increased planning horizon
 
 class VisionTurnSpeedController:
     def __init__(
