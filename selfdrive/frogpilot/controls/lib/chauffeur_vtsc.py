@@ -409,17 +409,19 @@ class VisionTurnSpeedController:
         margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
-        apex_decel_factor = 0.25   # Increased from 0.12 to broaden decel window before apex
+        apex_decel_factor = 0.30   # Increased further (from 0.25) to start decel ramp earlier
         apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
+        pre_apex_spool_fract = 0.5 # Start spooling this fraction of spool_sec *before* the apex
 
         planned = safe_speeds.copy()
 
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
+            safe_apex_speed = safe_speeds[apex_i] # Use the calculated safe speed for duration timing
 
-            # Calculate decel/spool duration based on velocity at apex
-            decel_sec = velocity_pred[apex_i] * apex_decel_factor
-            spool_sec = velocity_pred[apex_i] * apex_spool_factor
+            # Calculate decel/spool duration based on SAFE speed at apex
+            decel_sec = safe_apex_speed * apex_decel_factor
+            spool_sec = safe_apex_speed * apex_spool_factor
 
             # Find start of decel ramp relative to apex time
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
@@ -437,16 +439,35 @@ class VisionTurnSpeedController:
             # Ensure apex is clamped
             planned[apex_i] = min(planned[apex_i], apex_speed)
 
-            # Spool up starting from apex_i (clamp upward)
-            spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
-            if spool_end > apex_i:
-                steps_spool = spool_end - apex_i
-                v_spool_end = planned[spool_end -1] if spool_end > 0 else apex_speed # Handle edge case spool_end=0? Should not happen.
+            # --- Modified Spool-up Logic ---
+            # Find spool start time slightly before apex
+            spool_start_time = times[apex_i] - spool_sec * pre_apex_spool_fract
+            spool_start = self._find_time_index(times, spool_start_time)
+            spool_start = max(0, min(spool_start, apex_i)) # Ensure spool_start is valid and not after apex
+
+            # Find spool end time after apex
+            spool_end_time = times[apex_i] + spool_sec * (1.0 - pre_apex_spool_fract) # Ensure total spool duration is still spool_sec
+            spool_end = self._find_time_index(times, spool_end_time, clip_high=True)
+            spool_end = max(spool_start + 1, spool_end) # Ensure spool_end is after spool_start
+
+            # Spool up starting from spool_start (clamp upward)
+            if spool_end > spool_start:
+                steps_spool = spool_end - spool_start
+                # Start spool from the potentially modified speed at spool_start
+                v_spool_start = planned[spool_start]
+                # Target speed at the end of the spool window
+                v_spool_end = planned[spool_end -1] if spool_end > 0 else v_spool_start # Handle edge case
+
                 if steps_spool > 0: # Avoid division by zero
-                    for idx in range(apex_i, spool_end): # Start spool from apex_i
-                        f = (idx - apex_i) / float(steps_spool)
-                        spool_val = apex_speed * (1 - f) + v_spool_end * f
+                    for idx in range(spool_start, spool_end):
+                        # Interpolate from v_spool_start towards v_spool_end
+                        # Should we target the original safe_speed at spool_end instead?
+                        # Let's target planned[spool_end-1] for now to smooth into the existing plan.
+                        f = (idx - spool_start) / float(steps_spool)
+                        spool_val = v_spool_start * (1 - f) + v_spool_end * f
+                        # Apply spool-up clamp
                         planned[idx] = max(planned[idx], spool_val)
+            # --- End Modified Spool-up ---
 
         # (4) Standard backward pass to avoid abrupt decel
         # Limit decel based on COMFORT_DECEL as well
