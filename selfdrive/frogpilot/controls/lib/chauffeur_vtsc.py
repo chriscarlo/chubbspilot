@@ -409,7 +409,7 @@ class VisionTurnSpeedController:
         margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
-        apex_decel_factor = 0.30   # Increased further (from 0.25) to start decel ramp earlier
+        apex_decel_factor = 0.35   # Increased further (from 0.25) to start decel ramp earlier
         apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
         pre_apex_spool_fract = 0.5 # Start spooling this fraction of spool_sec *before* the apex
 
