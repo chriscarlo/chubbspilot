@@ -86,11 +86,12 @@ V_EGO_STATIONARY = 4.0
 RADAR_TO_CAMERA = 1.52
 
 class Track:
-  def __init__(self, identifier: int, d_rel_init: float, v_rel_init: float, dt: float):
+  def __init__(self, identifier: int, d_rel_init: float, v_rel_init: float, dt: float, is_hyundai_interface: bool):
     self.identifier = identifier
     self.cnt = 0
     # We'll keep aLeadTau logic if desired
     self.aLeadTau = _LEAD_ACCEL_TAU
+    self.is_hyundai_interface = is_hyundai_interface
 
     # New 2D KF for [dRel, vRel]
     self.kf = KF2D(dt)
@@ -103,12 +104,21 @@ class Track:
     self.prev_vRel_K = v_rel_init
     self.aLeadK = 0.0
 
+    # For calculating vRel from dRel derivative (Hyundai interface only)
+    self.prev_dRel_K = d_rel_init
+    self.calculated_vRel = v_rel_init
+
     # store raw measured values
     self.dRel = d_rel_init
     self.yRel = 0.0
     self.vRel = v_rel_init
     self.vLead = 0.0
     self.measured = False
+
+    # Store filtered states from KF and vLeadK
+    self.dRel_K = d_rel_init
+    self.vRel_K = v_rel_init
+    self.vLeadK = v_rel_init
 
   def update(self, d_rel: float, y_rel: float, v_rel: float, v_lead: float, measured: bool, v_ego: float):
     """
@@ -133,14 +143,26 @@ class Track:
     z = np.array([d_rel, v_rel], dtype=float)
     self.kf.update(z)
 
-    # Get filtered states
+    # Get filtered states from KF
     dRel_K = float(self.kf.x[0, 0])
     vRel_K = float(self.kf.x[1, 0])
 
-    # approximate lead acceleration
+    # --- Conditional vRel Calculation ---
+    if self.is_hyundai_interface:
+        current_dRel_K = dRel_K
+        dt = self.kf.dt
+        if self.cnt > 0 and dt > 1e-5:
+            self.calculated_vRel = (current_dRel_K - self.prev_dRel_K) / dt
+        self.prev_dRel_K = current_dRel_K
+    else:
+        self.calculated_vRel = vRel_K
+    # --- End Conditional Calculation ---
+
+    # approximate lead acceleration (always using KF's vRel_K for stability/consistency for now)
     if self.cnt > 0:
       dt = self.kf.dt
-      self.aLeadK = (vRel_K - self.prev_vRel_K) / dt
+      if dt > 1e-5:
+          self.aLeadK = (vRel_K - self.prev_vRel_K) / dt
     self.prev_vRel_K = vRel_K
 
     # If you want to keep some "aLeadTau" adaptation logic:
@@ -151,9 +173,10 @@ class Track:
 
     self.cnt += 1
 
+    # Store KF states and KF-derived vLeadK
     self.dRel_K = dRel_K
     self.vRel_K = vRel_K
-    self.vLeadK = vRel_K + v_ego   # filtered absolute speed
+    self.vLeadK = vRel_K + v_ego
 
   def get_key_for_cluster(self):
     # Weigh y higher since radar is inaccurate in that dimension
@@ -164,7 +187,7 @@ class Track:
     self.aLeadK = aLeadK
     self.aLeadTau = aLeadTau
     # Optionally reinit the KF with new states
-    self.kf.x[1, 0] = self.vRel  # or aLeadK if you expand to 3D
+    self.kf.x[1, 0] = self.vRel
 
   def is_potential_fcw(self, model_prob: float):
     return model_prob > 0.9
@@ -175,18 +198,23 @@ class Track:
     We'll store `vLead` and `vRel` as the filtered versions so the planner uses them.
     Calculates TTC based on filtered dRel_K and vRel_K.
     """
-    # Calculate TTC using filtered values, clipped to reasonable range
-    ttc = safe_ttc(self.dRel_K, self.vRel_K)
+    # Calculate TTC using filtered dRel_K and the calculated vRel (either derived or KF's)
+    ttc = safe_ttc(self.dRel_K, self.calculated_vRel)
+
+    # Recover the v_ego used during the last update to calculate the vLead based on calculated_vRel
+    # vLeadK = vRel_K + v_ego  => v_ego = vLeadK - vRel_K
+    # Note: This assumes v_ego didn't change significantly between the update and this call
+    v_ego_est = self.vLeadK - self.vRel_K
 
     return {
       "dRel": float(self.dRel_K),   # use filtered distance
       "yRel": float(self.yRel),     # lateral remains unfiltered
-      "vRel": float(self.vRel_K),   # filtered relative speed
-      "vLead": float(self.vLeadK),  # filtered absolute speed
-      "vLeadK": float(self.vLeadK), # same as above, for debugging if you like
+      "vRel": float(self.calculated_vRel),   # Use calculated (derived or KF) relative speed
+      "vLead": float(self.calculated_vRel + v_ego_est),  # Use calculated (derived or KF) absolute speed
+      "vLeadK": float(self.vLeadK), # keep original KF-based vLeadK for debugging/comparison
       "aLeadK": float(self.aLeadK),
       "aLeadTau": float(self.aLeadTau),
-      "ttc": float(ttc),
+      "ttc": float(ttc),            # TTC uses calculated vRel
       "status": True,
       "fcw": self.is_potential_fcw(model_prob),
       "modelProb": model_prob,
@@ -348,7 +376,7 @@ def get_forward_blindspot(tracks: dict[int, Track], left: bool = True) -> bool:
 
 
 class RadarD:
-  def __init__(self, frogpilot_toggles, radar_ts: float, delay: int = 0):
+  def __init__(self, frogpilot_toggles, radar_ts: float, delay: int = 0, is_hyundai_interface: bool = False):
     self.points: dict[int, tuple[float, float, float]] = {}
     self.current_time = 0.0
 
@@ -369,6 +397,7 @@ class RadarD:
     self.frogpilot_toggles = frogpilot_toggles
     self.classic_model = self.frogpilot_toggles.classic_model
     self.radar_ts = radar_ts
+    self.is_hyundai_interface = is_hyundai_interface
 
   def update(self, sm: messaging.SubMaster, rr):
     self.ready = sm.seen['modelV2']
@@ -402,7 +431,7 @@ class RadarD:
 
       if ids not in self.tracks:
         # create new track with initial distance, relative speed
-        self.tracks[ids] = Track(ids, d_rel, v_rel, self.radar_ts)
+        self.tracks[ids] = Track(ids, d_rel, v_rel, self.radar_ts, self.is_hyundai_interface)
 
       self.tracks[ids].update(d_rel, y_rel, v_rel, v_lead, measured, self.v_ego_hist[0])
 
@@ -482,7 +511,7 @@ class RadarD:
         "trackId": tid,
         "dRel": float(t.dRel_K),   # filtered
         "yRel": float(t.yRel),
-        "vRel": float(t.vRel_K),   # filtered
+        "vRel": float(t.calculated_vRel),   # Use calculated (derived or KF) relative speed
         "aRel": float(t.aLeadK),
         "measured": bool(t.measured),
         "isCornerRadar": tid >= 1000,
@@ -548,13 +577,17 @@ def main():
 
   cloudlog.info("radard is importing %s", CP.carName)
   RadarInterface = importlib.import_module(f'selfdrive.car.{CP.carName}.radar_interface').RadarInterface
+  # Check if the imported interface is the specific Hyundai one
+  is_hyundai_interface = RadarInterface.__module__ == 'selfdrive.car.hyundai.radar_interface'
+  cloudlog.info(f"radard: Using Hyundai interface specific logic: {is_hyundai_interface}")
 
   can_sock = messaging.sub_sock('can')
   RI = RadarInterface(CP)
   rk = Ratekeeper(1.0 / CP.radarTimeStep, print_delay_threshold=0.1)
 
   frogpilot_toggles = get_frogpilot_toggles()
-  RD = RadarD(frogpilot_toggles, CP.radarTimeStep, RI.delay)
+  # Pass the flag to the RadarD constructor
+  RD = RadarD(frogpilot_toggles, CP.radarTimeStep, RI.delay, is_hyundai_interface)
 
   if not frogpilot_toggles.radarless_model:
     sm = messaging.SubMaster(['modelV2', 'carState', 'frogpilotCarState', 'frogpilotPlan'],
