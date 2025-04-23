@@ -72,10 +72,10 @@ class ChauffeurMtsc:
         self.params = Params()
         self.params_memory = Params("/dev/shm/params")
 
-        # State variables - Simplified, as path is now just the current segment
-        self.current_segment_data = None # Store dict from MapReader
-        # self.current_way_result = None # Old
-        # self.next_ways = [] # Old
+        # State variables
+        self.current_segment_id = None     # int: ID of the current segment
+        self.current_segment_data = None   # dict: Data for the current segment
+        self.current_on_way_result = None  # matcher.OnWayResult: Result of on_way check
         self.last_gps_pos = None
 
         # Cached speed profile
@@ -100,43 +100,103 @@ class ChauffeurMtsc:
                 return self.last_gps_pos
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             print(f"Error reading or parsing LastGPSPosition: {e}")
+        # Clear state if GPS is invalid
+        self.last_gps_pos = None
+        self.current_segment_id = None
+        self.current_segment_data = None
+        self.current_on_way_result = None
+        self.curvature_valid = False
         return None
 
     def _update_current_segment(self, pos: matcher.Position):
         """
-        Gets the current road segment data using the new MapReader.
-        Updates self.current_segment_data and self.curvature_valid (placeholder).
-        Returns True if segment data was found, False otherwise.
+        Gets the current road segment data using the MapReader and performs on_way check.
+        Updates self.current_segment_id, self.current_segment_data, self.current_on_way_result.
+        Returns True if a valid segment is found and the vehicle is considered on it, False otherwise.
         """
         try:
+            # Use MapReader to find the closest segment data first
             segment_data = self.map_reader.get_segment_data_at(pos.latitude, pos.longitude)
-            if segment_data:
-                self.current_segment_data = segment_data
-                # print(f"MTSC: Updated current segment ID {segment_data.get('id', 'N/A')}") # Debug
-                # TODO: Check if curvature data exists in segment_data once added
-                # self.curvature_valid = 'curvatures' in segment_data and len(segment_data['curvatures']) > 0
-                self.curvature_valid = False # Placeholder until curvatures are added
-                return True
-            else:
+
+            if not segment_data:
+                # No segment found nearby by the reader
+                self.current_segment_id = None
                 self.current_segment_data = None
+                self.current_on_way_result = None
                 self.curvature_valid = False
                 return False
+
+            segment_id = segment_data.get('id')
+            if not segment_id:
+                # Should not happen if reader returns valid data, but check anyway
+                self.current_segment_id = None
+                self.current_segment_data = None
+                self.current_on_way_result = None
+                self.curvature_valid = False
+                return False
+
+            # Now perform the detailed on_way check using the matcher
+            on_way_result = matcher.on_way(pos, segment_id, segment_data)
+
+            if on_way_result.on_way:
+                # Successfully found segment and we are on it
+                self.current_segment_id = segment_id
+                self.current_segment_data = segment_data
+                self.current_on_way_result = on_way_result
+                # Curvature validity will be checked later in profile calculation
+                return True
+            else:
+                # Segment found, but on_way check failed (e.g., too far, wrong direction on oneway)
+                self.current_segment_id = None # Treat as not being on a valid segment
+                self.current_segment_data = None
+                self.current_on_way_result = None
+                self.curvature_valid = False
+                return False
+
         except Exception as e:
-            print(f"MTSC: Error getting segment data: {e}")
+            print(f"MTSC: Error getting/checking segment data: {e}")
+            self.current_segment_id = None
             self.current_segment_data = None
+            self.current_on_way_result = None
             self.curvature_valid = False
             return False
+
+    # Helper function to calculate segment length (extracted and simplified from matcher)
+    def _calculate_segment_length(self, segment_data: dict, is_fwd: bool) -> float:
+        """ Calculates the approximate length of a map segment in meters. """
+        coords = matcher._get_coords_from_segment(segment_data)
+        num_nodes = len(coords)
+        if num_nodes < 2:
+            return 0.0
+
+        total_length = 0.0
+        # Iterate through node pairs to sum segment lengths
+        # No need to consider is_fwd here, length is the same
+        last_lat_rad = coords[0][0] * geometry.TO_RADIANS
+        last_lon_rad = coords[0][1] * geometry.TO_RADIANS
+        for i in range(1, num_nodes):
+             curr_lat, curr_lon = coords[i]
+             curr_lat_rad = curr_lat * geometry.TO_RADIANS
+             curr_lon_rad = curr_lon * geometry.TO_RADIANS
+             total_length += geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
+             last_lat_rad = curr_lat_rad
+             last_lon_rad = curr_lon_rad
+        return total_length
+
 
     def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, turn_aggressiveness: float):
         """
         Calculates a speed profile based on the geometry (and later, curvature)
         of the current road segment.
         """
-        if not self.current_segment_data or 'geom' not in self.current_segment_data:
+        # Requires valid current_segment_data and current_on_way_result from _update_current_segment
+        if not self.current_segment_data or not self.current_on_way_result or 'geom' not in self.current_segment_data:
+            self.curvature_valid = False # Ensure flag is cleared
             return np.array([]), np.array([])
 
         segment_geom = self.current_segment_data['geom'] # Shapely LineString
         if not isinstance(segment_geom, LineString) or len(segment_geom.coords) < 3:
+            self.curvature_valid = False
             return np.array([]), np.array([]) # Need at least 3 points for curvature
 
         # Extract coordinates in degrees (Shapely coords are lon, lat)
@@ -144,9 +204,7 @@ class ChauffeurMtsc:
         path_nodes_lon = [c[0] for c in coords_lon_lat]
         path_nodes_lat = [c[1] for c in coords_lon_lat]
 
-        # Calculate curvatures along the *entire* segment's geometry
-        # We will later figure out where the car is along this path
-        # TODO: Use pre-calculated curvatures when available in self.current_segment_data
+        # Use pre-calculated curvatures if available
         curvatures = self.current_segment_data.get('curvatures', [])
 
         if not curvatures:
@@ -156,7 +214,6 @@ class ChauffeurMtsc:
         # Calculate distances along the segment corresponding to curvature points
         # Curvature[i] corresponds to the curve defined by nodes i, i+1, i+2
         # We need cumulative distance up to the *start* of the curve (point i+1).
-        # Let's recalculate the segment lengths needed for distances, as arc_lengths isn't stored.
         cumulative_distances = [0.0] * len(curvatures)
         current_dist = 0.0
         # Calculate distance to the start of the first curve (point 1)
@@ -196,11 +253,13 @@ class ChauffeurMtsc:
 
         distance_points = np.array(cumulative_distances)
         speed_points = np.array(target_speeds)
-        self.curvature_valid = True # Mark as valid since we calculated curvatures
+        self.curvature_valid = True # Mark as valid since we processed curvatures
 
         # Now, find where the car is along this segment's profile
         current_point = Point(pos.longitude, pos.latitude)
         # Project the car's position onto the segment geometry
+        # Note: segment_geom.project gives distance along the LINESTRING,
+        # which matches how we calculated cumulative_distances.
         car_dist_along_segment = segment_geom.project(current_point)
 
         # Shift the distance profile so that the car's position is at distance 0
@@ -211,14 +270,10 @@ class ChauffeurMtsc:
         lookahead_distances = np.array(PROFILE_TIMES) * v_ego
 
         # Ensure distance_profile_shifted covers the range needed for interpolation
-        # We need points both before and after the lookahead_distances
-        # Add a point at the start (car's projected position) if needed
         interp_distances = distance_profile_shifted
         interp_speeds = speed_points
 
         if len(interp_distances) == 0:
-            # If no curvature points (straight road), return empty profile?
-            # Or return profile with high speed? Let's return empty for now.
             self.curvature_valid = False
             return np.array([]), np.array([])
 
@@ -255,69 +310,121 @@ class ChauffeurMtsc:
         """
         Main update loop for Chauffeur MTSC.
         Reads GPS, finds current road segment, calculates curvature-based speed profile,
-        and publishes the tagged speed limit.
+        determines upcoming speed limit, and publishes the tagged speed limits.
         """
         # Get current GPS position
         pos = self._get_current_position()
         if pos is None:
-            # If GPS is lost, clear published speed limits
+            # If GPS is lost, clear published speed limits and internal state
             self.params_memory.put_float("MapSpeedLimit", 0.0)
             self.params_memory.put("NextMapSpeedLimit", "{}")
-            # Clear internal state as well
-            self.current_segment_data = None
-            self.curvature_valid = False # Ensure flag is cleared
+            # Reset profiles
             self.distance_profile = np.array([])
             self.speed_profile = np.array([])
-            return None, None
+            return None, None # Return None to indicate invalid state
 
-        # Find the current road segment
-        segment_updated = self._update_current_segment(pos)
+        # Find the current road segment and check if we are on it
+        is_on_segment = self._update_current_segment(pos)
 
-        # --- Speed Limit Publishing (Using segment data) ---
+        # Initialize limits
         current_limit_mps = 0.0
-        next_limit_info = {} # Still not implemented
+        next_limit_info = {} # Default to empty dict
 
-        # TODO: Reimplement logic to find the *next* speed limit change downstream.
-        #       The old version iterated through `self.next_ways` (if available)
-        #       to find the first way with a different speed limit and its start point.
-        #       This will require adapting the logic to work with the current MapReader
-        #       approach, potentially involving querying segments further along the path
-        #       or enhancing MapReader to provide lookahead data.
-
-        if self.current_segment_data:
+        if is_on_segment:
+            # --- Current Speed Limit ---
             try:
-                # Get speed limit from the current segment data
                 current_limit_mps = self.current_segment_data.get('speed_mps', 0.0)
-                # TODO: Add logic for next speed limit if we enhance the reader later
             except Exception as e:
-                print(f"MTSC: Error reading speed limit from segment data: {e}")
+                print(f"MTSC: Error reading speed limit from current segment data: {e}")
                 current_limit_mps = 0.0
+
+            # --- Next Speed Limit Logic ---
+            try:
+                # Construct CurrentWayResult needed by get_next_ways
+                current_way_res = matcher.CurrentWayResult(
+                    segment_id=self.current_segment_id,
+                    on_way_result=self.current_on_way_result
+                )
+
+                # Get sequence of next way segments
+                next_ways_results = matcher.get_next_ways(pos, current_way_res, self.map_reader)
+
+                if next_ways_results:
+                    # Calculate distance remaining on the current segment first
+                    dist_to_end_current = matcher.distance_to_end_of_way(
+                        pos, self.current_segment_data, self.current_on_way_result
+                    )
+                    cumulative_dist_to_next_start = dist_to_end_current
+
+                    # Iterate through the predicted next segments
+                    for i, next_way in enumerate(next_ways_results):
+                        next_segment_id = next_way.segment_id
+                        next_is_fwd = next_way.is_forward
+
+                        # Fetch data for this next segment
+                        next_segment_data = self.map_reader.segments_data.get(next_segment_id)
+                        if not next_segment_data:
+                            # print(f"Warning: Data for next segment {next_segment_id} not found.")
+                            continue # Skip if data isn't loaded for some reason
+
+                        next_limit_mps = next_segment_data.get('speed_mps', 0.0)
+
+                        # Check for speed limit change (allow for small float differences)
+                        if abs(next_limit_mps - current_limit_mps) > 0.1:
+                            # Found the segment where the speed limit changes
+                            # Get coordinates of the start of this segment
+                            start_coord, _ = matcher.get_way_start_end(next_segment_data, next_is_fwd)
+
+                            if start_coord:
+                                next_limit_info = {
+                                    'speedlimit': float(next_limit_mps),
+                                    'latitude': float(start_coord[0]),
+                                    'longitude': float(start_coord[1]),
+                                    'distance': float(cumulative_dist_to_next_start)
+                                }
+                            break # Stop searching once the first change is found
+
+                        # If limit hasn't changed, add the length of this segment to the cumulative distance
+                        # This segment's length will contribute to the distance *to the start* of the *following* segment
+                        segment_len = self._calculate_segment_length(next_segment_data, next_is_fwd)
+                        cumulative_dist_to_next_start += segment_len
+
+            except Exception as e:
+                print(f"MTSC: Error calculating next speed limit: {e}")
+                next_limit_info = {} # Reset on error
+
         else:
-             # If no segment found, ensure limit is 0
-             current_limit_mps = 0.0
+            # Not on a segment, ensure current limit is 0
+            current_limit_mps = 0.0
+            next_limit_info = {}
+
 
         # Publish the found limits (or defaults)
-        # print(f"MTSC: Publishing MapSpeedLimit = {current_limit_mps:.2f}") # Debug
+        # print(f"MTSC: Publishing MapSpeedLimit = {current_limit_mps:.2f}, Next: {next_limit_info}") # Debug
         self.params_memory.put_float("MapSpeedLimit", float(current_limit_mps))
         self.params_memory.put("NextMapSpeedLimit", json.dumps(next_limit_info))
         # --- End Speed Limit Publishing ---
 
         # --- Curvature-Based Speed Profile Calculation ---
-        if self.current_segment_data:
+        if is_on_segment:
             # Calculate profile based on current segment's geometry
-            # Pass v_ego which is needed for the final profile generation
             self.distance_profile, self.speed_profile = self._calculate_speed_profile_from_segment(
                 pos, v_ego, turn_aggressiveness
             )
             # self.curvature_valid is set within _calculate_speed_profile_from_segment
         else:
-            # No segment, clear profile
+            # No segment or not on segment, clear profile
             self.distance_profile = np.array([])
             self.speed_profile = np.array([])
             self.curvature_valid = False
 
-        # Return the calculated profiles (or empty if invalid)
-        return self.distance_profile, self.speed_profile
+        # Return the calculated profiles (or empty if invalid/not on segment)
+        if is_on_segment and self.curvature_valid:
+            return self.distance_profile, self.speed_profile
+        else:
+            # Return None, None if we aren't on a segment or curvature is invalid
+            # This signals to VTSC or other consumers that the profile is not usable
+            return None, None
 
 # --- Old code removed ---
 # TARGET_JERK, TARGET_ACCEL, TARGET_OFFSET

@@ -25,7 +25,7 @@ MANEUVER_TRANSITION_THRESHOLD = 10
 REROUTE_COUNTER_MIN = 3
 
 # Mock Route Constants
-MOCK_ROUTE_DISTANCE_KM = 15.0  # Distance ahead for mock route (km)
+MOCK_ROUTE_DISTANCE_KM = 1.5  # Distance ahead for mock route (km)
 MOCK_ROUTE_RECALC_INTERVAL_SEC = 300 # How often to recalculate mock route (seconds)
 EARTH_RADIUS_KM = 6371.0
 
@@ -155,7 +155,7 @@ class RouteEngine:
         else:
           cloudlog.error("Failed to calculate mock destination.")
           # Don't retry immediately, wait for next timer cycle or location update
-          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC / 10 # Retry sooner
+          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC // 10 # Retry sooner
       return # Don't proceed to regular route logic if handling mock route
 
     # --- Regular Route Logic ---
