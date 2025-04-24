@@ -82,7 +82,7 @@ class MapdPyDaemon:
         if self.sm.updated['carState']:
           self.last_v_ego = self.sm['carState'].vEgo
 
-        msg = messaging.new_message('liveMapData'liveMapData = msg.liveMapData
+        msg = messaging.new_message('liveMapData')
         is_on_segment = False # Assume not on segment initially
 
         if location_valid and self.last_valid_pos is not None:
@@ -175,24 +175,24 @@ class MapdPyDaemon:
             next_limit_dist = 0.0
 
         # --- Publish liveMapData ---
-        liveMapData.lastGpsTimestamp = self.sm['liveLocationKalman'].unixTimestampMillis
-        liveMapData.speedLimitValid = is_on_segment and current_limit_mps > 0
-        liveMapData.speedLimit = float(current_limit_mps) # m/s
+        msg.liveMapData.lastGpsTimestamp = self.sm['liveLocationKalman'].unixTimestampMillis
+        msg.liveMapData.speedLimitValid = is_on_segment and current_limit_mps > 0
+        msg.liveMapData.speedLimit = float(current_limit_mps) # m/s
 
-        liveMapData.speedLimitAheadValid = is_on_segment and next_limit_mps > 0 and next_limit_dist > 0
-        liveMapData.speedLimitAhead = float(next_limit_mps) # m/s
-        liveMapData.speedLimitAheadDistance = float(next_limit_dist) # m
+        msg.liveMapData.speedLimitAheadValid = is_on_segment and next_limit_mps > 0 and next_limit_dist > 0
+        msg.liveMapData.speedLimitAhead = float(next_limit_mps) # m/s
+        msg.liveMapData.speedLimitAheadDistance = float(next_limit_dist) # m
 
         # Add road name if available
         if is_on_segment and self.current_segment_data and 'name' in self.current_segment_data:
-             liveMapData.currentRoadName = str(self.current_segment_data['name'])
+             msg.liveMapData.currentRoadName = str(self.current_segment_data['name'])
         else:
-             liveMapData.currentRoadName = ""
+             msg.liveMapData.currentRoadName = ""
 
         # Add curvature info (placeholder for now, could be calculated here or read if precalculated)
-        # liveMapData.curvatureValid = False
-        # liveMapData.distToTurn = 0.0
-        # liveMapData.turnSpeedLimit = 0.0
+        # msg.liveMapData.curvatureValid = False
+        # msg.liveMapData.distToTurn = 0.0
+        # msg.liveMapData.turnSpeedLimit = 0.0
 
         self.pm.send('liveMapData', msg)
 
@@ -201,7 +201,7 @@ class MapdPyDaemon:
         try:
             self.params_memory.put_float("MapSpeedLimit", float(current_limit_mps))
             next_limit_info = {}
-            if liveMapData.speedLimitAheadValid and self.last_valid_pos is not None:
+            if msg.liveMapData.speedLimitAheadValid and self.last_valid_pos is not None:
                  # Need to find the coordinate of the start of the segment where the limit changes
                  # This requires more complex logic tracking the path geometry, skipping for now
                  # to keep the daemon simpler initially. chauffeur_mtsc has this logic.
