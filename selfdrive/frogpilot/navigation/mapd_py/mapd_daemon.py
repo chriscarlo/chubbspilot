@@ -70,7 +70,7 @@ class MapdPyDaemon:
             self.current_segment_data = None
             self.current_on_way_result = None
             # Clear legacy param on GPS loss
-            self.params_memory.delete("LastGPSPosition")
+            self.params_memory.remove("LastGPSPosition")
             return False
 
     def update(self):
