@@ -29,6 +29,8 @@ MOCK_ROUTE_DISTANCE_KM = 1.5  # Distance ahead for mock route (km)
 MOCK_ROUTE_RECALC_INTERVAL_SEC = 300 # How often to recalculate mock route (seconds)
 EARTH_RADIUS_KM = 6371.0
 
+MAPBOX_API_KEY_FILE = "/persist/mapbox/mapbox_api.txt"
+
 class RouteEngine:
   def __init__(self, sm, pm):
     self.sm = sm
@@ -58,15 +60,40 @@ class RouteEngine:
 
     self.api = None
     self.mapbox_token = None
-    if "MAPBOX_TOKEN" in os.environ:
-      self.mapbox_token = os.environ["MAPBOX_TOKEN"]
-      self.mapbox_host = "https://api.mapbox.com"
-    elif not has_prime():
-      self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
-      self.mapbox_host = "https://api.mapbox.com"
-    else:
-      self.api = Api(self.params.get("DongleId", encoding='utf8'))
-      self.mapbox_host = "https://maps.comma.ai"
+    self.mapbox_public_token = None # Added for potential future use
+    self.mapbox_host = None
+    try:
+      with open(MAPBOX_API_KEY_FILE, 'r') as f:
+        keys = json.load(f)
+        self.mapbox_token = keys.get('secret_key')
+        self.mapbox_public_token = keys.get('public_key') # Store public key too
+        self.mapbox_host = "https://api.mapbox.com"
+        cloudlog.info("Using Mapbox keys from file.")
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+      cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: {e}. Falling back to other methods.")
+      # Fallback logic (existing code)
+      if "MAPBOX_TOKEN" in os.environ:
+        self.mapbox_token = os.environ["MAPBOX_TOKEN"]
+        self.mapbox_host = "https://api.mapbox.com"
+        cloudlog.info("Using Mapbox token from environment variable.")
+      elif not has_prime():
+        self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
+        if self.mapbox_token:
+            cloudlog.info("Using Mapbox token from MapboxSecretKey param.")
+            self.mapbox_host = "https://api.mapbox.com"
+        else:
+            cloudlog.warning("No MapboxSecretKey param found.")
+      else: # has_prime()
+        self.api = Api(self.params.get("DongleId", encoding='utf8'))
+        self.mapbox_host = "https://maps.comma.ai"
+        cloudlog.info("Using comma.ai map proxy.")
+
+    # Ensure mapbox_host is set if token was found in file but not otherwise
+    if self.mapbox_token and not self.mapbox_host:
+        self.mapbox_host = "https://api.mapbox.com" # Default if token exists but host wasn't set
+
+    if not self.mapbox_token and not self.api:
+      cloudlog.error("Mapbox token/API key not configured and not using comma proxy.")
 
     # FrogPilot variables
     self.frogpilot_toggles = get_frogpilot_toggles()
@@ -190,6 +217,11 @@ class RouteEngine:
     token = self.mapbox_token
     if token is None:
       token = self.api.get_token()
+
+    if token is None:
+      cloudlog.error("No valid Mapbox token or API token available. Cannot fetch route.")
+      self.clear_route()
+      return
 
     params = {
       'access_token': token,

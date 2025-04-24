@@ -1,9 +1,8 @@
 # PFEIFER - SLC - Modified by FrogAi for FrogPilot
 #!/usr/bin/env python3
-import json
+import cereal.messaging as messaging
 
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
-from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params, params_memory
+from openpilot.selfdrive.frogpilot.frogpilot_variables import params # Keep params for PreviousSpeedLimit
 
 class SpeedLimitController:
   def __init__(self):
@@ -11,19 +10,43 @@ class SpeedLimitController:
     self.speed_limit_changed = False
 
     self.desired_speed_limit = 0
-    self.map_speed_limit = 0
+    # self.map_speed_limit = 0 # Removed, will be determined in update
     self.speed_limit = 0
-    self.upcoming_speed_limit = 0
+    # self.upcoming_speed_limit = 0 # Removed, will be determined in update
 
     self.source = "None"
 
     self.previous_speed_limit = params.get_float("PreviousSpeedLimit")
 
+    # Add SubMaster for liveMapData
+    self.sm = messaging.SubMaster(['liveMapData'], poll=['liveMapData'])
+
   def update(self, dashboard_speed_limit, enabled, navigation_speed_limit, v_cruise, v_ego, frogpilot_toggles):
-    self.update_map_speed_limit(v_ego, frogpilot_toggles)
+    self.sm.update(0) # Update SubMaster
+
+    # Extract data from liveMapData message
+    liveMapData = self.sm['liveMapData']
+    map_speed_limit = liveMapData.speedLimit if liveMapData.speedLimitValid else 0
+    upcoming_speed_limit = liveMapData.speedLimitAhead if liveMapData.speedLimitAheadValid else 0
+    upcoming_distance = liveMapData.speedLimitAheadDistance if liveMapData.speedLimitAheadValid else 0
+
+    # Determine effective map speed limit considering lookahead
+    effective_map_limit = map_speed_limit
+    if upcoming_speed_limit > 1 and upcoming_distance > 0:
+      # Use lookahead logic based on toggles
+      if map_speed_limit < upcoming_speed_limit:
+        # Speed limit increases ahead
+        max_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
+      else:
+        # Speed limit decreases ahead
+        max_distance = frogpilot_toggles.map_speed_lookahead_lower * v_ego
+
+      if upcoming_distance < max_distance:
+        effective_map_limit = upcoming_speed_limit
+
     max_speed_limit = v_cruise if enabled else 0
 
-    self.speed_limit = self.get_speed_limit(dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles)
+    self.speed_limit = self.get_speed_limit(dashboard_speed_limit, effective_map_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles)
     self.desired_speed_limit = self.get_desired_speed_limit()
 
     self.experimental_mode = frogpilot_toggles.slc_fallback_experimental_mode and self.speed_limit == 0
@@ -39,33 +62,6 @@ class SpeedLimitController:
       self.speed_limit_changed = False
       return 0
 
-  def update_map_speed_limit(self, v_ego, frogpilot_toggles):
-    position = json.loads(params_memory.get("LastGPSPosition") or "{}")
-    if not position:
-      self.map_speed_limit = 0
-      return
-
-    self.map_speed_limit = params_memory.get_float("MapSpeedLimit")
-
-    next_map_speed_limit = json.loads(params_memory.get("NextMapSpeedLimit") or "{}")
-    self.upcoming_speed_limit = next_map_speed_limit.get("speedlimit", 0)
-    if self.upcoming_speed_limit > 1:
-      current_latitude = position.get("latitude")
-      current_longitude = position.get("longitude")
-
-      upcoming_latitude = next_map_speed_limit.get("latitude")
-      upcoming_longitude = next_map_speed_limit.get("longitude")
-
-      distance_to_upcoming = calculate_distance_to_point(current_latitude * TO_RADIANS, current_longitude * TO_RADIANS, upcoming_latitude * TO_RADIANS, upcoming_longitude * TO_RADIANS)
-
-      if self.previous_speed_limit < self.upcoming_speed_limit:
-        max_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
-      else:
-        max_distance = frogpilot_toggles.map_speed_lookahead_lower * v_ego
-
-      if distance_to_upcoming < max_distance:
-        self.map_speed_limit = self.upcoming_speed_limit
-
   def get_offset(self, speed_limit, frogpilot_toggles):
     if speed_limit < 13.5:
       return frogpilot_toggles.speed_limit_offset1
@@ -75,10 +71,10 @@ class SpeedLimitController:
       return frogpilot_toggles.speed_limit_offset3
     return frogpilot_toggles.speed_limit_offset4
 
-  def get_speed_limit(self, dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles):
+  def get_speed_limit(self, dashboard_speed_limit, effective_map_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles):
     limits = {
       "Dashboard": dashboard_speed_limit,
-      "Map Data": self.map_speed_limit,
+      "Map Data": effective_map_limit, # Use the calculated effective map limit
       "Navigation": navigation_speed_limit
     }
     filtered_limits = {source: float(limit) for source, limit in limits.items() if limit > 1}

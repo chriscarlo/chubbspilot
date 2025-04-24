@@ -2095,7 +2095,7 @@ struct LiveTorqueParametersData {
   useParams @12 :Bool;
 }
 
-struct LiveMapDataDEPRECATED {
+struct LiveMapData {
   speedLimitValid @0 :Bool;
   speedLimit @1 :Float32;
   speedAdvisoryValid @12 :Bool;
@@ -2113,6 +2113,7 @@ struct LiveMapDataDEPRECATED {
   roadCurvature @9 :List(Float32);
   distToTurn @10 :Float32;
   mapValid @11 :Bool;
+  currentRoadName @17 :Text;
 }
 
 struct CameraOdometry {
