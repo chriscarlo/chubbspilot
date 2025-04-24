@@ -1,6 +1,7 @@
 #include <QDirIterator>
 #include <regex>
 #include <QColor>
+#include <QStyle>
 
 #include <QtConcurrent>
 
