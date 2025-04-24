@@ -19,7 +19,7 @@ class SpeedLimitController:
     self.previous_speed_limit = params.get_float("PreviousSpeedLimit")
 
     # Add SubMaster for liveMapData
-    self.sm = messaging.SubMaster(['liveMapData'], poll=['liveMapData'])
+    self.sm = messaging.SubMaster(['liveMapData'], poll='liveMapData')
 
   def update(self, dashboard_speed_limit, enabled, navigation_speed_limit, v_cruise, v_ego, frogpilot_toggles):
     self.sm.update(0) # Update SubMaster
