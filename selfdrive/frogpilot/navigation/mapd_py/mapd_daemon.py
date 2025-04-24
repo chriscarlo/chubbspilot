@@ -175,7 +175,26 @@ class MapdPyDaemon:
             next_limit_dist = 0.0
 
         # --- Publish liveMapData ---
-        msg.liveMapData.lastGpsTimestamp = self.sm['liveLocationKalman'].unixTimestampMillis
+        # Populate the nested lastGps struct
+        if self.gps_ok and self.last_valid_pos is not None:
+            llk = self.sm['liveLocationKalman']
+            msg.liveMapData.lastGps.latitude = self.last_valid_pos.latitude
+            msg.liveMapData.lastGps.longitude = self.last_valid_pos.longitude
+            msg.liveMapData.lastGps.altitude = llk.positionGeodetic.value[2]
+            msg.liveMapData.lastGps.speed = llk.velocityDevice.value[0] # Assuming llk.velocityDevice[0] is speed
+            msg.liveMapData.lastGps.bearingDeg = math.degrees(self.last_valid_pos.bearing_rad)
+            msg.liveMapData.lastGps.horizontalAccuracy = llk.positionGeodetic.std[0] # Assuming std[0] is horizontal
+            msg.liveMapData.lastGps.verticalAccuracy = llk.positionGeodetic.std[2] # Assuming std[2] is vertical
+            msg.liveMapData.lastGps.unixTimestampMillis = llk.unixTimestampMillis
+            msg.liveMapData.lastGps.source = 'ublox' # Or determine source more dynamically if needed
+            msg.liveMapData.lastGps.vNED = list(llk.velocityNED.value)
+            msg.liveMapData.lastGps.bearingAccuracyDeg = math.degrees(llk.calibratedOrientationNED.std[2]) # Assuming std[2] is yaw std
+            msg.liveMapData.lastGps.speedAccuracy = llk.velocityDevice.std[0] # Assuming std[0] is speed std
+            msg.liveMapData.lastGps.hasFix = True # Assuming gps_ok implies hasFix
+        else:
+            msg.liveMapData.lastGps.hasFix = False
+
+        # Set other LiveMapData fields
         msg.liveMapData.speedLimitValid = is_on_segment and current_limit_mps > 0
         msg.liveMapData.speedLimit = float(current_limit_mps) # m/s
 
