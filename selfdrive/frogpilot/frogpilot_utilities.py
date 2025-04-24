@@ -333,22 +333,8 @@ def update_maps(now: datetime) -> None:
 
     * All region‑specific logic removed – the whole `protobuf_tiles/` tree is
       mirrored on whatever cadence the driver selects.
-    * Runs **only** when schedule and date warrant an update, otherwise returns.
+    * Now runs **only** when explicitly called, typically triggered by the UI.
     """
-    day = now.day
-    weekday = now.weekday()
-    suffix = "th" if 4 <= day <= 20 or 24 <= day <= 30 else ["st", "nd", "rd"][day % 10 - 1]
-    today_str = now.strftime(f"%B {day}{suffix}, %Y")
-
-    # honour user's scheduling preference
-    schedule = params.get_int("PreferredSchedule")  # 0=daily,1=Sun,2=1st‑of‑month
-    if schedule == 1 and weekday != 6:
-        return
-    if schedule == 2 and day != 1:
-        return
-    if params.get("LastMapsUpdate", encoding="utf-8") == today_str:
-        return
-
     # sanity checks
     conn = get_azure_connection_string(CONN_STRING_PATH)
     if ShareDirectoryClient is None:
@@ -374,11 +360,14 @@ def update_maps(now: datetime) -> None:
         return
 
     if ok:
-        params.put("LastMapsUpdate", today_str)
-        cloudlog.info("maps: update successful, LastMapsUpdate set to %s", today_str)
+        # No longer track LastMapsUpdate based on schedule
+        cloudlog.info("maps: update successful")
     else:
-        cloudlog.warning("maps: update failed, LastMapsUpdate left unchanged")
+        cloudlog.warning("maps: update failed")
 
+
+def delete_azure_file(conn_str: str, share_name: str, remote_path: str):
+    # ... existing code ...
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Functions below are unchanged from the original implementation

@@ -1,9 +1,13 @@
 #include <QDirIterator>
 #include <regex>
+#include <QColor>
 
 #include <QtConcurrent>
 
 #include "selfdrive/frogpilot/navigation/ui/maps_settings.h"
+#include "common/params.h"
+#include "selfdrive/ui/qt/util.h"
+#include "selfdrive/ui/qt/widgets/input.h"
 
 FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   QVBoxLayout *mainLayout = new QVBoxLayout();
@@ -12,16 +16,16 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   FrogPilotListWidget *settingsList = new FrogPilotListWidget(this);
   mainLayout->addWidget(new ScrollView(settingsList, this));
 
-  ButtonControl *downloadCaliforniaButton = new ButtonControl(tr("Download California Map"), tr("DOWNLOAD"));
-  QObject::connect(downloadCaliforniaButton, &ButtonControl::clicked, [this, downloadCaliforniaButton] {
-    params.remove("LastMapsUpdate");
-    downloadCaliforniaButton->setText(tr("UPDATE REQUESTED"));
-    QTimer::singleShot(5000, [downloadCaliforniaButton]() { downloadCaliforniaButton->setText(tr("DOWNLOAD")); });
-    ConfirmationDialog::alert(tr("Request sent to check for map updates. Update will occur according to schedule (daily, weekly, or monthly) or on next boot."), this);
+  downloadCaliforniaButton = new ButtonControl(tr("Download California Map"), tr("DOWNLOAD"));
+  downloadCaliforniaButton->setProperty("downloading", false);
+  downloadCaliforniaButton->setObjectName("californiaDownloadBtn");
+
+  QObject::connect(downloadCaliforniaButton, &ButtonControl::clicked, [this] {
+    params_memory.putBoolNonBlocking("TriggerMapDownloadCheck", true);
   });
   settingsList->addItem(downloadCaliforniaButton);
 
-  ButtonControl *downloadNevadaButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
+  downloadNevadaButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
   QObject::connect(downloadNevadaButton, &ButtonControl::clicked, [this, downloadNevadaButton] {
     params.remove("LastMapsUpdate");
     downloadNevadaButton->setText(tr("UPDATE REQUESTED"));
@@ -34,12 +38,38 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   settingsList->addItem(lastMapsDownload = new LabelControl(tr("Maps Last Updated"), params.get("LastMapsUpdate").empty() ? "Never" : QString::fromStdString(params.get("LastMapsUpdate"))));
   settingsList->addItem(mapsSize = new LabelControl(tr("Downloaded Maps Size"), calculateDirectorySize(mapsPath)));
 
+  trigger_param_watcher = new ParamWatcher(this);
+  QObject::connect(trigger_param_watcher, &ParamWatcher::paramChanged, this, &FrogPilotMapsPanel::updateButtonStates);
+  trigger_param_watcher->addParam("TriggerMapDownloadCheck");
+
+  QString styleSheet = R"(
+    #californiaDownloadBtn[downloading="true"] {
+      background-color: blue;
+    }
+  )";
+  setStyleSheet(styleSheet);
+
+  updateButtonStates();
+
   QObject::connect(parent, &FrogPilotSettingsWindow::closeMapSelection, [] {
   });
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotMapsPanel::updateState);
 }
 
+void FrogPilotMapsPanel::updateButtonStates() {
+  bool isTriggerSet = params_memory.getBool("TriggerMapDownloadCheck");
+  if (downloadCaliforniaButton) {
+    bool currentDownloadingState = downloadCaliforniaButton->property("downloading").toBool();
+    if (currentDownloadingState != isTriggerSet) {
+        downloadCaliforniaButton->setProperty("downloading", isTriggerSet);
+        downloadCaliforniaButton->style()->unpolish(downloadCaliforniaButton);
+        downloadCaliforniaButton->style()->polish(downloadCaliforniaButton);
+    }
+  }
+}
+
 void FrogPilotMapsPanel::showEvent(QShowEvent *event) {
+  updateButtonStates();
 }
 
 void FrogPilotMapsPanel::updateState(const UIState &s) {

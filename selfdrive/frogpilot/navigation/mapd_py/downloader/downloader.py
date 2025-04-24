@@ -36,11 +36,16 @@ def main():
         rk._last_monitor_time = time.monotonic()      # reset the moving average
         rk._next_frame_time  = rk._last_monitor_time + rk._interval
 
-      if rk.keep_time() and not check_triggered:
-        cloudlog.info(f"Scheduled map download check at {datetime.now()}")
-        update_maps(datetime.now())
-      elif not check_triggered:
-        time.sleep(1)
+      # Remove the scheduled check
+      # if rk.keep_time() and not check_triggered:
+      #  cloudlog.info(f"Scheduled map download check at {datetime.now()}")
+      #  update_maps(datetime.now())
+      # elif not check_triggered:
+      #   time.sleep(1)
+
+      # Only sleep if no trigger was detected in this loop iteration
+      if not check_triggered:
+          time.sleep(1) # Check for manual trigger param roughly every second
 
     except Exception as e:
       cloudlog.exception("mapd_py.downloader.service_loop_exception")
