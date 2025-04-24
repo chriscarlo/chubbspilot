@@ -366,9 +366,6 @@ def update_maps(now: datetime) -> None:
         cloudlog.warning("maps: update failed")
 
 
-def delete_azure_file(conn_str: str, share_name: str, remote_path: str):
-    # ... existing code ...
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Functions below are unchanged from the original implementation
 # ──────────────────────────────────────────────────────────────────────────────
