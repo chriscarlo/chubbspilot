@@ -16,7 +16,7 @@ from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry # For TO_R
 
 class MapdPyDaemon:
     def __init__(self):
-        self.sm = messaging.SubMaster(['liveLocationKalman', 'carState'], poll=['liveLocationKalman'])
+        self.sm = messaging.SubMaster(['liveLocationKalman', 'carState'], poll='liveLocationKalman')
         self.pm = messaging.PubMaster(['liveMapData'])
 
         self.params = Params()
