@@ -25,14 +25,14 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   });
   settingsList->addItem(downloadCaliforniaButton);
 
-  downloadNevadaButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
-  QObject::connect(downloadNevadaButton, &ButtonControl::clicked, [this, downloadNevadaButton] {
+  downloadMapsButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
+  QObject::connect(downloadMapsButton, &ButtonControl::clicked, [this] {
     params.remove("LastMapsUpdate");
-    downloadNevadaButton->setText(tr("UPDATE REQUESTED"));
-    QTimer::singleShot(5000, [downloadNevadaButton]() { downloadNevadaButton->setText(tr("DOWNLOAD")); });
+    downloadMapsButton->setText(tr("UPDATE REQUESTED"));
+    QTimer::singleShot(5000, [button = downloadMapsButton]() { button->setText(tr("DOWNLOAD")); });
     ConfirmationDialog::alert(tr("Request sent to check for map updates. Update will occur according to schedule (daily, weekly, or monthly) or on next boot."), this);
   });
-  settingsList->addItem(downloadNevadaButton);
+  settingsList->addItem(downloadMapsButton);
 
   const QString mapsPath = "/data/media/0/map_data_tiles_protobuf/";
   settingsList->addItem(lastMapsDownload = new LabelControl(tr("Maps Last Updated"), params.get("LastMapsUpdate").empty() ? "Never" : QString::fromStdString(params.get("LastMapsUpdate"))));

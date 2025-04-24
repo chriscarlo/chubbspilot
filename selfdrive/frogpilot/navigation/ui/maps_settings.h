@@ -2,6 +2,8 @@
 
 #include "selfdrive/frogpilot/navigation/ui/navigation_functions.h"
 #include "selfdrive/frogpilot/ui/qt/offroad/frogpilot_settings.h"
+#include "common/params.h"
+#include "selfdrive/ui/qt/util.h"
 
 class FrogPilotMapsPanel : public FrogPilotListWidget {
   Q_OBJECT
@@ -26,8 +28,10 @@ private:
   bool cancellingDownload;
   bool hasMapsSelected;
 
+  ButtonControl *downloadCaliforniaButton;
   ButtonControl *downloadMapsButton;
   ButtonControl *removeMapsButton;
+  ParamWatcher *trigger_param_watcher;
 
   FrogPilotSettingsWindow *parent;
 
@@ -47,4 +51,7 @@ private:
   QString mapsFolderPath;
 
   QStackedLayout *mapsLayout;
+
+private slots:
+  void updateButtonStates();
 };
