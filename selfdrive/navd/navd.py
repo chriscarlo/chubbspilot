@@ -158,6 +158,7 @@ class RouteEngine:
     print("navd.py: RouteEngine __init__ finished.", flush=True)
 
   def update(self):
+    print("\\n--- navd.py: update cycle start ---", flush=True) # ADDED
     self.sm.update(0)
 
     if self.sm.updated["managerState"]:
@@ -170,8 +171,11 @@ class RouteEngine:
         self.ui_pid = ui_pid[0]
 
     self.update_location()
+    print(f"navd.py: update - after update_location: gps_ok={self.gps_ok}, localizer_valid={self.localizer_valid}, last_bearing={self.last_bearing}", flush=True) # ADDED
     try:
+      print("navd.py: update - calling recompute_route...", flush=True) # ADDED
       self.recompute_route()
+      print("navd.py: update - finished recompute_route, calling send_instruction...", flush=True) # ADDED
       self.send_instruction()
     except Exception:
       cloudlog.exception("navd.failed_to_compute")
@@ -182,40 +186,57 @@ class RouteEngine:
       self.frogpilot_toggles = get_frogpilot_toggles()
 
   def update_location(self):
+    print("navd.py: update_location called...", flush=True) # ADDED
     location = self.sm['liveLocationKalman']
     self.gps_ok = location.gpsOK
+    print(f"navd.py: update_location - got gps_ok: {self.gps_ok}", flush=True) # ADDED
 
     self.localizer_valid = (location.status == log.LiveLocationKalman.Status.valid) and location.positionGeodetic.valid
+    print(f"navd.py: update_location - got localizer_valid: {self.localizer_valid} (status={location.status}, positionGeodetic.valid={location.positionGeodetic.valid})", flush=True) # ADDED
 
     if self.localizer_valid:
       self.last_bearing = math.degrees(location.calibratedOrientationNED.value[2])
       self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
+      print(f"navd.py: update_location - Updated bearing: {self.last_bearing}, position: {self.last_position}", flush=True) # ADDED
+    else: # ADDED block
+        print(f"navd.py: update_location - Localizer not valid, not updating bearing/position.", flush=True) # ADDED
 
     # Decrement mock route timer (ensuring it doesn't go below zero)
     # Assumes update() is called roughly once per second by Ratekeeper
     self.mock_route_timer = max(0, self.mock_route_timer - 1)
+    print(f"navd.py: update_location - Updated mock_route_timer: {self.mock_route_timer}", flush=True) # ADDED
 
   def recompute_route(self):
+    print("navd.py: recompute_route called...", flush=True) # Existing trace, confirmed present
     if self.last_position is None:
+      print("navd.py: recompute_route - last_position is None, returning.", flush=True)
       return
 
     # Don't recompute when GPS drifts in tunnels
     if not self.gps_ok and self.step_idx is not None:
+      print("navd.py: recompute_route - GPS not OK but have route, returning.", flush=True)
       return
 
     new_destination = coordinate_from_param("NavDestination", self.params)
+    print(f"navd.py: recompute_route - Read NavDestination: {new_destination}", flush=True)
 
     # --- Mock Route Logic ---
     if new_destination is None:
-      if not self.mock_route_active and self.last_bearing is not None and self.gps_ok and self.localizer_valid:
+      print(f"navd.py: recompute_route - Entering mock route logic. Active: {self.mock_route_active}, Timer: {self.mock_route_timer}", flush=True)
+      mock_conditions_met = (self.last_bearing is not None and self.gps_ok and self.localizer_valid)
+      print(f"navd.py: recompute_route - Mock Activation Conditions: Bearing={self.last_bearing is not None}, GPS OK={self.gps_ok}, Localizer Valid={self.localizer_valid} -> Met={mock_conditions_met}", flush=True)
+      if not self.mock_route_active and mock_conditions_met:
         # Start mock route if not active and conditions are met
+        print("navd.py: recompute_route - Triggering mock route activation.", flush=True)
         self.mock_route_timer = 0 # Trigger immediate calculation
         self.mock_route_active = True
         cloudlog.info("No destination set, activating mock route.")
         print("navd.py: CLOUDLG - No destination set, activating mock route.", flush=True)
 
       if self.mock_route_active and self.mock_route_timer == 0:
+        print("navd.py: recompute_route - Mock route active and timer is 0, attempting calculation.", flush=True)
         if self.last_bearing is None or not self.gps_ok or not self.localizer_valid:
+          print("navd.py: recompute_route - Mock conditions lost before calculation.", flush=True)
           cloudlog.warning("Mock route conditions lost (bearing/gps/localizer), deactivating.")
           print("navd.py: CLOUDLG - Mock route conditions lost (bearing/gps/localizer), deactivating.", flush=True)
           self.clear_route() # This also sets mock_route_active to False and resets timer
@@ -226,40 +247,56 @@ class RouteEngine:
                                                   self.last_bearing,
                                                   MOCK_ROUTE_DISTANCE_KM)
         if mock_dest:
+          print(f"navd.py: recompute_route - Calculated mock destination: {mock_dest}", flush=True)
           cloudlog.info(f"Calculating mock route to {mock_dest}")
           print(f"navd.py: CLOUDLG - Calculating mock route to {mock_dest}", flush=True)
           self.calculate_route(mock_dest)
           # Reset timer for next recalculation
           self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC
         else:
+          print("navd.py: recompute_route - Failed to calculate mock destination coordinate.", flush=True)
           cloudlog.error("Failed to calculate mock destination.")
           print("navd.py: CLOUDLG - Failed to calculate mock destination.", flush=True)
           # Don't retry immediately, wait for next timer cycle or location update
           self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC // 10 # Retry sooner
+      print("navd.py: recompute_route - Exiting after mock route logic.", flush=True)
       return # Don't proceed to regular route logic if handling mock route
 
     # --- Regular Route Logic ---
+    print("navd.py: recompute_route - Entering regular route logic.", flush=True)
     # If a destination is set, ensure mock route is deactivated
     if self.mock_route_active:
+        print("navd.py: recompute_route - Deactivating mock route due to set destination.", flush=True)
         cloudlog.info("Destination set, deactivating mock route.")
         print("navd.py: CLOUDLG - Destination set, deactivating mock route.", flush=True)
         self.clear_route() # Deactivates mock route and clears existing route data
         # Don't return here, let regular logic continue with the new destination
 
     # Existing logic for handling NavDestination changes and recomputing
-    should_recompute = self.should_recompute()
-    if new_destination != self.nav_destination:
+    needs_route = self.should_recompute()
+    print(f"navd.py: recompute_route - should_recompute() returned: {needs_route}", flush=True)
+    destination_changed = (new_destination != self.nav_destination)
+    print(f"navd.py: recompute_route - Destination changed: {destination_changed} (New: {new_destination}, Old: {self.nav_destination})", flush=True)
+
+    should_recompute_final = needs_route or destination_changed
+    print(f"navd.py: recompute_route - Final should_recompute check: {should_recompute_final}", flush=True)
+
+    if new_destination != self.nav_destination: # Log only if changed
       cloudlog.warning(f"Got new destination from NavDestination param {new_destination}")
       print(f"navd.py: CLOUDLG - Got new destination from NavDestination param {new_destination}", flush=True)
-      should_recompute = True
+      # should_recompute = True # Handled by should_recompute_final
 
-    if self.recompute_countdown == 0 and should_recompute:
+    print(f"navd.py: recompute_route - Checking countdown ({self.recompute_countdown}) and should_recompute ({should_recompute_final})", flush=True)
+    if self.recompute_countdown == 0 and should_recompute_final:
+      print(f"navd.py: recompute_route - Conditions met, calling calculate_route. Backoff: {self.recompute_backoff}", flush=True)
       self.recompute_countdown = 2**self.recompute_backoff
       self.recompute_backoff = min(6, self.recompute_backoff + 1)
       self.calculate_route(new_destination)
       self.reroute_counter = 0
     else:
+      print("navd.py: recompute_route - Conditions not met or countdown active, decrementing countdown.", flush=True)
       self.recompute_countdown = max(0, self.recompute_countdown - 1)
+    print("navd.py: recompute_route finished.", flush=True)
 
   def calculate_route(self, destination):
     print(f"navd.py: calculate_route called for destination: {destination}", flush=True)
