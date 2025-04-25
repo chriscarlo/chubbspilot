@@ -37,9 +37,11 @@ class RouteEngine:
     self.pm = pm
 
     self.params = Params()
+    print("navd.py: Params initialized.", flush=True)
 
     # Get last gps position from params
     self.last_position = coordinate_from_param("LastGPSPosition", self.params)
+    print(f"navd.py: Initial last_position: {self.last_position}", flush=True)
     self.last_bearing = None
 
     self.gps_ok = False
@@ -60,40 +62,74 @@ class RouteEngine:
 
     self.api = None
     self.mapbox_token = None
-    self.mapbox_public_token = None # Added for potential future use
+    self.mapbox_public_token = None
     self.mapbox_host = None
+    print(f"navd.py: Attempting to load keys from {MAPBOX_API_KEY_FILE}...", flush=True)
+    key_loaded_from_file = False
     try:
       with open(MAPBOX_API_KEY_FILE, 'r') as f:
+        print(f"navd.py: Opened {MAPBOX_API_KEY_FILE}", flush=True)
         keys = json.load(f)
+        print(f"navd.py: Parsed JSON keys: {keys}", flush=True) # Be careful logging keys
         self.mapbox_token = keys.get('secret_key')
-        self.mapbox_public_token = keys.get('public_key') # Store public key too
-        self.mapbox_host = "https://api.mapbox.com"
-        cloudlog.info("Using Mapbox keys from file.")
-    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-      cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: {e}. Falling back to other methods.")
+        self.mapbox_public_token = keys.get('public_key')
+        if self.mapbox_token:
+          print("navd.py: Found secret_key in file.", flush=True)
+          self.mapbox_host = "https://api.mapbox.com"
+          cloudlog.info("Using Mapbox keys from file.")
+          key_loaded_from_file = True
+        else:
+           print("navd.py: secret_key not found in file.", flush=True)
+    except FileNotFoundError:
+      print(f"navd.py: {MAPBOX_API_KEY_FILE} not found.", flush=True)
+      cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: FileNotFoundError.")
+    except json.JSONDecodeError as e:
+      print(f"navd.py: Error decoding JSON from {MAPBOX_API_KEY_FILE}: {e}", flush=True)
+      cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: JSONDecodeError: {e}")
+    except KeyError as e:
+      print(f"navd.py: Key error parsing {MAPBOX_API_KEY_FILE}: {e}", flush=True)
+      cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: KeyError: {e}")
+    except Exception as e: # Catch other potential errors
+        print(f"navd.py: Unexpected error loading key file {MAPBOX_API_KEY_FILE}: {e}", flush=True)
+        cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: {e}. Falling back to other methods.")
+
+    # Fallback logic
+    if not key_loaded_from_file:
+      print("navd.py: Key file failed, entering fallback logic...", flush=True)
       # Fallback logic (existing code)
       if "MAPBOX_TOKEN" in os.environ:
+        print("navd.py: Checking MAPBOX_TOKEN env var...", flush=True)
         self.mapbox_token = os.environ["MAPBOX_TOKEN"]
         self.mapbox_host = "https://api.mapbox.com"
         cloudlog.info("Using Mapbox token from environment variable.")
+        print("navd.py: Using token from env var.", flush=True)
       elif not has_prime():
+        print("navd.py: Not prime user, checking MapboxSecretKey param...", flush=True)
         self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
         if self.mapbox_token:
+            print("navd.py: Using token from MapboxSecretKey param.", flush=True)
             cloudlog.info("Using Mapbox token from MapboxSecretKey param.")
             self.mapbox_host = "https://api.mapbox.com"
         else:
+            print("navd.py: MapboxSecretKey param not found.", flush=True)
             cloudlog.warning("No MapboxSecretKey param found.")
       else: # has_prime()
+        print("navd.py: Prime user, using comma api proxy...", flush=True)
         self.api = Api(self.params.get("DongleId", encoding='utf8'))
         self.mapbox_host = "https://maps.comma.ai"
         cloudlog.info("Using comma.ai map proxy.")
 
     # Ensure mapbox_host is set if token was found in file but not otherwise
     if self.mapbox_token and not self.mapbox_host:
+        print("navd.py: Setting mapbox_host for file token.", flush=True)
         self.mapbox_host = "https://api.mapbox.com" # Default if token exists but host wasn't set
 
+    # Final check
     if not self.mapbox_token and not self.api:
+      print("navd.py: ERROR - No token/API configured.", flush=True)
       cloudlog.error("Mapbox token/API key not configured and not using comma proxy.")
+    else:
+       print(f"navd.py: API config final check OK. Host: {self.mapbox_host}, Token set: {self.mapbox_token is not None}, API set: {self.api is not None}", flush=True)
 
     # FrogPilot variables
     self.frogpilot_toggles = get_frogpilot_toggles()
@@ -109,6 +145,8 @@ class RouteEngine:
     # Mock Route State
     self.mock_route_active = False
     self.mock_route_timer = 0 # Start timer at 0 to trigger initial calculation
+
+    print("navd.py: RouteEngine __init__ finished.", flush=True)
 
   def update(self):
     self.sm.update(0)
@@ -347,10 +385,12 @@ class RouteEngine:
     self.send_route()
 
   def send_instruction(self):
+    print("navd.py: send_instruction called...", flush=True) # Added trace
     msg = messaging.new_message('navInstruction', valid=True)
     fp_msg = messaging.new_message('frogpilotNavigation', valid=True)
 
     if self.step_idx is None:
+      print("navd.py: send_instruction - step_idx is None, invalidating.", flush=True)
       msg.valid = False
       self.pm.send('navInstruction', msg)
 
@@ -420,18 +460,41 @@ class RouteEngine:
     msg.navInstruction.timeRemaining = total_time
     msg.navInstruction.timeRemainingTypical = total_time_typical
 
-    # Speed limit
-    closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
-    if closest_idx > 0:
-      # If we are not past the closest point, show previous
-      if along_geometry < distance_along_geometry(geometry, geometry[closest_idx]):
-        closest = geometry[closest_idx - 1]
+    # Speed limit logic
+    print("navd.py: send_instruction - Processing speed limit...", flush=True)
+    current_nav_speed_limit = 0 # Local variable for this cycle
+    speed_limit_found = False
+    try:
+        closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
+        print(f"navd.py: send_instruction - Closest geometry index: {closest_idx}", flush=True)
+        if closest_idx > 0:
+            # If we are not past the closest point, show previous
+            if along_geometry < distance_along_geometry(geometry, geometry[closest_idx]):
+                print("navd.py: send_instruction - Using previous geometry point for speed limit.", flush=True)
+                closest = geometry[closest_idx - 1]
 
-    if ('maxspeed' in closest.annotations) and self.localizer_valid:
-      msg.navInstruction.speedLimit = closest.annotations['maxspeed']
-      self.nav_speed_limit = closest.annotations['maxspeed']
-    if not self.localizer_valid or ('maxspeed' not in closest.annotations):
-      self.nav_speed_limit = 0
+        print(f"navd.py: send_instruction - Checking annotations for point: {closest}", flush=True)
+        if 'maxspeed' in closest.annotations:
+            speed_limit_found = True
+            maxspeed_value = closest.annotations['maxspeed']
+            print(f"navd.py: send_instruction - Found maxspeed annotation: {maxspeed_value}", flush=True)
+            if self.localizer_valid:
+                print("navd.py: send_instruction - Localizer valid, setting speed limit.", flush=True)
+                msg.navInstruction.speedLimit = maxspeed_value
+                current_nav_speed_limit = maxspeed_value
+            else:
+                print("navd.py: send_instruction - Localizer invalid, not setting speed limit in msg.", flush=True)
+                current_nav_speed_limit = 0 # Set internal variable to 0 if localizer invalid
+        else:
+             print("navd.py: send_instruction - No maxspeed annotation found for closest point.", flush=True)
+
+    except Exception as e:
+        print(f"navd.py: send_instruction - Error during speed limit processing: {e}", flush=True)
+        cloudlog.exception("navd.send_instruction speed limit error")
+
+    # Update internal state AFTER processing
+    self.nav_speed_limit = current_nav_speed_limit
+    print(f"navd.py: send_instruction - Updated self.nav_speed_limit to: {self.nav_speed_limit}", flush=True)
 
     # Speed limit sign type
     if 'speedLimitSign' in step:
@@ -487,6 +550,7 @@ class RouteEngine:
     fp_msg.frogpilotNavigation.navigationSpeedLimit = self.nav_speed_limit
 
     self.pm.send('frogpilotNavigation', fp_msg)
+    print("navd.py: send_instruction finished.", flush=True) # Added trace
 
   def send_route(self):
     coords = []
