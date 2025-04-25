@@ -433,9 +433,6 @@ class MapReader:
         for tile_id in tiles_to_unload:
             self._unload_tile(tile_id)
 
-        # Update loaded tiles based on current position FIRST
-        self._update_loaded_tiles(lat, lon)
-
         # Check cache directly first - segment might be loaded even if tile isn't "active"
         # if not self.segments_data: # This check is misleading with cache
         if len(self.segments_data) == 0:
