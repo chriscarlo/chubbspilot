@@ -2,6 +2,7 @@
 import math
 import json
 import numpy as np
+from shapely.geometry import Point
 
 import cereal.messaging as messaging
 from cereal import log
