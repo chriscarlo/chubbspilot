@@ -77,21 +77,26 @@ class RouteEngine:
           print("navd.py: Found secret_key in file.", flush=True)
           self.mapbox_host = "https://api.mapbox.com"
           cloudlog.info("Using Mapbox keys from file.")
+          print("navd.py: CLOUDLG - Using Mapbox keys from file.", flush=True)
           key_loaded_from_file = True
         else:
            print("navd.py: secret_key not found in file.", flush=True)
     except FileNotFoundError:
       print(f"navd.py: {MAPBOX_API_KEY_FILE} not found.", flush=True)
       cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: FileNotFoundError.")
+      print(f"navd.py: CLOUDLG - Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: FileNotFoundError.", flush=True)
     except json.JSONDecodeError as e:
       print(f"navd.py: Error decoding JSON from {MAPBOX_API_KEY_FILE}: {e}", flush=True)
       cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: JSONDecodeError: {e}")
+      print(f"navd.py: CLOUDLG - Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: JSONDecodeError: {e}", flush=True)
     except KeyError as e:
       print(f"navd.py: Key error parsing {MAPBOX_API_KEY_FILE}: {e}", flush=True)
       cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: KeyError: {e}")
+      print(f"navd.py: CLOUDLG - Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: KeyError: {e}", flush=True)
     except Exception as e: # Catch other potential errors
         print(f"navd.py: Unexpected error loading key file {MAPBOX_API_KEY_FILE}: {e}", flush=True)
         cloudlog.warning(f"Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: {e}. Falling back to other methods.")
+        print(f"navd.py: CLOUDLG - Could not load Mapbox keys from {MAPBOX_API_KEY_FILE}: {e}. Falling back to other methods.", flush=True)
 
     # Fallback logic
     if not key_loaded_from_file:
@@ -102,7 +107,7 @@ class RouteEngine:
         self.mapbox_token = os.environ["MAPBOX_TOKEN"]
         self.mapbox_host = "https://api.mapbox.com"
         cloudlog.info("Using Mapbox token from environment variable.")
-        print("navd.py: Using token from env var.", flush=True)
+        print("navd.py: CLOUDLG - Using Mapbox token from environment variable.", flush=True)
       elif not has_prime():
         print("navd.py: Not prime user, checking MapboxSecretKey param...", flush=True)
         self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
@@ -110,14 +115,17 @@ class RouteEngine:
             print("navd.py: Using token from MapboxSecretKey param.", flush=True)
             cloudlog.info("Using Mapbox token from MapboxSecretKey param.")
             self.mapbox_host = "https://api.mapbox.com"
+            print("navd.py: CLOUDLG - Using Mapbox token from MapboxSecretKey param.", flush=True)
         else:
             print("navd.py: MapboxSecretKey param not found.", flush=True)
             cloudlog.warning("No MapboxSecretKey param found.")
+            print("navd.py: CLOUDLG - No MapboxSecretKey param found.", flush=True)
       else: # has_prime()
         print("navd.py: Prime user, using comma api proxy...", flush=True)
         self.api = Api(self.params.get("DongleId", encoding='utf8'))
         self.mapbox_host = "https://maps.comma.ai"
         cloudlog.info("Using comma.ai map proxy.")
+        print("navd.py: CLOUDLG - Using comma.ai map proxy.", flush=True)
 
     # Ensure mapbox_host is set if token was found in file but not otherwise
     if self.mapbox_token and not self.mapbox_host:
@@ -128,6 +136,7 @@ class RouteEngine:
     if not self.mapbox_token and not self.api:
       print("navd.py: ERROR - No token/API configured.", flush=True)
       cloudlog.error("Mapbox token/API key not configured and not using comma proxy.")
+      print("navd.py: CLOUDLG - Mapbox token/API key not configured and not using comma proxy.", flush=True)
     else:
        print(f"navd.py: API config final check OK. Host: {self.mapbox_host}, Token set: {self.mapbox_token is not None}, API set: {self.api is not None}", flush=True)
 
@@ -156,6 +165,7 @@ class RouteEngine:
       if ui_pid:
         if self.ui_pid and self.ui_pid != ui_pid[0]:
           cloudlog.warning("UI restarting, sending route")
+          print("navd.py: CLOUDLG - UI restarting, sending route", flush=True)
           threading.Timer(5.0, self.send_route).start()
         self.ui_pid = ui_pid[0]
 
@@ -165,6 +175,7 @@ class RouteEngine:
       self.send_instruction()
     except Exception:
       cloudlog.exception("navd.failed_to_compute")
+      print("navd.py: CLOUDLG - navd.failed_to_compute", flush=True)
 
     # Update FrogPilot parameters
     if self.sm['frogpilotPlan'].togglesUpdated:
@@ -201,10 +212,12 @@ class RouteEngine:
         self.mock_route_timer = 0 # Trigger immediate calculation
         self.mock_route_active = True
         cloudlog.info("No destination set, activating mock route.")
+        print("navd.py: CLOUDLG - No destination set, activating mock route.", flush=True)
 
       if self.mock_route_active and self.mock_route_timer == 0:
         if self.last_bearing is None or not self.gps_ok or not self.localizer_valid:
           cloudlog.warning("Mock route conditions lost (bearing/gps/localizer), deactivating.")
+          print("navd.py: CLOUDLG - Mock route conditions lost (bearing/gps/localizer), deactivating.", flush=True)
           self.clear_route() # This also sets mock_route_active to False and resets timer
           return
 
@@ -214,11 +227,13 @@ class RouteEngine:
                                                   MOCK_ROUTE_DISTANCE_KM)
         if mock_dest:
           cloudlog.info(f"Calculating mock route to {mock_dest}")
+          print(f"navd.py: CLOUDLG - Calculating mock route to {mock_dest}", flush=True)
           self.calculate_route(mock_dest)
           # Reset timer for next recalculation
           self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC
         else:
           cloudlog.error("Failed to calculate mock destination.")
+          print("navd.py: CLOUDLG - Failed to calculate mock destination.", flush=True)
           # Don't retry immediately, wait for next timer cycle or location update
           self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC // 10 # Retry sooner
       return # Don't proceed to regular route logic if handling mock route
@@ -227,6 +242,7 @@ class RouteEngine:
     # If a destination is set, ensure mock route is deactivated
     if self.mock_route_active:
         cloudlog.info("Destination set, deactivating mock route.")
+        print("navd.py: CLOUDLG - Destination set, deactivating mock route.", flush=True)
         self.clear_route() # Deactivates mock route and clears existing route data
         # Don't return here, let regular logic continue with the new destination
 
@@ -234,6 +250,7 @@ class RouteEngine:
     should_recompute = self.should_recompute()
     if new_destination != self.nav_destination:
       cloudlog.warning(f"Got new destination from NavDestination param {new_destination}")
+      print(f"navd.py: CLOUDLG - Got new destination from NavDestination param {new_destination}", flush=True)
       should_recompute = True
 
     if self.recompute_countdown == 0 and should_recompute:
@@ -247,6 +264,7 @@ class RouteEngine:
   def calculate_route(self, destination):
     print(f"navd.py: calculate_route called for destination: {destination}", flush=True)
     cloudlog.warning(f"Calculating route {self.last_position} -> {destination}")
+    print(f"navd.py: CLOUDLG - Calculating route {self.last_position} -> {destination}", flush=True)
     self.nav_destination = destination
 
     lang = self.params.get('LanguageSetting', encoding='utf8')
@@ -260,6 +278,7 @@ class RouteEngine:
     if token is None:
       print("navd.py: calculate_route - No token available, exiting.", flush=True)
       cloudlog.error("No valid Mapbox token or API token available. Cannot fetch route.")
+      print("navd.py: CLOUDLG - No valid Mapbox token or API token available. Cannot fetch route.", flush=True)
       self.clear_route()
       return
 
@@ -300,6 +319,7 @@ class RouteEngine:
       if resp.status_code != 200:
         print(f"navd.py: calculate_route - API Error Response Text: {resp.text}", flush=True)
         cloudlog.event("API request failed", status_code=resp.status_code, text=resp.text, error=True)
+        print(f"navd.py: CLOUDLG - API request failed. status_code={resp.status_code}, text={resp.text}", flush=True)
       resp.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
 
       print("navd.py: calculate_route - Request successful, parsing JSON...", flush=True)
@@ -383,6 +403,7 @@ class RouteEngine:
       else:
         print("navd.py: calculate_route - Mapbox returned empty route list.", flush=True)
         cloudlog.warning("Got empty route response")
+        print("navd.py: CLOUDLG - Got empty route response", flush=True)
         self.clear_route()
 
       # clear waypoints to avoid a re-route including past waypoints
@@ -392,14 +413,17 @@ class RouteEngine:
     except requests.exceptions.Timeout:
         print("navd.py: calculate_route - Request timed out.", flush=True)
         cloudlog.exception("failed to get route - timeout")
+        print("navd.py: CLOUDLG - failed to get route - timeout", flush=True)
         self.clear_route()
     except requests.exceptions.RequestException as e:
         print(f"navd.py: calculate_route - Request failed: {e}", flush=True)
         cloudlog.exception("failed to get route")
+        print(f"navd.py: CLOUDLG - failed to get route: {e}", flush=True)
         self.clear_route()
     except Exception as e: # Catch other potential errors like JSON parsing
         print(f"navd.py: calculate_route - Unexpected error: {e}", flush=True)
         cloudlog.exception("navd.calculate_route unexpected error")
+        print(f"navd.py: CLOUDLG - navd.calculate_route unexpected error: {e}", flush=True)
         self.clear_route()
 
     self.send_route()
@@ -511,6 +535,7 @@ class RouteEngine:
     except Exception as e:
         print(f"navd.py: send_instruction - Error during speed limit processing: {e}", flush=True)
         cloudlog.exception("navd.send_instruction speed limit error")
+        print(f"navd.py: CLOUDLG - navd.send_instruction speed limit error: {e}", flush=True)
 
     # Update internal state AFTER processing
     self.nav_speed_limit = current_nav_speed_limit
@@ -539,7 +564,7 @@ class RouteEngine:
           json.dump(self.r3, json_file, indent=4)
       else:
         cloudlog.warning("Destination reached")
-
+        print("navd.py: CLOUDLG - Destination reached", flush=True)
         # Clear route if driving away from destination
         dist = self.nav_destination.distance_to(self.last_position)
         if dist > REROUTE_DISTANCE:
@@ -636,6 +661,7 @@ class RouteEngine:
       return Coordinate(math.degrees(lat2_rad), math.degrees(lon2_rad))
     except Exception as e:
       cloudlog.error(f"Error calculating coordinate ahead: {e}")
+      print(f"navd.py: CLOUDLG - Error calculating coordinate ahead: {e}", flush=True)
       return None
 
 
