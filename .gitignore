@@ -2748,3 +2748,4 @@ rlog
 
 *.a
 !third_party/libyuv/*/lib/libyuv.a
+tools/bin/protoc

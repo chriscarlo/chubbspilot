@@ -3,20 +3,17 @@
 import sys
 import time
 # import capnp # REMOVED
-import struct # Added for size prefixing
+import struct # Added for size prefixing and index file
 import os # Import os for path operations
 import json # For parsing GeoJSON lines
 import numpy as np
 import math # Added for tiling
-import pickle # Added for simplified index serialization
+from collections import defaultdict # Added for collecting index data
 
 # Import our geometry functions
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
 # Import generated protobuf classes
 from tools.map_processing import osm_speed_data_pb2
-
-# Add necessary imports for bounding box
-from shapely.geometry import LineString
 
 # Load Cap'n Proto schema REMOVED
 # script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +32,23 @@ MPH_TO_MPS = 0.44704
 TILE_SIZE_DEG = 0.1 # Back to 0.1 degrees
 OUTPUT_BASE_DIR = "map_data_tiles_protobuf"
 
-# Index record structure (using struct for binary packing)
-# Q: osm_way_id (int64)
-# dddd: min_lon, min_lat, max_lon, max_lat (double)
-# QQ: offset, size (uint64)
-INDEX_RECORD_FORMAT = '<QddddQQ'
+# Define index file format using struct
+# < = little-endian
+# q = long long (osm_way_id, 8 bytes)
+# d = double (bounds, 4 * 8 = 32 bytes)
+# Q = unsigned long long (offset, 8 bytes)
+# Q = unsigned long long (size, 8 bytes)
+# Total: 8 + 32 + 8 + 8 = 56 bytes per index record
+INDEX_RECORD_FORMAT = '<qddddQQ'
 INDEX_RECORD_SIZE = struct.calcsize(INDEX_RECORD_FORMAT)
+
+# Add REGION_BOUNDS definition (copied from reader.py)
+# Approximate Bounding Boxes (min_lon, min_lat, max_lon, max_lat)
+REGION_BOUNDS = {
+    "california": (-124.5, 32.5, -114.1, 42.0),
+    "nevada": (-120.0, 35.0, -114.0, 42.0),
+    # Add more regions here as needed
+}
 
 # Speed parsing function (remains the same)
 def parse_speed_limit(speed_str):
@@ -78,7 +86,6 @@ def write_message(outfile, message):
     size_bytes = struct.pack('<I', len(message_bytes)) # Pack size as little-endian unsigned int (4 bytes)
     outfile.write(size_bytes)
     outfile.write(message_bytes)
-    return outfile.tell() - len(message_bytes), len(message_bytes) # Return offset and size
 
 def main(input_geojsonl, output_basedir):
     start_time = time.time()
@@ -121,7 +128,8 @@ def main(input_geojsonl, output_basedir):
     # ---
     tile_file_handles = {}
     tile_segment_counts = {}
-    tile_index_data = {} # Store index records per tile_id {tile_id: [(id, min_lon, ...), ...]}
+    tile_index_data = defaultdict(list) # Store index records per tile_id
+    tile_current_offsets = defaultdict(int) # Track current offset in protobuf file
 
     try:
         with open(input_geojsonl, 'r') as infile:
@@ -191,19 +199,8 @@ def main(input_geojsonl, output_basedir):
                     start_lon, start_lat = coords[0]
                     tile_id = get_tile_id(start_lat, start_lon, TILE_SIZE_DEG)
 
-                    # Determine sub-directory based on region and latitude
-                    sub_dir_name = None
-                    if region_name == "california":
-                        if start_lat >= 35.8:
-                            sub_dir_name = "NorCal"
-                        else:
-                            sub_dir_name = "SoCal"
-
                     # Construct final output directory for the tile
-                    if sub_dir_name:
-                        tile_output_dir = os.path.join(region_base_output_dir, sub_dir_name)
-                    else:
-                        tile_output_dir = region_base_output_dir # No subdir for other regions
+                    tile_output_dir = region_base_output_dir # No subdir for other regions
 
                     # Ensure the specific tile output directory exists
                     # Creating directories within the loop might be slow, but ensures correctness
@@ -217,16 +214,17 @@ def main(input_geojsonl, output_basedir):
                     # --- Get or Open Tile File Handle (using full path) ---
                     outfile = tile_file_handles.get(tile_id)
                     if outfile is None:
-                        tile_filename = f"{tile_id}.protobuf"
-                        tile_filepath = os.path.join(tile_output_dir, tile_filename) # Use the determined output dir
+                        tile_filename_proto = f"{tile_id}.protobuf"
+                        tile_filepath_proto = os.path.join(tile_output_dir, tile_filename_proto) # Use the determined output dir
                         try:
-                            # Open in 'wb' to ensure offset tracking starts from 0 for new/overwritten files
-                            outfile = open(tile_filepath, 'wb')
+                            # Use 'ab' for protobuf file
+                            outfile = open(tile_filepath_proto, 'ab')
                             tile_file_handles[tile_id] = outfile
                             tile_segment_counts[tile_id] = 0
-                            tile_index_data[tile_id] = [] # Initialize index list for new tile
+                            # Initialize offset for new file
+                            tile_current_offsets[tile_id] = 0
                         except IOError as e:
-                            print(f"Error opening tile file {tile_filepath}: {e}")
+                            print(f"Error opening protobuf tile file {tile_filepath_proto}: {e}")
                             continue
 
                     # DEBUG: Are we reaching the processing point?
@@ -246,6 +244,7 @@ def main(input_geojsonl, output_basedir):
 
                     # Populate geometry, skipping non-finite and (0,0) points
                     points_added = 0
+                    min_lon, min_lat, max_lon, max_lat = float('inf'), float('inf'), float('-inf'), float('-inf')
                     for lon, lat in coords:
                         # Check for finite *and* non-zero coordinates
                         if math.isfinite(lat) and math.isfinite(lon) and not (lat == 0.0 and lon == 0.0):
@@ -253,6 +252,11 @@ def main(input_geojsonl, output_basedir):
                             point.latitude = lat
                             point.longitude = lon
                             points_added += 1
+                            # Update bounds for index
+                            min_lon = min(min_lon, lon)
+                            min_lat = min(min_lat, lat)
+                            max_lon = max(max_lon, lon)
+                            max_lat = max(max_lat, lat)
                         else:
                             # Keep the warning for non-finite, but maybe silence for (0,0)? - Keeping warning for now.
                             print(f"Warning: Skipping invalid coordinate (Lat: {lat}, Lon: {lon}) in segment {current_osm_id}, line {line_num}", file=sys.stderr)
@@ -262,17 +266,6 @@ def main(input_geojsonl, output_basedir):
                         print(f"Warning: Skipping segment {current_osm_id} on line {line_num} due to insufficient valid points ({points_added} found).", file=sys.stderr)
                         processed_way_count -= 1 # Decrement because we are skipping after incrementing
                         continue # Skip to next line in geojsonl
-
-                    # --- Calculate Bounding Box ---
-                    try:
-                        # Create LineString from the *filtered* points used in the message
-                        valid_coords_lon_lat = [(p.longitude, p.latitude) for p in segment_msg.geometry]
-                        segment_linestring = LineString(valid_coords_lon_lat)
-                        min_lon, min_lat, max_lon, max_lat = segment_linestring.bounds
-                    except Exception as e_bounds:
-                        print(f"Warning: Could not calculate bounds for segment {current_osm_id} on line {line_num}: {e_bounds}. Skipping segment.")
-                        processed_way_count -= 1
-                        continue
 
                     # Populate curvatures - Ensure they are standard, finite floats
                     valid_curvatures = [float(c) for c in segment_curvatures if math.isfinite(float(c))]
@@ -290,12 +283,24 @@ def main(input_geojsonl, output_basedir):
                     print(f"DEBUG WRITE Line {line_num}: ID={segment_msg.osm_way_id}, GeomLen={len(segment_msg.geometry)}, CurvLen={len(segment_msg.curvatures)}, Speed={segment_msg.speed_limit_mps:.1f}", file=sys.stderr)
 
                     # --- Write Size-Prefixed Message to Tile File ---
-                    offset, size = write_message(outfile, segment_msg)
-                    tile_segment_counts[tile_id] += 1
+                    message_bytes = segment_msg.SerializeToString()
+                    message_size = len(message_bytes)
+                    size_bytes = struct.pack('<I', message_size) # Pack size as little-endian unsigned int (4 bytes)
 
-                    # --- Store Index Record ---
-                    index_record = (current_osm_id, min_lon, min_lat, max_lon, max_lat, offset, size)
+                    # Store current offset before writing
+                    current_offset = tile_current_offsets[tile_id]
+
+                    outfile.write(size_bytes)
+                    outfile.write(message_bytes)
+
+                    # Update offset for the next message
+                    tile_current_offsets[tile_id] += len(size_bytes) + message_size
+
+                    # Add record to index data for this tile
+                    index_record = (current_osm_id, min_lon, min_lat, max_lon, max_lat, current_offset, message_size)
                     tile_index_data[tile_id].append(index_record)
+
+                    tile_segment_counts[tile_id] += 1
 
                     # Update overall progress
                     if processed_way_count % 100000 == 0: # Reduce progress frequency
@@ -315,10 +320,9 @@ def main(input_geojsonl, output_basedir):
          print(f"An error occurred during processing near line {line_num}: {e}")
          sys.exit(1) # Exit on error
     finally:
-        # --- Ensure all tile files are closed AND write index files ---
+        # --- Ensure all tile files are closed ---
         print("Closing tile files and writing index files...")
         closed_count = 0
-        index_files_written = 0
         for tile_id, handle in tile_file_handles.items():
             try:
                 handle.flush() # Explicitly flush buffers
@@ -326,34 +330,48 @@ def main(input_geojsonl, output_basedir):
                 closed_count += 1
 
                 # --- Write the index file for this tile ---
-                index_records = tile_index_data.get(tile_id)
-                if index_records:
-                    # Determine output directory again (needed here)
-                    # Get approx center to find region/subdir
-                    # TODO: Store the actual tile_output_dir when opening the file handle?
-                    temp_lat_idx, temp_lon_idx = _get_approx_center_for_tile(tile_id) # Assume helper exists
-                    if temp_lat_idx is not None and temp_lon_idx is not None:
-                        tile_output_dir = _determine_tile_output_dir(region_name, temp_lat_idx, temp_lon_idx, region_base_output_dir) # Assume helper
-                    else: # Fallback if center calculation fails
-                        tile_output_dir = region_base_output_dir
+                index_data = tile_index_data.get(tile_id)
+                if index_data:
+                    # Determine output directory for index file (same as protobuf file)
+                    # We need the original path used to open the handle
+                    # This is tricky as handle doesn't store path. Reconstruct it.
+                    # Assuming region_name is consistent for the tile_id's lifetime
+                    tile_lat_idx = math.floor(float(tile_id.split('_')[0][1:]) * (1 if tile_id.startswith('N') else -1) / TILE_SIZE_DEG)
+                    tile_lon_idx = math.floor(float(tile_id.split('_')[1][1:]) * (1 if tile_id.startswith('E') else -1) / TILE_SIZE_DEG)
+                    tile_start_lat = tile_lat_idx * TILE_SIZE_DEG
+                    tile_start_lon = tile_lon_idx * TILE_SIZE_DEG
 
+                    # Re-determine region (safe but slightly redundant)
+                    tile_region = None
+                    for r, bounds in REGION_BOUNDS.items():
+                        if bounds[1] <= tile_start_lat < bounds[3] + TILE_SIZE_DEG and bounds[0] <= tile_start_lon < bounds[2] + TILE_SIZE_DEG:
+                             tile_region = r
+                             break
+                    if not tile_region:
+                        print(f"Warning: Could not determine region for tile {tile_id} during index write.")
+                        continue
+
+                    index_output_dir = os.path.join(output_basedir, tile_region)
                     index_filename = f"{tile_id}.idx"
-                    index_filepath = os.path.join(tile_output_dir, index_filename)
+                    index_filepath = os.path.join(index_output_dir, index_filename)
+
                     try:
-                        with open(index_filepath, 'wb') as idxfile:
-                            for record in index_records:
-                                packed_record = struct.pack(INDEX_RECORD_FORMAT, *record)
-                                idxfile.write(packed_record)
-                        index_files_written += 1
+                        with open(index_filepath, 'wb') as idx_file:
+                            for record in index_data:
+                                packed_record = struct.pack(INDEX_RECORD_FORMAT,
+                                                          record[0], # osm_id
+                                                          record[1], record[2], record[3], record[4], # bounds
+                                                          record[5], record[6]) # offset, size
+                                idx_file.write(packed_record)
+                        print(f"  Written index file: {index_filepath} ({len(index_data)} records)")
                     except IOError as e_idx:
-                        print(f"Warning: Error writing index file {index_filepath}: {e_idx}")
-                    except struct.error as e_pack:
-                         print(f"Warning: Error packing index record for tile {tile_id}: {e_pack}. Record: {record}")
+                        print(f"Error writing index file {index_filepath}: {e_idx}")
+                else:
+                     print(f"Warning: No index data found for tile {tile_id}")
 
             except IOError as e:
-                print(f"Warning: Error closing file for tile {tile_id}: {e}")
-        print(f"Closed {closed_count} tile files.")
-        print(f"Wrote {index_files_written} index files.")
+                print(f"Warning: Error closing protobuf file for tile {tile_id}: {e}")
+        print(f"Closed {closed_count} protobuf tile files.")
         print(f"DEBUG Counts: empty={skipped_empty}, json_err={skipped_json_error}, not_feat={skipped_not_feature}, not_line={skipped_not_linestring}, coords<2={skipped_coords_len}, no_id={skipped_no_id}, bad_id={skipped_bad_id}")
 
     # --- Final Reporting ---
@@ -368,41 +386,6 @@ def main(input_geojsonl, output_basedir):
     #    print(f"  Tile {tile_id}: {count} segments")
 
     print(f"Total processing time: {total_time:.2f}s")
-
-# Helper to get tile center (copy from reader or make common)
-def _get_approx_center_for_tile(tile_id):
-    try:
-        parts = tile_id.split('_')
-        lat_part = parts[0]
-        lon_part = parts[1]
-
-        lat = float(lat_part[1:])
-        if lat_part[0] == 'S': lat *= -1
-
-        lon = float(lon_part[1:])
-        if lon_part[0] == 'W': lon *= -1
-
-        # Return center coordinates
-        center_lat = lat + TILE_SIZE_DEG / 2.0
-        center_lon = lon + TILE_SIZE_DEG / 2.0
-        return center_lat, center_lon
-    except Exception as e:
-        print(f"Error parsing tile_id '{tile_id}': {e}")
-        return None, None
-
-# Helper to determine output dir (logic from main loop)
-def _determine_tile_output_dir(region_name, start_lat, start_lon, region_base_output_dir):
-    sub_dir_name = None
-    if region_name == "california":
-        if start_lat >= 35.8:
-            sub_dir_name = "NorCal"
-        else:
-            sub_dir_name = "SoCal"
-
-    if sub_dir_name:
-        return os.path.join(region_base_output_dir, sub_dir_name)
-    else:
-        return region_base_output_dir
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

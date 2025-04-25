@@ -1,15 +1,15 @@
 import os
 # import capnp # REMOVED
-import struct # Added for size prefix reading
+import struct # Added for size prefix reading and index file
 import math
 import sys
 import json
 import sys # Add sys import
 import os # Add os import
-from collections import OrderedDict # Added for LRU Cache
 from openpilot.common.params import Params
 from rtree import index as rtree_index
 from shapely.geometry import Point, LineString
+from collections import OrderedDict # Added for LRU cache
 # Import generated protobuf classes - now relative
 # from tools.map_processing import osm_speed_data_pb2
 from . import osm_speed_data_pb2
@@ -99,28 +99,29 @@ print(f"MapReader: Using tile base directory: {TILE_DATA_BASE_DIR}") # Add confi
 # SCHEMA_DIR = os.path.join(_repo_root, "tools/map_processing") # No longer needed
 # SCHEMA_PATH = os.path.join(SCHEMA_DIR, "osm_speed_data.capnp") # No longer needed
 
-# --- Constants ---
-INDEX_RECORD_FORMAT = '<QddddQQ' # Must match process_osm.py (id, minlon, minlat, maxlon, maxlat, offset, size)
+# Define index record format (must match process_osm.py)
+INDEX_RECORD_FORMAT = '<qddddQQ'
 INDEX_RECORD_SIZE = struct.calcsize(INDEX_RECORD_FORMAT)
-CACHE_MAX_SEGMENTS = 2000 # Max number of segments to keep in LRU cache (tune this value)
-NEARBY_QUERY_RADIUS_DEG = 0.002 # Approx 220m, initial radius for finding candidates in index
+
+# Cache configuration
+DEFAULT_CACHE_SIZE = 5000 # Max number of segments to keep in memory
 
 class MapReader:
-    def __init__(self):
-        print("MapReader (Indexed PROTOBUF)") # Updated name
+    def __init__(self, cache_size=DEFAULT_CACHE_SIZE):
+        print("MapReader (Indexed Tiled PROTOBUF - Geom Focus) Initializing...") # Updated name
         # No schema check needed
 
-        # self.segments_data = {} # Replaced by LRU cache
-        self.segments_data = OrderedDict() # LRU Cache: {osm_id: segment_data_dict}
-        self.segment_tile_map = {} # Keep track of which tile a segment came from (for debugging/potential future use)
-        self.rtree_idx = rtree_index.Index() # R-tree now only indexes items *in the cache*
-        self.loaded_tiles = set() # Keep track of *which* tiles have had their *index* processed recently
-        self.protobuf_file_handles = {} # Cache open file handles for protobuf files {tile_id: file_handle}
+        self.segments_data = OrderedDict() # LRU Cache for segment data dicts
+        self.cache_size = cache_size
 
+        self.segment_tile_map = {} # Still needed to track which tile a segment came from for unloading
+        self.rtree_idx = rtree_index.Index() # R-tree will index segments currently IN THE CACHE
+        self.loaded_tiles = set() # Tracks which TILE INDICES have been loaded (not necessarily all segments)
         self.current_region = None
+
         self._determine_initial_region()
 
-        print("MapReader (Indexed PROTOBUF) Initialized. Ready to load tiles on demand.")
+        print(f"MapReader Initialized (Cache Size: {self.cache_size}). Ready to load tiles on demand.")
 
     def _determine_initial_region(self):
         # Simplified logic to find region for path construction
@@ -175,179 +176,210 @@ class MapReader:
         # Base directory for the determined region
         region_base_dir = os.path.join(TILE_DATA_BASE_DIR, determined_region)
 
-        # Construct final path
-        tile_output_dir = region_base_dir # Use region base directly
+        # Construct final path - NO SUBDIRS
+        # tile_output_dir = region_base_dir # Use region base directly - This line is redundant
+        # REMOVED SUBDIR LOGIC
+        # if determined_region == "california":
+        #     # Need lat/lon to determine NorCal/SoCal
+        #     if lat_deg >= 35.8:
+        #         tile_output_dir = os.path.join(region_base_dir, "NorCal")
+        #     else:
+        #         tile_output_dir = os.path.join(region_base_dir, "SoCal")
+        # else:
+        tile_output_dir = region_base_dir # No subdir for other regions
+
         return os.path.join(tile_output_dir, f"{tile_id}.protobuf")
 
-    def _load_tile(self, tile_id):
-        """Loads data from a specific tile file."""
+    def _load_tile(self, tile_id, current_lat, current_lon): # Added lat/lon context
+        """Loads relevant segment data from a specific tile file using its index."""
         if tile_id in self.loaded_tiles:
             return True
 
-        # PROBLEM: _load_tile doesn't know the lat/lon to determine the subdir!
-        # We need to pass lat/lon used to determine the tile_id here, or refactor.
-        # TEMP FIX: Try both NorCal/SoCal paths if region is CA and path doesn't exist?
-        # This is inefficient and hacky.
-
-        # TODO: Refactor tile loading to pass context (lat/lon) or determine path differently.
-
-        # -- Placeholder/Inefficient Fix Attempt ---
-        # First, try to guess path assuming current self.current_region context
-        # This requires _update_loaded_tiles to set self.current_region correctly first.
-        temp_lat, temp_lon = self._get_approx_center_for_tile(tile_id) # Need helper
-        if temp_lat is None or temp_lon is None:
-             print(f"Warning: Cannot determine approx coords for tile {tile_id}, load might fail.")
-             # Fallback: maybe try without subdir?
-             # tile_path = os.path.join(TILE_DATA_BASE_DIR, self.current_region or "unknown", f"{tile_id}.protobuf")
-             return False # Cannot reliably construct path
-
-        tile_path = self._get_tile_path(tile_id, temp_lat, temp_lon)
-        # --- End Placeholder ---
-
-        if not tile_path:
+        # Determine path for both protobuf and index file
+        tile_path_proto = self._get_tile_path(tile_id, current_lat, current_lon) # Use context lat/lon
+        if not tile_path_proto:
             print(f"Error: Could not construct path for tile {tile_id}")
+            # Mark as "loaded" to avoid retrying a tile we can't pathfind
+            self.loaded_tiles.add(tile_id)
             return False
 
-        # Check if file exists AND is effectively empty (e.g., < 4 bytes for size prefix)
-        file_exists = os.path.exists(tile_path)
-        if not file_exists or (file_exists and os.path.getsize(tile_path) < 4):
-            pass # No alternate check needed anymore
+        tile_path_idx = tile_path_proto.replace(".protobuf", ".idx")
 
-        # Final check before trying to load
-        if not file_exists or (file_exists and os.path.getsize(tile_path) < 4):
-             # print(f"Tile file not found or effectively empty: {tile_path}") # Too noisy
-             self.loaded_tiles.add(tile_id)
-             return True
+        # Check if index file exists and is not empty
+        if not os.path.exists(tile_path_idx) or os.path.getsize(tile_path_idx) < INDEX_RECORD_SIZE:
+            # print(f"Index file not found or empty for tile {tile_id}: {tile_path_idx}")
+            self.loaded_tiles.add(tile_id) # Mark as loaded (nothing to load)
+            return True # Considered "loaded" successfully (as there's nothing to load)
 
-        # --- Read the Index File ---
-        index_path = tile_path.replace('.protobuf', '.idx')
-        if not os.path.exists(index_path) or os.path.getsize(index_path) == 0:
-            # print(f"Index file not found or empty: {index_path}") # Too noisy
-            self.loaded_tiles.add(tile_id) # Mark tile as processed (even if empty/no index)
-            return True
+        # print(f"Loading index for tile: {tile_path_idx}") # Can be noisy
+        loaded_this_call = 0
+        segments_to_cache = [] # List of (osm_id, segment_data_dict)
 
-        # print(f"Processing index: {index_path}") # Too noisy
-        index_records = []
         try:
-            with open(index_path, 'rb') as idx_f:
+            # --- Read Index Records ---
+            index_records = []
+            with open(tile_path_idx, 'rb') as idx_file:
                 while True:
-                    record_bytes = idx_f.read(INDEX_RECORD_SIZE)
-                    if not record_bytes: break
-                    if len(record_bytes) < INDEX_RECORD_SIZE: break # Corrupt?
+                    record_bytes = idx_file.read(INDEX_RECORD_SIZE)
+                    if not record_bytes or len(record_bytes) < INDEX_RECORD_SIZE:
+                        break
+                    # osm_id, min_lon, min_lat, max_lon, max_lat, offset, size
                     record = struct.unpack(INDEX_RECORD_FORMAT, record_bytes)
-                    index_records.append(record) # (osm_id, min_lon, min_lat, max_lon, max_lat, offset, size)
-        except Exception as e:
-            print(f"Error reading index file {index_path}: {e}")
-            # Don't mark as loaded if index read failed fundamentally
-            if tile_id in self.loaded_tiles: self.loaded_tiles.remove(tile_id)
-            return False
+                    index_records.append(record)
 
-        # --- Find Nearby Candidates from Index (Needs current position) ---
-        # This function is now mainly about *preparing* to load segments when needed,
-        # triggered by _update_loaded_tiles. The actual loading happens on cache miss.
-        # For now, just mark the tile index as processed.
-        # TODO: Optionally, pre-populate cache with *very* close segments?
+            if not index_records:
+                 # print(f"No index records found in {tile_path_idx}")
+                 self.loaded_tiles.add(tile_id) # Mark as loaded
+                 return True
 
-        self.loaded_tiles.add(tile_id)
-        return True # Successfully processed index
+            # --- Find Candidate Segments using Index Bounds ---
+            # Simple bounding box check against current location (could use R-tree on index records too)
+            SEARCH_RADIUS_DEG = 0.005 # Approx 550m radius - adjust as needed
+            search_bounds = (current_lon - SEARCH_RADIUS_DEG,
+                             current_lat - SEARCH_RADIUS_DEG,
+                             current_lon + SEARCH_RADIUS_DEG,
+                             current_lat + SEARCH_RADIUS_DEG)
 
-    # Helper function to estimate tile center (needed for placeholder fix)
-    def _get_approx_center_for_tile(self, tile_id):
-        try:
-            parts = tile_id.split('_')
-            lat_part = parts[0]
-            lon_part = parts[1]
+            candidate_records = []
+            for rec in index_records:
+                osm_id, r_min_lon, r_min_lat, r_max_lon, r_max_lat, offset, size = rec
+                # Check if segment bounds overlap with search bounds
+                if (r_min_lon <= search_bounds[2] and r_max_lon >= search_bounds[0] and
+                    r_min_lat <= search_bounds[3] and r_max_lat >= search_bounds[1]):
+                    # Check if segment isn't already in our cache
+                    if osm_id not in self.segments_data:
+                        candidate_records.append(rec)
 
-            lat = float(lat_part[1:])
-            if lat_part[0] == 'S': lat *= -1
+            if not candidate_records:
+                # print(f"No candidate segments found near location in tile {tile_id}")
+                self.loaded_tiles.add(tile_id) # Mark as loaded
+                return True
 
-            lon = float(lon_part[1:])
-            if lon_part[0] == 'W': lon *= -1
+            # print(f"Found {len(candidate_records)} candidates in tile {tile_id} index near location.")
+            # --- Read and Deserialize Only Candidate Segments ---
+            with open(tile_path_proto, 'rb') as proto_file:
+                for rec in candidate_records:
+                    osm_id, _, _, _, _, offset, size = rec
+                    try:
+                        proto_file.seek(offset)
+                        message_bytes = proto_file.read(size)
+                        if len(message_bytes) < size:
+                            print(f"Warning: Could not read full message ({len(message_bytes)}/{size} bytes) for segment {osm_id} in {tile_path_proto}")
+                            continue
 
-            # Return center coordinates
-            center_lat = lat + TILE_SIZE_DEG / 2.0
-            center_lon = lon + TILE_SIZE_DEG / 2.0
-            return center_lat, center_lon
-        except Exception as e:
-            print(f"Error parsing tile_id '{tile_id}': {e}")
-            return None, None
+                    segment = osm_speed_data_pb2.SpeedLimitSegment()
+                        segment.ParseFromString(message_bytes)
 
-    def _unload_tile(self, tile_id):
-        """Unloads data for a specific tile."""
-        if tile_id not in self.loaded_tiles:
-            return
-        # print(f"Marking tile index as unloaded: {tile_id}") # Less noisy
-        if tile_id in self.protobuf_file_handles:
-            try:
-                self.protobuf_file_handles[tile_id].close()
-            except Exception as e:
-                print(f"Warning: Error closing protobuf file handle for tile {tile_id}: {e}")
-            del self.protobuf_file_handles[tile_id]
+                    coords = [(p.longitude, p.latitude) for p in segment.geometry]
+                    if len(coords) < 2: continue
+                    line = LineString(coords)
 
-        # We don't proactively remove segments from cache here anymore.
-        # Eviction happens naturally as new segments are loaded.
-        self.loaded_tiles.remove(tile_id)
+                        # --- Store Segment Data Temporarily ---
+                        segment_data = {
+                       'id': osm_id,
+                       'speed_mps': segment.speed_limit_mps,
+                       'geom': line,
+                       'curvatures': list(segment.curvatures),
+                           # Placeholders needed by matcher/consumers
+                           'highway': '', 'lanes': 0, 'oneway': 0, 'name': '',
+                           'ref': '', 'surface': '', 'is_bridge': False, 'is_tunnel': False,
+                           # Store bounds used for indexing/unloading
+                           '_bounds': (rec[1], rec[2], rec[3], rec[4]) # min_lon, min_lat, max_lon, max_lat
+                        }
+                        segments_to_cache.append((osm_id, segment_data))
+                        loaded_this_call += 1
 
-    def _ensure_segment_loaded(self, segment_id_to_load):
-        """Loads a specific segment ID into the cache if not already present."""
-        if segment_id_to_load in self.segments_data:
-            # Already in cache, move to end (most recently used)
-            self.segments_data.move_to_end(segment_id_to_load)
+                    except DecodeError as de:
+                        print(f"Protobuf DecodeError at offset {offset}, size {size} in {tile_path_proto} for segment {osm_id}: {de}")
+                        continue # Skip this segment
+                    except Exception as e_read:
+                        print(f"Error reading/parsing segment {osm_id} at offset {offset} in {tile_path_proto}: {e_read}")
+                        continue # Skip this segment
+
+            # --- Add Loaded Segments to LRU Cache ---
+            for osm_id, segment_data in segments_to_cache:
+                self._add_to_cache(osm_id, segment_data, tile_id)
+
+            if loaded_this_call > 0:
+                print(f"Cached {loaded_this_call} new segments from tile {tile_id}. Cache size: {len(self.segments_data)}")
+
+            self.loaded_tiles.add(tile_id) # Mark tile index as processed
             return True
 
-        # --- Cache Miss ---
-        # Find which tile this segment *should* belong to (requires reverse lookup or storing index data)
-        # This is inefficient. A better way: Query the relevant .idx file directly when needed.
-        # Let's redesign get_segment_data_at to handle this.
-        # This function becomes less useful in the new design.
-        print(f"ERROR: _ensure_segment_loaded called for {segment_id_to_load} - this shouldn't happen with new design")
-        return False
+        except FileNotFoundError:
+             print(f"Tile index or protobuf file not found during load: {tile_path_idx} or {tile_path_proto}")
+             self.loaded_tiles.add(tile_id) # Avoid retrying
+             return False
+        except Exception as e:
+             print(f"Error processing index/tile {tile_id}: {e}")
+             # Don't mark as loaded if fundamental error occurred
+             if tile_id in self.loaded_tiles: self.loaded_tiles.remove(tile_id)
+             return False
 
-    def _add_segment_to_cache(self, segment_id, segment_data_dict, tile_id):
+    def _add_to_cache(self, osm_id, segment_data, tile_id):
         """Adds a segment to the LRU cache and R-tree, handling eviction."""
-        if segment_id in self.segments_data:
-            # Should not happen if called correctly after checking cache
-            print(f"Warning: Attempted to re-add segment {segment_id} to cache.")
-            self.segments_data.move_to_end(segment_id)
-            return
-
-        # Add to cache
-        self.segments_data[segment_id] = segment_data_dict
-        self.segment_tile_map[segment_id] = tile_id # Keep track of origin tile
+        # Add to cache (OrderedDict)
+        if osm_id in self.segments_data:
+            self.segments_data.move_to_end(osm_id) # Mark as recently used
+        self.segments_data[osm_id] = segment_data
+        self.segment_tile_map[osm_id] = tile_id
 
         # Add to R-tree
         try:
-            geom = segment_data_dict.get('geom')
-            if geom:
-                self.rtree_idx.insert(segment_id, geom.bounds, obj=segment_id)
+            segment_bounds = segment_data['_bounds'] # Use stored bounds
+            self.rtree_idx.insert(osm_id, segment_bounds, obj=osm_id)
         except Exception as e_rtree:
-            print(f"Warning: Failed to insert segment {segment_id} into R-tree: {e_rtree}")
+            print(f"Warning: Failed to insert segment {osm_id} into R-tree: {e_rtree}")
 
-        # --- Enforce Cache Size Limit (Eviction) ---
-        while len(self.segments_data) > CACHE_MAX_SEGMENTS:
-            # Remove the least recently used item (first item in OrderedDict)
-            evicted_id, evicted_data = self.segments_data.popitem(last=False)
-            # print(f"Cache Eviction: Removing segment {evicted_id}") # Can be noisy
-
-            # Remove from R-tree
-            try:
-                evicted_geom = evicted_data.get('geom')
-                if evicted_geom:
-                    # Search for the specific item ID in the R-tree to delete
-                    items_to_delete = list(self.rtree_idx.intersection(evicted_geom.bounds, objects=True))
-                    for item in items_to_delete:
-                        if item.object == evicted_id:
-                            self.rtree_idx.delete(item.id, item.bbox)
-                            break # Found and deleted
-            except Exception as e_rtree_del:
-                print(f"Warning: Failed to delete segment {evicted_id} from R-tree during eviction: {e_rtree_del}")
-
-            # Remove from tile map
+        # Enforce cache size limit
+        while len(self.segments_data) > self.cache_size:
+            evicted_id, evicted_data = self.segments_data.popitem(last=False) # Remove oldest
+            # print(f"Cache full. Evicting segment {evicted_id}") # Can be noisy
+            self._remove_from_rtree(evicted_id, evicted_data)
             if evicted_id in self.segment_tile_map:
                 del self.segment_tile_map[evicted_id]
 
+    def _remove_from_rtree(self, segment_id, segment_data):
+        """Removes a segment from the R-tree index."""
+        try:
+            segment_bounds = segment_data.get('_bounds')
+            if segment_bounds:
+                # Use Rtree delete method with exact ID and bounds
+                self.rtree_idx.delete(segment_id, segment_bounds)
+            # else: Fallback - search and delete (less efficient)
+            #    items_to_delete = list(self.rtree_idx.intersection(segment_bounds, objects=True))
+            #    for item in items_to_delete:
+            #        if item.object == segment_id:
+            #            self.rtree_idx.delete(item.id, item.bbox)
+            #            break
+        except Exception as e:
+            # Rtree raises specific errors if ID/bounds not found, can be noisy
+            # print(f"Warning: Error removing segment {segment_id} from R-tree during eviction: {e}")
+            pass # Suppress R-tree deletion errors for now
+
+    def _unload_tile(self, tile_id):
+        """Unloads data for a specific tile - now primarily manages cache based on tile ID."""
+        if tile_id not in self.loaded_tiles:
+            return
+        # print(f"Requesting unload for tile: {tile_id}")
+
+        ids_in_tile = [seg_id for seg_id, t_id in self.segment_tile_map.items() if t_id == tile_id]
+
+        unloaded_count = 0
+        for seg_id in ids_in_tile:
+            if seg_id in self.segments_data:
+                segment_data = self.segments_data.pop(seg_id)
+                self._remove_from_rtree(seg_id, segment_data)
+                unloaded_count += 1
+            if seg_id in self.segment_tile_map:
+                del self.segment_tile_map[seg_id]
+
+        # if unloaded_count > 0:
+        #     print(f"Unloaded {unloaded_count} cached segments associated with tile {tile_id}. Cache size: {len(self.segments_data)}")
+        self.loaded_tiles.remove(tile_id)
+
     def _update_loaded_tiles(self, lat, lon):
-        """Determine current tile, load it & neighbors, unload old ones."""
+        """Determine current tile, load relevant segments using index, unload old tiles/segments."""
         # Determine current region if not set or changed
         current_point_region = None
         for region, bounds in REGION_BOUNDS.items():
@@ -390,168 +422,74 @@ class MapReader:
                 # Use actual corner lat/lon to generate ID consistently
                 tiles_to_load.add(get_tile_id(neighbor_lat, neighbor_lon, TILE_SIZE_DEG))
 
-        # Load needed tile *indices* (pass lat/lon context)
+        # Load needed tiles (pass lat/lon context)
         for tile_id in tiles_to_load:
             if tile_id not in self.loaded_tiles:
-                # Pass context for path construction
-                self._load_tile(tile_id)
+                # Pass context lat/lon for index searching and path finding
+                self._load_tile(tile_id, lat, lon)
 
-        # Unload tiles no longer needed (outside the 3x3 grid)
+        # Unload tiles no longer needed (triggers cache eviction for segments from those tiles)
         tiles_to_unload = self.loaded_tiles - tiles_to_load
         for tile_id in tiles_to_unload:
             self._unload_tile(tile_id)
 
-    def get_segment_data_at(self, lat, lon):
-        """Finds the closest map segment to the given coordinates."""
         # Update loaded tiles based on current position FIRST
         self._update_loaded_tiles(lat, lon)
 
-        if not self.segments_data:
-            # print("Warning: No map data loaded/relevant, cannot get segment data.")
+        # Check cache directly first - segment might be loaded even if tile isn't "active"
+        # if not self.segments_data: # This check is misleading with cache
+        if len(self.segments_data) == 0:
+            # print("Warning: No map data in cache, cannot get segment data.")
             return None
 
         current_point = Point(lon, lat)
-
         try:
-            # 1. Query R-tree (containing only *cached* segments)
-            search_bounds = (lon - NEARBY_QUERY_RADIUS_DEG, lat - NEARBY_QUERY_RADIUS_DEG,
-                             lon + NEARBY_QUERY_RADIUS_DEG, lat + NEARBY_QUERY_RADIUS_DEG)
-            cached_candidates = list(self.rtree_idx.intersection(search_bounds, objects=True))
+            # Query R-tree (which mirrors the cache) for nearest segments
+            search_bounds = (lon - 1e-4, lat - 1e-4, lon + 1e-4, lat + 1e-4) # Smaller search box for R-tree query
+            nearest_candidates = list(self.rtree_idx.intersection(search_bounds, objects=True))
 
-            closest_segment_info = None
-            min_dist_cached = float('inf')
-
-            # Find closest among *cached* candidates
-            for item in cached_candidates:
-                segment_id = item.object
-                # Check data is still loaded (should be, as it's from cache R-tree)
-                if segment_id not in self.segments_data:
-                    # print(f"Warning: R-tree pointed to non-cached segment {segment_id}") # Should not happen
-                    continue
-                segment_info = self.segments_data[segment_id]
-                distance = segment_info['geom'].distance(current_point)
-
-                if distance < min_dist_cached:
-                    MAX_RELEVANT_DISTANCE_DEGREES = 0.0015 # Approx 166m
-                    if distance < MAX_RELEVANT_DISTANCE_DEGREES:
-                        min_dist_cached = distance
-                        closest_segment_info = segment_info
-                        # Move accessed segment to end of LRU cache
-                        self.segments_data.move_to_end(segment_id)
-
-            if closest_segment_info is not None:
-                # print(f"Found closest segment {closest_segment_info['id']} in cache.") # Debug
-                return closest_segment_info
-
-            # 2. If no suitable candidate in cache, check the index file for the current tile
-            # print(f"No suitable segment in cache, checking index for tile containing {lat}, {lon}") # Debug
-            current_tile_id = get_tile_id(lat, lon, TILE_SIZE_DEG)
-            tile_path_proto = self._get_tile_path(current_tile_id, lat, lon)
-            if not tile_path_proto:
-                 return None
-            index_path = tile_path_proto.replace('.protobuf', '.idx')
-
-            if not os.path.exists(index_path) or os.path.getsize(index_path) == 0:
-                # print(f"Index file missing or empty for current tile: {index_path}") # Debug
+            if not nearest_candidates:
+                # print("No segments found in R-tree cache near location.")
                 return None
 
-            # --- Search Index File ---
-            min_dist_index = float('inf')
-            best_candidate_record = None
-            try:
-                with open(index_path, 'rb') as idx_f:
-                    while True:
-                        record_bytes = idx_f.read(INDEX_RECORD_SIZE)
-                        if not record_bytes: break
-                        if len(record_bytes) < INDEX_RECORD_SIZE: break
-                        record = struct.unpack(INDEX_RECORD_FORMAT, record_bytes)
-                        # (osm_id, min_lon, min_lat, max_lon, max_lat, offset, size)
-                        osm_id, r_min_lon, r_min_lat, r_max_lon, r_max_lat, _, _ = record
+            closest_segment_info = None
+            min_dist = float('inf')
 
-                        # Check if current point is within expanded bounds of this segment
-                        if (r_min_lat - NEARBY_QUERY_RADIUS_DEG <= lat <= r_max_lat + NEARBY_QUERY_RADIUS_DEG and
-                            r_min_lon - NEARBY_QUERY_RADIUS_DEG <= lon <= r_max_lon + NEARBY_QUERY_RADIUS_DEG):
-                            # Estimate distance to bounding box center (crude but fast pre-filter)
-                            # center_lon = (r_min_lon + r_max_lon) / 2
-                            # center_lat = (r_min_lat + r_max_lat) / 2
-                            # approx_dist_sq = (lon - center_lon)**2 + (lat - center_lat)**2
-                            # Consider segment if its bbox is close - skip exact dist calc here
-                            # Temporarily just consider it a candidate if bbox overlaps query radius
-                            if osm_id not in self.segments_data: # Only consider if not already cached
-                                 # We need to load it to calculate exact distance,
-                                 # but for now, just store the *best candidate record* based on bbox overlap.
-                                 # This is imperfect. A better index query is needed.
-                                 # Let's just load the first candidate found in the index for now.
-                                 best_candidate_record = record
-                                 break # Simplification: load first potential match found
+            # Find the segment whose geometry is actually closest among candidates
+            for item in nearest_candidates:
+                segment_id = item.object
+                # Check data is still loaded (robustness - less needed with LRU if accessed)
+                if segment_id not in self.segments_data:
+                    # This might happen if evicted between rtree query and dict access (rare)
+                    # print(f"Warning: R-tree pointed to evicted segment {segment_id}")
+                    continue
+                # segment_info = self.segments_data[segment_id]
+                # Access via get to handle potential rare race condition, and move to end for LRU
+                segment_info = self.segments_data.get(segment_id)
+                if segment_info is None:
+                    continue # Was evicted between query and get
+                self.segments_data.move_to_end(segment_id) # Mark as recently used
 
-            except Exception as e:
-                 print(f"Error reading index {index_path} during cache miss lookup: {e}")
-                 return None
+                distance = segment_info['geom'].distance(current_point)
 
-            # 3. Load the best candidate from index (if found) into cache
-            if best_candidate_record:
-                osm_id, _, _, _, _, offset, size = best_candidate_record
-                # print(f"Cache miss: Loading segment {osm_id} from index record.") # Debug
-
-                # --- Get or open the correct protobuf file handle ---
-                proto_f = self.protobuf_file_handles.get(current_tile_id)
-                if proto_f is None:
-                    try:
-                        proto_f = open(tile_path_proto, 'rb')
-                        self.protobuf_file_handles[current_tile_id] = proto_f
-                    except IOError as e_io:
-                        print(f"Error opening protobuf file {tile_path_proto} on cache miss: {e_io}")
-                        return None
-                # --- Read and deserialize specific segment ---
-                segment_data_dict = None
-                try:
-                    proto_f.seek(offset)
-                    message_bytes = proto_f.read(size)
-                    if len(message_bytes) == size:
-                        segment = osm_speed_data_pb2.SpeedLimitSegment()
-                        segment.ParseFromString(message_bytes)
-                        # --- Convert to dictionary format used internally ---
-                        coords = [(p.longitude, p.latitude) for p in segment.geometry]
-                        if len(coords) >= 2:
-                             line = LineString(coords)
-                             segment_data_dict = {
-                                'id': osm_id,
-                                'speed_mps': segment.speed_limit_mps,
-                                'geom': line,
-                                'curvatures': list(segment.curvatures),
-                                # Add placeholders for fields not in proto
-                                'highway': '', 'lanes': 0, 'oneway': 0,
-                                'name': '', 'ref': '', 'surface': '',
-                                'is_bridge': False, 'is_tunnel': False,
-                            }
-                    else:
-                         print(f"Error: Read wrong size for segment {osm_id} from {tile_path_proto}. Expected {size}, got {len(message_bytes)}")
-                except DecodeError as de:
-                    print(f"Protobuf DecodeError loading segment {osm_id} from {tile_path_proto}: {de}")
-                except Exception as e_load:
-                    print(f"Error loading segment {osm_id} on cache miss: {e_load}")
-
-                # --- Add to cache if loaded successfully ---
-                if segment_data_dict:
-                    self._add_segment_to_cache(osm_id, segment_data_dict, current_tile_id)
-                    # Now check distance again
-                    distance = segment_data_dict['geom'].distance(current_point)
-                    MAX_RELEVANT_DISTANCE_DEGREES = 0.0015 # Approx 166m
+                if distance < min_dist:
+                    # Optional: Add a threshold for max distance?
+                    MAX_RELEVANT_DISTANCE_DEGREES = 0.0015 # Approx 166m, slightly larger?
                     if distance < MAX_RELEVANT_DISTANCE_DEGREES:
-                        return segment_data_dict
-                    else:
-                        # Loaded, but too far away after checking exact distance
-                        return None
-                else:
-                    return None # Failed to load/deserialize
-            else:
-                 # print(f"No candidate found in index file {index_path}") # Debug
-                 return None # No candidate found in index
+                        min_dist = distance
+                        closest_segment_info = segment_info
+            # else:
+                # print(f"Closest candidate distance {min_dist:.6f} > threshold")
+
+            return closest_segment_info
 
         except Exception as e:
-            print(f"Error during spatial query or index lookup: {e}")
+            print(f"Error during spatial query: {e}")
             return None
+
+    # Remove old _load_and_index_data method
+    # def _load_and_index_data(self):
+    #    ...
 
 # Example usage section (modified for new structure)
 if __name__ == '__main__':
@@ -582,7 +520,11 @@ if __name__ == '__main__':
     test_lat = 37.77 # Approx SF
     test_lon = -122.41
 
-    if reader.segments_data: # Check if data was loaded and indexed
+    # Manually trigger tile loading for the test location
+    print(f"\nManually updating loaded tiles for Lat={test_lat}, Lon={test_lon}")
+    reader._update_loaded_tiles(test_lat, test_lon)
+
+    if len(reader.segments_data) > 0:
         print(f"\nQuerying segment data near Lat={test_lat}, Lon={test_lon}")
         segment_data = reader.get_segment_data_at(test_lat, test_lon)
 
