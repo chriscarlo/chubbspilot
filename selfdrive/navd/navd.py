@@ -245,6 +245,7 @@ class RouteEngine:
       self.recompute_countdown = max(0, self.recompute_countdown - 1)
 
   def calculate_route(self, destination):
+    print(f"navd.py: calculate_route called for destination: {destination}", flush=True)
     cloudlog.warning(f"Calculating route {self.last_position} -> {destination}")
     self.nav_destination = destination
 
@@ -257,6 +258,7 @@ class RouteEngine:
       token = self.api.get_token()
 
     if token is None:
+      print("navd.py: calculate_route - No token available, exiting.", flush=True)
       cloudlog.error("No valid Mapbox token or API token available. Cannot fetch route.")
       self.clear_route()
       return
@@ -289,12 +291,18 @@ class RouteEngine:
 
     coords_str = ';'.join([f'{lon},{lat}' for lon, lat in coords])
     url = self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords_str
+    print(f"navd.py: calculate_route - Requesting URL: {url}", flush=True)
+    print(f"navd.py: calculate_route - Params: {params}", flush=True)
     try:
+      print("navd.py: calculate_route - Sending request...", flush=True)
       resp = requests.get(url, params=params, timeout=10)
+      print(f"navd.py: calculate_route - Response Status Code: {resp.status_code}", flush=True)
       if resp.status_code != 200:
+        print(f"navd.py: calculate_route - API Error Response Text: {resp.text}", flush=True)
         cloudlog.event("API request failed", status_code=resp.status_code, text=resp.text, error=True)
-      resp.raise_for_status()
+      resp.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
 
+      print("navd.py: calculate_route - Request successful, parsing JSON...", flush=True)
       r = resp.json()
       r1 = resp.json()
 
@@ -333,6 +341,7 @@ class RouteEngine:
         json.dump(self.r3, json_file, indent=4)
 
       if len(r['routes']):
+        print("navd.py: calculate_route - Route found, processing steps...", flush=True)
         self.route = r['routes'][0]['legs'][0]['steps']
         self.route_geometry = []
 
@@ -370,7 +379,9 @@ class RouteEngine:
           maxspeed_idx -= 1  # Every segment ends with the same coordinate as the start of the next
 
         self.step_idx = 0
+        print(f"navd.py: calculate_route - Successfully set step_idx to {self.step_idx}", flush=True)
       else:
+        print("navd.py: calculate_route - Mapbox returned empty route list.", flush=True)
         cloudlog.warning("Got empty route response")
         self.clear_route()
 
@@ -378,9 +389,18 @@ class RouteEngine:
       # TODO: only clear once we're past a waypoint
       self.params.remove('NavDestinationWaypoints')
 
-    except requests.exceptions.RequestException:
-      cloudlog.exception("failed to get route")
-      self.clear_route()
+    except requests.exceptions.Timeout:
+        print("navd.py: calculate_route - Request timed out.", flush=True)
+        cloudlog.exception("failed to get route - timeout")
+        self.clear_route()
+    except requests.exceptions.RequestException as e:
+        print(f"navd.py: calculate_route - Request failed: {e}", flush=True)
+        cloudlog.exception("failed to get route")
+        self.clear_route()
+    except Exception as e: # Catch other potential errors like JSON parsing
+        print(f"navd.py: calculate_route - Unexpected error: {e}", flush=True)
+        cloudlog.exception("navd.calculate_route unexpected error")
+        self.clear_route()
 
     self.send_route()
 
