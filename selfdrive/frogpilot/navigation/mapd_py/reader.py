@@ -262,6 +262,9 @@ class MapReader:
                     osm_id, _, _, _, _, offset, size = rec
                     try:
                         proto_file.seek(offset)
+                        # Read and discard the 4-byte size prefix
+                        _ = proto_file.read(4)
+                        # Now read the actual message bytes
                         message_bytes = proto_file.read(size)
                         if len(message_bytes) < size:
                             print(f"Warning: Could not read full message ({len(message_bytes)}/{size} bytes) for segment {osm_id} in {tile_path_proto}")
