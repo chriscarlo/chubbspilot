@@ -1,14 +1,15 @@
 #!/usr/bin/bash
 
 # Setups the environment similar to the main launch script
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd $DIR
+# DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # No longer needed
+# cd $DIR # No longer needed
 
-source ./launch_env.sh
+# Source environment from standard location
+source /data/openpilot/launch_env.sh
 
-# Set PYTHONPATH. Must be absolute path
-export PYTHONPATH="$DIR"
+# Set PYTHONPATH explicitly to the standard openpilot directory
+export PYTHONPATH="/data/openpilot"
 
-echo "Launching navd.py directly..."
-# Execute navd.py - output will appear here
-python selfdrive/navd/navd.py
+# echo "Launching navd.py directly..." # Removed echo line
+# Execute navd.py using its absolute path
+python /data/openpilot/selfdrive/navd/navd.py
