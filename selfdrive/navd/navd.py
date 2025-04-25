@@ -39,13 +39,15 @@ class RouteEngine:
     self.params = Params()
     print("navd.py: Params initialized.", flush=True)
 
-    # Get last gps position from params
-    self.last_position = coordinate_from_param("LastGPSPosition", self.params)
-    print(f"navd.py: Initial last_position: {self.last_position}", flush=True)
-    self.last_bearing = None
-
-    self.gps_ok = False
-    self.localizer_valid = False
+    # == MOCK DATA FOR TESTING ==
+    mock_lat = 37.7749 # San Francisco Civic Center approx lat
+    mock_lon = -122.4194 # San Francisco Civic Center approx lon
+    self.last_position = Coordinate(mock_lat, mock_lon)
+    self.last_bearing = 0.0 # North
+    self.gps_ok = True
+    self.localizer_valid = True
+    print(f"navd.py: Using MOCK Initial Data: pos={self.last_position}, bearing={self.last_bearing}, gps_ok={self.gps_ok}, localizer_valid={self.localizer_valid}", flush=True)
+    # ===========================
 
     self.nav_destination = None
     self.step_idx = None
@@ -188,18 +190,15 @@ class RouteEngine:
   def update_location(self):
     print("navd.py: update_location called...", flush=True) # ADDED
     location = self.sm['liveLocationKalman']
-    self.gps_ok = location.gpsOK
-    print(f"navd.py: update_location - got gps_ok: {self.gps_ok}", flush=True) # ADDED
-
-    self.localizer_valid = (location.status == log.LiveLocationKalman.Status.valid) and location.positionGeodetic.valid
-    print(f"navd.py: update_location - got localizer_valid: {self.localizer_valid} (status={location.status}, positionGeodetic.valid={location.positionGeodetic.valid})", flush=True) # ADDED
-
-    if self.localizer_valid:
-      self.last_bearing = math.degrees(location.calibratedOrientationNED.value[2])
-      self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
-      print(f"navd.py: update_location - Updated bearing: {self.last_bearing}, position: {self.last_position}", flush=True) # ADDED
-    else: # ADDED block
-        print(f"navd.py: update_location - Localizer not valid, not updating bearing/position.", flush=True) # ADDED
+    # == TEMP MOD FOR TESTING: Prevent overwriting mock data ==
+    # Normally, we'd update gps_ok, localizer_valid, last_bearing, and last_position here.
+    # We are skipping this for now to force the use of initial mock data.
+    # REMEMBER TO REVERT THIS!
+    print("navd.py: update_location - TEMP: Skipping update from liveLocationKalman to preserve mock data.", flush=True)
+    _gps_ok_real = location.gpsOK
+    _localizer_valid_real = (location.status == log.LiveLocationKalman.Status.valid) and location.positionGeodetic.valid
+    print(f"navd.py: update_location - TEMP: Real status is gps_ok={_gps_ok_real}, localizer_valid={_localizer_valid_real}", flush=True)
+    # ========================================================
 
     # Decrement mock route timer (ensuring it doesn't go below zero)
     # Assumes update() is called roughly once per second by Ratekeeper
