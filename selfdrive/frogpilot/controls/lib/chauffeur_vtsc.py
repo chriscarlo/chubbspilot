@@ -74,11 +74,6 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
 # DYNAMIC SCALING LOGIC
 # --------------------
 def dynamic_decel_scale(v_ego_ms: float) -> float:
-    """
-    Originally was 4.0 -> 1.0 from ~5 m/s to ~25 m/s.
-    Now we double it for lower speeds: 8.0 -> 1.0.
-    Clamped maximum to 3.0 for more proactive planning.
-    """
     min_speed = 3.0   # below this speed => max scaling
     max_speed = 35.0  # above this speed => 1.0
     scale = 9.0 # Default for v_ego <= min_speed
@@ -139,12 +134,6 @@ class VisionTurnSpeedController:
         # EMA (exponential moving average) for curvature filtering - Keeping curvature filtering for potential future use/analysis
         self.curvature_ema_ratio = 0.3  # lower = more smoothing
         self._filtered_curvature = None  # filtered maximum curvature value
-
-        # Hysteresis thresholds removed - no longer needed
-        # self.curv_thresh_enter = 5e-5
-        # self.curv_thresh_exit  = self.curv_thresh_enter * 0.7
-
-        # self.curve_active = False  # state flag removed
 
         # For speed smoothing: filter speed increases only (avoid overshoot when exiting curves)
         self.speed_up_ema_ratio = 0.2
@@ -227,12 +216,6 @@ class VisionTurnSpeedController:
             else:
                 self._filtered_curvature = (1 - self.curvature_ema_ratio) * self._filtered_curvature + self.curvature_ema_ratio * current_max_curvature
 
-            # Hysteresis logic removed. Planning always occurs if model data is valid.
-            # if not self.curve_active and self._filtered_curvature >= self.curv_thresh_enter:
-            #     self.curve_active = True
-            # elif self.curve_active and self._filtered_curvature <= self.curv_thresh_exit:
-            #     self.curve_active = False
-
             # Curvature extrapolation logic removed - planning always active, so no need to force curve_active based on far point.
             # if current_max_curvature >= self.curv_thresh_enter:
             #     far_point_curvature = curvature_33[-1]
@@ -260,18 +243,6 @@ class VisionTurnSpeedController:
                 skip_accel_limit=is_bump_up
             )
             raw_target = self.planned_speeds[0]
-
-            # ------------------------------
-            # Apply speed filtering for smoothing increases - REMOVED to fix sluggish accel
-            # if self._last_model_speed is None:
-            #     self._last_model_speed = raw_target
-            # if raw_target < self._last_model_speed: # If target is decreasing, apply immediately
-            #     filtered_target = raw_target
-            # else: # If target is increasing, smooth it
-            #     filtered_target = self._last_model_speed + self.speed_up_ema_ratio * (raw_target - self._last_model_speed)
-            # self._last_model_speed = filtered_target
-            # raw_target = filtered_target
-            # --- End of always-on planning block ---
 
         # Always clamp raw_target to at most v_cruise_cluster
         # raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
@@ -406,12 +377,12 @@ class VisionTurnSpeedController:
 
         # (3) Apex-based shaping pass (using fixed parameters)
         apex_idxs = find_apexes(curvature, threshold=5e-5)
-        margin_factor = 3.5      # Substantially increased (from 2.2) to force much earlier deceleration initiation
+        margin_factor = 4.0      # Substantially increased (from 3.5) to force much earlier deceleration initiation
         decel_mult = 1.0
-        accel_mult = 1.2         # Small increase from original (1.0) for better accel feel
-        apex_decel_factor = 0.35   # Increased further (from 0.25) to start decel ramp earlier
+        accel_mult = 1.2         # Small increase from original (1.0) for better accel feel - REVERTED from 1.6
+        apex_decel_factor = 0.45   # Increased further (from 0.35) to start decel ramp earlier, hitting speed sooner
         apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
-        pre_apex_spool_fract = 0.5 # Start spooling this fraction of spool_sec *before* the apex
+        pre_apex_spool_fract = 0.1 # Start spooling much closer to the apex (was 0.5)
 
         planned = safe_speeds.copy()
 
@@ -455,17 +426,17 @@ class VisionTurnSpeedController:
                 steps_spool = spool_end - spool_start
                 # Start spool from the potentially modified speed at spool_start
                 v_spool_start = planned[spool_start]
-                # Target speed at the end of the spool window
-                v_spool_end = planned[spool_end -1] if spool_end > 0 else v_spool_start # Handle edge case
+                # Target speed at the end of the spool window - aim for the MAX of planned/safe speed
+                v_planned_at_spool_end = planned[spool_end - 1] if spool_end > 0 else v_spool_start
+                v_safe_at_spool_end = safe_speeds[spool_end - 1] if spool_end > 0 else v_spool_start
+                v_spool_target = max(v_planned_at_spool_end, v_safe_at_spool_end)
 
                 if steps_spool > 0: # Avoid division by zero
                     for idx in range(spool_start, spool_end):
-                        # Interpolate from v_spool_start towards v_spool_end
-                        # Should we target the original safe_speed at spool_end instead?
-                        # Let's target planned[spool_end-1] for now to smooth into the existing plan.
+                        # Interpolate from v_spool_start towards the potentially higher v_spool_target
                         f = (idx - spool_start) / float(steps_spool)
-                        spool_val = v_spool_start * (1 - f) + v_spool_end * f
-                        # Apply spool-up clamp
+                        spool_val = v_spool_start * (1 - f) + v_spool_target * f
+                        # Apply spool-up clamp (only allow speed to increase)
                         planned[idx] = max(planned[idx], spool_val)
             # --- End Modified Spool-up ---
 

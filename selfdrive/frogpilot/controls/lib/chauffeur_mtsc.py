@@ -42,28 +42,32 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 PROFILE_TIMES = list(ModelConstants.T_IDXS[:33])
 PROFILE_LENGTH = len(PROFILE_TIMES)
 
-# --- New Function: Target Lateral Accel based on Curvature ---
+# --- New Function: Target Lateral Accel based on Curvature (Decreasing Sigmoid) ---
 def curvature_based_lat_accel(abs_curvature: float) -> float:
     """
-    Determines the target lateral acceleration based on curvature.
-    Targets 3.02 m/s^2 for very gentle curves, ramping up to 3.1 m/s^2 for sharper curves.
+    Determines target lateral acceleration based on curvature using a tuned decreasing sigmoid.
+    Targets high acceleration (3.2 m/s^2) for gentle curves (low curvature / high speed).
+    Smoothly decreases towards a lower acceleration (1.5 m/s^2) for very sharp curves
+    (high curvature / low speed), approximating low-speed torque/comfort limits.
     """
-    K_MIN = 0.001  # Curvature threshold for gentle curves (Radius = 1000m)
-    A_MIN = 3.02   # Target lat accel for gentle curves
+    # Target lateral acceleration range
+    high_accel = 3.2  # Target accel for gentle/moderate curves (kappa -> 0)
+    low_accel = 1.5   # Target accel limit for very sharp curves (kappa -> high)
+    span = high_accel - low_accel # The range of reduction (1.7 m/s^2)
 
-    K_MAX = 0.02   # Curvature threshold for sharp curves (Radius = 50m)
-    A_MAX = 3.1    # Target lat accel for sharp curves
+    # Sigmoid parameters tuned to approximate:
+    # - lat_accel ~ 3.1-3.2 for kappa ~ 0
+    # - lat_accel ~ 2.0 for kappa ~ 0.02 (equiv. ~10 m/s)
+    # - lat_accel ~ 1.5 for kappa ~ 0.06 (equiv. ~5 m/s)
+    center_curvature = 0.018 # Center the transition slightly below kappa=0.02
+    k = 180                  # Gain to control the transition sharpness
 
-    if abs_curvature <= K_MIN:
-        # For very gentle curves (>= 1000m radius), use the lower limit
-        return A_MIN
-    elif abs_curvature >= K_MAX:
-        # For sharper curves (<= 50m radius), use the upper limit
-        return A_MAX
-    else:
-        # Linearly interpolate between the min and max thresholds
-        ratio = (abs_curvature - K_MIN) / (K_MAX - K_MIN)
-        return A_MIN + ratio * (A_MAX - A_MIN)
+    # Calculate the decreasing sigmoid value:
+    reduction = span / (1.0 + math.exp(-k * (abs_curvature - center_curvature)))
+    lat_acc = high_accel - reduction
+
+    # Ensure the value stays within the intended bounds [low_accel, high_accel]
+    return clip(lat_acc, low_accel, high_accel)
 # --- End New Function ---
 
 class ChauffeurMtsc:
@@ -253,6 +257,30 @@ class ChauffeurMtsc:
 
         distance_points = np.array(cumulative_distances)
         speed_points = np.array(target_speeds)
+
+        # --- Add Strategic Deceleration Backward Pass ---
+        if len(speed_points) > 1:
+            STRATEGIC_DECEL = 1.5  # m/s^2, comfortable early deceleration rate
+            for i in range(len(speed_points) - 2, -1, -1):
+                dist = distance_points[i+1] - distance_points[i]
+                if dist < 1e-3: # Avoid issues with zero/tiny distance
+                    # If distance is negligible, speed should ideally be the same or lower
+                    speed_points[i] = min(speed_points[i], speed_points[i+1])
+                    continue
+
+                # Calculate max feasible speed at i to reach speed_points[i+1] decelerating at STRATEGIC_DECEL
+                # v_i = sqrt(v_{i+1}^2 + 2 * a * d)
+                try:
+                    required_speed_sq = speed_points[i+1]**2 + 2 * STRATEGIC_DECEL * dist
+                    # Ensure we don't take sqrt of negative if speed_points[i+1] somehow became negative (shouldn't happen)
+                    if required_speed_sq < 0: required_speed_sq = 0
+                    max_feasible_speed = math.sqrt(required_speed_sq)
+                    speed_points[i] = min(speed_points[i], max_feasible_speed)
+                except ValueError: # Catch potential math domain errors, though unlikely
+                    # If error, default to the more conservative speed (the next point's speed)
+                    speed_points[i] = min(speed_points[i], speed_points[i+1])
+        # --- End Strategic Deceleration Backward Pass ---
+
         self.curvature_valid = True # Mark as valid since we processed curvatures
 
         # Now, find where the car is along this segment's profile
