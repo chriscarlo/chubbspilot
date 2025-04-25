@@ -267,19 +267,19 @@ class MapReader:
                             print(f"Warning: Could not read full message ({len(message_bytes)}/{size} bytes) for segment {osm_id} in {tile_path_proto}")
                             continue
 
-                    segment = osm_speed_data_pb2.SpeedLimitSegment()
+                        segment = osm_speed_data_pb2.SpeedLimitSegment()
                         segment.ParseFromString(message_bytes)
 
-                    coords = [(p.longitude, p.latitude) for p in segment.geometry]
-                    if len(coords) < 2: continue
-                    line = LineString(coords)
+                        coords = [(p.longitude, p.latitude) for p in segment.geometry]
+                        if len(coords) < 2: continue
+                        line = LineString(coords)
 
                         # --- Store Segment Data Temporarily ---
                         segment_data = {
-                       'id': osm_id,
-                       'speed_mps': segment.speed_limit_mps,
-                       'geom': line,
-                       'curvatures': list(segment.curvatures),
+                           'id': osm_id,
+                           'speed_mps': segment.speed_limit_mps,
+                           'geom': line,
+                           'curvatures': list(segment.curvatures),
                            # Placeholders needed by matcher/consumers
                            'highway': '', 'lanes': 0, 'oneway': 0, 'name': '',
                            'ref': '', 'surface': '', 'is_bridge': False, 'is_tunnel': False,
