@@ -26,7 +26,7 @@ REROUTE_COUNTER_MIN = 3
 
 # Mock Route Constants
 MOCK_ROUTE_DISTANCE_KM = 1.5  # Distance ahead for mock route (km)
-MOCK_ROUTE_RECALC_INTERVAL_SEC = 5 # How often to recalculate mock route (seconds)
+MOCK_ROUTE_RECALC_INTERVAL_SEC = 10 # How often to recalculate mock route (seconds)
 EARTH_RADIUS_KM = 6371.0
 
 MAPBOX_API_KEY_FILE = "/persist/mapbox/mapbox_api.txt"

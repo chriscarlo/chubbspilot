@@ -89,7 +89,7 @@ class MapdPyDaemon:
             # --- Find Current Segment ---
             try:
                 # Use MapReader to find the closest segment data first
-                segment_data = self.map_reader.get_segment_data_at(self.last_valid_pos.latitude, self.last_valid_pos.longitude)
+                segment_data = self.map_reader._get_segment_data_at_cached(self.last_valid_pos.latitude, self.last_valid_pos.longitude)
 
                 if segment_data:
                     segment_id = segment_data.get('id')
