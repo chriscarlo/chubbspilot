@@ -54,7 +54,7 @@ class SpeedLimitController:
     # We need to assign the raw values to the instance attributes for frogpilot_planner.py
     self.map_speed_limit = map_speed_limit
     self.upcoming_speed_limit = upcoming_speed_limit
-    self.source = liveMapData.speedLimitSource # Store the source string
+    # self.source = liveMapData.speedLimitSource # Incorrect: Source is determined internally
 
   def get_desired_speed_limit(self):
     if self.speed_limit > 1:
