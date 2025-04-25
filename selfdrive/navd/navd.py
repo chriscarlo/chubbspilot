@@ -380,15 +380,26 @@ class RouteEngine:
         first_route = self.r2['routes'][0]
         nav_destination_json = self.params.get('NavDestination')
 
-        try:
-          nav_destination_data = json.loads(nav_destination_json)
-          place_name = nav_destination_data.get('place_name', 'Default Place Name')
-          first_route['Destination'] = place_name
-          first_route['Metric'] = self.params.get_bool("IsMetric")
-          self.r3['CurrentStep'] = 0
-          self.r3['uuid'] = self.r2['uuid']
-        except json.JSONDecodeError as e:
-          print(f"Error decoding JSON: {e}")
+        # Only try to load destination info if it actually exists (not a mock route)
+        if nav_destination_json is not None:
+            try:
+              nav_destination_data = json.loads(nav_destination_json)
+              place_name = nav_destination_data.get('place_name', '[No Destination Set]') # Changed default
+              first_route['Destination'] = place_name
+            except json.JSONDecodeError as e:
+              print(f"Error decoding NavDestination JSON: {e}")
+              first_route['Destination'] = "[Destination Error]"
+        else:
+            first_route['Destination'] = "[Mock Route Active]" # Indicate mock route
+
+        # These can be set regardless of destination existence
+        first_route['Metric'] = self.params.get_bool("IsMetric")
+        self.r3['CurrentStep'] = 0
+        if 'uuid' in self.r2:
+            self.r3['uuid'] = self.r2['uuid']
+        else:
+            print("Warning: No UUID found in Mapbox response")
+            self.r3['uuid'] = "N/A"
 
       # Save slim json as file
       with open('navdirections.json', 'w') as json_file:
