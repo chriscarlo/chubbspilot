@@ -386,10 +386,10 @@ class CarInterfaceBase(ABC):
     tune.torque.steeringAngleDeadzoneDeg = steering_angle_deadzone_deg
 
   @abstractmethod
-  def _update(self, c: car.CarControl) -> car.CarState:
+  def _update(self, c: car.CarControl, frogpilot_toggles, sm) -> car.CarState:
     pass
 
-  def update(self, c: car.CarControl, can_strings: list[bytes], params_list: SimpleNamespace, frogpilot_toggles) -> car.CarState:
+  def update(self, c: car.CarControl, can_strings: list[bytes], params_list: SimpleNamespace, frogpilot_toggles, sm) -> car.CarState:
     # parse can
     for cp in self.can_parsers:
       if cp is not None:
@@ -398,7 +398,7 @@ class CarInterfaceBase(ABC):
     self.CS.params_list = params_list
 
     # get CarState
-    ret, fp_ret = self._update(c, frogpilot_toggles)
+    ret, fp_ret = self._update(c, frogpilot_toggles, sm)
 
     ret.canValid = all(cp.can_valid for cp in self.can_parsers if cp is not None)
     ret.canTimeout = any(cp.bus_timeout for cp in self.can_parsers if cp is not None)

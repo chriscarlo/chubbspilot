@@ -264,7 +264,7 @@ class CarInterface(CarInterfaceBase):
     if CP.flags & HyundaiFlags.ENABLE_BLINKERS:
       disable_ecu(logcan, sendcan, bus=CanBus(CP).ECAN, addr=0x7B1, com_cont_req=b'\x28\x83\x01')
 
-  def _update(self, c, frogpilot_toggles):
+  def _update(self, c, frogpilot_toggles, sm):
     ret, fp_ret = self.CS.update(self.cp, self.cp_cam, frogpilot_toggles)
 
     if self.CS.CP.openpilotLongitudinalControl:
@@ -297,8 +297,8 @@ class CarInterface(CarInterfaceBase):
     ret.events = events.to_msg()
 
     # Copy lead data from radarState into CarState for use in other modules
-    if self.sm.valid['radarState']:
-      ret.leadOne = self.sm['radarState'].leadOne
-      ret.leadTwo = self.sm['radarState'].leadTwo
+    if sm is not None and sm.valid['radarState']:
+      ret.leadOne = sm['radarState'].leadOne
+      ret.leadTwo = sm['radarState'].leadTwo
 
     return ret, fp_ret
