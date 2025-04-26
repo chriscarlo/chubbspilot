@@ -1,6 +1,6 @@
 import numpy as np
 import math # Needed for isnan, isinf
-from cereal import car, messaging
+from cereal import car, messaging, log
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
@@ -151,7 +151,7 @@ class HKGLongitudinalTuning:
     current_time = self.DT_CTRL * self.jerk_count
     return (current_time - self.last_decel_time) < self.min_cancel_delay and CS.out.aEgo < 0
 
-  def calculate_limited_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, lead_one: car.RadarState.LeadData = None) -> float:
+  def calculate_limited_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, lead_one: log.RadarState.LeadData = None) -> float:
     """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
     if self.handle_cruise_cancel(CS):
@@ -219,7 +219,7 @@ class HKGLongitudinalTuning:
                         isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
                          jerk_needed_for_target = abs((accel_request - self.accel_last) / self.DT_CTRL)
                      else:
-                          cloudlog.warning(f"long_tuning: Invalid accel values for jerk_needed calc: req={accel_request}, last={self.accel_last}")
+                          log.warning(f"long_tuning: Invalid accel values for jerk_needed calc: req={accel_request}, last={self.accel_last}")
 
                  # Define interpolation points
                  ttc_bp = [6.0, 5.0, 4.0]  # Time-to-collision (s) - Max aggression at 4.0s
@@ -264,10 +264,10 @@ class HKGLongitudinalTuning:
             if isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
                  accel = max(accel_request, self.accel_last - max_delta_accel)
             else:
-                 cloudlog.warning(f"long_tuning: Invalid self.accel_last={self.accel_last}, using accel_request={accel_request}")
+                 log.warning(f"long_tuning: Invalid self.accel_last={self.accel_last}, using accel_request={accel_request}")
                  accel = accel_request # Fallback if accel_last is invalid
         else:
-            cloudlog.warning(f"long_tuning: Invalid effective_jerk={effective_jerk}, using accel_request={accel_request}")
+            log.warning(f"long_tuning: Invalid effective_jerk={effective_jerk}, using accel_request={accel_request}")
             accel = accel_request # Fallback if jerk is invalid
         # --- END DYNAMIC JERK MODIFICATION ---
 
@@ -281,7 +281,7 @@ class HKGLongitudinalTuning:
     self.accel_last = accel
     return accel
 
-  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: car.RadarState.LeadData = None) -> float:
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: log.RadarState.LeadData = None) -> float:
     """Calculate acceleration with cruise control status handling and final clipping."""
     if self.handle_cruise_cancel(CS):
       return 0.0 # Return 0 on cancel
@@ -363,7 +363,7 @@ class HKGLongitudinalController:
           self.cb_lower
       )
 
-  def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators, CS: car.CarState, long_control_state: LongCtrlState, lead_one: car.RadarState.LeadData = None) -> JerkOutput:
+  def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators, CS: car.CarState, long_control_state: LongCtrlState, lead_one: log.RadarState.LeadData = None) -> JerkOutput:
     """Calculate jerk based on tuning (if active) and return JerkOutput."""
     if self.tuning is not None:
       # Delegate jerk calculation to the tuning instance
@@ -379,7 +379,7 @@ class HKGLongitudinalController:
     # Return the current jerk state (either from tuning or defaults)
     return self.get_jerk()
 
-  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: car.RadarState.LeadData = None) -> float:
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: log.RadarState.LeadData = None) -> float:
     """Calculate final acceleration, delegating to tuning instance if active."""
     # Check if the specific tuning logic should be used
     use_tuning_logic = self.param("HKGBraking") and self.tuning is not None
