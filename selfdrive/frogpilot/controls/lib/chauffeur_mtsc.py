@@ -187,6 +187,77 @@ class ChauffeurMtsc:
              last_lon_rad = curr_lon_rad
         return total_length
 
+    # --- meters-true projection ----------------------------------------------
+    def _project_along_segment_m(self, pos: matcher.Position) -> float:
+        """
+        Return distance [m] from segment start to the orthogonal projection of 'pos'.
+        Requires self.current_segment_data to be valid.
+        """
+        if not self.current_segment_data or 'geom' not in self.current_segment_data:
+            return 0.0
+        coords = list(self.current_segment_data['geom'].coords)
+        if len(coords) < 2:
+            return 0.0
+
+        # Find the node pair that straddles the projected point
+        min_dist_sq = float('inf') # Use squared distance for comparison efficiency
+        best_i = 0
+        pos_lat_rad = pos.latitude * geometry.TO_RADIANS
+        pos_lon_rad = pos.longitude * geometry.TO_RADIANS
+
+        for i in range(len(coords) - 1):
+            p0_lon, p0_lat = coords[i]
+            p1_lon, p1_lat = coords[i + 1]
+            p0_lat_rad, p0_lon_rad = p0_lat * geometry.TO_RADIANS, p0_lon * geometry.TO_RADIANS
+            p1_lat_rad, p1_lon_rad = p1_lat * geometry.TO_RADIANS, p1_lon * geometry.TO_RADIANS
+
+            # Quick check: Check if longitude is within bounds (approximate)
+            # Adding a small buffer for floating point comparisons
+            lon_buffer = 1e-6
+            if not (min(p0_lon, p1_lon) - lon_buffer <= pos.longitude <= max(p0_lon, p1_lon) + lon_buffer):
+                continue
+            # Quick check: Check if latitude is within bounds (approximate)
+            lat_buffer = 1e-6
+            if not (min(p0_lat, p1_lat) - lat_buffer <= pos.latitude <= max(p0_lat, p1_lat) + lat_buffer):
+                 continue
+
+            # Calculate cross-track error (distance from point to line segment)
+            # Use squared distance to avoid sqrt for comparison
+            dist_sq = geometry.cross_track_error_squared(
+                p0_lat_rad, p0_lon_rad,
+                p1_lat_rad, p1_lon_rad,
+                pos_lat_rad, pos_lon_rad)
+
+            if dist_sq < min_dist_sq:
+                min_dist_sq = dist_sq
+                best_i = i
+
+        # Sum metres up to best_i
+        meters = 0.0
+        for j in range(best_i):
+            p_j0_lon, p_j0_lat = coords[j]
+            p_j1_lon, p_j1_lat = coords[j + 1]
+            meters += geometry.distance_to_point(
+                p_j0_lat * geometry.TO_RADIANS, p_j0_lon * geometry.TO_RADIANS,
+                p_j1_lat * geometry.TO_RADIANS, p_j1_lon * geometry.TO_RADIANS)
+
+        # Add fractional distance along the best segment (best_i to best_i+1)
+        p0_lon, p0_lat = coords[best_i]
+        p1_lon, p1_lat = coords[best_i + 1]
+        seg_len = geometry.distance_to_point(
+            p0_lat * geometry.TO_RADIANS, p0_lon * geometry.TO_RADIANS,
+            p1_lat * geometry.TO_RADIANS, p1_lon * geometry.TO_RADIANS)
+
+        if seg_len > 1e-3: # Avoid division by zero/tiny segments
+            frac = geometry.fraction_along_segment(
+                p0_lat, p0_lon, p1_lat, p1_lon, pos.latitude, pos.longitude)
+            # Clamp frac to [0, 1] as projection might slightly exceed segment bounds
+            frac = clip(frac, 0.0, 1.0)
+            meters += frac * seg_len
+        # else: segment is too short, don't add fractional component
+
+        return meters
+    # --- end meters-true projection ------------------------------------------
 
     def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, turn_aggressiveness: float):
         """
@@ -260,7 +331,7 @@ class ChauffeurMtsc:
 
         # --- Add Strategic Deceleration Backward Pass ---
         if len(speed_points) > 1:
-            STRATEGIC_DECEL = 1.5  # m/s^2, comfortable early deceleration rate
+            STRATEGIC_DECEL = 1.2  # m/s^2, comfortable early deceleration rate (was 1.5)
             for i in range(len(speed_points) - 2, -1, -1):
                 dist = distance_points[i+1] - distance_points[i]
                 if dist < 1e-3: # Avoid issues with zero/tiny distance
@@ -283,19 +354,17 @@ class ChauffeurMtsc:
 
         self.curvature_valid = True # Mark as valid since we processed curvatures
 
-        # Now, find where the car is along this segment's profile
-        current_point = Point(pos.longitude, pos.latitude)
-        # Project the car's position onto the segment geometry
-        # Note: segment_geom.project gives distance along the LINESTRING,
-        # which matches how we calculated cumulative_distances.
-        car_dist_along_segment = segment_geom.project(current_point)
+        # Now, find where the car is along this segment's profile using metres
+        # current_point = Point(pos.longitude, pos.latitude) # No longer needed
+        # car_dist_along_segment = segment_geom.project(current_point) # WRONG UNITS!
+        car_dist_along_segment = self._project_along_segment_m(pos) # Correct units
 
         # Shift the distance profile so that the car's position is at distance 0
         distance_profile_shifted = distance_points - car_dist_along_segment
 
-        # --- Generate profile matching VTSC/Planner output format ---
+        # --- Generate profile matching VTSC/Planner output format --- # REMOVED v_ego based interpolation
         # Target distances ahead based on current speed and profile times
-        lookahead_distances = np.array(PROFILE_TIMES) * v_ego
+        # lookahead_distances = np.array(PROFILE_TIMES) * v_ego # REMOVED - VTSC uses its own kinematic projection
 
         # Ensure distance_profile_shifted covers the range needed for interpolation
         interp_distances = distance_profile_shifted
@@ -317,22 +386,24 @@ class ChauffeurMtsc:
         if len(unique_distances) < 1:
             self.curvature_valid = False
             return np.array([]), np.array([])
-        elif len(unique_distances) < 2:
-            # Only one point, use constant speed
-            final_speeds = np.full(PROFILE_LENGTH, speed_points_unique[0])
-        else:
-            # Interpolate speeds at the desired lookahead distances
-            # Use bounds_error=False and fill_value=(first_speed, last_speed) for extrapolation
-            first_speed = speed_points_unique[0]
-            last_speed = speed_points_unique[-1]
-            final_speeds = np.interp(lookahead_distances, unique_distances, speed_points_unique,
-                                     left=first_speed, right=last_speed)
+        # elif len(unique_distances) < 2: # Let VTSC handle interpolation even with 1 point
+        #     # Only one point, use constant speed
+        #     final_speeds = np.full(PROFILE_LENGTH, speed_points_unique[0])
+        # else:
+        #     # Interpolate speeds at the desired lookahead distances
+        #     # Use bounds_error=False and fill_value=(first_speed, last_speed) for extrapolation
+        #     first_speed = speed_points_unique[0]
+        #     last_speed = speed_points_unique[-1]
+        #     final_speeds = np.interp(lookahead_distances, unique_distances, speed_points_unique,
+        #                              left=first_speed, right=last_speed)
 
-        # Final distance profile corresponds to PROFILE_TIMES * v_ego
-        final_distances = lookahead_distances
+        # Final distance profile corresponds to PROFILE_TIMES * v_ego # REMOVED
+        # final_distances = lookahead_distances # REMOVED
 
-        # print(f"MTSC: Generated profile: {len(final_distances)} dist, {len(final_speeds)} speed") # Debug
-        return final_distances, final_speeds
+        # Return the raw distance/speed profile for VTSC to interpolate
+        # print(f"MTSC: Generated raw profile: {len(unique_distances)} dist, {len(speed_points_unique)} speed") # Debug
+        return unique_distances, speed_points_unique
+        # --- End REMOVED v_ego interpolation ---
 
     def update(self, v_ego, a_ego, frogpilot_toggles, turn_aggressiveness=1.0) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
         """

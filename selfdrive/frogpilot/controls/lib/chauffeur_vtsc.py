@@ -115,8 +115,8 @@ class VisionTurnSpeedController:
 
         self.MAX_DECEL = max_decel
         self.MAX_JERK = max_jerk
-        # Allow ~2x acceleration than deceleration
-        self.MAX_ACCEL = max_accel if max_accel is not None else 2.0 * max_decel
+        # Allow ~1.3x acceleration than deceleration (was 2.0x)
+        self.MAX_ACCEL = max_accel if max_accel is not None else 1.3 * max_decel
         self.MAX_JERK_ACCEL = max_jerk_accel if max_jerk_accel is not None else 2.0 * max_jerk
 
         self.current_accel = 0.0
@@ -242,7 +242,8 @@ class VisionTurnSpeedController:
                 turn_aggressiveness=turn_aggressiveness,
                 skip_accel_limit=is_bump_up
             )
-            raw_target = self.planned_speeds[0]
+            # Use the minimum of the first two planned points to anticipate decel
+            raw_target = min(self.planned_speeds[0], self.planned_speeds[1]) if len(self.planned_speeds) >= 2 else self.planned_speeds[0]
 
         # Always clamp raw_target to at most v_cruise_cluster
         # raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
@@ -381,8 +382,8 @@ class VisionTurnSpeedController:
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel - REVERTED from 1.6
         apex_decel_factor = 0.45   # Increased further (from 0.35) to start decel ramp earlier, hitting speed sooner
-        apex_spool_factor = 0.15   # Increased from 0.10 to start accel slightly sooner post-apex and smooth transition
-        pre_apex_spool_fract = 0.1 # Start spooling much closer to the apex (was 0.5)
+        apex_spool_factor = 0.25   # Increased from 0.15 to keep foot in sooner & longer (was 0.15)
+        pre_apex_spool_fract = 0.3 # Start spooling earlier before the apex (was 0.1)
 
         planned = safe_speeds.copy()
 
