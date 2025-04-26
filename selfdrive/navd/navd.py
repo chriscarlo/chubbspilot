@@ -59,6 +59,8 @@ class RouteEngine:
 
     self.reroute_counter = 0
 
+    # Speed limit from local map data fetch (when no route active)
+    self.current_segment_speed_limit = 0
 
     self.api = None
     self.mapbox_token = None
@@ -184,6 +186,8 @@ class RouteEngine:
             fp_msg.frogpilotNavigation.approachingIntersection = False
             fp_msg.frogpilotNavigation.approachingTurn = False
             self.pm.send('frogpilotNavigation', fp_msg)
+            # Also clear any potentially stale local speed limit if localizer becomes invalid
+            self.current_segment_speed_limit = 0
             return
 
     try:
@@ -248,43 +252,30 @@ class RouteEngine:
         print("navd.py: CLOUDLG - No destination set, activating mock route.", flush=True)
 
       if self.mock_route_active and self.mock_route_timer == 0:
-        print("navd.py: recompute_route - Mock route active and timer is 0, attempting calculation.", flush=True)
+        print("navd.py: recompute_route - Mock route active and timer is 0, attempting fetch.", flush=True)
         if self.last_bearing is None or not self.gps_ok or not self.localizer_valid:
-          print("navd.py: recompute_route - Mock conditions lost before calculation.", flush=True)
+          print("navd.py: recompute_route - Mock conditions lost before fetch.", flush=True)
           cloudlog.warning("Mock route conditions lost (bearing/gps/localizer), deactivating.")
           print("navd.py: CLOUDLG - Mock route conditions lost (bearing/gps/localizer), deactivating.", flush=True)
           self.clear_route() # This also sets mock_route_active to False and resets timer
           return
-
-        mock_dest = self.calculate_coordinate_ahead(self.last_position.latitude,
-                                                  self.last_position.longitude,
-                                                  self.last_bearing,
-                                                  MOCK_ROUTE_DISTANCE_KM)
-        if mock_dest:
-          print(f"navd.py: recompute_route - Calculated mock destination: {mock_dest}", flush=True)
-          cloudlog.info(f"Calculating mock route to {mock_dest}")
-          print(f"navd.py: CLOUDLG - Calculating mock route to {mock_dest}", flush=True)
-          self.calculate_route(mock_dest)
-          # Reset timer for next recalculation
-          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC
         else:
-          print("navd.py: recompute_route - Failed to calculate mock destination coordinate.", flush=True)
-          cloudlog.error("Failed to calculate mock destination.")
-          print("navd.py: CLOUDLG - Failed to calculate mock destination.", flush=True)
-          # Don't retry immediately, wait for next timer cycle or location update
-          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC // 10 # Retry sooner
-      print("navd.py: recompute_route - Exiting after mock route logic.", flush=True)
+          # Conditions still good, fetch local data instead of calculating full route
+          self._fetch_map_data_for_location()
+          # Reset timer for next fetch
+          self.mock_route_timer = MOCK_ROUTE_RECALC_INTERVAL_SEC
+      print("navd.py: recompute_route - Exiting after mock route fetch/timer logic.", flush=True)
       return # Don't proceed to regular route logic if handling mock route
 
     # --- Regular Route Logic ---
     print("navd.py: recompute_route - Entering regular route logic.", flush=True)
-    # If a destination is set, ensure mock route is deactivated
+    # If a destination is set, ensure mock route is deactivated and local speed limit is cleared
     if self.mock_route_active:
         print("navd.py: recompute_route - Deactivating mock route due to set destination.", flush=True)
         cloudlog.info("Destination set, deactivating mock route.")
         print("navd.py: CLOUDLG - Destination set, deactivating mock route.", flush=True)
-        self.clear_route() # Deactivates mock route and clears existing route data
-        # Don't return here, let regular logic continue with the new destination
+        self.clear_route() # Deactivates mock route, clears route data AND local speed limit
+        return # Conditions not met, and no destination, so nothing to do.
 
     # Existing logic for handling NavDestination changes and recomputing
     needs_route = self.should_recompute()
@@ -490,171 +481,293 @@ class RouteEngine:
 
     self.send_route()
 
+  def _fetch_map_data_for_location(self):
+    print("navd.py: _fetch_map_data_for_location called...", flush=True)
+    if self.last_position is None or self.last_bearing is None:
+        print("navd.py: _fetch_map_data_for_location - Missing position or bearing.", flush=True)
+        self.current_segment_speed_limit = 0 # Clear speed limit if we can't fetch
+        return
+
+    # Fetch API token
+    token = self.mapbox_token
+    if token is None and self.api:
+      token = self.api.get_token()
+
+    if token is None:
+      print("navd.py: _fetch_map_data_for_location - No token available.", flush=True)
+      cloudlog.error("No valid Mapbox token or API token available for local data fetch.")
+      print("navd.py: CLOUDLG - No valid Mapbox token or API token available for local data fetch.", flush=True)
+      self.current_segment_speed_limit = 0 # Clear speed limit if we can't fetch
+      return
+
+    # Calculate a short coordinate ahead (e.g., 50 meters)
+    # Using a small distance to ensure we get data for the current segment
+    FETCH_DISTANCE_KM = 0.05
+    coord_ahead = self.calculate_coordinate_ahead(self.last_position.latitude,
+                                                  self.last_position.longitude,
+                                                  self.last_bearing,
+                                                  FETCH_DISTANCE_KM)
+    if coord_ahead is None:
+        print("navd.py: _fetch_map_data_for_location - Failed to calculate coordinate ahead.", flush=True)
+        self.current_segment_speed_limit = 0
+        return
+
+    # Define API parameters - minimal request for annotations
+    params = {
+      'access_token': token,
+      'annotations': 'maxspeed', # Only request maxspeed
+      'geometries': 'geojson',   # Still need geometry to associate annotation
+      'overview': 'simplified',  # Don't need full overview
+      'steps': 'false',          # Don't need steps
+      'alternatives': 'false',
+      # Waypoints define the short segment we care about
+      'waypoints': '0;1',
+      # Provide bearing for the start point
+      'bearings': f"{(self.last_bearing + 360) % 360:.0f},90",
+    }
+
+    coords_str = (f'{self.last_position.longitude},{self.last_position.latitude};'
+                  f'{coord_ahead.longitude},{coord_ahead.latitude}')
+    url = self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords_str
+
+    print(f"navd.py: _fetch_map_data_for_location - Requesting URL: {url}", flush=True)
+    # print(f"navd.py: _fetch_map_data_for_location - Params: {params}", flush=True) # Reduce logging noise
+
+    try:
+      resp = requests.get(url, params=params, timeout=5) # Shorter timeout for local fetch
+      print(f"navd.py: _fetch_map_data_for_location - Response Status Code: {resp.status_code}", flush=True)
+      resp.raise_for_status()
+
+      r = resp.json()
+
+      current_maxspeed_ms = 0 # Default to 0
+      if r.get('routes') and len(r['routes']) > 0:
+        route = r['routes'][0]
+        if route.get('legs') and len(route['legs']) > 0:
+          leg = route['legs'][0]
+          if leg.get('annotation') and leg['annotation'].get('maxspeed'):
+            maxspeeds = leg['annotation']['maxspeed']
+            # Use the first maxspeed value available for the segment
+            for speed_info in maxspeeds:
+              if speed_info and 'speed' in speed_info and speed_info['speed'] is not None:
+                 if isinstance(speed_info['speed'], (int, float)): # Check it's a number
+                    current_maxspeed_ms = maxspeed_to_ms(speed_info) # Use helper
+                    print(f"navd.py: _fetch_map_data_for_location - Found maxspeed: {speed_info} -> {current_maxspeed_ms} m/s", flush=True)
+                    break # Take the first valid one
+                 elif isinstance(speed_info['speed'], str): # Handle 'none' or 'unknown' strings explicitly
+                     if speed_info['speed'] not in ('none', 'unknown'):
+                         # Try converting if it's a numeric string (e.g., "60kph")
+                         try:
+                             current_maxspeed_ms = maxspeed_to_ms(speed_info)
+                             print(f"navd.py: _fetch_map_data_for_location - Found maxspeed (str): {speed_info} -> {current_maxspeed_ms} m/s", flush=True)
+                             break
+                         except ValueError:
+                             print(f"navd.py: _fetch_map_data_for_location - Invalid speed string '{speed_info['speed']}'", flush=True)
+                     else:
+                         print(f"navd.py: _fetch_map_data_for_location - Maxspeed is '{speed_info['speed']}'", flush=True)
+                 else:
+                     print(f"navd.py: _fetch_map_data_for_location - Unexpected speed format: {speed_info}", flush=True)
+
+      # Store the fetched speed limit
+      self.current_segment_speed_limit = current_maxspeed_ms
+      print(f"navd.py: _fetch_map_data_for_location - Set current_segment_speed_limit to {self.current_segment_speed_limit}", flush=True)
+
+    except requests.exceptions.Timeout:
+        print("navd.py: _fetch_map_data_for_location - Request timed out.", flush=True)
+        cloudlog.exception("_fetch_map_data_for_location timeout")
+        self.current_segment_speed_limit = 0 # Clear on error
+    except requests.exceptions.RequestException as e:
+        print(f"navd.py: _fetch_map_data_for_location - Request failed: {e}", flush=True)
+        cloudlog.exception(f"_fetch_map_data_for_location failed: {e}")
+        self.current_segment_speed_limit = 0 # Clear on error
+    except Exception as e:
+        print(f"navd.py: _fetch_map_data_for_location - Unexpected error: {e}", flush=True)
+        cloudlog.exception("navd._fetch_map_data_for_location unexpected error")
+        self.current_segment_speed_limit = 0 # Clear on error
+
   def send_instruction(self):
     print("navd.py: send_instruction called...", flush=True) # Added trace
     msg = messaging.new_message('navInstruction', valid=True)
     fp_msg = messaging.new_message('frogpilotNavigation', valid=True)
 
+    # Default values for FrogPilot message
+    current_nav_speed_limit = 0
+    approaching_intersection = False
+    approaching_turn = False
+
+    # --- Handle Case: No Active Navigation Route ---
     if self.step_idx is None:
-      print("navd.py: send_instruction - step_idx is None, invalidating.", flush=True)
+      print("navd.py: send_instruction - No active route (step_idx is None). Sending invalid navInstruction.", flush=True)
       msg.valid = False
-      self.pm.send('navInstruction', msg)
-
-      fp_msg.frogpilotNavigation.navigationSpeedLimit = 0
-      self.pm.send('frogpilotNavigation', fp_msg)
-      return
-
-    step = self.route[self.step_idx]
-    geometry = self.route_geometry[self.step_idx]
-    along_geometry = distance_along_geometry(geometry, self.last_position)
-    distance_to_maneuver_along_geometry = step['distance'] - along_geometry
-
-    # Banner instructions are for the following maneuver step, don't use empty last step
-    banner_step = step
-    if not len(banner_step['bannerInstructions']) and self.step_idx == len(self.route) - 1:
-      banner_step = self.route[max(self.step_idx - 1, 0)]
-
-    # Current instruction
-    msg.navInstruction.maneuverDistance = distance_to_maneuver_along_geometry
-    instruction = parse_banner_instructions(banner_step['bannerInstructions'], distance_to_maneuver_along_geometry)
-    if instruction is not None:
-      for k,v in instruction.items():
-        setattr(msg.navInstruction, k, v)
-
-    # All instructions
-    maneuvers = []
-    for i, step_i in enumerate(self.route):
-      if i < self.step_idx:
-        distance_to_maneuver = -sum(self.route[j]['distance'] for j in range(i+1, self.step_idx)) - along_geometry
-      elif i == self.step_idx:
-        distance_to_maneuver = distance_to_maneuver_along_geometry
-      else:
-        distance_to_maneuver = distance_to_maneuver_along_geometry + sum(self.route[j]['distance'] for j in range(self.step_idx+1, i+1))
-
-      instruction = parse_banner_instructions(step_i['bannerInstructions'], distance_to_maneuver)
-      if instruction is None:
-        continue
-      maneuver = {'distance': distance_to_maneuver}
-      if 'maneuverType' in instruction:
-        maneuver['type'] = instruction['maneuverType']
-      if 'maneuverModifier' in instruction:
-        maneuver['modifier'] = instruction['maneuverModifier']
-      maneuvers.append(maneuver)
-
-    msg.navInstruction.allManeuvers = maneuvers
-
-    # Compute total remaining time and distance
-    remaining = 1.0 - along_geometry / max(step['distance'], 1)
-    total_distance = step['distance'] * remaining
-    total_time = step['duration'] * remaining
-
-    if step['duration_typical'] is None:
-      total_time_typical = total_time
-    else:
-      total_time_typical = step['duration_typical'] * remaining
-
-    # Add up totals for future steps
-    for i in range(self.step_idx + 1, len(self.route)):
-      total_distance += self.route[i]['distance']
-      total_time += self.route[i]['duration']
-      if self.route[i]['duration_typical'] is None:
-        total_time_typical += self.route[i]['duration']
-      else:
-        total_time_typical += self.route[i]['duration_typical']
-
-    msg.navInstruction.distanceRemaining = total_distance
-    msg.navInstruction.timeRemaining = total_time
-    msg.navInstruction.timeRemainingTypical = total_time_typical
-
-    # Speed limit logic
-    print("navd.py: send_instruction - Processing speed limit...", flush=True)
-    current_nav_speed_limit = 0 # Local variable for this cycle
-    speed_limit_found = False
-    try:
-        closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
-        print(f"navd.py: send_instruction - Closest geometry index: {closest_idx}", flush=True)
-        if closest_idx > 0:
-            # If we are not past the closest point, show previous
-            if along_geometry < distance_along_geometry(geometry, geometry[closest_idx]):
-                print("navd.py: send_instruction - Using previous geometry point for speed limit.", flush=True)
-                closest = geometry[closest_idx - 1]
-
-        print(f"navd.py: send_instruction - Checking annotations for point: {closest}", flush=True)
-        if 'maxspeed' in closest.annotations:
-            speed_limit_found = True
-            maxspeed_value = closest.annotations['maxspeed']
-            print(f"navd.py: send_instruction - Found maxspeed annotation: {maxspeed_value}", flush=True)
-            if self.localizer_valid:
-                print("navd.py: send_instruction - Localizer valid, setting speed limit.", flush=True)
-                msg.navInstruction.speedLimit = maxspeed_value
-                current_nav_speed_limit = maxspeed_value
-            else:
-                print("navd.py: send_instruction - Localizer invalid, not setting speed limit in msg.", flush=True)
-                current_nav_speed_limit = 0 # Set internal variable to 0 if localizer invalid
-        else:
-             print("navd.py: send_instruction - No maxspeed annotation found for closest point.", flush=True)
-
-    except Exception as e:
-        print(f"navd.py: send_instruction - Error during speed limit processing: {e}", flush=True)
-        cloudlog.exception("navd.send_instruction speed limit error")
-        print(f"navd.py: CLOUDLG - navd.send_instruction speed limit error: {e}", flush=True)
-
-    # Update internal state AFTER processing
-    self.nav_speed_limit = current_nav_speed_limit
-    print(f"navd.py: send_instruction - Updated self.nav_speed_limit to: {self.nav_speed_limit}", flush=True)
-
-    # Speed limit sign type
-    if 'speedLimitSign' in step:
-      if step['speedLimitSign'] == 'mutcd':
-        msg.navInstruction.speedLimitSign = log.NavInstruction.SpeedLimitSign.mutcd
-      elif step['speedLimitSign'] == 'vienna':
-        msg.navInstruction.speedLimitSign = log.NavInstruction.SpeedLimitSign.vienna
-
-    self.pm.send('navInstruction', msg)
-
-    # Transition to next route segment
-    if distance_to_maneuver_along_geometry < -MANEUVER_TRANSITION_THRESHOLD:
-      if self.step_idx + 1 < len(self.route):
-        self.step_idx += 1
-        self.reset_recompute_limits()
-
-        # Update the 'CurrentStep' value in the JSON
-        if 'routes' in self.r2 and len(self.r2['routes']) > 0:
-          self.r3['CurrentStep'] = self.step_idx
-        # Write the modified JSON data back to the file
-        with open('CurrentStep.json', 'w') as json_file:
-          json.dump(self.r3, json_file, indent=4)
-      else:
-        cloudlog.warning("Destination reached")
-        print("navd.py: CLOUDLG - Destination reached", flush=True)
-        # Clear route if driving away from destination
-        dist = self.nav_destination.distance_to(self.last_position)
-        if dist > REROUTE_DISTANCE:
-          self.params.remove("NavDestination")
-          self.clear_route()
-
-    if self.frogpilot_toggles.conditional_navigation:
-      v_ego = self.sm['carState'].vEgo
-      seconds_to_stop = interp(v_ego, [0, 22.5, 45], [5, 10, 10])
-
-      closest_condition_indices = [idx for idx in self.stop_signal if idx >= closest_idx]
-      if closest_condition_indices:
-        closest_condition_index = min(closest_condition_indices, key=lambda idx: abs(closest_idx - idx))
-        index = self.stop_signal.index(closest_condition_index)
-
-        distance_to_condition = self.last_position.distance_to(self.stop_coord[index])
-        self.approaching_intersection = self.frogpilot_toggles.conditional_navigation_intersections and distance_to_condition < max((seconds_to_stop * v_ego), 25)
-      else:
-        self.approaching_intersection = False
-
-      self.approaching_turn = self.frogpilot_toggles.conditional_navigation_turns and distance_to_maneuver_along_geometry < max((seconds_to_stop * v_ego), 25)
-    else:
+      # Use the speed limit fetched by _fetch_map_data_for_location if localizer is valid
+      current_nav_speed_limit = self.current_segment_speed_limit if self.localizer_valid else 0
+      print(f"navd.py: send_instruction (no route) - Using speed limit: {current_nav_speed_limit} (localizer_valid={self.localizer_valid})", flush=True)
+      # No maneuver info when not navigating
       self.approaching_intersection = False
       self.approaching_turn = False
+      self.nav_speed_limit = 0 # Ensure nav_speed_limit specific to routes is 0
 
+    # --- Handle Case: Active Navigation Route ---
+    else:
+      print(f"navd.py: send_instruction - Active route (step_idx={self.step_idx}). Processing step.", flush=True)
+      # Existing logic for active route navigation instructions
+      step = self.route[self.step_idx]
+      geometry = self.route_geometry[self.step_idx]
+      along_geometry = distance_along_geometry(geometry, self.last_position)
+      distance_to_maneuver_along_geometry = step['distance'] - along_geometry
+
+      # Banner instructions are for the following maneuver step, don't use empty last step
+      banner_step = step
+      if not len(banner_step['bannerInstructions']) and self.step_idx == len(self.route) - 1:
+        banner_step = self.route[max(self.step_idx - 1, 0)]
+
+      # Current instruction
+      msg.navInstruction.maneuverDistance = distance_to_maneuver_along_geometry
+      instruction = parse_banner_instructions(banner_step['bannerInstructions'], distance_to_maneuver_along_geometry)
+      if instruction is not None:
+        for k,v in instruction.items():
+          setattr(msg.navInstruction, k, v)
+
+      # All instructions
+      maneuvers = []
+      for i, step_i in enumerate(self.route):
+        if i < self.step_idx:
+          distance_to_maneuver = -sum(self.route[j]['distance'] for j in range(i+1, self.step_idx)) - along_geometry
+        elif i == self.step_idx:
+          distance_to_maneuver = distance_to_maneuver_along_geometry
+        else:
+          distance_to_maneuver = distance_to_maneuver_along_geometry + sum(self.route[j]['distance'] for j in range(self.step_idx+1, i+1))
+
+        instruction = parse_banner_instructions(step_i['bannerInstructions'], distance_to_maneuver)
+        if instruction is None:
+          continue
+        maneuver = {'distance': distance_to_maneuver}
+        if 'maneuverType' in instruction:
+          maneuver['type'] = instruction['maneuverType']
+        if 'maneuverModifier' in instruction:
+          maneuver['modifier'] = instruction['maneuverModifier']
+        maneuvers.append(maneuver)
+
+      msg.navInstruction.allManeuvers = maneuvers
+
+      # Compute total remaining time and distance
+      remaining = 1.0 - along_geometry / max(step['distance'], 1)
+      total_distance = step['distance'] * remaining
+      total_time = step['duration'] * remaining
+
+      if step['duration_typical'] is None:
+        total_time_typical = total_time
+      else:
+        total_time_typical = step['duration_typical'] * remaining
+
+      # Add up totals for future steps
+      for i in range(self.step_idx + 1, len(self.route)):
+        total_distance += self.route[i]['distance']
+        total_time += self.route[i]['duration']
+        if self.route[i]['duration_typical'] is None:
+          total_time_typical += self.route[i]['duration']
+        else:
+          total_time_typical += self.route[i]['duration_typical']
+
+      msg.navInstruction.distanceRemaining = total_distance
+      msg.navInstruction.timeRemaining = total_time
+      msg.navInstruction.timeRemainingTypical = total_time_typical
+
+      # Speed limit logic (only for active route)
+      print("navd.py: send_instruction (route) - Processing speed limit...", flush=True)
+      route_speed_limit = 0 # Local variable for this cycle
+      try:
+          closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
+          print(f"navd.py: send_instruction (route) - Closest geometry index: {closest_idx}", flush=True)
+          if closest_idx > 0:
+              # If we are not past the closest point, show previous
+              if along_geometry < distance_along_geometry(geometry, geometry[closest_idx]):
+                  print("navd.py: send_instruction (route) - Using previous geometry point for speed limit.", flush=True)
+                  closest = geometry[closest_idx - 1]
+
+          print(f"navd.py: send_instruction (route) - Checking annotations for point: {closest}", flush=True)
+          if 'maxspeed' in closest.annotations:
+              maxspeed_value = closest.annotations['maxspeed']
+              print(f"navd.py: send_instruction (route) - Found maxspeed annotation: {maxspeed_value}", flush=True)
+              if self.localizer_valid:
+                  print("navd.py: send_instruction (route) - Localizer valid, setting speed limit in msg.", flush=True)
+                  msg.navInstruction.speedLimit = maxspeed_value
+                  route_speed_limit = maxspeed_value
+              else:
+                  print("navd.py: send_instruction (route) - Localizer invalid, not setting speed limit in msg.", flush=True)
+                  route_speed_limit = 0 # Set internal variable to 0 if localizer invalid
+          else:
+               print("navd.py: send_instruction (route) - No maxspeed annotation found for closest point.", flush=True)
+
+      except Exception as e:
+          print(f"navd.py: send_instruction (route) - Error during speed limit processing: {e}", flush=True)
+          cloudlog.exception("navd.send_instruction route speed limit error")
+          print(f"navd.py: CLOUDLG - navd.send_instruction route speed limit error: {e}", flush=True)
+
+      # Update internal state AFTER processing (only for route-based speed limit)
+      self.nav_speed_limit = route_speed_limit
+      current_nav_speed_limit = self.nav_speed_limit # Use the route speed limit for the FP message
+      print(f"navd.py: send_instruction (route) - Updated self.nav_speed_limit to: {self.nav_speed_limit}", flush=True)
+      self.current_segment_speed_limit = 0 # Ensure local speed limit is not used when route active
+
+      # Speed limit sign type
+      if 'speedLimitSign' in step:
+        if step['speedLimitSign'] == 'mutcd':
+          msg.navInstruction.speedLimitSign = log.NavInstruction.SpeedLimitSign.mutcd
+        elif step['speedLimitSign'] == 'vienna':
+          msg.navInstruction.speedLimitSign = log.NavInstruction.SpeedLimitSign.vienna
+
+      # Transition to next route segment / Destination Reached logic
+      if distance_to_maneuver_along_geometry < -MANEUVER_TRANSITION_THRESHOLD:
+        if self.step_idx + 1 < len(self.route):
+          self.step_idx += 1
+          self.reset_recompute_limits()
+
+          # Update the 'CurrentStep' value in the JSON
+          if 'routes' in self.r2 and len(self.r2['routes']) > 0:
+            self.r3['CurrentStep'] = self.step_idx
+          # Write the modified JSON data back to the file
+          with open('CurrentStep.json', 'w') as json_file:
+            json.dump(self.r3, json_file, indent=4)
+        else:
+          cloudlog.warning("Destination reached")
+          print("navd.py: CLOUDLG - Destination reached", flush=True)
+          # Clear route if driving away from destination
+          dist = self.nav_destination.distance_to(self.last_position)
+          if dist > REROUTE_DISTANCE:
+            self.params.remove("NavDestination")
+            self.clear_route() # Clears route, step_idx, AND local speed limit
+
+      # Conditional Experimental Mode logic (only for active route)
+      if self.frogpilot_toggles.conditional_navigation:
+        v_ego = self.sm['carState'].vEgo
+        seconds_to_stop = interp(v_ego, [0, 22.5, 45], [5, 10, 10])
+
+        closest_condition_indices = [idx for idx in self.stop_signal if idx >= closest_idx]
+        if closest_condition_indices:
+          closest_condition_index = min(closest_condition_indices, key=lambda idx: abs(closest_idx - idx))
+          index = self.stop_signal.index(closest_condition_index)
+
+          distance_to_condition = self.last_position.distance_to(self.stop_coord[index])
+          approaching_intersection = self.frogpilot_toggles.conditional_navigation_intersections and distance_to_condition < max((seconds_to_stop * v_ego), 25)
+        else:
+          approaching_intersection = False
+
+        approaching_turn = self.frogpilot_toggles.conditional_navigation_turns and distance_to_maneuver_along_geometry < max((seconds_to_stop * v_ego), 25)
+      else:
+        approaching_intersection = False
+        approaching_turn = False
+
+      self.approaching_intersection = approaching_intersection
+      self.approaching_turn = approaching_turn
+
+    # --- Send Messages ---
+    self.pm.send('navInstruction', msg)
+
+    # Populate and send FrogPilot message (uses appropriate speed limit based on route status)
+    fp_msg.frogpilotNavigation.navigationSpeedLimit = current_nav_speed_limit
     fp_msg.frogpilotNavigation.approachingIntersection = self.approaching_intersection
     fp_msg.frogpilotNavigation.approachingTurn = self.approaching_turn
-    fp_msg.frogpilotNavigation.navigationSpeedLimit = self.nav_speed_limit
 
     self.pm.send('frogpilotNavigation', fp_msg)
     print("navd.py: send_instruction finished.", flush=True) # Added trace
@@ -677,6 +790,8 @@ class RouteEngine:
     self.nav_destination = None
     self.mock_route_active = False # Ensure mock route is deactivated
     self.mock_route_timer = 0 # Reset timer
+    self.current_segment_speed_limit = 0 # Clear local speed limit too
+    print("navd.py: clear_route called - Route and local speed limit cleared.", flush=True) # Added trace
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
