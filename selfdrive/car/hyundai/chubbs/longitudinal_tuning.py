@@ -151,7 +151,7 @@ class HKGLongitudinalTuning:
     current_time = self.DT_CTRL * self.jerk_count
     return (current_time - self.last_decel_time) < self.min_cancel_delay and CS.out.aEgo < 0
 
-  def calculate_limited_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState) -> float:
+  def calculate_limited_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, lead_one: car.RadarState.LeadData = None) -> float:
     """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
     if self.handle_cruise_cancel(CS):
@@ -202,9 +202,11 @@ class HKGLongitudinalTuning:
         ttc = float('inf')
         jerk_needed_for_target = 0.0 # Initialize here
 
-        # Check for lead and calculate TTC if closing
-        if CS.leadOne.status and CS.leadOne.vRel < -0.1 and CS.leadOne.dRel > 0.1:
-            lead_ttc = getattr(CS.leadOne, 'ttc', float('inf')) # Get TTC, default to infinity if missing
+        # Check for lead using the passed lead_one object
+        # Use hasattr for robustness in case lead_one is None from controller
+        if lead_one is not None and lead_one.status and lead_one.vRel < -0.1 and lead_one.dRel > 0.1:
+            # Use lead_one.ttc directly, no need for getattr if we require lead_one to exist
+            lead_ttc = lead_one.ttc
 
             # Check if lead_ttc is a valid finite number and positive
             if isinstance(lead_ttc, float) and math.isfinite(lead_ttc) and lead_ttc > 0:
@@ -251,7 +253,7 @@ class HKGLongitudinalTuning:
                  # Sticking to baseline seems safer if TTC is unknown/invalid.
                  effective_jerk = baseline_jerk
 
-        # If no lead closing or status false, effective_jerk remains baseline_jerk from initialization
+        # If lead_one is None or status false, effective_jerk remains baseline_jerk from initialization
 
         # Apply the effective jerk limit
         # Ensure effective_jerk is valid before calculating max_delta_accel
@@ -279,13 +281,13 @@ class HKGLongitudinalTuning:
     self.accel_last = accel
     return accel
 
-  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles) -> float:
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: car.RadarState.LeadData = None) -> float:
     """Calculate acceleration with cruise control status handling and final clipping."""
     if self.handle_cruise_cancel(CS):
       return 0.0 # Return 0 on cancel
 
-    # Get the rate-limited acceleration value using the new logic
-    accel = self.calculate_limited_accel(actuators, CS)
+    # Pass lead_one down to calculate_limited_accel
+    accel = self.calculate_limited_accel(actuators, CS, lead_one)
 
     # Final clipping against car config limits
     max_accel_upper_limit = self.car_config.accel_limits[1]
@@ -361,7 +363,7 @@ class HKGLongitudinalController:
           self.cb_lower
       )
 
-  def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators, CS: car.CarState, long_control_state: LongCtrlState) -> JerkOutput:
+  def calculate_and_get_jerk(self, actuators: car.CarControl.Actuators, CS: car.CarState, long_control_state: LongCtrlState, lead_one: car.RadarState.LeadData = None) -> JerkOutput:
     """Calculate jerk based on tuning (if active) and return JerkOutput."""
     if self.tuning is not None:
       # Delegate jerk calculation to the tuning instance
@@ -377,14 +379,14 @@ class HKGLongitudinalController:
     # Return the current jerk state (either from tuning or defaults)
     return self.get_jerk()
 
-  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles) -> float:
+  def calculate_accel(self, actuators: car.CarControl.Actuators, CS: car.CarState, frogpilot_toggles, lead_one: car.RadarState.LeadData = None) -> float:
     """Calculate final acceleration, delegating to tuning instance if active."""
     # Check if the specific tuning logic should be used
     use_tuning_logic = self.param("HKGBraking") and self.tuning is not None
 
     if use_tuning_logic:
-        # Use the potentially modified calculate_accel from the tuning instance
-        accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles)
+        # Pass lead_one down to the tuning instance's calculate_accel
+        accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles, lead_one)
     else:
         # --- Fallback logic if tuning is not used ---
         max_accel_upper_limit = CarControllerParams.ACCEL_MAX

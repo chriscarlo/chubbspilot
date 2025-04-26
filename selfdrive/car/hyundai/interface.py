@@ -296,9 +296,4 @@ class CarInterface(CarInterfaceBase):
 
     ret.events = events.to_msg()
 
-    # Copy lead data from radarState into CarState for use in other modules
-    if sm is not None and sm.valid['radarState']:
-      ret.leadOne = sm['radarState'].leadOne
-      ret.leadTwo = sm['radarState'].leadTwo
-
     return ret, fp_ret

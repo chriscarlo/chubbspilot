@@ -8,6 +8,7 @@ from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAMERA_SCC_CAR
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
+from cereal import messaging
 
 from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController
 
@@ -81,8 +82,13 @@ class CarController(CarControllerBase, HKGLongitudinalController):
 
     # Initialize DesireHelper for auto-passing blinker control
     self.desire_helper = DesireHelper()
+    # Add SubMaster subscription needed for lead data
+    self.sm = messaging.SubMaster(['radarState'])
 
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
+    # Update sm
+    self.sm.update(0)
+
     actuators = CC.actuators
     hud_control = CC.hudControl
     accel = actuators.accel
@@ -113,14 +119,19 @@ class CarController(CarControllerBase, HKGLongitudinalController):
     self.apply_steer_last = apply_steer
 
     # Accel + Longitudinal control
+    # Get lead data
+    lead_one = None
+    if self.sm.valid['radarState']:
+        lead_one = self.sm['radarState'].leadOne
+        # TODO: Handle lead_two if needed by tuning
 
-    accel = self.calculate_accel(actuators, CS, frogpilot_toggles)
+    accel = self.calculate_accel(actuators, CS, frogpilot_toggles, lead_one)
 
     stopping = actuators.longControlState == LongCtrlState.stopping
     set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
 
-    radar_state = None  # Initialize radar_state as None
-    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState)
+    # Pass lead_one to jerk calculation if needed (assuming it might also use it)
+    self.jerk = self.calculate_and_get_jerk(actuators, CS, actuators.longControlState, lead_one)
 
     # HUD messages
     sys_warning, sys_state, left_lane_warning, right_lane_warning = process_hud_alert(CC.enabled, self.car_fingerprint,
