@@ -121,7 +121,7 @@ class Car:
 
     # Update carState from CAN
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)
-    CS, FPCS = self.CI.update(self.CC_prev, can_strs, self._params_list, self.frogpilot_toggles)
+    CS, FPCS = self.CI.update(self.CC_prev, can_strs, self._params_list, self.frogpilot_toggles, self.sm)
 
     self.sm.update(0)
 
