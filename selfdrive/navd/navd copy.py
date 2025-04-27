@@ -206,21 +206,18 @@ class RouteEngine:
   def update_location(self):
     print("navd.py: update_location called...", flush=True) # ADDED
     location = self.sm['liveLocationKalman']
+    self.gps_ok = location.gpsOK
+    print(f"navd.py: update_location - got gps_ok: {self.gps_ok}", flush=True) # ADDED
 
-    # Force conditions for testing mock route
-    self.gps_ok = True # Force GPS OK
-    self.localizer_valid = True # Force localizer valid
-    self.last_bearing = 0.0 # Force a specific bearing (e.g., 0 degrees North)
-    # Use the initial position if kalman isn't valid, otherwise use kalman
-    if location.status == log.LiveLocationKalman.Status.valid and location.positionGeodetic.valid:
-        self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
-    elif self.last_position is None: # Ensure last_position is not None, use a default if needed
-        self.last_position = coordinate_from_param("LastGPSPosition", self.params) # Re-read from param
-        if self.last_position is None: # Still None? Use a default coordinate
-             self.last_position = Coordinate(38.7531, -120.6233) # Example default coordinate from logs
-             print("navd.py: update_location - WARNING: Using hardcoded default position", flush=True)
+    self.localizer_valid = (location.status == log.LiveLocationKalman.Status.valid) and location.positionGeodetic.valid
+    print(f"navd.py: update_location - got localizer_valid: {self.localizer_valid} (status={location.status}, positionGeodetic.valid={location.positionGeodetic.valid})", flush=True) # ADDED
 
-    print(f"navd.py: update_location - FORCED gps_ok={self.gps_ok}, localizer_valid={self.localizer_valid}, bearing={self.last_bearing}, position={self.last_position}", flush=True)
+    if self.localizer_valid:
+      self.last_bearing = math.degrees(location.calibratedOrientationNED.value[2])
+      self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
+      print(f"navd.py: update_location - Updated bearing: {self.last_bearing}, position: {self.last_position}", flush=True) # ADDED
+    else: # ADDED block
+        print(f"navd.py: update_location - Localizer not valid, not updating bearing/position.", flush=True) # ADDED
 
     # Decrement mock route timer (ensuring it doesn't go below zero)
     # Assumes update() is called roughly once per second by Ratekeeper
