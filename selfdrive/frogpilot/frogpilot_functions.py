@@ -85,7 +85,7 @@ def cleanup_backups(directory, limit, success_message, fail_message, compressed=
 
 def backup_frogpilot(build_metadata):
   backup_path = Path("/data/backups")
-  maximum_backups = 5
+  maximum_backups = 1
   cleanup_backups(backup_path, maximum_backups, "Successfully cleaned up old FrogPilot backups", "Failed to cleanup old FrogPilot backups", compressed=True)
 
   _, _, free = shutil.disk_usage(backup_path)
