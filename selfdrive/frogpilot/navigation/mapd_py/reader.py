@@ -232,30 +232,19 @@ class MapReader:
                  self.loaded_tiles.add(tile_id) # Mark as loaded
                  return True
 
-            # --- Find Candidate Segments using Index Bounds ---
-            # Simple bounding box check against current location (could use R-tree on index records too)
-            SEARCH_RADIUS_DEG = 0.005 # Approx 550m radius - adjust as needed
-            search_bounds = (current_lon - SEARCH_RADIUS_DEG,
-                             current_lat - SEARCH_RADIUS_DEG,
-                             current_lon + SEARCH_RADIUS_DEG,
-                             current_lat + SEARCH_RADIUS_DEG)
-
+            # Process ALL records from the index if they aren't already cached
             candidate_records = []
             for rec in index_records:
-                osm_id, r_min_lon, r_min_lat, r_max_lon, r_max_lat, offset, size = rec
-                # Check if segment bounds overlap with search bounds
-                if (r_min_lon <= search_bounds[2] and r_max_lon >= search_bounds[0] and
-                    r_min_lat <= search_bounds[3] and r_max_lat >= search_bounds[1]):
-                    # Check if segment isn't already in our cache
-                    if osm_id not in self.segments_data:
-                        candidate_records.append(rec)
+                osm_id = rec[0]
+                if osm_id not in self.segments_data:
+                     candidate_records.append(rec)
 
             if not candidate_records:
-                # print(f"No candidate segments found near location in tile {tile_id}")
+                # print(f"No *new* segments found in tile {tile_id} index (all might be cached).")
                 self.loaded_tiles.add(tile_id) # Mark as loaded
                 return True
 
-            # print(f"Found {len(candidate_records)} candidates in tile {tile_id} index near location.")
+            # print(f"Found {len(candidate_records)} candidates in tile {tile_id} index near location.") # Now potentially all segments
             # --- Read and Deserialize Only Candidate Segments ---
             with open(tile_path_proto, 'rb') as proto_file:
                 for rec in candidate_records:
