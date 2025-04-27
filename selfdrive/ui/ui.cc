@@ -317,6 +317,12 @@ static void update_state(UIState *s) {
     scene.upcoming_speed_limit = frogpilotPlan.getUpcomingSLCSpeedLimit();
     scene.vtsc_controlling_curve = frogpilotPlan.getVtscControllingCurve();
     scene.vtsc_speed = frogpilotPlan.getVtscSpeed();
+
+    // Update speed_limit_map from frogpilotNavigation if navInstruction is invalid
+    if (!sm["navInstruction"].getValid() && sm.valid("frogpilotNavigation")) {
+      scene.speed_limit_map = sm["frogpilotNavigation"].getFrogpilotNavigation().getNavigationSpeedLimit();
+    }
+
     if (frogpilotPlan.getTogglesUpdated() && sm.frame % UI_FREQ == 0) {
       scene.frogpilot_toggles = QJsonDocument::fromJson(s->params_memory.get("FrogPilotToggles", true).c_str()).object();
 
