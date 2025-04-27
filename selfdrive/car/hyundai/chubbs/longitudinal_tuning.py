@@ -220,8 +220,8 @@ class HKGLongitudinalTuning:
 
             # Get accel_limits safely, ensuring it's a valid structure for max decel
             _accel_limits_raw = getattr(self.car_config, "accel_limits", (-6.0, 4.5))
-            if isinstance(_accel_limits_raw, (tuple, list)) and len(_accel_limits_raw) >= 1 and \\
-               isinstance(_accel_limits_raw[0], (int, float)) and _accel_limits_raw[0] < 0:
+            if (isinstance(_accel_limits_raw, (tuple, list)) and len(_accel_limits_raw) >= 1 and
+               isinstance(_accel_limits_raw[0], (int, float)) and _accel_limits_raw[0] < 0):
                 a_max = abs(_accel_limits_raw[0])
             else:
                 log.warning(f"long_tuning: Invalid car_config.accel_limits[0]: {_accel_limits_raw}. Using fallback max decel.")
