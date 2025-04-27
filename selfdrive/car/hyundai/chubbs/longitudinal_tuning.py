@@ -14,11 +14,7 @@ from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerPa
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
-# --- Constants for Dynamic Jerk ---
-TTC_RESPONSIVENESS_THRESHOLD = 2.0 # TTC (s) below which we consider increasing jerk response
-MAX_ALLOWABLE_JERK = 20.0 # Max downward jerk allowed in urgent situations (m/s^3) - Increased from 10.0
-# MIN_CRITICAL_JERK = 15.0 # Removed, superseded by interpolation
-# --- End Constants ---
+MAX_ALLOWABLE_JERK = 20.0 # Max downward jerk
 
 
 def akima_interp(x, xp, fp):
@@ -198,62 +194,54 @@ class HKGLongitudinalTuning:
                                      np.array(self.car_config.brake_response))
 
         # --- START DYNAMIC JERK MODIFICATION ---
-        effective_jerk = baseline_jerk # Default to comfortable jerk
+        initial_effective_jerk = baseline_jerk # Default to comfortable jerk unless TTC justifies more
         ttc = float('inf')
-        jerk_needed_for_target = 0.0 # Initialize here
+        jerk_needed_for_target = 0.0
 
-        # Check for lead using the passed lead_one object
-        # Use hasattr for robustness in case lead_one is None from controller
-        if lead_one is not None and lead_one.status and lead_one.vRel < -0.1 and lead_one.dRel > 0.1:
-            # Use lead_one.ttc directly, no need for getattr if we require lead_one to exist
-            lead_ttc = lead_one.ttc
+        # Simplified lead check: only require a valid, positive TTC
+        is_ttc_valid = lead_one is not None and isinstance(lead_one.ttc, float) and math.isfinite(lead_one.ttc) and lead_one.ttc > 0
 
-            # Check if lead_ttc is a valid finite number and positive
-            if isinstance(lead_ttc, float) and math.isfinite(lead_ttc) and lead_ttc > 0:
-                 ttc = lead_ttc # Use the valid TTC from radarState
+        if is_ttc_valid:
+            ttc = lead_one.ttc # Use the valid TTC from radarState
 
-                 # --- START DYNAMIC JERK INTERPOLATION ---
-                 # Calculate jerk needed *only if* planner wants more braking
-                 if accel_request < self.accel_last:
-                     if isinstance(accel_request, float) and math.isfinite(accel_request) and \
-                        isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
-                         jerk_needed_for_target = abs((accel_request - self.accel_last) / self.DT_CTRL)
-                     else:
-                          log.warning(f"long_tuning: Invalid accel values for jerk_needed calc: req={accel_request}, last={self.accel_last}")
+            # --- START DYNAMIC JERK INTERPOLATION ---
+            # Define interpolation points
+            ttc_bp = [8.0, 7.0, 6.0]  # Time-to-collision (s) - Max aggression at 4.0s
+            jerk_factor_bp = [0.0, 0.5, 1.0] # Aggressiveness factor (0=baseline, 1=max potential)
+            MAX_POTENTIAL_JERK = MAX_ALLOWABLE_JERK # Use the overall max as the target potential
 
-                 # Define interpolation points
-                 ttc_bp = [6.0, 5.0, 4.0]  # Time-to-collision (s) - Max aggression at 4.0s
-                 jerk_factor_bp = [0.0, 0.3, 1.0] # Aggressiveness factor (0=baseline, 1=max potential)
-                 MAX_POTENTIAL_JERK = MAX_ALLOWABLE_JERK # Use the overall max as the target potential
+            # Interpolate TTC to get aggressiveness factor (clamp TTC within bounds)
+            clamped_ttc = np.clip(ttc, ttc_bp[-1], ttc_bp[0])
+            # np.interp requires x values to be increasing
+            ttc_jerk_factor = np.interp(clamped_ttc, ttc_bp[::-1], jerk_factor_bp[::-1])
 
-                 # Interpolate TTC to get aggressiveness factor (clamp TTC within bounds)
-                 clamped_ttc = np.clip(ttc, ttc_bp[-1], ttc_bp[0])
-                 # np.interp requires x values to be increasing
-                 ttc_jerk_factor = np.interp(clamped_ttc, ttc_bp[::-1], jerk_factor_bp[::-1])
+            # Calculate the maximum jerk allowed based purely on TTC aggressiveness
+            max_jerk_from_ttc = baseline_jerk + (MAX_POTENTIAL_JERK - baseline_jerk) * ttc_jerk_factor
 
-                 # Calculate the maximum jerk allowed based purely on TTC aggressiveness
-                 max_jerk_from_ttc = baseline_jerk + (MAX_POTENTIAL_JERK - baseline_jerk) * ttc_jerk_factor
+            # Use the TTC-based jerk, but capped at the absolute maximum
+            initial_effective_jerk = min(max(baseline_jerk, max_jerk_from_ttc), MAX_ALLOWABLE_JERK)
+            # --- END DYNAMIC JERK INTERPOLATION ---
 
-                 # Determine the effective jerk:
-                 # Must be at least baseline.
-                 # If planner requests more braking, consider jerk_needed and max_jerk_from_ttc.
-                 # Cap at the absolute maximum allowable jerk.
-                 if accel_request < self.accel_last:
-                      effective_jerk = min(max(baseline_jerk, jerk_needed_for_target, max_jerk_from_ttc), MAX_ALLOWABLE_JERK)
-                      # Optional Logging:
-                      # print(f"TTC={ttc:.2f}, Factor={ttc_jerk_factor:.2f}, MaxTTCJ={max_jerk_from_ttc:.2f}, ReqJ={jerk_needed_for_target:.2f}, EffJ={effective_jerk:.2f}")
-                 else:
-                      # If not requesting harder braking, just use baseline
-                      effective_jerk = baseline_jerk
-                 # --- END DYNAMIC JERK INTERPOLATION ---
+        # Regardless of TTC validity, calculate jerk needed to reach planner's target *if* braking harder
+        if accel_request < self.accel_last:
+            if isinstance(accel_request, float) and math.isfinite(accel_request) and \
+               isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
+                 jerk_needed_for_target = abs((accel_request - self.accel_last) / self.DT_CTRL)
+            else:
+                 jerk_needed_for_target = 0.0 # Reset if values invalid
+                 log.warning(f"long_tuning: Invalid accel values for jerk_needed calc: req={accel_request}, last={self.accel_last}")
 
-            else: # Invalid TTC from lead
-                 ttc = float('inf') # Treat invalid/non-positive TTC as infinite
-                 # If planner wants more braking even w/o valid TTC, allow needed jerk up to baseline? Or just baseline?
-                 # Sticking to baseline seems safer if TTC is unknown/invalid.
-                 effective_jerk = baseline_jerk
+        # --- Determine final effective jerk, prioritizing planner's request ---
+        if accel_request < self.accel_last:
+            # If planner wants more braking, use at least the jerk needed to reach it,
+            # potentially more if TTC justifies it, but capped overall.
+            effective_jerk = min(max(initial_effective_jerk, jerk_needed_for_target), MAX_ALLOWABLE_JERK)
+        else:
+            # If planner is not requesting more braking, just use the initial TTC/baseline derived jerk.
+            effective_jerk = initial_effective_jerk
 
-        # If lead_one is None or status false, effective_jerk remains baseline_jerk from initialization
+        # Optional Logging:
+        # print(f"TTC={ttc:.2f}, Valid={is_ttc_valid}, EffJ_init={initial_effective_jerk:.2f}, ReqJ={jerk_needed_for_target:.2f}, EffJ_final={effective_jerk:.2f}")
 
         # Apply the effective jerk limit
         # Ensure effective_jerk is valid before calculating max_delta_accel
