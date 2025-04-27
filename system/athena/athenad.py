@@ -537,6 +537,19 @@ def upload_handler(end_event: threading.Event) -> None:
 
         _do_upload_azure(item) # This function now handles FileNotFoundError internally too
 
+        # --- Delete local file after successful upload ---
+        try:
+          os.remove(fn)
+          debug_print(f"Successfully deleted local file after upload: {fn}")
+          cloudlog.event("azure.upload_handler.deleted_local", fn=fn, azure_subdir=item.azure_subdir)
+        except FileNotFoundError:
+          debug_print(f"Local file {fn} already deleted before explicit removal.")
+          cloudlog.info("azure.upload_handler.local_already_deleted", fn=fn)
+        except OSError as e:
+          debug_print(f"Error deleting local file {fn} after successful upload: {e}")
+          cloudlog.exception("azure.upload_handler.delete_local_fail", fn=fn, error=str(e))
+        # --- End deletion logic ---
+
         # Mark success (progress 1.0)
         cur_upload_items[tid] = replace(item, progress=1.0, current=False) # Update state before logging/cache
         debug_print(f"\n[DEBUG] === Upload Success/Skipped (Thread {tid}) ===")
