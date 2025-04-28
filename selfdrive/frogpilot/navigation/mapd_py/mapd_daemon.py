@@ -14,6 +14,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import reader
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import matcher
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry # For TO_RADIANS
+from openpilot.selfdrive.frogpilot.navigation.mapd_py.reader import TILE_SIZE_DEG, get_tile_id # For proactive loading
 
 class MapdPyDaemon:
     def __init__(self):
@@ -168,6 +169,23 @@ class MapdPyDaemon:
                     on_way_result=self.current_on_way_result
                 )
                 next_ways_results = matcher.get_next_ways(self.last_valid_pos, current_way_res, self.map_reader)
+
+                # --- Proactive Tile Loading --- Added
+                if next_ways_results:
+                    future_tile_ids = set()
+                    for next_way in next_ways_results:
+                        # Get coordinates for the future segment to determine its tile
+                        # Need segment coordinates (get_segment_coords handles locking)
+                        coords = self.map_reader.get_segment_coords(next_way.segment_id)
+                        if coords:
+                            # Use first coordinate to determine tile ID
+                            first_coord_lat, first_coord_lon = coords[0]
+                            tile_id = get_tile_id(first_coord_lat, first_coord_lon, TILE_SIZE_DEG)
+                            future_tile_ids.add(tile_id)
+                    if future_tile_ids:
+                         # print(f"MapdDaemon: Proactively requesting {len(future_tile_ids)} future tiles.")
+                         self.map_reader.request_tiles(future_tile_ids)
+                # ------------------------------
 
                 if next_ways_results:
                     dist_to_end_current = matcher.distance_to_end_of_way(
