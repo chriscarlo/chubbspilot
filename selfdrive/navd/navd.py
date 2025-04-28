@@ -517,7 +517,7 @@ class RouteEngine:
       'access_token': token,
       'annotations': 'maxspeed', # Only request maxspeed
       'geometries': 'geojson',   # Still need geometry to associate annotation
-      'overview': 'simplified',  # Don't need full overview
+      'overview': 'full',        # NOTE: annotation=maxspeed REQUIRES overview=full, otherwise the API omits
       'steps': 'false',          # Don't need steps
       'alternatives': 'false',
       # Waypoints define the short segment we care about

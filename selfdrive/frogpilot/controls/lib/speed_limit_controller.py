@@ -52,7 +52,7 @@ class SpeedLimitController:
     self.experimental_mode = frogpilot_toggles.slc_fallback_experimental_mode and self.speed_limit == 0
 
     # We need to assign the raw values to the instance attributes for frogpilot_planner.py
-    self.map_speed_limit = map_speed_limit
+    self.map_speed_limit = effective_map_limit
     self.upcoming_speed_limit = upcoming_speed_limit
     # self.source = liveMapData.speedLimitSource # Incorrect: Source is determined internally
 

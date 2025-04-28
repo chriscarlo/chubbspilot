@@ -239,9 +239,10 @@ def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, jerk_upper, 
   if not enabled or gas_override:
     a_val, a_raw = 0, 0
   else:
+    # Use the already calculated accel value from the tuning module for both fields.
+    # This relies on the tuning module having already applied appropriate jerk limits.
     a_raw = accel
-    # Apply hardcoded jerk limit locally to a_val, just in case ECU prioritizes it
-    a_val = clip(accel, accel_last - jn, accel_last + jn)
+    a_val = accel # Set aReqValue equal to aReqRaw (the tuner's output)
 
   values = {
     "ACCMode": 0 if not enabled else (2 if gas_override else 1),
