@@ -110,38 +110,31 @@ DEFAULT_CACHE_SIZE = 5000 # Max number of segments to keep in memory
 
 class MapReader:
     def __init__(self, cache_size=DEFAULT_CACHE_SIZE):
-        print("MapReader (Indexed Tiled PROTOBUF - Geom Focus) Initializing...") # Updated name
-        # No schema check needed
-
-        self.segments_data = OrderedDict() # LRU Cache for segment data dicts
+        print("MapReader (Indexed Tiled PROTOBUF - Threaded) Initializing...")
+        self.segments_data = OrderedDict()
         self.cache_size = cache_size
-
-        self.segment_tile_map = {} # Still needed to track which tile a segment came from for unloading
-        self.rtree_idx = rtree_index.Index() # R-tree will index segments currently IN THE CACHE
-        self.loaded_tiles = set() # Tracks which TILE INDICES have been loaded
+        self.segment_tile_map = {}
+        self.rtree_idx = rtree_index.Index()
+        self.loaded_tiles = set()
         self.current_region = None
 
         # --- Threading and Queue for Background Loading ---
         self.loading_lock = threading.Lock()
         self.load_queue = queue.Queue()
-        self.queued_or_loading = set() # Track tiles requested but not yet fully loaded
+        self.queued_or_loading = set()
         self.worker_thread = threading.Thread(target=self._tile_loader_worker, daemon=True)
         self.worker_thread.start()
         # -------------------------------------------------
 
         self._determine_initial_region()
-
         print(f"MapReader Initialized (Cache Size: {self.cache_size}). Ready to load tiles on demand.")
 
     def _determine_initial_region(self):
-        # Simplified logic to find region for path construction
-        # (Doesn't load tiles here)
         print("MapReader: Determining initial region...")
         params_memory = None
         last_gps = None
         try:
             params_memory = Params("/dev/shm/params")
-            # Use non-blocking read without timeout (fixed earlier)
             gps_json = params_memory.get("LastGPSPosition", block=False)
             if gps_json:
                 last_gps = json.loads(gps_json)
@@ -167,114 +160,86 @@ class MapReader:
         if self.current_region is None:
             print("MapReader: Could not determine initial region.")
 
-    def _get_tile_path(self, tile_id, lat_deg, lon_deg):
-        """Constructs the expected path for a given tile ID, including subdirs."""
-        # Determine region based on lat/lon if not already set
-        # (This might duplicate effort from _update_loaded_tiles but ensures region is known)
-        determined_region = self.current_region
-        if not determined_region:
-            for region, bounds in REGION_BOUNDS.items():
-                min_lon_b, min_lat_b, max_lon_b, max_lat_b = bounds
-                if min_lon_b <= lon_deg <= max_lon_b and min_lat_b <= lat_deg <= max_lat_b:
-                    determined_region = region
-                    break
+    def _get_tile_path_for_worker(self, tile_id):
+        """Gets tile path. Attempts to infer region from tile ID if needed."""
+        try:
+            lat_part, lon_part = tile_id.split('_')
+            lat_val = float(lat_part[1:]) * (1 if lat_part[0] == 'N' else -1)
+            lon_val = float(lon_part[1:]) * (1 if lon_part[0] == 'E' else -1)
 
-        if not determined_region:
-             # print("Warning: Cannot get tile path, region not determined for lat/lon.")
-             return None
+            determined_region = self.current_region
+            if not determined_region:
+                # Lock not strictly needed for read, but ensures consistency if region changes
+                # with self.loading_lock: determined_region = self.current_region
+                 for region, bounds in REGION_BOUNDS.items():
+                      min_lon_b, min_lat_b, max_lon_b, max_lat_b = bounds
+                      if min_lon_b <= lon_val <= max_lon_b and min_lat_b <= lat_val <= max_lat_b:
+                          determined_region = region
+                          break
 
-        # Base directory for the determined region
-        region_base_dir = os.path.join(TILE_DATA_BASE_DIR, determined_region)
+            if not determined_region:
+                print(f"Warning: Cannot get tile path for {tile_id}, region not determined.")
+                return None
 
-        # Construct final path - NO SUBDIRS
-        # tile_output_dir = region_base_dir # Use region base directly - This line is redundant
-        # REMOVED SUBDIR LOGIC
-        # if determined_region == "california":
-        #     # Need lat/lon to determine NorCal/SoCal
-        #     if lat_deg >= 35.8:
-        #         tile_output_dir = os.path.join(region_base_dir, "NorCal")
-        #     else:
-        #         tile_output_dir = os.path.join(region_base_dir, "SoCal")
-        # else:
-        tile_output_dir = region_base_dir # No subdir for other regions
+            region_base_dir = os.path.join(TILE_DATA_BASE_DIR, determined_region)
+            tile_output_dir = region_base_dir # Assume no subdirs
+            return os.path.join(tile_output_dir, f"{tile_id}.protobuf")
 
-        return os.path.join(tile_output_dir, f"{tile_id}.protobuf")
-
-    def _load_tile(self, tile_id, current_lat, current_lon): # Added lat/lon context
-        """DEPRECATED: Logic moved to _tile_loader_worker. Use request_tiles instead."""
-        # This method should no longer be called directly by the main thread.
-        # The worker thread handles the loading logic.
-        print(f"Warning: _load_tile called directly for {tile_id}. This should not happen.")
-        # Optionally, queue it if called unexpectedly?
-        # self.request_tiles({tile_id})
-        return False # Indicate loading is handled elsewhere
+        except Exception as e:
+            print(f"Error parsing tile_id '{tile_id}' for path: {e}")
+            return None
 
     def _tile_loader_worker(self):
         """Background thread worker to load tiles from the queue."""
         print("MapReader: Tile loader worker thread started.")
         while True:
-            tile_id = self.load_queue.get() # Blocks until a tile ID is available
+            tile_id = self.load_queue.get()
             # print(f"Worker: Processing tile {tile_id}")
 
-            # Determine path for both protobuf and index file
-            # We need lat/lon context. How to get this reliably?
-            # Maybe the queue item should be (tile_id, lat_context, lon_context)?
-            # For now, let's assume _get_tile_path can work without perfect context
-            # or we modify _get_tile_path logic slightly.
-            # Let's try getting context from a recently processed point (if available)
-            # This is imperfect. A better way is needed.
-            # TEMP HACK: Use placeholder coords if none readily available.
-            # A better solution: Pass context through the queue, or make _get_tile_path robust.
-            # Let's make _get_tile_path potentially determine region based on tile ID if needed.
-            tile_path_proto = self._get_tile_path_for_worker(tile_id) # Modified path getter
+            tile_path_proto = self._get_tile_path_for_worker(tile_id)
             if not tile_path_proto:
                 print(f"Worker: Error - Could not construct path for tile {tile_id}")
                 with self.loading_lock:
-                    if tile_id in self.queued_or_loading: self.queued_or_loading.remove(tile_id)
+                    if tile_id in self.queued_or_loading:
+                        self.queued_or_loading.remove(tile_id)
                 self.load_queue.task_done()
-                continue
+                continue # Skip to next item in queue
 
             tile_path_idx = tile_path_proto.replace(".protobuf", ".idx")
-
-            segments_to_cache_local = [] # Store locally before acquiring lock
+            segments_to_cache_local = []
             tile_processed_successfully = False
 
             try:
-                # Check if index file exists and is not empty
                 if not os.path.exists(tile_path_idx) or os.path.getsize(tile_path_idx) < INDEX_RECORD_SIZE:
-                    # print(f"Worker: Index file not found or empty for tile {tile_id}")
                     tile_processed_successfully = True # Nothing to load is success
                 else:
-                    # --- Read Index Records --- (Same as before)
+                    # Read Index Records
                     index_records = []
                     with open(tile_path_idx, 'rb') as idx_file:
                         while True:
                             record_bytes = idx_file.read(INDEX_RECORD_SIZE)
-                            if not record_bytes or len(record_bytes) < INDEX_RECORD_SIZE:
-                                break
+                            if not record_bytes: break
                             record = struct.unpack(INDEX_RECORD_FORMAT, record_bytes)
                             index_records.append(record)
 
                     if index_records:
-                        # Process ALL records from the index (check cache *inside* lock later)
-                        candidate_records = index_records # Load all, check cache with lock
-
-                        # --- Read and Deserialize Segments --- (Same as before)
+                        # Read and Deserialize Segments
                         with open(tile_path_proto, 'rb') as proto_file:
-                            for rec in candidate_records:
+                            for rec in index_records:
                                 osm_id, _, _, _, _, offset, size = rec
                                 try:
                                     proto_file.seek(offset)
-                                    _ = proto_file.read(4)
+                                    _ = proto_file.read(4) # Discard size prefix
                                     message_bytes = proto_file.read(size)
-                                    # ... rest of parsing ...
+                                    if len(message_bytes) < size: continue
+
                                     segment = osm_speed_data_pb2.SpeedLimitSegment()
                                     segment.ParseFromString(message_bytes)
                                     coords = [(p.longitude, p.latitude) for p in segment.geometry]
                                     if len(coords) < 2: continue
                                     line = LineString(coords)
+
                                     segment_data = {
-                                        # ... (populate segment_data dict identically)
                                         'id': osm_id,
                                         'speed_mps': segment.speed_limit_mps,
                                         'geom': line,
@@ -286,28 +251,23 @@ class MapReader:
                                     segments_to_cache_local.append((osm_id, segment_data))
                                 except (DecodeError, Exception) as e_read:
                                      # print(f"Worker: Error reading segment {osm_id} in {tile_path_proto}: {e_read}")
-                                     continue # Skip this segment
+                                     continue # Skip bad segment
                         tile_processed_successfully = True
                     else:
-                        # print(f"Worker: No index records found in {tile_path_idx}")
-                        tile_processed_successfully = True # No records is success
+                        tile_processed_successfully = True # No index records is success
 
             except FileNotFoundError:
                 print(f"Worker: File not found for tile {tile_id}: {tile_path_idx} or {tile_path_proto}")
-                # Keep it in queued_or_loading so we don't retry?
-                # Or remove it to allow retrying later? Let's remove for now.
                 tile_processed_successfully = False
             except Exception as e:
                 print(f"Worker: Error processing tile {tile_id}: {e}")
                 tile_processed_successfully = False
 
-            # --- Update Shared State (Cache, R-tree, Sets) --- (Under Lock) ---
+            # Update Shared State (Under Lock)
             loaded_count_for_tile = 0
             if segments_to_cache_local:
                 with self.loading_lock:
                     for osm_id, segment_data in segments_to_cache_local:
-                        # Only add if not already present (avoids overwriting if loaded via another tile)
-                        # And ensures eviction logic works correctly based on current cache state
                         if osm_id not in self.segments_data:
                              self._add_to_cache_locked(osm_id, segment_data, tile_id)
                              loaded_count_for_tile += 1
@@ -321,48 +281,14 @@ class MapReader:
                 if loaded_count_for_tile > 0:
                      print(f"Worker: Cached {loaded_count_for_tile} new segments from tile {tile_id}. Cache size: {len(self.segments_data)}")
 
-            # --- Mark Tile as Processed (Under Lock) ---
+            # Mark Tile as Processed (Under Lock)
             with self.loading_lock:
                 if tile_processed_successfully:
                     self.loaded_tiles.add(tile_id)
-                # Always remove from queued_or_loading set once processing attempt is done
                 if tile_id in self.queued_or_loading:
                     self.queued_or_loading.remove(tile_id)
 
-            self.load_queue.task_done() # Signal completion for this item
-
-    def _get_tile_path_for_worker(self, tile_id):
-        """Gets tile path. Attempts to infer region from tile ID if needed."""
-        # Example tile ID: N38.7_W120.6
-        try:
-            lat_part, lon_part = tile_id.split('_')
-            lat_val = float(lat_part[1:]) * (1 if lat_part[0] == 'N' else -1)
-            lon_val = float(lon_part[1:]) * (1 if lon_part[0] == 'E' else -1)
-
-            # Use these extracted coords to find region if necessary
-            determined_region = self.current_region
-            if not determined_region:
-                 # Acquiring lock here might be slow/contentious? Try without first.
-                 # with self.loading_lock: current_region = self.current_region
-                 for region, bounds in REGION_BOUNDS.items():
-                      min_lon_b, min_lat_b, max_lon_b, max_lat_b = bounds
-                      if min_lon_b <= lon_val <= max_lon_b and min_lat_b <= lat_val <= max_lat_b:
-                          determined_region = region
-                          # Optionally update self.current_region here? Needs lock.
-                          break
-
-            if not determined_region:
-                print(f"Warning: Cannot get tile path for {tile_id}, region not determined.")
-                return None
-
-            region_base_dir = os.path.join(TILE_DATA_BASE_DIR, determined_region)
-            # Assume no subdirs for simplicity in worker path finding
-            tile_output_dir = region_base_dir
-            return os.path.join(tile_output_dir, f"{tile_id}.protobuf")
-
-        except Exception as e:
-            print(f"Error parsing tile_id '{tile_id}' for path: {e}")
-            return None
+            self.load_queue.task_done()
 
     def request_tiles(self, tile_ids: set[str]):
         """Requests tiles to be loaded by the background worker."""
@@ -373,21 +299,17 @@ class MapReader:
                     self.queued_or_loading.add(tile_id)
                     self.load_queue.put(tile_id)
                     queued_count += 1
-        # if queued_count > 0:
-        #     print(f"MainThread: Queued {queued_count} new tiles for loading.")
+        # if queued_count > 0: print(f"MainThread: Queued {queued_count} new tiles.")
 
     # --- Locked Helper Methods --- (Assume lock is held by caller)
     def _add_to_cache_locked(self, osm_id, segment_data, tile_id):
-        """Adds a segment to cache/R-tree. Assumes lock is held."""
-        # Add to cache (OrderedDict)
         if osm_id in self.segments_data:
-            self.segments_data.move_to_end(osm_id) # Mark as recently used
+            self.segments_data.move_to_end(osm_id)
         self.segments_data[osm_id] = segment_data
         self.segment_tile_map[osm_id] = tile_id
         self._insert_into_rtree_locked(osm_id, segment_data)
 
     def _insert_into_rtree_locked(self, osm_id, segment_data):
-        """Inserts into R-tree. Assumes lock is held."""
         try:
             segment_bounds = segment_data.get('_bounds')
             if segment_bounds:
@@ -396,22 +318,16 @@ class MapReader:
             print(f"Warning: Failed to insert segment {osm_id} into R-tree: {e_rtree}")
 
     def _remove_from_rtree_locked(self, segment_id, segment_data):
-        """Removes a segment from R-tree. Assumes lock is held."""
         try:
             segment_bounds = segment_data.get('_bounds')
             if segment_bounds:
                 self.rtree_idx.delete(segment_id, segment_bounds)
         except Exception as e:
-            # Rtree raises specific errors if ID/bounds not found, can be noisy
-            # print(f"Warning: Error removing segment {segment_id} from R-tree during eviction: {e}")
+            # print(f"Warning: Error removing segment {segment_id} from R-tree: {e}")
             pass
 
     def _unload_tile_locked(self, tile_id):
-        """Unloads data for a specific tile. Assumes lock is held."""
-        # Assumes lock is held by caller (_update_loaded_tiles)
-        if tile_id not in self.loaded_tiles:
-            return
-
+        if tile_id not in self.loaded_tiles: return
         ids_in_tile = [seg_id for seg_id, t_id in self.segment_tile_map.items() if t_id == tile_id]
         unloaded_count = 0
         for seg_id in ids_in_tile:
@@ -421,19 +337,16 @@ class MapReader:
                 unloaded_count += 1
             if seg_id in self.segment_tile_map:
                 del self.segment_tile_map[seg_id]
-
-        # if unloaded_count > 0:
-        #     print(f"MainThread: Unloaded {unloaded_count} segments for tile {tile_id}. Cache size: {len(self.segments_data)}")
         self.loaded_tiles.remove(tile_id)
-        # Also remove from queued_or_loading if it was there (e.g., queued then immediately unloaded)
         if tile_id in self.queued_or_loading:
              self.queued_or_loading.remove(tile_id)
+        # if unloaded_count > 0: print(f"MainThread: Unloaded {unloaded_count} segments for tile {tile_id}.")
     # ---------------------------
 
-    # --- Methods potentially called by main thread --- (Need locking for shared data access)
+    # --- Methods potentially called by main thread ---
     def _update_loaded_tiles(self, lat, lon):
         """Determine current/neighbor tiles, queue new ones, unload old ones."""
-        # Determine current region (outside lock - read only access to REGION_BOUNDS)
+        # Determine region (read-only access ok without lock)
         current_point_region = None
         for region, bounds in REGION_BOUNDS.items():
              min_lon_b, min_lat_b, max_lon_b, max_lat_b = bounds
@@ -441,121 +354,89 @@ class MapReader:
                  current_point_region = region
                  break
 
-        region_changed = False
-        # Update shared self.current_region carefully (optional lock, but infrequent write)
-        # Let's skip locking here for simplicity, assuming region changes are rare.
+        # Handle region change (needs lock for writes)
         if current_point_region != self.current_region:
             print(f"Region changed from {self.current_region} to {current_point_region}.")
-            region_changed = True
-            self.current_region = current_point_region
-            # TODO: Handle region change - unload *all* tiles?
-            # Need to acquire lock to modify loaded_tiles and call unload
+            self.current_region = current_point_region # Update immediately (mostly safe)
             with self.loading_lock:
                 all_tiles_before_change = list(self.loaded_tiles)
+                # Clear queue safely
+                while not self.load_queue.empty():
+                    try: self.load_queue.get_nowait()
+                    except queue.Empty: break
+                self.queued_or_loading.clear()
             print(f"  Requesting unload of {len(all_tiles_before_change)} tiles due to region change.")
             for t_id in all_tiles_before_change:
-                 # Acquire lock for each unload call
-                 with self.loading_lock:
-                      self._unload_tile_locked(t_id)
-            # Clear the queue as well?
-            with self.load_queue.mutex:
-                 self.load_queue.queue.clear()
-            with self.loading_lock:
-                 self.queued_or_loading.clear()
-
+                 with self.loading_lock: self._unload_tile_locked(t_id)
 
         if not self.current_region:
-            # Ensure everything is unloaded if we are outside known regions
-            # Similar logic as region change, check if tiles are loaded first
+            # Handle being outside known regions (needs lock)
             with self.loading_lock:
-                 if self.loaded_tiles:
-                      print("Warning: Outside known regions, unloading remaining tiles.")
-                      all_tiles = list(self.loaded_tiles)
-                 else:
-                      all_tiles = []
-            if all_tiles:
-                for t_id in all_tiles:
-                    with self.loading_lock:
-                         self._unload_tile_locked(t_id)
-                # Clear queue too
-                with self.load_queue.mutex:
-                     self.load_queue.queue.clear()
-                with self.loading_lock:
-                     self.queued_or_loading.clear()
+                 loaded_tiles_list = list(self.loaded_tiles)
+                 if loaded_tiles_list: print("Warning: Outside known regions, unloading remaining tiles.")
+            if loaded_tiles_list:
+                 for t_id in loaded_tiles_list:
+                      with self.loading_lock: self._unload_tile_locked(t_id)
+                 with self.loading_lock:
+                    # Clear queue safely
+                    while not self.load_queue.empty():
+                        try: self.load_queue.get_nowait()
+                        except queue.Empty: break
+                    self.queued_or_loading.clear()
             return # Cannot load tiles outside known region
 
-        # Calculate current tile ID and neighbors (3x3 grid)
-        current_tile_id = get_tile_id(lat, lon, TILE_SIZE_DEG)
+        # Calculate reactive 3x3 grid
         reactive_tiles_to_load = set()
         current_lat_idx = math.floor(lat / TILE_SIZE_DEG)
         current_lon_idx = math.floor(lon / TILE_SIZE_DEG)
         for lat_idx_offset in [-1, 0, 1]:
              for lon_idx_offset in [-1, 0, 1]:
-                  # ... (neighbor calculation as before)
                   neighbor_lat = (current_lat_idx + lat_idx_offset) * TILE_SIZE_DEG
                   neighbor_lon = (current_lon_idx + lon_idx_offset) * TILE_SIZE_DEG
                   reactive_tiles_to_load.add(get_tile_id(neighbor_lat, neighbor_lon, TILE_SIZE_DEG))
 
-        # --- Queue Tiles for Loading --- (uses request_tiles which handles locking)
+        # Queue reactive tiles (handles locking internally)
         self.request_tiles(reactive_tiles_to_load)
 
-        # --- Unload Tiles No Longer Needed --- (acquire lock inside loop)
+        # Unload old tiles (needs lock)
         with self.loading_lock:
-             # Determine tiles to unload based on *currently loaded* set
-             current_loaded = set(self.loaded_tiles) # Copy loaded set under lock
+             current_loaded = set(self.loaded_tiles)
         tiles_to_unload = current_loaded - reactive_tiles_to_load
-        if tiles_to_unload:
-            # print(f"MainThread: Requesting unload for tiles: {tiles_to_unload}")
-            for tile_id in tiles_to_unload:
-                 # Acquire lock for each unload
-                 with self.loading_lock:
-                      self._unload_tile_locked(tile_id)
+        for tile_id in tiles_to_unload:
+             with self.loading_lock: self._unload_tile_locked(tile_id)
 
         # --- R-tree Query (Needs Lock) ---
-        # The spatial query itself should happen here in the main thread,
-        # operating on the *current* state of the R-tree.
         closest_segment_info = None
-        current_point = Point(lon, lat)
         search_bounds = (lon - 1e-4, lat - 1e-4, lon + 1e-4, lat + 1e-4)
-
         with self.loading_lock: # Protect access to rtree_idx and segments_data
             try:
                 nearest_candidates = list(self.rtree_idx.intersection(search_bounds, objects=True))
                 if nearest_candidates:
                     min_dist = float('inf')
-                    # Find the segment whose geometry is actually closest among candidates
+                    current_point = Point(lon, lat) # Create Point inside lock? Or outside? Outside is fine.
+                    best_candidate_info = None
+
                     for item in nearest_candidates:
                         segment_id = item.object
-                        # Check data is still loaded (robustness)
                         segment_info = self.segments_data.get(segment_id)
-                        if segment_info is None:
-                            continue # Was evicted between query and get
+                        if segment_info is None: continue
 
-                        # Use shapely distance (can be done outside lock if geom is copied? No, keep simple)
                         try:
                              distance = segment_info['geom'].distance(current_point)
-                             # Optional: Add a threshold for max distance?
                              MAX_RELEVANT_DISTANCE_DEGREES = 0.0015
                              if distance < min_dist and distance < MAX_RELEVANT_DISTANCE_DEGREES:
                                  min_dist = distance
-                                 closest_segment_info = segment_info # Keep ref while holding lock
-                                 # Mark as recently used *only if* it's the closest candidate?
-                                 # Or mark all candidates accessed? Let's mark the best one.
-                        except Exception as e_dist:
-                            # print(f"Warn: Error calculating distance for segment {segment_id}: {e_dist}")
-                            pass # Ignore segments causing distance errors
+                                 best_candidate_info = segment_info
+                        except Exception as e_dist: pass # Ignore distance errors
 
-                    # Mark the closest one found as recently used
-                    if closest_segment_info:
-                         closest_id = closest_segment_info.get('id')
-                         if closest_id and closest_id in self.segments_data:
+                    # Mark the closest one found as recently used and assign for return
+                    if best_candidate_info:
+                         closest_segment_info = best_candidate_info
+                         closest_id = best_candidate_info.get('id')
+                         if closest_id: # Check if ID exists
                               self.segments_data.move_to_end(closest_id)
 
-            except Exception as e:
-                 print(f"Error during spatial query under lock: {e}")
-
-        # Return the *data* of the closest segment found (copy? or ref?)
-        # Returning the dict ref should be okay as long as caller doesn't modify it deeply.
+            except Exception as e: print(f"Error during spatial query under lock: {e}")
         return closest_segment_info
 
     def get_segment_coords(self, segment_id: int) -> list[tuple[float, float]] | None:
@@ -563,15 +444,13 @@ class MapReader:
          with self.loading_lock:
               segment_data = self.segments_data.get(segment_id)
               if segment_data:
-                   # Use helper that doesn't need lock
-                   return _get_coords_from_segment(segment_data)
+                   return _get_coords_from_segment(segment_data) # Use helper
               else:
                    return None
 
 # Helper function (can be outside class)
 def _get_coords_from_segment(segment_data: dict) -> list[tuple[float, float]]:
     """Extracts node coordinates as (lat, lon) tuples from segment geom."""
-    # ... (identical implementation as before)
     if not segment_data or 'geom' not in segment_data:
         return []
     geom = segment_data['geom']
