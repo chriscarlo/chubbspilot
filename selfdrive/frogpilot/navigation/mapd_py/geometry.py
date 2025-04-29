@@ -39,6 +39,7 @@ def distance_to_point(lat_a_rad, lon_a_rad, lat_b_rad, lon_b_rad):
 
     return R * c  # Distance in meters
 
+
 def vector(lat_a_rad, lon_a_rad, lat_b_rad, lon_b_rad):
     """
     Calculates the vector components for bearing calculation.
@@ -50,6 +51,7 @@ def vector(lat_a_rad, lon_a_rad, lat_b_rad, lon_b_rad):
     y = (math.cos(lat_a_rad) * math.sin(lat_b_rad) -
          (math.sin(lat_a_rad) * math.cos(lat_b_rad) * math.cos(dlon)))
     return x, y
+
 
 def bearing(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg):
     """
@@ -69,12 +71,14 @@ def bearing(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg):
     # Note: Standard geographic bearing often uses atan2(y, x)
     return math.atan2(x, y)
 
+
 def dot(ax, ay, bx, by):
     """
     Calculates the dot product of two 2D vectors.
     Equivalent to Dot in math.go.
     """
     return (ax * bx) + (ay * by)
+
 
 def point_on_line(start_lat_deg, start_lon_deg, end_lat_deg, end_lon_deg, point_lat_deg, point_lon_deg):
     """
@@ -106,6 +110,7 @@ def point_on_line(start_lat_deg, start_lon_deg, end_lat_deg, end_lon_deg, point_
     closest_lon = start_lon_deg + t * ab_lon
 
     return closest_lat, closest_lon
+
 
 def get_curvature(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg, lat_c_deg, lon_c_deg):
     """
@@ -155,48 +160,27 @@ def get_curvature(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg, lat_c_deg, lon_c_d
     radius = 1.0 / curvature
 
     # Calculate the angle subtended by the chord length_b at the center of the circumcircle
-    # Using Law of Cosines on the isosceles triangle formed by two radii and length_b:
-    # length_b^2 = radius^2 + radius^2 - 2 * radius * radius * cos(angle)
-    # length_b^2 = 2 * radius^2 * (1 - cos(angle))
-    # cos(angle) = 1 - (length_b^2 / (2 * radius^2))
-    # Handle potential floating point issues where the argument might be slightly outside [-1, 1]
     cos_angle_arg = (2.0 * radius**2 - length_b**2) / (2.0 * radius**2)
     cos_angle_arg = max(-1.0, min(1.0, cos_angle_arg))
     angle = math.acos(cos_angle_arg)
 
     # Arc length is radius * angle (where angle is in radians)
-    # The Go code seems to return length_a here, let's verify which arc length is intended.
-    # Based on the usage in GetCurvatures, it seems to be the arc length corresponding to the middle point (B).
-    # However, the Go implementation calculates angle based on length_b but returns length_a... odd.
-    # Let's stick to what the Go code calculates for now, which seems to be angle related to length_b,
-    # but the arc length returned is just length_a (the chord length AB).
-    # Revisit if MTSC requires the actual arc length of the curve segment.
-    arc_length = length_a # Replicating Go code's apparent return value for arc_length
-
-    # Let's calculate the *actual* arc length related to the angle we found for completeness, though unused for now:
-    # actual_arc_length = radius * angle
+    # But to replicate the Go code’s return (chord length AB), we use:
+    arc_length = length_a
 
     # Determine the sign of the curvature (left or right turn)
-    # Check orientation using the cross-product of vectors AB and BC in the tangent plane
-    # Simplified approach: compare bearings
     bearing_ab = bearing(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg)
     bearing_bc = bearing(lat_b_deg, lon_b_deg, lat_c_deg, lon_c_deg)
     bearing_diff = bearing_bc - bearing_ab
-
-    # Normalize bearing difference to (-pi, pi]
     while bearing_diff <= -math.pi:
         bearing_diff += 2 * math.pi
     while bearing_diff > math.pi:
         bearing_diff -= 2 * math.pi
-
-    # Positive difference usually means left turn, negative means right turn
     if bearing_diff < 0:
         curvature *= -1.0
 
     return curvature, arc_length, angle
 
-
-# --- Functions below might be needed for path finding / matching ---
 
 def get_curvatures(lat_points_deg, lon_points_deg):
     """
@@ -206,12 +190,11 @@ def get_curvatures(lat_points_deg, lon_points_deg):
     Returns tuple: (list of curvatures, list of arc lengths)
     """
     if len(lat_points_deg) < 3:
-        # raise ValueError("Need at least 3 points to calculate curvatures")
-        return [], [] # Return empty lists, similar to Go error handling
+        return [], []
 
     num_curvatures = len(lat_points_deg) - 2
     curvatures = [0.0] * num_curvatures
-    arc_lengths = [0.0] * num_curvatures # Corresponds to length_a in get_curvature
+    arc_lengths = [0.0] * num_curvatures
 
     for i in range(num_curvatures):
         curv, arc_len, _ = get_curvature(
@@ -225,6 +208,73 @@ def get_curvatures(lat_points_deg, lon_points_deg):
     return curvatures, arc_lengths
 
 
-# Note: GetAverageCurvatures, GetStateCurvatures, GetTargetVelocities from math.go
-# depend on the 'State' and Capnp structures, so they would likely belong in
-# the MTSC or a dedicated path processing module rather than pure geometry.
+# ---------------------------------------------------------------------------
+# ADDITIONS — required by chauffeur_mtsc.py
+# ---------------------------------------------------------------------------
+
+def _bearing_rad(lat1, lon1, lat2, lon2):
+    """
+    Initial bearing from point 1 to point 2, all args in **radians**.
+    Returns bearing in radians in the range (-π, π].
+    """
+    dlon = lon2 - lon1
+    x = math.sin(dlon) * math.cos(lat2)
+    y = (math.cos(lat1) * math.sin(lat2) -
+         math.sin(lat1) * math.cos(lat2) * math.cos(dlon))
+    return math.atan2(x, y)
+
+
+def cross_track_error_squared(lat1_rad, lon1_rad,
+                              lat2_rad, lon2_rad,
+                              latp_rad, lonp_rad):
+    """
+    Squared cross-track distance (metres²) from point P to the great-circle
+    segment A→B on a sphere.
+
+    All coordinates **must** be in radians.  Returns zero if A == B.
+    """
+    # If the segment is a single point, fall back to point distance.
+    if lat1_rad == lat2_rad and lon1_rad == lon2_rad:
+        d = distance_to_point(lat1_rad, lon1_rad, latp_rad, lonp_rad)
+        return d * d
+
+    # Angular distance A→P
+    sin_d13 = (math.sin((latp_rad - lat1_rad) / 2.0) ** 2 +
+               math.cos(lat1_rad) * math.cos(latp_rad) *
+               math.sin((lonp_rad - lon1_rad) / 2.0) ** 2)
+    sin_d13 = min(1.0, sin_d13)
+    d13 = 2.0 * math.asin(math.sqrt(sin_d13))  # radians
+
+    # Bearings
+    θ13 = _bearing_rad(lat1_rad, lon1_rad, latp_rad, lonp_rad)
+    θ12 = _bearing_rad(lat1_rad, lon1_rad, lat2_rad, lon2_rad)
+
+    # Cross-track (angular) error
+    δ_xt = math.asin(math.sin(d13) * math.sin(θ13 - θ12))
+
+    # Convert to metres, then square
+    return (δ_xt * R) ** 2
+
+
+def fraction_along_segment(lat1_deg, lon1_deg,
+                           lat2_deg, lon2_deg,
+                           latp_deg, lonp_deg):
+    """
+    Fraction (0 – 1) of the way from A to B where the orthogonal projection
+    of P falls.  Uses the along-track distance divided by AB length.
+    Values < 0 or > 1 mean the projection lies outside the segment.
+    """
+    proj_lat, proj_lon = point_on_line(lat1_deg, start_lon_deg=lon1_deg,
+                                       end_lat_deg=lat2_deg, end_lon_deg=lon2_deg,
+                                       point_lat_deg=latp_deg, point_lon_deg=lonp_deg)
+
+    dist_ap = distance_to_point(lat1_deg * TO_RADIANS, lon1_deg * TO_RADIANS,
+                                proj_lat * TO_RADIANS, proj_lon * TO_RADIANS)
+    dist_ab = distance_to_point(lat1_deg * TO_RADIANS, lon1_deg * TO_RADIANS,
+                                lat2_deg * TO_RADIANS, lon2_deg * TO_RADIANS)
+
+    if dist_ab < 1e-6:
+        return 0.0
+
+    return dist_ap / dist_ab
+# ---------------------------------------------------------------------------
