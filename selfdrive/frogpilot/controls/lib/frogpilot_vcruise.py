@@ -267,6 +267,9 @@ class FrogPilotVCruise:
         # else: v_cruise remains unchanged (implicitly uses original v_cruise)
         # v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets])) # Old logic
 
+        # Cap the final target speed by the user's set v_cruise_cluster
+        v_cruise = min(v_cruise, v_cruise_cluster)
+
         # Keep everything in sync w/ cluster differences
         # self.mtsc_target += v_cruise_diff # Removed: No longer a separate MTSC target
         self.vtsc_target += v_cruise_diff # Keep VTSC target synced

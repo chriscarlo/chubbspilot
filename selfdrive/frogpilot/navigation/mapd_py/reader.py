@@ -236,13 +236,21 @@ class MapReader:
                                     segment = osm_speed_data_pb2.SpeedLimitSegment()
                                     segment.ParseFromString(message_bytes)
                                     coords = [(p.longitude, p.latitude) for p in segment.geometry]
-                                    if len(coords) < 2: continue
-                                    line = LineString(coords)
+
+                                    # Handle both line and point geometries
+                                    if len(coords) >= 2:
+                                        geom_obj = LineString(coords)
+                                    elif len(coords) == 1:
+                                        # Single-node geometry (e.g. speed-limit sign). Use Point so distance() works.
+                                        geom_obj = Point(coords[0])
+                                    else:
+                                        # No coordinates → skip
+                                        continue
 
                                     segment_data = {
                                         'id': osm_id,
                                         'speed_mps': segment.speed_limit_mps,
-                                        'geom': line,
+                                        'geom': geom_obj,
                                         'curvatures': list(segment.curvatures),
                                         'curvature_derived_speeds_mps': list(segment.curvature_derived_speeds_mps),
                                         'highway': '', 'lanes': 0, 'oneway': 0, 'name': '',
