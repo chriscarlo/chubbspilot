@@ -12,4 +12,5 @@ message SpeedLimitSegment {
   repeated Point geometry = 2;
   repeated float curvatures = 3;
   float speed_limit_mps = 4; // Required by reader, default 0.0 set during processing
+  repeated float curvature_derived_speeds_mps = 5; // Speeds derived from curvatures using curvature_to_speed
 }

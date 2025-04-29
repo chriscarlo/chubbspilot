@@ -130,7 +130,7 @@ class FrogPilotVCruise:
             # Get ego acceleration for MTSC (provide default if unavailable)
             a_ego = controlsState.aEgo if hasattr(controlsState, 'aEgo') else 0.0
             # Call the new MTSC update method, which returns (distance_profile, speed_profile) or (None, None)
-            map_distances, map_speeds = self.mtsc.update(v_ego, a_ego, v_cruise_cluster, frogpilot_toggles, turn_aggressiveness)
+            map_distances, map_speeds = self.mtsc.update(v_ego, a_ego, v_cruise_cluster, frogpilot_toggles)
             if map_distances is not None and map_speeds is not None:
                 self.map_speed_profile = (map_distances, map_speeds)
             else:

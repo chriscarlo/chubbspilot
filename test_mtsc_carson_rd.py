@@ -132,8 +132,8 @@ if __name__ == "__main__":
             distance_profile, speed_profile = mtsc.update(
                 v_ego=SIM_VEHICLE_SPEED_MS,
                 a_ego=SIM_VEHICLE_ACCEL_MS2,
-                frogpilot_toggles=DUMMY_FROGPILOT_TOGGLES,
-                turn_aggressiveness=1.0
+                v_cruise_cluster=SIM_VEHICLE_SPEED_MS,  # Use current speed as cruise for test
+                frogpilot_toggles=DUMMY_FROGPILOT_TOGGLES
             )
 
             # Analyze the results

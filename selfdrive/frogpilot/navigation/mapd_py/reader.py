@@ -244,6 +244,7 @@ class MapReader:
                                         'speed_mps': segment.speed_limit_mps,
                                         'geom': line,
                                         'curvatures': list(segment.curvatures),
+                                        'curvature_derived_speeds_mps': list(segment.curvature_derived_speeds_mps),
                                         'highway': '', 'lanes': 0, 'oneway': 0, 'name': '',
                                         'ref': '', 'surface': '', 'is_bridge': False, 'is_tunnel': False,
                                         '_bounds': (rec[1], rec[2], rec[3], rec[4])

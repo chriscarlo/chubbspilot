@@ -15,23 +15,6 @@ from openpilot.selfdrive.frogpilot.navigation.mapd_py import reader
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import matcher
 
-# Import VTSC's lat accel function for consistency
-# (Alternatively, define it in a shared location)
-try:
-    from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import nonlinear_lat_accel
-except ImportError:
-    # Fallback or define locally if VTSC isn't available/refactored yet
-    print("Warning: Could not import nonlinear_lat_accel from chauffeur_vtsc. Using local definition.")
-    def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
-        v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-        base = 2.0
-        span = 1.8
-        center = 20.0
-        k = 0.15
-        lat_acc = base + span / (1 + math.exp(-k * (v_ego_mph - center)))
-        lat_acc = min(lat_acc, 3.2)
-        return lat_acc * turn_aggressiveness
-
 # Define lookahead distance (can be tuned)
 LOOKAHEAD_DISTANCE = 500.0 # Meters, similar to MIN_WAY_DIST_M
 
@@ -268,10 +251,10 @@ class ChauffeurMtsc:
         return meters
     # --- end meters-true projection ------------------------------------------
 
-    def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, v_cruise_cluster: float, turn_aggressiveness: float):
+    def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, v_cruise_cluster: float):
         """
-        Calculates a speed profile based on the geometry (and later, curvature)
-        of the current road segment. Clamps speeds to v_cruise_cluster.
+        Calculates a speed profile based on the pre-calculated speeds
+        stored in the current road segment data. Clamps speeds to v_cruise_cluster.
         """
         # Requires valid current_segment_data and current_on_way_result from _update_current_segment
         if not self.current_segment_data or not self.current_on_way_result or 'geom' not in self.current_segment_data:
@@ -279,32 +262,37 @@ class ChauffeurMtsc:
             return np.array([]), np.array([])
 
         segment_geom = self.current_segment_data['geom'] # Shapely LineString
-        if not isinstance(segment_geom, LineString) or len(segment_geom.coords) < 3:
+        # Still need geometry for distance calculation
+        if not isinstance(segment_geom, LineString) or len(segment_geom.coords) < 2:
             self.curvature_valid = False
-            return np.array([]), np.array([]) # Need at least 3 points for curvature
+            return np.array([]), np.array([])
 
         # Extract coordinates in degrees (Shapely coords are lon, lat)
         coords_lon_lat = list(segment_geom.coords)
         path_nodes_lon = [c[0] for c in coords_lon_lat]
         path_nodes_lat = [c[1] for c in coords_lon_lat]
 
-        # Use pre-calculated curvatures if available
+        # Use pre-calculated curvature-derived speeds if available
+        precalc_speeds = self.current_segment_data.get('curvature_derived_speeds_mps', [])
+
+        # Use curvatures only for distance calculation alignment (must have same length as speeds)
         curvatures = self.current_segment_data.get('curvatures', [])
 
-        if not curvatures:
+        if not precalc_speeds or not curvatures or len(precalc_speeds) != len(curvatures):
+            # If speeds or curvatures are missing, or lengths mismatch, profile is invalid
             self.curvature_valid = False
             return np.array([]), np.array([])
 
-        # --- ADDED: Check if curvature is significant enough to activate MTSC ---
-        if not curvatures or max(abs(c) for c in curvatures) < MIN_ENABLE_KAPPA:
-             self.curvature_valid = False # Mark as invalid if below threshold
-             return np.array([]), np.array([])
-        # --- End Threshold Check ---
+        # --- Check if any speed suggests a curve (optional, MIN_ENABLE_KAPPA check removed) ---
+        # We assume if speeds are present, they are meaningful.
+        # Can add a check here if needed, e.g., if min(precalc_speeds) < some_threshold
+        # self.curvature_valid = True # Set later
+        # --- End Optional Check ---
 
-        # Calculate distances along the segment corresponding to curvature points
-        # Curvature[i] corresponds to the curve defined by nodes i, i+1, i+2
+        # Calculate distances along the segment corresponding to curvature/speed points
+        # Curvature/Speed[i] corresponds to the curve defined by nodes i, i+1, i+2
         # We need cumulative distance up to the *start* of the curve (point i+1).
-        cumulative_distances = [0.0] * len(curvatures)
+        cumulative_distances = [0.0] * len(curvatures) # Use length of curvatures (should match speeds)
         current_dist = 0.0
         # Calculate distance to the start of the first curve (point 1)
         if len(path_nodes_lat) > 1:
@@ -316,7 +304,7 @@ class ChauffeurMtsc:
 
         for i in range(len(curvatures)):
              cumulative_distances[i] = current_dist
-             # Add length of segment i+1 -> i+2 for next curvature point
+             # Add length of segment i+1 -> i+2 for next curvature/speed point
              if (i + 2) < len(path_nodes_lat): # Check index exists for point i+2
                   segment_len = geometry.distance_to_point(path_nodes_lat[i+1] * geometry.TO_RADIANS,
                                                           path_nodes_lon[i+1] * geometry.TO_RADIANS,
@@ -325,28 +313,29 @@ class ChauffeurMtsc:
                   current_dist += segment_len
              # else: We are at the last curvature point, no more segments to add length from
 
-        # Calculate target speeds based on curvature
-        target_speeds = []
-        ZERO_CURVATURE_THRESHOLD = 1e-5
-        STRAIGHT_SPEED_LIMIT = 70.0 # m/s
-
-        for k in curvatures:
-            # --- Apply curvature correction for MPH-based tuning ---
-            abs_k = abs(k) / CURV_CORR
-            # --- End correction ---
-            if abs_k < ZERO_CURVATURE_THRESHOLD:
-                target_speed = STRAIGHT_SPEED_LIMIT
-            else:
-                # Use the original MTSC curvature-based lateral accel logic
-                target_lat_accel_base = curvature_based_lat_accel(abs_k)
-                target_lat_accel = target_lat_accel_base * turn_aggressiveness
-                target_speed = math.sqrt(target_lat_accel / abs_k) if abs_k > 1e-9 else STRAIGHT_SPEED_LIMIT
-            target_speeds.append(min(target_speed, STRAIGHT_SPEED_LIMIT))
+        # --- Use pre-calculated speeds --- # REFACTORED
+        # target_speeds = [] # Removed
+        # ZERO_CURVATURE_THRESHOLD = 1e-5 # Removed
+        # STRAIGHT_SPEED_LIMIT = 70.0 # Removed
+        # for k in curvatures: # Removed loop
+            # --- Apply curvature correction for MPH-based tuning --- # Removed
+            # abs_k = abs(k) / CURV_CORR # Removed
+            # --- End correction --- # Removed
+            # if abs_k < ZERO_CURVATURE_THRESHOLD: # Removed
+            #     target_speed = STRAIGHT_SPEED_LIMIT # Removed
+            # else: # Removed
+            #     # Use the original MTSC curvature-based lateral accel logic # Removed
+            #     target_lat_accel_base = curvature_based_lat_accel(abs_k) # Removed
+            #     target_lat_accel = target_lat_accel_base * turn_aggressiveness # Removed
+            #     target_speed = math.sqrt(target_lat_accel / abs_k) if abs_k > 1e-9 else STRAIGHT_SPEED_LIMIT # Removed
+            # target_speeds.append(min(target_speed, STRAIGHT_SPEED_LIMIT)) # Removed
 
         distance_points = np.array(cumulative_distances)
-        speed_points = np.array(target_speeds)
+        # Use the pre-calculated speeds directly
+        speed_points = np.array(precalc_speeds)
+        # --- End Refactor --- #
 
-        # --- Add Strategic Deceleration Backward Pass ---
+        # --- Add Strategic Deceleration Backward Pass (remains the same) ---
         if len(speed_points) > 1:
             STRATEGIC_DECEL = 1.2  # m/s^2, comfortable early deceleration rate (was 1.5)
             for i in range(len(speed_points) - 2, -1, -1):
@@ -369,25 +358,20 @@ class ChauffeurMtsc:
                     speed_points[i] = min(speed_points[i], speed_points[i+1])
         # --- End Strategic Deceleration Backward Pass ---
 
-        # --- ADDED: Clamp speed profile to v_cruise_cluster ---
+        # --- Clamp speed profile to v_cruise_cluster ---
         speed_points = np.minimum(speed_points, v_cruise_cluster)
         # --- End Clamping ---
 
-        self.curvature_valid = True # Mark as valid since we processed curvatures
+        # Mark as valid since we successfully processed precalculated speeds
+        self.curvature_valid = True
 
         # Now, find where the car is along this segment's profile using metres
-        # current_point = Point(pos.longitude, pos.latitude) # No longer needed
-        # car_dist_along_segment = segment_geom.project(current_point) # WRONG UNITS!
         car_dist_along_segment = self._project_along_segment_m(pos) # Correct units
 
         # Shift the distance profile so that the car's position is at distance 0
         distance_profile_shifted = distance_points - car_dist_along_segment
 
-        # --- Generate profile matching VTSC/Planner output format --- # REMOVED v_ego based interpolation
-        # Target distances ahead based on current speed and profile times
-        # lookahead_distances = np.array(PROFILE_TIMES) * v_ego # REMOVED - VTSC uses its own kinematic projection
-
-        # Ensure distance_profile_shifted covers the range needed for interpolation
+        # Prepare profile for VTSC
         interp_distances = distance_profile_shifted
         interp_speeds = speed_points
 
@@ -407,29 +391,14 @@ class ChauffeurMtsc:
         if len(unique_distances) < 1:
             self.curvature_valid = False
             return np.array([]), np.array([])
-        # elif len(unique_distances) < 2: # Let VTSC handle interpolation even with 1 point
-        #     # Only one point, use constant speed
-        #     final_speeds = np.full(PROFILE_LENGTH, speed_points_unique[0])
-        # else:
-        #     # Interpolate speeds at the desired lookahead distances
-        #     # Use bounds_error=False and fill_value=(first_speed, last_speed) for extrapolation
-        #     first_speed = speed_points_unique[0]
-        #     last_speed = speed_points_unique[-1]
-        #     final_speeds = np.interp(lookahead_distances, unique_distances, speed_points_unique,
-        #                              left=first_speed, right=last_speed)
-
-        # Final distance profile corresponds to PROFILE_TIMES * v_ego # REMOVED
-        # final_distances = lookahead_distances # REMOVED
 
         # Return the raw distance/speed profile for VTSC to interpolate
-        # print(f"MTSC: Generated raw profile: {len(unique_distances)} dist, {len(speed_points_unique)} speed") # Debug
         return unique_distances, speed_points_unique
-        # --- End REMOVED v_ego interpolation ---
 
-    def update(self, v_ego, a_ego, v_cruise_cluster, frogpilot_toggles, turn_aggressiveness=1.0) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
+    def update(self, v_ego, a_ego, v_cruise_cluster, frogpilot_toggles) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
         """
         Main update loop for Chauffeur MTSC.
-        Reads GPS, finds current road segment, calculates curvature-based speed profile,
+        Reads GPS, finds current road segment, loads pre-calculated curvature-based speed profile,
         determines upcoming speed limit, and publishes the tagged speed limits.
         """
         # Get current GPS position
@@ -527,9 +496,9 @@ class ChauffeurMtsc:
 
         # --- Curvature-Based Speed Profile Calculation ---
         if is_on_segment:
-            # Calculate profile based on current segment's geometry
+            # Calculate profile using pre-calculated speeds from current segment
             self.distance_profile, self.speed_profile = self._calculate_speed_profile_from_segment(
-                pos, v_ego, v_cruise_cluster, turn_aggressiveness
+                pos, v_ego, v_cruise_cluster
             )
             # self.curvature_valid is set within _calculate_speed_profile_from_segment
         else:

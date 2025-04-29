@@ -14,6 +14,8 @@ from collections import defaultdict # Added for collecting index data
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
 # Import generated protobuf classes
 from tools.map_processing import osm_speed_data_pb2
+# Import the curvature_to_speed function
+from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import curvature_to_speed
 
 # Load Cap'n Proto schema REMOVED
 # script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -271,6 +273,10 @@ def main(input_geojsonl, output_basedir):
                     valid_curvatures = [float(c) for c in segment_curvatures if math.isfinite(float(c))]
                     segment_msg.curvatures.extend(valid_curvatures)
 
+                    # Calculate curvature-derived speeds using the imported function
+                    curvature_derived_speeds = [curvature_to_speed(abs(c)) for c in valid_curvatures]
+                    segment_msg.curvature_derived_speeds_mps.extend(curvature_derived_speeds)
+
                     # Populate speed limit with default value (required by reader)
                     # segment_msg.speed_limit_mps = 0.0 <-- Remove old default
 
@@ -280,7 +286,7 @@ def main(input_geojsonl, output_basedir):
                     segment_msg.speed_limit_mps = parsed_speed_mps if parsed_speed_mps is not None else 0.0
 
                     # --- DEBUG: Print message state before writing ---
-                    print(f"DEBUG WRITE Line {line_num}: ID={segment_msg.osm_way_id}, GeomLen={len(segment_msg.geometry)}, CurvLen={len(segment_msg.curvatures)}, Speed={segment_msg.speed_limit_mps:.1f}", file=sys.stderr)
+                    print(f"DEBUG WRITE Line {line_num}: ID={segment_msg.osm_way_id}, GeomLen={len(segment_msg.geometry)}, CurvLen={len(segment_msg.curvatures)}, DerivedSpeedLen={len(segment_msg.curvature_derived_speeds_mps)}, SpeedLimit={segment_msg.speed_limit_mps:.1f}", file=sys.stderr)
 
                     # --- Write Size-Prefixed Message to Tile File ---
                     message_bytes = segment_msg.SerializeToString()

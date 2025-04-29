@@ -7,7 +7,12 @@ from openpilot.common.numpy_fast import clip, interp
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
 # Import the curvature-based lat accel function from MTSC
-from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_mtsc import curvature_based_lat_accel
+# from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_mtsc import curvature_based_lat_accel
+
+# Add necessary imports if not already present at the top of chauffeur_vtsc.py
+import math
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.numpy_fast import clip
 
 # Determine actual available points from ModelConstants and set target
 AVAILABLE_POINTS = len(ModelConstants.T_IDXS)
@@ -16,6 +21,58 @@ N_POINTS_TARGET = min(50, AVAILABLE_POINTS) # Use up to 50 points, but no more t
 # print(f"[VTSC] Using N_POINTS_TARGET = {N_POINTS_TARGET} based on available {AVAILABLE_POINTS} points.")
 
 CRUISING_SPEED = 5.0  # m/s
+
+# --- Keep the original lat accel function logic internally ---
+# This function's logic remains unchanged, using the existing tuned parameters.
+# It takes scaled curvature (because it was tuned based on MPH-like values).
+def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
+    """Internal function replicating the original tuned lateral accel logic."""
+    high_accel = 3.2
+    low_accel = 1.5
+    span = high_accel - low_accel
+    center_curvature = 0.018 # Center the transition slightly below kappa=0.02 (scaled)
+    k = 180                  # Gain to control the transition sharpness
+    reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
+    lat_acc = high_accel - reduction
+    return clip(lat_acc, low_accel, high_accel)
+
+# --- Constants for the new function ---
+CURV_CORR_FACTOR = (CV.MS_TO_MPH ** 2) # Correction factor (~5.0) for internal lat_accel function
+MAX_SPEED_DEFAULT = 70.0 # m/s (~156 mph), fallback for straight roads
+SPEED_INCREASE_FACTOR = 1.25 # User request for +25% speed increase over base calculation
+
+def curvature_to_speed(abs_curvature_meters: float) -> float:
+    """
+    Calculates a target speed (m/s) directly from curvature (1/radius in meters).
+
+    This function deterministically maps curvature to speed, baking in the
+    desired lateral acceleration profile and applying a speed scaling factor.
+    """
+    if abs_curvature_meters < 1e-7: # Handle straight roads
+        return MAX_SPEED_DEFAULT
+
+    # Scale curvature for the internally used lat accel function (tuned in MPH-like units)
+    abs_curvature_scaled = abs_curvature_meters / CURV_CORR_FACTOR
+
+    # Get the base lateral accel using the original tuned logic
+    base_lat_accel = _original_curvature_based_lat_accel(abs_curvature_scaled)
+
+    # Calculate the base speed using the physics formula v = sqrt(a / k)
+    # Use the original (meters) curvature for this physical calculation.
+    try:
+        # Ensure we don't try to sqrt a negative number (shouldn't happen here)
+        if base_lat_accel < 0: base_lat_accel = 0
+        base_speed_mps = math.sqrt(base_lat_accel / abs_curvature_meters)
+    except (ValueError, ZeroDivisionError): # Catch potential issues
+        base_speed_mps = 0.0
+
+    # Apply the requested speed increase factor
+    target_speed_mps = base_speed_mps * SPEED_INCREASE_FACTOR
+
+    # Clip to a reasonable maximum speed
+    return clip(target_speed_mps, 0.0, MAX_SPEED_DEFAULT)
+
+# --- End of new/modified functions ---
 
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
     """
@@ -239,7 +296,6 @@ class VisionTurnSpeedController:
                 times_target,          # Use target array
                 init_speed=self.prev_target_speed,
                 map_speed_profile=map_speed_profile,
-                turn_aggressiveness=turn_aggressiveness,
                 skip_accel_limit=is_bump_up
             )
             # Use the minimum of the first two planned points to anticipate decel
@@ -296,6 +352,11 @@ class VisionTurnSpeedController:
 
             final_target_speed = self.prev_target_speed + self.current_accel * dt
 
+        # --- Apply turn_aggressiveness to the target speed --- # MODIFIED
+        # Apply only if not resuming/accelerating hard from stop, to prevent lurching
+        if not ((v_cruise_cluster > self.prev_v_cruise_cluster) or (self.prev_v_cruise_cluster == 0 and v_cruise_cluster > 0)):
+             final_target_speed *= turn_aggressiveness
+
         # Always clamp final target speed to the cruise set speed
         final_target_speed = min(final_target_speed, v_cruise_cluster)
 
@@ -312,7 +373,6 @@ class VisionTurnSpeedController:
         times: np.ndarray,
         init_speed: float,
         map_speed_profile: tuple[np.ndarray, np.ndarray] | None,
-        turn_aggressiveness: float,
         skip_accel_limit: bool = False
     ) -> np.ndarray:
         """
@@ -352,28 +412,13 @@ class VisionTurnSpeedController:
         # (2) Compute safe speeds from lateral accel AND map data
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
-            # Calculate vision-based safe speed using curvature_based_lat_accel
+            # Calculate vision-based safe speed using curvature_to_speed directly
             abs_curv_vision = abs(curvature[i])
-            if abs_curv_vision < 1e-9:
-                vision_safe_speed = 70.0 # Max speed for straight
-            else:
-                # Get base lat accel from curvature
-                base_lat_accel = curvature_based_lat_accel(abs_curv_vision)
-                # Apply turn aggressiveness multiplier
-                lat_acc_limit = base_lat_accel * turn_aggressiveness
-                # Calculate speed limit v = sqrt(a / k)
-                vision_safe_speed = math.sqrt(lat_acc_limit / abs_curv_vision)
-
-            vision_safe_speed = clip(vision_safe_speed, 0.0, 70.0)
-            # Mild tweak around ~30-45 mph range - Keep this empirical tweak?
-            # If the goal is pure physics, maybe remove this?
-            # Let's keep it for now, as it might smooth behavior.
-            if 13.4 <= vision_safe_speed <= 20.1:
-                vision_safe_speed *= 0.93
+            # Directly get the target speed from curvature
+            vision_safe_speed = curvature_to_speed(abs_curv_vision)
 
             # Final safe speed is the minimum of vision limit and map limit for this step
-            # NOTE: If map data seems ignored, check the incoming map_speed_profile from MTSC
-            # or log vision_safe_speed vs map_safe_speeds[i] here.
+            # NOTE: Map speeds from MTSC should now be pre-calculated using curvature_to_speed as well.
             safe_speeds[i] = min(vision_safe_speed, map_safe_speeds[i])
 
         # (3) Apex-based shaping pass (using fixed parameters)
@@ -554,24 +599,14 @@ class VisionTurnSpeedController:
     def _single_step_fallback(self, v_ego, curvature, turn_aggressiveness):
         """
         Fallback if model data isn't available.
-        Uses curvature_based_lat_accel now.
+        Uses curvature_to_speed now.
         """
-        # Original fallback using nonlinear_lat_accel - REMOVED
-        # lat_acc = nonlinear_lat_accel(v_ego, turn_aggressiveness)
-        # c = max(curvature, 1e-9)
-        # safe_speed = math.sqrt(lat_acc / c) if c > 1e-9 else 70.0
-        # safe_speed = clip(safe_speed, 0.0, 70.0)
-        # --- End REMOVED ---
+        # --- REMOVED OLD FALLBACK LOGIC --- #
 
-        # New fallback using curvature_based_lat_accel
+        # New fallback using curvature_to_speed
         abs_curv = abs(curvature)
-        if abs_curv < 1e-9:
-            safe_speed = 70.0
-        else:
-            base_lat_acc = curvature_based_lat_accel(abs_curv)
-            lat_acc = base_lat_acc * turn_aggressiveness
-            safe_speed = math.sqrt(lat_acc / abs_curv)
-        safe_speed = clip(safe_speed, 0.0, 70.0)
+        # Directly get the target speed from curvature
+        safe_speed = curvature_to_speed(abs_curv)
 
         # Smoothing logic remains the same, using the calculated safe_speed
         current_lat_acc = curvature * (v_ego ** 2) # Use actual measured curvature for smoothing trigger
