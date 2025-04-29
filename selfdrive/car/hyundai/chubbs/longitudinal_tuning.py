@@ -208,10 +208,8 @@ class HKGLongitudinalTuning:
             stop_buffer = max(1.0, 0.5 + 0.1 * CS.out.vEgo)
             d_gap = max(raw_d_rel - stop_buffer, 0.1)
 
-            # Fallback: treat fast-closing even if lead is not fully valid
-            lead_rel_too_fast = (v_rel < -3.0) and (raw_d_rel > 5.0)
-
-            if (lead_ok or lead_rel_too_fast) and v_ego_valid and accel_last_valid and accel_request_valid and self.DT_CTRL > 1e-6:
+            # Always compute physics-based urgency when data is valid
+            if v_ego_valid and accel_last_valid and accel_request_valid and self.DT_CTRL > 1e-6:
                 # Nominal vs max deceleration
                 _comfy_decel_raw = getattr(self.car_config, "comfy_decel", 2.0)
                 a_nom = abs(_comfy_decel_raw) if isinstance(_comfy_decel_raw, (int, float)) and _comfy_decel_raw > 0 else 2.0
