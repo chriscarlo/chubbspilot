@@ -42,6 +42,15 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 PROFILE_TIMES = list(ModelConstants.T_IDXS[:33])
 PROFILE_LENGTH = len(PROFILE_TIMES)
 
+# --- New Constant for Curvature Unit Correction ---
+MS_TO_MPH = CV.MS_TO_MPH
+CURV_CORR = MS_TO_MPH ** 2 # Correction factor (MPH^2 / MS^2) ≈ 5.0
+# --- End New Constant ---
+
+# --- New Constant for MTSC Activation Threshold ---
+MIN_ENABLE_KAPPA = 8e-4 # Minimum curvature (1/radius) to enable MTSC profile (1/1250 m)
+# --- End New Constant ---
+
 # --- New Function: Target Lateral Accel based on Curvature (Decreasing Sigmoid) ---
 def curvature_based_lat_accel(abs_curvature: float) -> float:
     """
@@ -259,10 +268,10 @@ class ChauffeurMtsc:
         return meters
     # --- end meters-true projection ------------------------------------------
 
-    def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, turn_aggressiveness: float):
+    def _calculate_speed_profile_from_segment(self, pos: matcher.Position, v_ego: float, v_cruise_cluster: float, turn_aggressiveness: float):
         """
         Calculates a speed profile based on the geometry (and later, curvature)
-        of the current road segment.
+        of the current road segment. Clamps speeds to v_cruise_cluster.
         """
         # Requires valid current_segment_data and current_on_way_result from _update_current_segment
         if not self.current_segment_data or not self.current_on_way_result or 'geom' not in self.current_segment_data:
@@ -285,6 +294,12 @@ class ChauffeurMtsc:
         if not curvatures:
             self.curvature_valid = False
             return np.array([]), np.array([])
+
+        # --- ADDED: Check if curvature is significant enough to activate MTSC ---
+        if not curvatures or max(abs(c) for c in curvatures) < MIN_ENABLE_KAPPA:
+             self.curvature_valid = False # Mark as invalid if below threshold
+             return np.array([]), np.array([])
+        # --- End Threshold Check ---
 
         # Calculate distances along the segment corresponding to curvature points
         # Curvature[i] corresponds to the curve defined by nodes i, i+1, i+2
@@ -316,7 +331,9 @@ class ChauffeurMtsc:
         STRAIGHT_SPEED_LIMIT = 70.0 # m/s
 
         for k in curvatures:
-            abs_k = abs(k)
+            # --- Apply curvature correction for MPH-based tuning ---
+            abs_k = abs(k) / CURV_CORR
+            # --- End correction ---
             if abs_k < ZERO_CURVATURE_THRESHOLD:
                 target_speed = STRAIGHT_SPEED_LIMIT
             else:
@@ -351,6 +368,10 @@ class ChauffeurMtsc:
                     # If error, default to the more conservative speed (the next point's speed)
                     speed_points[i] = min(speed_points[i], speed_points[i+1])
         # --- End Strategic Deceleration Backward Pass ---
+
+        # --- ADDED: Clamp speed profile to v_cruise_cluster ---
+        speed_points = np.minimum(speed_points, v_cruise_cluster)
+        # --- End Clamping ---
 
         self.curvature_valid = True # Mark as valid since we processed curvatures
 
@@ -405,7 +426,7 @@ class ChauffeurMtsc:
         return unique_distances, speed_points_unique
         # --- End REMOVED v_ego interpolation ---
 
-    def update(self, v_ego, a_ego, frogpilot_toggles, turn_aggressiveness=1.0) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
+    def update(self, v_ego, a_ego, v_cruise_cluster, frogpilot_toggles, turn_aggressiveness=1.0) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
         """
         Main update loop for Chauffeur MTSC.
         Reads GPS, finds current road segment, calculates curvature-based speed profile,
@@ -508,7 +529,7 @@ class ChauffeurMtsc:
         if is_on_segment:
             # Calculate profile based on current segment's geometry
             self.distance_profile, self.speed_profile = self._calculate_speed_profile_from_segment(
-                pos, v_ego, turn_aggressiveness
+                pos, v_ego, v_cruise_cluster, turn_aggressiveness
             )
             # self.curvature_valid is set within _calculate_speed_profile_from_segment
         else:
