@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import tarfile
+import shutil
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta
 from functools import partial
@@ -456,6 +457,22 @@ def upload_handler(end_event: threading.Event) -> None:
                        fn=fn, sz=file_size,
                        azure_subdir=item.azure_subdir or "",
                        network_type=network_type, metered=metered)
+
+        # --- Start Deletion Logic ---
+        try:
+          source_dir = os.path.dirname(fn)
+          debug_print(f"Attempting to delete archive {fn} and source dir {source_dir}")
+          os.remove(fn)
+          debug_print(f"Deleted archive file: {fn}")
+          shutil.rmtree(source_dir)
+          debug_print(f"Deleted source directory: {source_dir}")
+          cloudlog.event("azure.upload_handler.cleanup_success",
+                         archive_path=fn, source_dir=source_dir)
+        except OSError as e:
+          debug_print(f"Error deleting local files after upload: {e}")
+          cloudlog.exception("azure.upload_handler.cleanup_error",
+                             archive_path=fn, source_dir=os.path.dirname(fn), error=str(e))
+        # --- End Deletion Logic ---
 
         upload_queue.task_done()
         UploadQueueCache.cache(upload_queue)
