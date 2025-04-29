@@ -90,35 +90,14 @@ class MapdPyDaemon:
         if location_valid and self.last_valid_pos is not None:
             # --- Find Current Segment ---
             try:
-                # Ensure tiles around the current location are loaded into the cache
-                self.map_reader._update_loaded_tiles(self.last_valid_pos.latitude, self.last_valid_pos.longitude)
-
-                # Query the R-tree index (which reflects the cache) for nearby segments
-                search_bounds = (self.last_valid_pos.longitude - 1e-4,
-                                 self.last_valid_pos.latitude - 1e-4,
-                                 self.last_valid_pos.longitude + 1e-4,
-                                 self.last_valid_pos.latitude + 1e-4)
-                nearest_candidates = list(self.map_reader.rtree_idx.intersection(search_bounds, objects=True))
-
-                segment_data = None # Initialize segment_data to None
-                if nearest_candidates:
-                    closest_segment_info = None
-                    min_dist = float('inf')
-                    current_point = Point(self.last_valid_pos.longitude, self.last_valid_pos.latitude)
-
-                    # Find the segment whose geometry is actually closest among candidates
-                    for item in nearest_candidates:
-                        segment_id = item.object
-                        segment_info = self.map_reader.segments_data.get(segment_id)
-                        if segment_info:
-                            self.map_reader.segments_data.move_to_end(segment_id) # Mark as recently used
-                            distance = segment_info['geom'].distance(current_point)
-                            MAX_RELEVANT_DISTANCE_DEGREES = 0.0015
-                            if distance < min_dist and distance < MAX_RELEVANT_DISTANCE_DEGREES:
-                                min_dist = distance
-                                closest_segment_info = segment_info
-
-                    segment_data = closest_segment_info # Assign the closest found segment
+                # Ask MapReader for the closest segment (this queues required tile
+                # loads *and* performs the spatial query in one place).  By relying
+                # on the shared helper we avoid duplicating logic here and reduce
+                # the chance of subtle inconsistencies.
+                segment_data = self.map_reader.get_segment_data_at(
+                    self.last_valid_pos.latitude,
+                    self.last_valid_pos.longitude,
+                )
 
                 # The rest of the logic remains the same, using the segment_data found (or None)
                 if segment_data:

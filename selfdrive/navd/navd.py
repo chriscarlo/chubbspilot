@@ -523,7 +523,7 @@ class RouteEngine:
       # Waypoints define the short segment we care about
       'waypoints': '0;1',
       # Provide bearing for the start point
-      'bearings': f"{(self.last_bearing + 360) % 360:.0f},90",
+      'bearings': f"{(self.last_bearing + 360) % 360:.0f},90;,180", # Added permissive bearing for second point
     }
 
     coords_str = (f'{self.last_position.longitude},{self.last_position.latitude};'

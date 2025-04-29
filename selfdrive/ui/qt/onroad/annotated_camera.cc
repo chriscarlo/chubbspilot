@@ -227,18 +227,27 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     p.setOpacity(1.0);
     p.drawPixmap(curveSpeedRect, scaledCurveSpeedIcon);
 
-    if (mtscEnabled) {
-      QRect mtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), vtscControllingCurve ? 50 : 100));
-      drawCurveSpeedControl(mtscRect, mtscSpeedStr, true);
+    // --- Draw only VTSC ---
+    if (vtscEnabled) {
+      // Position VTSC box directly below the curve icon
+      QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150)); // Use a fixed height
 
-      if (vtscEnabled) {
-        QRect vtscRect(mtscRect.topLeft() + QPoint(0, mtscRect.height() + 20), QSize(mtscRect.width(), vtscControllingCurve ? 100 : 50));
-        drawCurveSpeedControl(vtscRect, vtscSpeedStr, false);
+      // Set pen and brush based on whether VTSC is controlling (similar to old logic but simplified)
+      if (vtscControllingCurve) { // This flag should still be valid as it comes from frogpilotPlan
+        p.setPen(QPen(redColor(), 10));
+        p.setBrush(redColor(166));
+        p.setFont(InterFont(45, QFont::Bold)); // Keep larger font if controlling
+      } else {
+        p.setPen(QPen(blackColor(), 10));
+        p.setBrush(blackColor(166));
+        p.setFont(InterFont(35, QFont::DemiBold)); // Smaller font if not controlling
       }
-    } else if (vtscEnabled) {
-      QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150));
-      drawCurveSpeedControl(vtscRect, vtscSpeedStr, false);
+      p.drawRoundedRect(vtscRect, 24, 24);
+
+      p.setPen(QPen(whiteColor(), 6));
+      p.drawText(vtscRect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, vtscSpeedStr); // Draw vtscSpeedStr
     }
+    // --- End Draw only VTSC ---
   }
 
   const QRect sign_rect = set_speed_rect.adjusted(sign_margin, default_size.height(), -sign_margin, -sign_margin);
@@ -1175,9 +1184,6 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   bigMapOpen = mapOpen && scene.big_map;
 
   modelLength = scene.model_length;
-
-  mtscEnabled = scene.mtsc_enabled;
-  mtscSpeed = mtscEnabled ? scene.mtsc_speed * speedConversion : setSpeed;
 
   onroadDistanceButton = scene.onroad_distance_button;
   bool enableDistanceButton = onroadDistanceButton && !hideBottomIcons;

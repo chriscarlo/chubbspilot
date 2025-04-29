@@ -448,6 +448,26 @@ class MapReader:
               else:
                    return None
 
+    # Public helper ----------------------------------------------------------
+    def get_segment_data_at(self, lat: float, lon: float):
+        """Return the closest segment data for a lat/lon point.
+
+        This is a thin convenience wrapper around the internal
+        `_update_loaded_tiles` method so that other modules (e.g. the
+        planner or MTSC) can retrieve the same information without
+        having to know about our tile-management internals.  It will:
+        1. Ensure the correct tiles are queued / loaded for the supplied
+           coordinate.
+        2. Return the *closest* segment dictionary for the coordinate if
+           one exists, or ``None`` otherwise.
+
+        The implementation purposefully mirrors the logic already used
+        by ``_update_loaded_tiles`` so the behaviour stays consistent
+        across the code-base.
+        """
+        return self._update_loaded_tiles(lat, lon)
+    # -----------------------------------------------------------------------
+
 # Helper function (can be outside class)
 def _get_coords_from_segment(segment_data: dict) -> list[tuple[float, float]]:
     """Extracts node coordinates as (lat, lon) tuples from segment geom."""
