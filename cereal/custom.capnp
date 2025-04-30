@@ -113,6 +113,10 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   vCruise @28 :Float32;
   vtscControllingCurve @29 :Bool;
   vtscSpeed @30 :Float32;
+
+  #vtsc stuff
+  leftCurve @31 :Bool;
+  rightCurve @32 :Bool;
 }
 
 struct CustomReserved5 @0xa5cd762cd951a455 {
