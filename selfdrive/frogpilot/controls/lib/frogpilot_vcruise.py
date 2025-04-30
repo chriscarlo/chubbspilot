@@ -115,11 +115,13 @@ class FrogPilotVCruise:
           self.override_force_stop_timer -= DT_MDL
 
         # Keep cluster in sync
-        v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
-        v_cruise_diff = v_cruise_cluster - v_cruise
+        # v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise) # Original
+        # Use the user's set speed directly as the ceiling
+        v_cruise_cluster = controlsState.vCruiseCluster * CV.KPH_TO_MS
+        v_cruise_diff = v_cruise_cluster - v_cruise # Keep diff for syncing published values if needed
 
         v_ego_cluster = max(_get_attr(carState, 'vEgoCluster', v_ego), v_ego)
-        v_ego_diff = v_ego_cluster - v_ego
+        v_ego_diff = v_ego_cluster - v_ego # Keep diff for potential future use, but remove from target calc
 
         # -------------------------------------------------------------
         # Map Turn Speed Controller
@@ -250,7 +252,8 @@ class FrogPilotVCruise:
         if speed_limit_controller:
           targets = [
             # self.mtsc_target, # Removed: VTSC's target includes map influence
-            max(self.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff,
+            # max(self.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff, # Original: Removed diff adjustment
+            max(self.overridden_speed, self.slc_target + self.slc_offset),
             self.vtsc_target # This target now contains the fused map/vision speed
           ]
         else:
@@ -262,17 +265,19 @@ class FrogPilotVCruise:
         # Don't drop below CRUISING_SPEED unless needed
         # Filter targets >= CRUISING_SPEED, then take min, fallback to original v_cruise
         valid_targets = [t for t in targets if t >= CRUISING_SPEED]
+        # Store the initially calculated target before clamping, might be useful for debugging/UI
+        intermediate_v_cruise = v_cruise # Keep previous cycle's v_cruise as default for now
         if valid_targets:
-            v_cruise = float(min(valid_targets))
-        # else: v_cruise remains unchanged (implicitly uses original v_cruise)
-        # v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets])) # Old logic
+            intermediate_v_cruise = float(min(valid_targets))
+        # else: intermediate_v_cruise remains the input v_cruise
 
         # Cap the final target speed by the user's set v_cruise_cluster
-        v_cruise = min(v_cruise, v_cruise_cluster)
+        # v_cruise = min(v_cruise, v_cruise_cluster) # Original place
+        v_cruise = min(intermediate_v_cruise, v_cruise_cluster) # Clamp the calculated target
 
         # Keep everything in sync w/ cluster differences
         # self.mtsc_target += v_cruise_diff # Removed: No longer a separate MTSC target
-        self.vtsc_target += v_cruise_diff # Keep VTSC target synced
+        self.vtsc_target += v_cruise_diff # Keep VTSC target synced (for publishing in frogpilotPlan)
 
         return v_cruise
 

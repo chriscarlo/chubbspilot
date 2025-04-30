@@ -57,7 +57,8 @@ class FrogPilotPlanner:
     else:
       self.lead_one = radarState.leadOne
 
-    v_cruise = min(controlsState.vCruise, V_CRUISE_UNSET) # * CV.KPH_TO_MS
+    v_cruise_kph = min(controlsState.vCruise, V_CRUISE_UNSET)
+    v_cruise = v_cruise_kph * CV.KPH_TO_MS
     v_ego = max(carState.vEgo, 0)
     v_lead = self.lead_one.vLead
 
@@ -129,7 +130,11 @@ class FrogPilotPlanner:
     frogpilotPlan.speedJerkStock = float(J_EGO_COST * self.frogpilot_following.base_speed_jerk)
     frogpilotPlan.tFollow = float(self.frogpilot_following.t_follow)
 
-    frogpilotPlan.mtscSpeed = float(self.frogpilot_vcruise.vtsc_target)
+    # frogpilotPlan.mtscSpeed = float(self.frogpilot_vcruise.vtsc_target) # Incorrectly assigned VTSC target
+    # This field is likely unused or deprecated if MTSC only provides profiles now.
+    # Set to 0 or remove if confirmed unused by consumers.
+    # For now, set to 0 to avoid publishing confusing data.
+    frogpilotPlan.mtscSpeed = 0.0
     frogpilotPlan.vtscControllingCurve = bool(self.frogpilot_vcruise.vtsc_target < self.v_cruise)
     frogpilotPlan.vtscSpeed = float(self.frogpilot_vcruise.vtsc_target)
 
