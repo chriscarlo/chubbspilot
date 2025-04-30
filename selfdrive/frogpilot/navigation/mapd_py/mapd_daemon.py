@@ -174,7 +174,14 @@ class MapdPyDaemon:
                 current_distances_for_speeds = [0.0] * len(current_curv_speeds)
                 cumulative_node_dist = 0.0
                 if len(current_coords) > 1: # Distance to first node (index 1)
-                    cumulative_node_dist = geometry.distance_linalg(current_coords[0], current_coords[1])
+                    # --- Use distance_to_point with radians ---
+                    lat1, lon1 = current_coords[0]
+                    lat2, lon2 = current_coords[1]
+                    cumulative_node_dist = geometry.distance_to_point(
+                        lat1 * geometry.TO_RADIANS, lon1 * geometry.TO_RADIANS,
+                        lat2 * geometry.TO_RADIANS, lon2 * geometry.TO_RADIANS
+                    )
+                    # ------------------------------------------
 
                 for j in range(len(current_curv_speeds)):
                     target_node_index = j + 1
@@ -182,7 +189,15 @@ class MapdPyDaemon:
                         current_distances_for_speeds[j] = cumulative_node_dist
                     elif target_node_index < len(current_coords):
                         # Add length of segment from node j to j+1
-                        cumulative_node_dist += geometry.distance_linalg(current_coords[j], current_coords[target_node_index])
+                        # --- Use distance_to_point with radians ---
+                        lat1_curr, lon1_curr = current_coords[j]
+                        lat2_curr, lon2_curr = current_coords[target_node_index]
+                        segment_dist = geometry.distance_to_point(
+                            lat1_curr * geometry.TO_RADIANS, lon1_curr * geometry.TO_RADIANS,
+                            lat2_curr * geometry.TO_RADIANS, lon2_curr * geometry.TO_RADIANS
+                        )
+                        cumulative_node_dist += segment_dist
+                        # ------------------------------------------
                         current_distances_for_speeds[j] = cumulative_node_dist
                     else: # Should not happen if lists align, but handle gracefully
                         current_distances_for_speeds[j] = cumulative_node_dist # Use last known cumulative
@@ -224,7 +239,10 @@ class MapdPyDaemon:
                         for i in range(current_node_index_proactive, len(coords_current) - 1):
                              p1 = coords_current[i]
                              p2 = coords_current[i+1]
-                             dist_remaining_current_proactive += geometry.distance_linalg(p1,p2)
+                             dist_remaining_current_proactive += geometry.distance_to_point(
+                                 p1[0] * geometry.TO_RADIANS, p1[1] * geometry.TO_RADIANS,
+                                 p2[0] * geometry.TO_RADIANS, p2[1] * geometry.TO_RADIANS
+                             )
                     cumulative_proactive_dist += dist_remaining_current_proactive
                     # --- End distance remaining calculation ---
 
@@ -318,17 +336,32 @@ class MapdPyDaemon:
                              distances_for_speeds_pub = [0.0] * len(curv_speeds_pub)
                              cumulative_node_dist_pub = 0.0
                              if len(coords_pub) > 1:
-                                  cumulative_node_dist_pub = geometry.distance_linalg(coords_pub[0], coords_pub[1])
+                                  # --- Use distance_to_point with radians ---
+                                  lat1_pub0, lon1_pub0 = coords_pub[0]
+                                  lat2_pub1, lon2_pub1 = coords_pub[1]
+                                  cumulative_node_dist_pub = geometry.distance_to_point(
+                                      lat1_pub0 * geometry.TO_RADIANS, lon1_pub0 * geometry.TO_RADIANS,
+                                      lat2_pub1 * geometry.TO_RADIANS, lon2_pub1 * geometry.TO_RADIANS
+                                  )
+                                  # ------------------------------------------
 
                              for j in range(len(curv_speeds_pub)):
-                                  target_node_index_pub = j + 1
-                                  if target_node_index_pub == 1:
-                                       distances_for_speeds_pub[j] = cumulative_node_dist_pub
-                                  elif target_node_index_pub < len(coords_pub):
-                                       cumulative_node_dist_pub += geometry.distance_linalg(coords_pub[j], coords_pub[target_node_index_pub])
-                                       distances_for_speeds_pub[j] = cumulative_node_dist_pub
-                                  else:
-                                       distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                 target_node_index_pub = j + 1
+                                 if target_node_index_pub == 1:
+                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                 elif target_node_index_pub < len(coords_pub):
+                                     # --- Use distance_to_point with radians ---
+                                     lat1_pub, lon1_pub = coords_pub[j]
+                                     lat2_pub, lon2_pub = coords_pub[target_node_index_pub]
+                                     segment_dist_pub = geometry.distance_to_point(
+                                         lat1_pub * geometry.TO_RADIANS, lon1_pub * geometry.TO_RADIANS,
+                                         lat2_pub * geometry.TO_RADIANS, lon2_pub * geometry.TO_RADIANS
+                                     )
+                                     cumulative_node_dist_pub += segment_dist_pub
+                                     # ------------------------------------------
+                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                 else:
+                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
 
                         next_seg_struct = log.LiveMapData.NextSegmentData.new_message(
                             segmentId=next_segment_id_pub,
