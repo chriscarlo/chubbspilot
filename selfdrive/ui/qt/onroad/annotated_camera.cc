@@ -144,7 +144,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   QString speedLimitOffsetStr = (slcSpeedLimitOffset == 0) ? "–" : QString::number(slcSpeedLimitOffset, 'f', 0).prepend((slcSpeedLimitOffset > 0) ? "+" : "");
   QString speedStr = QString::number(std::nearbyint(speed));
   QString setSpeedStr = is_cruise_set ? QString::number(std::nearbyint(setSpeed)) : "–";
-  QString vtscSpeedStr = (vtscSpeed > 1) ? QString::number(std::nearbyint(fmin(speed, vtscSpeed))) + speedUnit : "–";
+  QString vtscSpeedStr = (vtscSpeed > 1) ? QString::number(std::nearbyint(vtscSpeed)) : "–";
 
   // Draw outer box + border to contain set speed and speed limit
   const int sign_margin = 12;
@@ -199,55 +199,26 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);
   }
 
-  if (!speedLimitChanged && is_cruise_set && (setSpeed - mtscSpeed > 1 || setSpeed - vtscSpeed > 1) && !hideCSCUI) {
-    std::function<void(const QRect&, const QString&, bool)> drawCurveSpeedControl = [&](const QRect &rect, const QString &speedStr, bool isMtsc) {
-      if (isMtsc && !vtscControllingCurve) {
-        p.setPen(QPen(greenColor(), 10));
-        p.setBrush(greenColor(166));
-        p.setFont(InterFont(45, QFont::Bold));
-      } else if (!isMtsc && vtscControllingCurve) {
-        p.setPen(QPen(redColor(), 10));
-        p.setBrush(redColor(166));
-        p.setFont(InterFont(45, QFont::Bold));
-      } else {
-        p.setPen(QPen(blackColor(), 10));
-        p.setBrush(blackColor(166));
-        p.setFont(InterFont(35, QFont::DemiBold));
-      }
-
-      p.drawRoundedRect(rect, 24, 24);
-
-      p.setPen(QPen(whiteColor(), 6));
-      p.drawText(rect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, speedStr);
-    };
-
+  // Draw VTSC/MTSC indicator when actively controlling curve speed
+  if (!speedLimitChanged && is_cruise_set && vtscControllingCurve && !hideCSCUI) {
+    // Draw curve direction icon
     QRect curveSpeedRect(QPoint(set_speed_rect.right() + 25, set_speed_rect.top()), QSize(default_size.width() * 1.25, default_size.width() * 1.25));
     QPixmap scaledCurveSpeedIcon = (leftCurve ? curveSpeedLeftIcon : curveSpeedRightIcon).scaled(curveSpeedRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
     p.setOpacity(1.0);
     p.drawPixmap(curveSpeedRect, scaledCurveSpeedIcon);
 
-    // --- Draw only VTSC ---
-    if (vtscEnabled) {
-      // Position VTSC box directly below the curve icon
-      QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150)); // Use a fixed height
+    // Draw VTSC target speed box below the icon
+    QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150)); // Use a fixed height
 
-      // Set pen and brush based on whether VTSC is controlling (similar to old logic but simplified)
-      if (vtscControllingCurve) { // This flag should still be valid as it comes from frogpilotPlan
-        p.setPen(QPen(redColor(), 10));
-        p.setBrush(redColor(166));
-        p.setFont(InterFont(45, QFont::Bold)); // Keep larger font if controlling
-      } else {
-        p.setPen(QPen(blackColor(), 10));
-        p.setBrush(blackColor(166));
-        p.setFont(InterFont(35, QFont::DemiBold)); // Smaller font if not controlling
-      }
-      p.drawRoundedRect(vtscRect, 24, 24);
+    // Style for active control
+    p.setPen(QPen(redColor(), 10));
+    p.setBrush(redColor(166));
+    p.setFont(InterFont(45, QFont::Bold));
+    p.drawRoundedRect(vtscRect, 24, 24);
 
-      p.setPen(QPen(whiteColor(), 6));
-      p.drawText(vtscRect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, vtscSpeedStr); // Draw vtscSpeedStr
-    }
-    // --- End Draw only VTSC ---
+    // Draw VTSC target speed text
+    p.setPen(QPen(whiteColor(), 6));
+    p.drawText(vtscRect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, vtscSpeedStr); // Use corrected vtscSpeedStr
   }
 
   const QRect sign_rect = set_speed_rect.adjusted(sign_margin, default_size.height(), -sign_margin, -sign_margin);
