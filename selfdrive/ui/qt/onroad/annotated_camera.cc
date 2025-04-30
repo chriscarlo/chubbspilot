@@ -138,7 +138,6 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
   p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
 
-  QString mtscSpeedStr = (mtscSpeed > 1) ? QString::number(std::nearbyint(fmin(speed, mtscSpeed))) + speedUnit : "–";
   QString newSpeedLimitStr = (unconfirmedSpeedLimit > 1) ? QString::number(std::nearbyint(unconfirmedSpeedLimit)) : "–";
   QString speedLimitStr = (speedLimit > 1) ? QString::number(std::nearbyint(speedLimit)) : "–";
   QString speedLimitOffsetStr = (slcSpeedLimitOffset == 0) ? "–" : QString::number(slcSpeedLimitOffset, 'f', 0).prepend((slcSpeedLimitOffset > 0) ? "+" : "");
@@ -249,7 +248,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     }
     p.restore();
 
-    if (speedLimitChanged && !(setSpeed - mtscSpeed > 1 || setSpeed - vtscSpeed > 1)) {
+    if (speedLimitChanged && !(setSpeed > speedLimit + 1)) {
       QRect new_sign_rect(sign_rect.translated(sign_rect.width() + 25, 0));
       new_sign_rect.setWidth(newSpeedLimitStr.size() >= 3 ? 200 : 175);
 
