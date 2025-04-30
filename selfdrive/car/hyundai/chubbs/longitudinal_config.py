@@ -413,7 +413,7 @@ CAR_SPECIFIC_CONFIGS = {
     jerk_limits=(0.5, 10.0),
     brake_response=(1.0, 1.5, 2.25, 3.5),
     accel_limits=(-6.0, 5.0),
-    comfy_decel=1.8,
+    comfy_decel=0.5,
     stop_buffer=3.0,
   ),
   CAR.KIA_NIRO_EV: CarTuningConfig(
