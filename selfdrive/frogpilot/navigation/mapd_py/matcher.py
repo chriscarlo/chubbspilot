@@ -496,6 +496,91 @@ def distance_to_end_of_way(pos: Position, segment_data: SegmentData, on_way_resu
 
     return total_dist
 
+# <<< NEW HELPER FUNCTIONS START >>>
+
+def distance_from_start_to_node(coords: list[CoordinatesTuple], node_index: int) -> float:
+    """Calculates distance along geometry from start (index 0) to node_index."""
+    distance = 0.0
+    if not coords or node_index >= len(coords) or node_index < 0:
+        return 0.0
+
+    # Sum distances between consecutive nodes up to the target index
+    last_lat_rad = coords[0][0] * geometry.TO_RADIANS
+    last_lon_rad = coords[0][1] * geometry.TO_RADIANS
+    for i in range(1, node_index + 1):
+        if i >= len(coords): break # Should not happen with initial check, but safety
+        curr_lat, curr_lon = coords[i]
+        curr_lat_rad = curr_lat * geometry.TO_RADIANS
+        curr_lon_rad = curr_lon * geometry.TO_RADIANS
+        distance += geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
+        last_lat_rad = curr_lat_rad
+        last_lon_rad = curr_lon_rad
+    return distance
+
+def get_progress_along_way(pos: Position, segment_data: SegmentData, on_way_result: OnWayResult) -> float:
+    """
+    Calculates the distance traveled along the segment geometry from its start
+    to the projected point of the current position.
+    Returns distance in meters.
+    """
+    if not on_way_result or not on_way_result.on_way or \
+       not on_way_result.line_start_coord or not on_way_result.line_end_coord:
+        return 0.0
+
+    coords = _get_coords_from_segment(segment_data)
+    if len(coords) < 2:
+        return 0.0
+
+    is_fwd = on_way_result.is_forward
+    line_start_coord = on_way_result.line_start_coord
+    line_end_coord = on_way_result.line_end_coord
+
+    # Find the index of the *start* node of the line segment we are currently projected onto
+    segment_start_node_index = -1
+    for i in range(len(coords)):
+        if _coords_equal(coords[i], line_start_coord):
+            segment_start_node_index = i
+            break
+
+    if segment_start_node_index == -1:
+        # Fallback: try finding the end node index if start wasn't found (shouldn't happen)
+        for i in range(len(coords)):
+           if _coords_equal(coords[i], line_end_coord):
+                segment_start_node_index = i - 1 # Use the node before the end node
+                break
+    if segment_start_node_index == -1 or segment_start_node_index < 0:
+         print("Matcher Warning: Could not find segment start node index in get_progress_along_way")
+         return 0.0 # Cannot determine progress
+
+    # Calculate distance from the way's start to the start node of our current line segment
+    dist_to_segment_start_node = distance_from_start_to_node(coords, segment_start_node_index)
+
+    # Calculate the vehicle's projected point on the current line segment (in degrees)
+    projected_lat_deg, projected_lon_deg = geometry.point_on_line(
+        line_start_coord[0], line_start_coord[1], # lat, lon
+        line_end_coord[0], line_end_coord[1],     # lat, lon
+        pos.latitude, pos.longitude
+    )
+
+    # Calculate distance from the segment_start_node to the projected point
+    dist_along_segment = geometry.distance_to_point(
+        line_start_coord[0] * geometry.TO_RADIANS, line_start_coord[1] * geometry.TO_RADIANS,
+        projected_lat_deg * geometry.TO_RADIANS, projected_lon_deg * geometry.TO_RADIANS
+    )
+
+    # Total progress is distance to segment start + distance along segment
+    # Handle directionality - this assumes nodes are ordered 0 to N
+    # If driving backwards (is_fwd=False), progress is total_length - calculated_forward_progress
+    # For now, we assume the calling function (mapd_daemon) handles directionality based on is_fwd
+    # This function returns progress assuming forward traversal (0 -> N)
+    total_progress = dist_to_segment_start_node + dist_along_segment
+
+    # TODO(?): If !is_fwd, should we return total_length - total_progress?
+    # Let's return forward progress for now and let caller adjust.
+    return total_progress
+
+# <<< NEW HELPER FUNCTIONS END >>>
+
 MIN_WAY_DIST_M = 500.0 # Lookahead distance
 
 # Modified: Uses MapReader instance and returns list of NextWayResult

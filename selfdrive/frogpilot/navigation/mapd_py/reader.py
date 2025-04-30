@@ -251,7 +251,6 @@ class MapReader:
                                         'id': osm_id,
                                         'speed_mps': segment.speed_limit_mps,
                                         'geom': geom_obj,
-                                        'curvatures': list(segment.curvatures),
                                         'curvature_derived_speeds_mps': list(segment.curvature_derived_speeds_mps),
                                         'highway': '', 'lanes': 0, 'oneway': 0, 'name': '',
                                         'ref': '', 'surface': '', 'is_bridge': False, 'is_tunnel': False,
@@ -353,7 +352,7 @@ class MapReader:
     # ---------------------------
 
     # --- Methods potentially called by main thread ---
-    def _update_loaded_tiles(self, lat, lon):
+    def _update_loaded_tiles(self, lat, lon, bearing_rad=None):
         """Determine current/neighbor tiles, queue new ones, unload old ones."""
         # Determine region (read-only access ok without lock)
         current_point_region = None
@@ -394,15 +393,52 @@ class MapReader:
                     self.queued_or_loading.clear()
             return # Cannot load tiles outside known region
 
-        # Calculate reactive 3x3 grid
+        # --- Calculate reactive tile grid --- Modified ---
         reactive_tiles_to_load = set()
         current_lat_idx = math.floor(lat / TILE_SIZE_DEG)
         current_lon_idx = math.floor(lon / TILE_SIZE_DEG)
-        for lat_idx_offset in [-1, 0, 1]:
-             for lon_idx_offset in [-1, 0, 1]:
-                  neighbor_lat = (current_lat_idx + lat_idx_offset) * TILE_SIZE_DEG
-                  neighbor_lon = (current_lon_idx + lon_idx_offset) * TILE_SIZE_DEG
-                  reactive_tiles_to_load.add(get_tile_id(neighbor_lat, neighbor_lon, TILE_SIZE_DEG))
+
+        # Always include the current tile
+        base_tile_lat = current_lat_idx * TILE_SIZE_DEG
+        base_tile_lon = current_lon_idx * TILE_SIZE_DEG
+        reactive_tiles_to_load.add(get_tile_id(base_tile_lat, base_tile_lon, TILE_SIZE_DEG))
+
+        # Determine adjacent tiles based on bearing (if available)
+        if bearing_rad is not None:
+            # Normalize bearing to 0-360 degrees
+            bearing_deg = (math.degrees(bearing_rad) + 360) % 360
+
+            # Determine primary adjacent tile offsets based on quadrant
+            lat_offset = 0
+            lon_offset = 0
+            if 0 <= bearing_deg < 90: # NE
+                lat_offset = 1
+                lon_offset = 1
+            elif 90 <= bearing_deg < 180: # SE
+                lat_offset = -1
+                lon_offset = 1
+            elif 180 <= bearing_deg < 270: # SW
+                lat_offset = -1
+                lon_offset = -1
+            else: # NW (270 <= bearing_deg < 360)
+                lat_offset = 1
+                lon_offset = -1
+
+            # Add the 3 tiles forming the 2x2 grid in the direction of travel
+            # (Current tile is already added)
+            for d_lat, d_lon in [(lat_offset, 0), (0, lon_offset), (lat_offset, lon_offset)]:
+                neighbor_lat = (current_lat_idx + d_lat) * TILE_SIZE_DEG
+                neighbor_lon = (current_lon_idx + d_lon) * TILE_SIZE_DEG
+                reactive_tiles_to_load.add(get_tile_id(neighbor_lat, neighbor_lon, TILE_SIZE_DEG))
+        else:
+            # Fallback to 3x3 grid if bearing is not provided (shouldn't happen often)
+            print("MapReader: Warning - Bearing not provided, falling back to 3x3 reactive grid.")
+            for lat_idx_offset in [-1, 0, 1]:
+                 for lon_idx_offset in [-1, 0, 1]:
+                      neighbor_lat = (current_lat_idx + lat_idx_offset) * TILE_SIZE_DEG
+                      neighbor_lon = (current_lon_idx + lon_idx_offset) * TILE_SIZE_DEG
+                      reactive_tiles_to_load.add(get_tile_id(neighbor_lat, neighbor_lon, TILE_SIZE_DEG))
+        # --- End Grid Calculation ---
 
         # Queue reactive tiles (handles locking internally)
         self.request_tiles(reactive_tiles_to_load)
@@ -458,7 +494,7 @@ class MapReader:
                    return None
 
     # Public helper ----------------------------------------------------------
-    def get_segment_data_at(self, lat: float, lon: float):
+    def get_segment_data_at(self, lat: float, lon: float, bearing_rad: float | None = None):
         """Return the closest segment data for a lat/lon point.
 
         This is a thin convenience wrapper around the internal
@@ -474,7 +510,7 @@ class MapReader:
         by ``_update_loaded_tiles`` so the behaviour stays consistent
         across the code-base.
         """
-        return self._update_loaded_tiles(lat, lon)
+        return self._update_loaded_tiles(lat, lon, bearing_rad)
     # -----------------------------------------------------------------------
 
 # Helper function (can be outside class)

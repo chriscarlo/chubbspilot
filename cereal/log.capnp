@@ -2114,6 +2114,26 @@ struct LiveMapData {
   distToTurn @10 :Float32;
   mapValid @11 :Bool;
   currentRoadName @17 :Text;
+
+  # Curvature / Segment Data for VTSC/MTSC
+  curvatureDataValid @18 :Bool;
+  currentSegment @19 :CurrentSegmentData;
+  nextSegments @20 :List(NextSegmentData);
+
+  struct CurrentSegmentData {
+    segmentId @0 :Int64;
+    distanceAlongSegment @1 :Float32;       # Distance progressed along the current segment (m)
+    curvatureDerivedSpeedsMps @2 :List(Float32); # Pre-calculated speeds based on curvature for nodes ahead
+    distancesForSpeeds @3 :List(Float32);   # Cumulative distance from segment start corresponding to each speed (m)
+  }
+
+  struct NextSegmentData {
+    segmentId @0 :Int64;
+    distanceToStart @1 :Float32;            # Cumulative distance from car to start of this segment (m)
+    segmentLength @2 :Float32;              # Length of this segment (m)
+    curvatureDerivedSpeedsMps @3 :List(Float32); # Pre-calculated speeds based on curvature for nodes in this segment
+    distancesForSpeeds @4 :List(Float32);   # Cumulative distance from this segment's start corresponding to each speed (m)
+  }
 }
 
 struct CameraOdometry {
