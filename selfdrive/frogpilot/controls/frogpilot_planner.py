@@ -110,6 +110,11 @@ class FrogPilotPlanner:
                                                   frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles)
     self.v_cruise = float(update_result if update_result is not None else v_cruise)
 
+    # Determine curve direction
+    # A negative curvature usually indicates a left turn
+    # Add a small threshold to avoid flipping on straight roads
+    self.left_curve = self.road_curvature < -0.0001
+
   def set_lead_status(self, carState, v_lead):
     following_lead = self.lead_one.status
     following_lead &= self.lead_one.dRel < self.model_length + STOP_DISTANCE
@@ -153,6 +158,9 @@ class FrogPilotPlanner:
     frogpilotPlan.laneWidthRight = float(self.lane_width_right)
 
     frogpilotPlan.lateralCheck = bool(self.lateral_check)
+
+    # Publish leftCurve for UI arrow direction
+    frogpilotPlan.leftCurve = bool(self.left_curve)
 
     frogpilotPlan.maxAcceleration = float(self.frogpilot_acceleration.max_accel)
     frogpilotPlan.minAcceleration = float(self.frogpilot_acceleration.min_accel)
