@@ -245,7 +245,9 @@ class MapdPyDaemon:
                         # Add segment length to cumulative distance for the *next* check
                         next_segment_data = self.map_reader.segments_data.get(next_way.segment_id)
                         if next_segment_data:
+                            # --- Use imported function --- #
                             segment_len = get_segment_length(next_segment_data)
+                            # --------------------------- #
                             cumulative_proactive_dist += segment_len
                         else:
                             # Cannot get length, break to be safe
@@ -278,9 +280,9 @@ class MapdPyDaemon:
                             break # Found first change
 
                         # If limit hasn't changed, add segment length to cumulative distance
-                        # --- Use imported function ---
+                        # --- Use imported function --- #
                         segment_len = get_segment_length(next_segment_data)
-                        # ---------------------------
+                        # --------------------------- #
                         cumulative_dist_to_next_start += segment_len
 
                 # --- Populate Next Segment Data for liveMapData ---
@@ -304,7 +306,9 @@ class MapdPyDaemon:
                         next_segment_data_pub = self.map_reader.segments_data.get(next_segment_id_pub)
                         if not next_segment_data_pub: continue
 
+                        # --- Use imported function --- #
                         seg_len_pub = get_segment_length(next_segment_data_pub)
+                        # --------------------------- #
                         curv_speeds_pub = next_segment_data_pub.get('curvature_derived_speeds_mps', [])
                         coords_pub = self.map_reader.get_segment_coords(next_segment_id_pub)
 

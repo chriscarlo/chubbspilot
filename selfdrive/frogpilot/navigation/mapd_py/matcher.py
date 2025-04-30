@@ -496,8 +496,6 @@ def distance_to_end_of_way(pos: Position, segment_data: SegmentData, on_way_resu
 
     return total_dist
 
-# <<< NEW HELPER FUNCTIONS START >>>
-
 def distance_from_start_to_node(coords: list[CoordinatesTuple], node_index: int) -> float:
     """Calculates distance along geometry from start (index 0) to node_index."""
     distance = 0.0
@@ -579,7 +577,27 @@ def get_progress_along_way(pos: Position, segment_data: SegmentData, on_way_resu
     # Let's return forward progress for now and let caller adjust.
     return total_progress
 
-# <<< NEW HELPER FUNCTIONS END >>>
+def get_segment_length(segment_data: SegmentData) -> float:
+    """Calculates the total length of a way segment geometry in meters."""
+    length = 0.0
+    coords = _get_coords_from_segment(segment_data)
+    num_nodes = len(coords)
+
+    if num_nodes < 2:
+        return 0.0
+
+    last_lat_rad = coords[0][0] * geometry.TO_RADIANS
+    last_lon_rad = coords[0][1] * geometry.TO_RADIANS
+
+    for i in range(1, num_nodes):
+        curr_lat, curr_lon = coords[i]
+        curr_lat_rad = curr_lat * geometry.TO_RADIANS
+        curr_lon_rad = curr_lon * geometry.TO_RADIANS
+        length += geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
+        last_lat_rad = curr_lat_rad
+        last_lon_rad = curr_lon_rad
+
+    return length
 
 MIN_WAY_DIST_M = 500.0 # Lookahead distance
 
@@ -644,35 +662,13 @@ def get_next_ways(
             current_segment_data = all_segments.get(current_segment_id) # Update data for length calc
             if not current_segment_data: break
 
-
-        # Estimate distance of this newly added way segment
-        start_coord, end_coord = get_way_start_end(current_segment_data, is_currently_forward)
-        if start_coord and end_coord:
-            way_length = 0
-            coords = _get_coords_from_segment(current_segment_data)
-            num_nodes = len(coords)
-
-            if num_nodes >= 2:
-                 # Use the correct start/end based on direction
-                 iter_start_coord = start_coord if is_currently_forward else end_coord
-                 last_lat_rad = iter_start_coord[0] * geometry.TO_RADIANS
-                 last_lon_rad = iter_start_coord[1] * geometry.TO_RADIANS
-
-                 node_indices = range(1, num_nodes) if is_currently_forward else range(num_nodes - 2, -1, -1)
-                 for i in node_indices:
-                     curr_lat, curr_lon = coords[i]
-                     curr_lat_rad = curr_lat * geometry.TO_RADIANS
-                     curr_lon_rad = curr_lon * geometry.TO_RADIANS
-                     way_length += geometry.distance_to_point(last_lat_rad, last_lon_rad, curr_lat_rad, curr_lon_rad)
-                     last_lat_rad = curr_lat_rad
-                     last_lon_rad = curr_lon_rad
-            else: # Single node segment? Use 0 length.
-                way_length = 0.0
-
+        # --- Use new function --- #
+        if current_segment_data:
+            way_length = get_segment_length(current_segment_data)
             total_distance_m += way_length
         else:
-            break # Cannot calculate length, stop lookahead
-
+            break # Stop if we cannot get segment data for length calculation
+        # ---------------------- #
 
     # Ensure at least one next way is returned if possible (even if dist < MIN_WAY_DIST_M)
     if not next_ways_list:
