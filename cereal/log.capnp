@@ -2119,6 +2119,7 @@ struct LiveMapData {
   curvatureDataValid @18 :Bool;
   currentSegment @19 :CurrentSegmentData;
   nextSegments @20 :List(NextSegmentData);
+  turnSpeedLimit @21 :Float32;
 
   struct CurrentSegmentData {
     segmentId @0 :Int64;
