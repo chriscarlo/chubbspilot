@@ -39,7 +39,7 @@ def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
 # --- Constants for the new function ---
 CURV_CORR_FACTOR = (CV.MS_TO_MPH ** 2) # Correction factor (~5.0) for internal lat_accel function
 MAX_SPEED_DEFAULT = 70.0 # m/s (~156 mph), fallback for straight roads
-SPEED_INCREASE_FACTOR = 1.25 # User request for +25% speed increase over base calculation
+SPEED_INCREASE_FACTOR = 1.0
 
 def curvature_to_speed(abs_curvature_meters: float) -> float:
     """
