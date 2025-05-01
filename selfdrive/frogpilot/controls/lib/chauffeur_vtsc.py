@@ -30,7 +30,7 @@ def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
     high_accel = 3.2
     low_accel = 1.5
     span = high_accel - low_accel
-    center_curvature = 0.018 # Center the transition slightly below kappa=0.02 (scaled)
+    center_curvature = 0.0482 # Tuned value to shift accel ramp to lower speeds
     k = 180                  # Gain to control the transition sharpness
     reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
     lat_acc = high_accel - reduction
