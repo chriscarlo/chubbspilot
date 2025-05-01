@@ -5,6 +5,8 @@
 import math
 import numpy as np
 # from shapely.geometry import LineString, Point # Removed
+import threading, time
+from collections import deque
 
 # --- Add cereal message import ---
 import cereal.messaging as messaging
@@ -29,6 +31,11 @@ LOOKAHEAD_DISTANCE = 500.0 # Meters, similar to MIN_WAY_DIST_M
 from openpilot.selfdrive.modeld.constants import ModelConstants
 PROFILE_TIMES = list(ModelConstants.T_IDXS[:33])
 PROFILE_LENGTH = len(PROFILE_TIMES)
+
+# --- New Constants for Threading ---
+PROFILE_RATE_HZ = 2.0          # worker frequency – >500 m still fine
+CACHE_LEN        = 2           # keep last 2 profiles
+# --- End New Constants ---
 
 # --- New Constant for Curvature Unit Correction ---
 MS_TO_MPH = CV.MS_TO_MPH
@@ -81,9 +88,20 @@ class ChauffeurMtsc:
         # self.last_gps_pos = None
 
         # Cached speed profile
-        self.distance_profile = np.array([], dtype=np.float64)
-        self.speed_profile = np.array([], dtype=np.float64)
-        self.curvature_valid = False # Flag if curvature data is usable
+        # self.distance_profile = np.array([], dtype=np.float64) # Replaced by queue
+        # self.speed_profile = np.array([], dtype=np.float64)   # Replaced by queue
+        # self.curvature_valid = False # Flag if curvature data is usable # Now handled implicitly by queue state
+
+        # --- Threading components ---
+        self.profile_lock = threading.Lock()
+        self.profile_queue: deque[tuple[np.ndarray, np.ndarray]] = deque(maxlen=CACHE_LEN)
+        self.last_worker_ts = 0.0
+        self.worker_running = True
+        # Shared variable for latest cruise speed (m/s) provided by FrogPilotVCruise
+        self._latest_v_cruise_cluster = 50.0  # default fallback
+        self.worker = threading.Thread(target=self._worker_loop, daemon=True)
+        self.worker.start()
+        # --- End Threading components ---
 
     # --- REMOVED HELPER FUNCTIONS --- #
     # def _get_current_position(self): ...
@@ -97,8 +115,9 @@ class ChauffeurMtsc:
         """
         Calculates a speed profile based on the curvature data provided in LiveMapData.
         Clamps speeds to v_cruise_cluster.
+        THIS IS THE HEAVY WORK DONE BY THE WORKER THREAD.
         """
-        self.curvature_valid = False # Assume invalid initially
+        # self.curvature_valid = False # Assume invalid initially # No longer needed here
 
         if not map_data.curvatureDataValid:
             return np.array([]), np.array([])
@@ -187,40 +206,64 @@ class ChauffeurMtsc:
         # --- End Clamping ---
 
         # Mark as valid since we successfully processed map data
-        self.curvature_valid = True
+        # self.curvature_valid = True # No longer needed here
 
         # Return the raw distance/speed profile for VTSC to interpolate
         # Note: distance_points are already relative to the car's position
         return distance_points, speed_points
 
-
-    def update(self, v_ego, a_ego, v_cruise_cluster, frogpilot_toggles) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
-        """
-        Main update loop for Chauffeur MTSC.
-        Reads liveMapData, builds speed profile from curvature data, and returns it.
-        """
-        self.sm.update(0) # Update SubMaster
-
-        # --- Use LiveMapData --- #
+    # --- NEW WORKER THREAD LOGIC ---
+    def _worker_loop(self):
+      """Background thread: builds speed profiles at PROFILE_RATE_HZ."""
+      while self.worker_running:
+        start = time.monotonic()
+        self.sm.update(0)                       # non-blocking
         if self.sm.updated['liveMapData'] and self.sm.valid['liveMapData']:
-            map_data = self.sm['liveMapData']
+          # Heavy lifting **once**, outside controls thread
+          # Use the latest cruise speed passed in from the controls thread whenever available,
+          # otherwise fall back to the instantaneous ego speed so we still have *some* clamp.
+          fallback_speed = float(self.sm['carState'].vEgo) if self.sm.valid['carState'] else 50.0
+          v_cruise_for_clamp = self._latest_v_cruise_cluster if self._latest_v_cruise_cluster > 0 else fallback_speed
 
-            # --- Curvature-Based Speed Profile Calculation --- #
-            self.distance_profile, self.speed_profile = self._build_speed_profile_from_mapdata(
-                map_data, v_cruise_cluster
-            )
+          dist, spd = self._build_speed_profile_from_mapdata(
+                        self.sm['liveMapData'],
+                        v_cruise_cluster = v_cruise_for_clamp)
+          with self.profile_lock:
+            self.profile_queue.append((dist, spd))
+        # sleep until next tick
+        dt = 1/PROFILE_RATE_HZ - (time.monotonic() - start)
+        if dt > 0:
+          time.sleep(dt)
+    # --- END NEW WORKER THREAD LOGIC ---
 
-        else:
-            # No updated map data, clear profile if it exists
-            if len(self.distance_profile) > 0:
-                self.distance_profile = np.array([])
-                self.speed_profile = np.array([])
-            self.curvature_valid = False
+    # --- NEW PROFILE GETTER ---
+    def get_latest_profile(self):
+      with self.profile_lock:
+        return self.profile_queue[-1] if self.profile_queue else (None, None)
+    # --- END NEW PROFILE GETTER ---
 
-        # Return the calculated profiles (or None if invalid/not available)
-        if self.curvature_valid:
-            return self.distance_profile, self.speed_profile
-        else:
-            # Return None, None if curvature data is invalid or not received
-            return None, None
+    # --- REPLACED UPDATE METHOD ---
+    def update(self, v_ego, a_ego, v_cruise_cluster, frogpilot_toggles):
+      """
+      Lightweight wrapper called from FrogPilotVCruise at 20 Hz.
+      It never does heavy work: just delivers the newest profile.
+      """
+      # Cache the latest cruise speed so the worker thread can clamp its profile correctly.
+      if v_cruise_cluster is not None and v_cruise_cluster > 0:
+          self._latest_v_cruise_cluster = float(v_cruise_cluster)
+
+      return self.get_latest_profile()
+    # --- END REPLACED UPDATE METHOD ---
+
+    # --- NEW SHUTDOWN METHOD ---
+    def shutdown(self):
+      self.worker_running = False
+      # Optional: join the thread if immediate cleanup is critical
+      # self.worker.join()
+    # --- END NEW SHUTDOWN METHOD ---
+
+    # --- NEW DESTRUCTOR ---
+    def __del__(self):
+      self.shutdown()
+    # --- END NEW DESTRUCTOR ---
 

@@ -23,6 +23,18 @@ from openpilot.selfdrive.frogpilot.navigation.mapd_py.matcher import (
 )
 # --------------------------
 
+# --- DEDUP + RESAMPLE FUNCTION ---
+def _compact(dist: list[float], speed: list[float], target=80) -> tuple[list[float], list[float]]:
+  if not dist or not speed or len(dist) <= target:
+    return dist, speed
+  # Ensure lists are numpy arrays for efficient indexing
+  dist_np = np.array(dist)
+  speed_np = np.array(speed)
+  idx = np.linspace(0, len(dist_np)-1, target, dtype=int)
+  # Use array indexing and convert back to list
+  return dist_np[idx].tolist(), speed_np[idx].tolist()
+# --- END DEDUP + RESAMPLE FUNCTION ---
+
 class MapdPyDaemon:
     def __init__(self):
         self.sm = messaging.SubMaster(['liveLocationKalman', 'carState'], poll='liveLocationKalman')
@@ -168,10 +180,9 @@ class MapdPyDaemon:
 
             if current_curv_speeds and current_coords and len(current_coords) > 2:
                 msg.liveMapData.curvatureDataValid = True # Mark as valid if speeds exist
-                msg.liveMapData.currentSegment.curvatureDerivedSpeedsMps = current_curv_speeds
                 # Calculate distances corresponding to each speed point
                 # Speed[j] applies to curve ending at node j+1. Distance is to node j+1.
-                current_distances_for_speeds = [0.0] * len(current_curv_speeds)
+                current_distances_for_speeds_raw = [0.0] * len(current_curv_speeds)
                 cumulative_node_dist = 0.0
                 if len(current_coords) > 1: # Distance to first node (index 1)
                     # --- Use distance_to_point with radians ---
@@ -186,7 +197,7 @@ class MapdPyDaemon:
                 for j in range(len(current_curv_speeds)):
                     target_node_index = j + 1
                     if target_node_index == 1: # Distance to node 1 already calculated
-                        current_distances_for_speeds[j] = cumulative_node_dist
+                        current_distances_for_speeds_raw[j] = cumulative_node_dist
                     elif target_node_index < len(current_coords):
                         # Add length of segment from node j to j+1
                         # --- Use distance_to_point with radians ---
@@ -198,11 +209,16 @@ class MapdPyDaemon:
                         )
                         cumulative_node_dist += segment_dist
                         # ------------------------------------------
-                        current_distances_for_speeds[j] = cumulative_node_dist
+                        current_distances_for_speeds_raw[j] = cumulative_node_dist
                     else: # Should not happen if lists align, but handle gracefully
-                        current_distances_for_speeds[j] = cumulative_node_dist # Use last known cumulative
+                        current_distances_for_speeds_raw[j] = cumulative_node_dist # Use last known cumulative
 
-                msg.liveMapData.currentSegment.distancesForSpeeds = current_distances_for_speeds
+                # --- COMPACT BEFORE ASSIGNING ---
+                compact_distances, compact_speeds = _compact(
+                    current_distances_for_speeds_raw, current_curv_speeds)
+                msg.liveMapData.currentSegment.distancesForSpeeds = compact_distances
+                msg.liveMapData.currentSegment.curvatureDerivedSpeedsMps = compact_speeds
+                # --- END COMPACT --- #
 
                 # Calculate distance along current segment
                 dist_covered_on_current = get_progress_along_way(
@@ -327,13 +343,13 @@ class MapdPyDaemon:
                         # --- Use imported function --- #
                         seg_len_pub = get_segment_length(next_segment_data_pub)
                         # --------------------------- #
-                        curv_speeds_pub = next_segment_data_pub.get('curvature_derived_speeds_mps', [])
+                        curv_speeds_pub_raw = next_segment_data_pub.get('curvature_derived_speeds_mps', [])
                         coords_pub = self.map_reader.get_segment_coords(next_segment_id_pub)
 
-                        distances_for_speeds_pub = []
-                        if curv_speeds_pub and coords_pub and len(coords_pub) > 2:
+                        distances_for_speeds_pub_raw = []
+                        if curv_speeds_pub_raw and coords_pub and len(coords_pub) > 2:
                              # Calculate distances like for current segment
-                             distances_for_speeds_pub = [0.0] * len(curv_speeds_pub)
+                             distances_for_speeds_pub_raw = [0.0] * len(curv_speeds_pub_raw)
                              cumulative_node_dist_pub = 0.0
                              if len(coords_pub) > 1:
                                   # --- Use distance_to_point with radians ---
@@ -345,10 +361,10 @@ class MapdPyDaemon:
                                   )
                                   # ------------------------------------------
 
-                             for j in range(len(curv_speeds_pub)):
+                             for j in range(len(curv_speeds_pub_raw)):
                                  target_node_index_pub = j + 1
                                  if target_node_index_pub == 1:
-                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                     distances_for_speeds_pub_raw[j] = cumulative_node_dist_pub
                                  elif target_node_index_pub < len(coords_pub):
                                      # --- Use distance_to_point with radians ---
                                      lat1_pub, lon1_pub = coords_pub[j]
@@ -359,16 +375,21 @@ class MapdPyDaemon:
                                      )
                                      cumulative_node_dist_pub += segment_dist_pub
                                      # ------------------------------------------
-                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                     distances_for_speeds_pub_raw[j] = cumulative_node_dist_pub
                                  else:
-                                     distances_for_speeds_pub[j] = cumulative_node_dist_pub
+                                     distances_for_speeds_pub_raw[j] = cumulative_node_dist_pub
+
+                        # --- COMPACT BEFORE ASSIGNING (NEXT SEGMENT) ---
+                        compact_distances_next, compact_speeds_next = _compact(
+                            distances_for_speeds_pub_raw, curv_speeds_pub_raw)
+                        # --- END COMPACT --- #
 
                         next_seg_struct = log.LiveMapData.NextSegmentData.new_message(
                             segmentId=next_segment_id_pub,
                             distanceToStart=cumulative_dist_next_start_for_pub,
                             segmentLength=seg_len_pub,
-                            curvatureDerivedSpeedsMps=curv_speeds_pub,
-                            distancesForSpeeds=distances_for_speeds_pub
+                            curvatureDerivedSpeedsMps=compact_speeds_next, # Use compacted data
+                            distancesForSpeeds=compact_distances_next  # Use compacted data
                         )
                         next_segments_list.append(next_seg_struct)
                         cumulative_dist_next_start_for_pub += seg_len_pub # Increment for the *next* segment

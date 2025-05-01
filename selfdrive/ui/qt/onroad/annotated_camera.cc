@@ -215,9 +215,10 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     p.setFont(InterFont(45, QFont::Bold));
     p.drawRoundedRect(vtscRect, 24, 24);
 
-    // Draw VTSC target speed text
-    p.setPen(QPen(whiteColor(), 6));
-    p.drawText(vtscRect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, vtscSpeedStr); // Use corrected vtscSpeedStr
+    // Draw VTSC target speed text (centered, solid white for better visibility)
+    p.setPen(whiteColor());
+    p.setFont(InterFont(70, QFont::Bold));
+    p.drawText(vtscRect, Qt::AlignCenter, vtscSpeedStr);
   }
 
   const QRect sign_rect = set_speed_rect.adjusted(sign_margin, default_size.height(), -sign_margin, -sign_margin);
