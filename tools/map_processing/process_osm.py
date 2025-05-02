@@ -425,6 +425,9 @@ def main(input_geojsonl, output_basedir):
                         curvature_derived_speeds = [curvature_to_speed(abs(c)) for c in valid_curvatures]
                         segment_msg.curvature_derived_speeds_mps.extend(curvature_derived_speeds)
 
+                        if curvature_derived_speeds:
+                            print(f"  [CURVATURE DEBUG] Way {current_osm_id}: Calculated {len(curvature_derived_speeds)} curvature speeds (min: {min(curvature_derived_speeds):.1f} m/s, max: {max(curvature_derived_speeds):.1f} m/s)", flush=True)
+
                         maxspeed_str = props.get('maxspeed'); parsed_speed_mps = parse_speed_limit(maxspeed_str)
                         segment_msg.speed_limit_mps = parsed_speed_mps if parsed_speed_mps is not None else 0.0
 

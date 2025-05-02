@@ -2,8 +2,12 @@ import os
 import json
 Import('qt_env', 'arch', 'common', 'messaging', 'visionipc', 'transformations')
 
+# Check for environment variable to enable/disable recorder
+enable_recorder = os.environ.get('ENABLE_RECORDER', '1') == '1' # Default to enabled
+
+# Define base libs WITHOUT OmxCore initially
 base_libs = [common, messaging, visionipc, transformations,
-             'm', 'OpenCL', 'ssl', 'crypto', 'pthread', 'avcodec', 'avformat', 'avutil', 'yuv', 'OmxCore'] + qt_env["LIBS"]
+             'm', 'OpenCL', 'ssl', 'crypto', 'pthread', 'avcodec', 'avformat', 'avutil', 'yuv'] + qt_env["LIBS"]
 
 if arch == 'larch64':
   base_libs.append('EGL')
@@ -24,8 +28,13 @@ widgets_src = ["ui.cc", "qt/widgets/input.cc", "qt/widgets/wifi.cc",
                "qt/widgets/scrollview.cc", "qt/widgets/cameraview.cc", "#third_party/qrcode/QrCode.cc",
                "qt/request_repeater.cc", "qt/qt_window.cc", "qt/network/networking.cc", "qt/network/wifi_manager.cc"]
 
+# Conditionally add recorder source files
+frogpilot_recorder_src = []
+if enable_recorder:
+  frogpilot_recorder_src = ["../frogpilot/screenrecorder/omx_encoder.cc", "../frogpilot/screenrecorder/screenrecorder.cc"]
+
 frogpilot_widgets_src = ["../frogpilot/ui/qt/widgets/drive_stats.cc", "../frogpilot/ui/qt/widgets/frogpilot_controls.cc",
-                         "../frogpilot/ui/qt/widgets/model_reviewer.cc"]
+                         "../frogpilot/ui/qt/widgets/model_reviewer.cc"] + frogpilot_recorder_src
 
 widgets_src += frogpilot_widgets_src
 
@@ -40,6 +49,14 @@ widgets = qt_env.Library("qt_widgets", widgets_src, LIBS=base_libs)
 Export('widgets')
 qt_libs = [widgets, qt_util] + base_libs
 
+# Conditionally add OmxCore to the final library list
+if enable_recorder:
+  qt_libs += ['OmxCore']
+
+# Force remove OmxCore if recorder is disabled, just in case
+if not enable_recorder and 'OmxCore' in qt_libs:
+  qt_libs.remove('OmxCore')
+
 qt_src = ["main.cc", "qt/sidebar.cc", "qt/body.cc",
           "qt/window.cc", "qt/home.cc", "qt/offroad/settings.cc",
           "qt/offroad/software_settings.cc", "qt/offroad/onboarding.cc",
@@ -48,8 +65,8 @@ qt_src = ["main.cc", "qt/sidebar.cc", "qt/body.cc",
           "qt/onroad/buttons.cc", "qt/onroad/alerts.cc"]
 
 frogpilot_src = ["../frogpilot/navigation/ui/maps_settings.cc", "../frogpilot/navigation/ui/navigation_functions.cc",
-                 "../frogpilot/navigation/ui/primeless_settings.cc", "../frogpilot/screenrecorder/omx_encoder.cc",
-                 "../frogpilot/screenrecorder/screenrecorder.cc", "../frogpilot/ui/qt/offroad/data_settings.cc",
+                 "../frogpilot/navigation/ui/primeless_settings.cc",
+                 "../frogpilot/ui/qt/offroad/data_settings.cc",
                  "../frogpilot/ui/qt/offroad/device_settings.cc", "../frogpilot/ui/qt/offroad/frogpilot_settings.cc",
                  "../frogpilot/ui/qt/offroad/lateral_settings.cc", "../frogpilot/ui/qt/offroad/longitudinal_settings.cc",
                  "../frogpilot/ui/qt/offroad/model_settings.cc", "../frogpilot/ui/qt/offroad/sounds_settings.cc",
@@ -94,14 +111,16 @@ qt_env.Program("_spinner", ["qt/spinner.cc"], LIBS=qt_libs)
 
 # build main UI
 qt_env.Program("ui", qt_src + [asset_obj], LIBS=qt_libs)
-if GetOption('extras'):
+if ARGUMENTS.get('extras', 0):
   qt_src.remove("main.cc")  # replaced by test_runner
   qt_env.Program('tests/test_translations', [asset_obj, 'tests/test_runner.cc', 'tests/test_translations.cc'] + qt_src, LIBS=qt_libs)
   qt_env.Program('tests/ui_snapshot', [asset_obj, "tests/ui_snapshot.cc"] + qt_src, LIBS=qt_libs)
 
-qt_env['CPPPATH'] += ["../frogpilot/screenrecorder/openmax/include/"]
+# Conditionally add recorder include path
+if enable_recorder:
+  qt_env['CPPPATH'] += ["../frogpilot/screenrecorder/openmax/include/"]
 
-if GetOption('extras') and arch != "Darwin":
+if ARGUMENTS.get('extras', 0) and arch != "Darwin":
   # setup and factory resetter
   qt_env.Program("qt/setup/reset", ["qt/setup/reset.cc"], LIBS=qt_libs)
   qt_env.Program("qt/setup/setup", ["qt/setup/setup.cc", asset_obj],
@@ -142,5 +161,5 @@ if GetOption('extras') and arch != "Darwin":
     assert f[0].get_size() < 350*1e3
 
 # build watch3
-if arch in ['x86_64', 'aarch64', 'Darwin'] or GetOption('extras'):
+if arch in ['x86_64', 'aarch64', 'Darwin'] or ARGUMENTS.get('extras', 0):
   qt_env.Program("watch3", ["watch3.cc"], LIBS=qt_libs + ['common', 'json11', 'msgq', 'visionipc'])

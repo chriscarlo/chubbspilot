@@ -1063,6 +1063,14 @@ Deactivate only occurs with the &apos;Cruise Control&apos; button.</source>
         <source>Instant</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Automatic Slow Lead Passing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatically signals and changes lanes when following a slower vehicle for more than 3 seconds and vehicle speed is above 55 mph.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotLongitudinalPanel</name>
@@ -1930,6 +1938,14 @@ This overrides &apos;Conditional Experimental Mode&apos;.</source>
         <source> second</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Match Follow Distance - %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The higher the percentage the more 1:1 the follow distance. 80% is 1:1 follow distance.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotManageControl</name>
@@ -2630,6 +2646,14 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <source>Enter the text for the bottom half</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Brake Indicator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Turns current speed value to red when the brake pedal is pressed.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotUtilitiesPanel</name>
@@ -2882,6 +2906,26 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
     </message>
     <message>
         <source>MANAGE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Chubbs&apos; Custom Tuning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Chubbs&apos; Custom tuning for Hyundai/Kia/Genesis vehicles, which smoothes acceleration and braking to help achieve a &apos;limo&apos; stop.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable Radar Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable this to attempt to enable radar tracks for Hyundai, Kia, and Genesis models equipped with the supported Mando SCC radar.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Smoother Braking</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4182,10 +4226,6 @@ This may take up to a minute.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>FrogPilot will automatically update itself and it&apos;s assets when you&apos;re offroad and connected to Wi-Fi.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Error Log</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4203,6 +4243,10 @@ This may take up to a minute.</source>
     </message>
     <message>
         <source>Are you sure? This is 100% unrecoverable and if you reinstall FrogPilot you&apos;ll lose all your previous settings!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FrogPilot will automatically update itself and it&apos;s assets when connected to Wi-Fi.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
