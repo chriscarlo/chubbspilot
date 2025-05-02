@@ -39,6 +39,9 @@ class FrogPilotPlanner:
     self.road_curvature = 1
     self.v_cruise = 0.0
 
+    # Holds most recent vCruiseCluster value (m/s) for VTSC comparison
+    self._latest_v_cruise_cluster_ms = 0.0
+
   def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, radarless_model, radarState, frogpilot_toggles, sm):
     if radarless_model:
       model_leads = list(modelData.leadsV3)
@@ -115,6 +118,13 @@ class FrogPilotPlanner:
     # Add a small threshold to avoid flipping on straight roads
     self.left_curve = self.road_curvature < -0.0001
 
+    # Store latest cruise-cluster value for later use in publish()
+    try:
+      controls_state = sm["controlsState"].getControlsState()
+      self._latest_v_cruise_cluster_ms = controls_state.getVCruiseCluster() * CV.KPH_TO_MS
+    except Exception:
+      self._latest_v_cruise_cluster_ms = 0.0
+
   def set_lead_status(self, carState, v_lead):
     following_lead = self.lead_one.status
     following_lead &= self.lead_one.dRel < self.model_length + STOP_DISTANCE
@@ -140,7 +150,11 @@ class FrogPilotPlanner:
     # Set to 0 or remove if confirmed unused by consumers.
     # For now, set to 0 to avoid publishing confusing data.
     frogpilotPlan.mtscSpeed = 0.0
-    frogpilotPlan.vtscControllingCurve = bool(self.frogpilot_vcruise.vtsc_target < self.v_cruise)
+    # Determine if VTSC is currently limiting speed by comparing its target
+    # to the driver-set cruise speed on the cluster. Use a small epsilon to
+    # account for rounding.
+    EPSILON = 0.05  # m/s (~0.1 mph)
+    frogpilotPlan.vtscControllingCurve = bool(self.frogpilot_vcruise.vtsc_target + EPSILON < self._latest_v_cruise_cluster_ms)
     frogpilotPlan.vtscSpeed = float(self.frogpilot_vcruise.vtsc_target)
 
     frogpilotPlan.desiredFollowDistance = self.frogpilot_following.desired_follow_distance

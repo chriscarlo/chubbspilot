@@ -117,6 +117,12 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   #vtsc stuff
   leftCurve @31 :Bool;
   rightCurve @32 :Bool;
+
+  # Output from MapLongPlanner: comfort-constrained speed profile
+  # derived from long-range map data (e.g., 500m lookahead).
+  # Parallel lists to avoid adding a new struct.
+  farSpeedPlanDistances @33 :List(Float32); # meters from current pos
+  farSpeedPlanSpeeds @34 :List(Float32);    # m/s target speed at distance
 }
 
 struct CustomReserved5 @0xa5cd762cd951a455 {

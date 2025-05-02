@@ -275,9 +275,13 @@ class FrogPilotVCruise:
         # v_cruise = min(v_cruise, v_cruise_cluster) # Original place
         v_cruise = min(intermediate_v_cruise, v_cruise_cluster) # Clamp the calculated target
 
-        # Keep everything in sync w/ cluster differences
-        # self.mtsc_target += v_cruise_diff # Removed: No longer a separate MTSC target
-        self.vtsc_target += v_cruise_diff # Keep VTSC target synced (for publishing in frogpilotPlan)
+        # NOTE: Do not adjust `vtsc_target` by the cluster difference.
+        # This value should reflect the raw speed command from VTSC so the
+        # UI can accurately determine whether VTSC is actively limiting
+        # the speed (i.e., when `vtsc_target` is below the user's set cruise).
+        # If we offset it here, the planner will never report VTSC as controlling
+        # a curve because the target becomes equal to the set speed.
+        # self.vtsc_target += v_cruise_diff  # <-- Removed
 
         return v_cruise
 

@@ -27,11 +27,11 @@ CRUISING_SPEED = 5.0  # m/s
 # It takes scaled curvature (because it was tuned based on MPH-like values).
 def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
     """Internal function replicating the original tuned lateral accel logic."""
-    high_accel = 3.2
+    high_accel = 3.7
     low_accel = 1.5
     span = high_accel - low_accel
-    center_curvature = 0.0482 # Tuned value to shift accel ramp to lower speeds
-    k = 180                  # Gain to control the transition sharpness
+    center_curvature = 0.044
+    k = 40
     reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
     lat_acc = high_accel - reduction
     return clip(lat_acc, low_accel, high_accel)
@@ -490,17 +490,21 @@ class VisionTurnSpeedController:
         # Limit decel based on COMFORT_DECEL as well
         COMFORT_DECEL = 1.0 # Define COMFORT_DECEL here, before it's used in Step 4 limit
         COMFORT_DECEL_STEP4_FACTOR = 1.5
+        MIN_DT_PROPAGATION = 0.05 # Minimum dt for propagation calculations
         for i in range(n - 2, -1, -1):
             # Robust dt calculation
             dt_i = dt_array[i] if i < len(dt_array) else (times[i+1] - times[i] if i+1 < n else 0.05)
-            if dt_i < 1e-5: dt_i = 0.05 # Avoid division by zero
+            # Use max(dt_i, MIN_DT_PROPAGATION) for the update calculation to prevent slow propagation
+            effective_dt_i = max(dt_i, MIN_DT_PROPAGATION)
+            if effective_dt_i < 1e-5: effective_dt_i = MIN_DT_PROPAGATION # Avoid division by zero again
 
             v_next = planned[i + 1]
             err = planned[i] - v_next
             # Apply combined decel limit correctly using COMFORT_DECEL defined above
             max_neg_accel = -min(self.MAX_DECEL * decel_mult, COMFORT_DECEL_STEP4_FACTOR * COMFORT_DECEL)
-            desired_acc = clip(err / dt_i, max_neg_accel, self.MAX_DECEL * decel_mult)
-            feasible_speed = v_next - desired_acc * dt_i
+            # Use effective_dt_i for calculating desired_acc and feasible_speed
+            desired_acc = clip(err / effective_dt_i, max_neg_accel, self.MAX_DECEL * decel_mult)
+            feasible_speed = v_next - desired_acc * effective_dt_i
             planned[i] = min(planned[i], feasible_speed)
 
         # (5) Margin-based backward pass prioritizing comfort decel
@@ -514,43 +518,56 @@ class VisionTurnSpeedController:
             if j <= i:
                 continue
             dt_ij = times[j] - times[i]
-            if dt_ij < 1e-3:
+            # Use max(dt_ij, MIN_DT_PROPAGATION) for the update calculation
+            effective_dt_ij = max(dt_ij, MIN_DT_PROPAGATION)
+            if effective_dt_ij < 1e-3: # Use a smaller tolerance here as dt_ij can be larger
                 continue
 
             v_future = planned[j]
             err = planned[i] - v_future
             # Clip required acceleration between -COMFORT_DECEL and MAX_ACCEL for this long-horizon check
-            desired_acc = clip(err / dt_ij, -COMFORT_DECEL, self.MAX_ACCEL * accel_mult)
-            feasible_speed = v_future - desired_acc * dt_ij
+            # Use effective_dt_ij for calculating desired_acc and feasible_speed
+            desired_acc = clip(err / effective_dt_ij, -COMFORT_DECEL, self.MAX_ACCEL * accel_mult)
+            feasible_speed = v_future - desired_acc * effective_dt_ij
             planned[i] = min(planned[i], feasible_speed)
             # Removed the incorrect re-application of Step 4 logic from here
 
         # (6) Forward pass for accel limit (skip positive limit if skip_accel_limit is True)
         planned[0] = min(planned[0], safe_speeds[0])
         dt_0 = dt_array[0] if len(dt_array) > 0 else (times[1] - times[0] if n > 1 else 0.05) # Robust dt_0
-        if dt_0 < 1e-5: dt_0 = 0.05
+        # Use max(dt_0, MIN_DT_PROPAGATION) for the update calculation
+        effective_dt_0 = max(dt_0, MIN_DT_PROPAGATION)
+        if effective_dt_0 < 1e-5: effective_dt_0 = MIN_DT_PROPAGATION # Avoid division by zero again
         err0 = planned[0] - init_speed
 
         if skip_accel_limit and err0 > 0:
-            accel0 = clip(err0 / dt_0, -self.MAX_DECEL * decel_mult, 9999.0)
+            # Use effective_dt_0
+            accel0 = clip(err0 / effective_dt_0, -self.MAX_DECEL * decel_mult, 9999.0)
         else:
-            accel0 = clip(err0 / dt_0, -self.MAX_DECEL * decel_mult, self.MAX_ACCEL * accel_mult)
+            # Use effective_dt_0
+            accel0 = clip(err0 / effective_dt_0, -self.MAX_DECEL * decel_mult, self.MAX_ACCEL * accel_mult)
 
-        planned[0] = init_speed + accel0 * dt_0
+        # Use effective_dt_0
+        planned[0] = init_speed + accel0 * effective_dt_0
 
         for i in range(1, n):
             # Robust dt calculation
             dt_i = dt_array[i - 1] if (i - 1 < len(dt_array)) else (times[i] - times[i-1] if i > 0 else 0.05)
-            if dt_i < 1e-5: dt_i = 0.05
+            # Use max(dt_i, MIN_DT_PROPAGATION) for the update calculation
+            effective_dt_i = max(dt_i, MIN_DT_PROPAGATION)
+            if effective_dt_i < 1e-5: effective_dt_i = MIN_DT_PROPAGATION # Avoid division by zero again
             v_prev = planned[i - 1]
             err = planned[i] - v_prev
 
             if skip_accel_limit and err > 0:
-                desired_acc = clip(err / dt_i, -self.MAX_DECEL * decel_mult, 9999.0)
+                # Use effective_dt_i
+                desired_acc = clip(err / effective_dt_i, -self.MAX_DECEL * decel_mult, 9999.0)
             else:
-                desired_acc = clip(err / dt_i, -self.MAX_DECEL * decel_mult, self.MAX_ACCEL * accel_mult)
+                # Use effective_dt_i
+                desired_acc = clip(err / effective_dt_i, -self.MAX_DECEL * decel_mult, self.MAX_ACCEL * accel_mult)
 
-            feasible_speed = v_prev + desired_acc * dt_i
+            # Use effective_dt_i
+            feasible_speed = v_prev + desired_acc * effective_dt_i
             planned[i] = min(planned[i], feasible_speed)
 
         # (7) "Emergency" decel override (final pass)
@@ -569,11 +586,14 @@ class VisionTurnSpeedController:
             for i in range(n - 2, -1, -1):
                 # Robust dt calculation
                 dt_i = dt_array[i] if i < len(dt_array) else (times[i+1] - times[i] if i+1 < n else 0.05)
-                if dt_i < 1e-5: dt_i = 0.05
+                # Use max(dt_i, MIN_DT_PROPAGATION) for the update calculation
+                effective_dt_i = max(dt_i, MIN_DT_PROPAGATION)
+                if effective_dt_i < 1e-5: effective_dt_i = MIN_DT_PROPAGATION # Avoid division by zero again
                 v_next = planned[i + 1]
                 err = planned[i] - v_next
-                desired_acc = clip(err / dt_i, -EMERGENCY_DECEL_THRESHOLD, EMERGENCY_DECEL_THRESHOLD)
-                feasible_speed = v_next - desired_acc * dt_i
+                # Use effective_dt_i
+                desired_acc = clip(err / effective_dt_i, -EMERGENCY_DECEL_THRESHOLD, EMERGENCY_DECEL_THRESHOLD)
+                feasible_speed = v_next - desired_acc * effective_dt_i
                 planned[i] = min(planned[i], feasible_speed, safe_speeds[i])
 
         return planned
