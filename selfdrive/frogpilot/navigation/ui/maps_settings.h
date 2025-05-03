@@ -44,14 +44,19 @@ private:
   Params params;
   Params params_memory{"/dev/shm/params"};
 
+  ParamWatcher *download_complete_watcher;
+
   QDateTime startTime;
 
   QElapsedTimer elapsedTime;
 
   QString mapsFolderPath;
 
+  const QString MAPS_PATH = "/data/media/0/map_data_tiles_protobuf/";
+
   QStackedLayout *mapsLayout;
 
 private slots:
   void updateButtonStates();
+  void handleDownloadComplete();
 };

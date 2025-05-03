@@ -362,6 +362,8 @@ def update_maps(now: datetime) -> None:
     if ok:
         # No longer track LastMapsUpdate based on schedule
         cloudlog.info("maps: update successful")
+        # Set flag to indicate completion for UI refresh
+        params_memory.put_bool("MapDownloadComplete", True)
     else:
         cloudlog.warning("maps: update failed")
 

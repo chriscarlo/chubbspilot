@@ -28,10 +28,7 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
 
   downloadMapsButton = new ButtonControl(tr("Download Nevada Map"), tr("DOWNLOAD"));
   QObject::connect(downloadMapsButton, &ButtonControl::clicked, [this] {
-    params.remove("LastMapsUpdate");
-    downloadMapsButton->setText(tr("UPDATE REQUESTED"));
-    QTimer::singleShot(5000, [button = downloadMapsButton]() { button->setText(tr("DOWNLOAD")); });
-    ConfirmationDialog::alert(tr("Request sent to check for map updates. Update will occur according to schedule (daily, weekly, or monthly) or on next boot."), this);
+    params_memory.putBoolNonBlocking("TriggerMapDownloadCheck", true);
   });
   settingsList->addItem(downloadMapsButton);
 
@@ -42,6 +39,11 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   trigger_param_watcher = new ParamWatcher(this);
   QObject::connect(trigger_param_watcher, &ParamWatcher::paramChanged, this, &FrogPilotMapsPanel::updateButtonStates);
   trigger_param_watcher->addParam("TriggerMapDownloadCheck");
+
+  // Watch for download completion
+  download_complete_watcher = new ParamWatcher(this);
+  QObject::connect(download_complete_watcher, &ParamWatcher::paramChanged, this, &FrogPilotMapsPanel::handleDownloadComplete);
+  download_complete_watcher->addParam("MapDownloadComplete");
 
   QString styleSheet = R"(
     #californiaDownloadBtn[downloading="true"] {
@@ -55,6 +57,16 @@ FrogPilotMapsPanel::FrogPilotMapsPanel(FrogPilotSettingsWindow *parent) : FrogPi
   QObject::connect(parent, &FrogPilotSettingsWindow::closeMapSelection, [] {
   });
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotMapsPanel::updateState);
+}
+
+void FrogPilotMapsPanel::handleDownloadComplete() {
+  if (params_memory.getBool("MapDownloadComplete")) {
+    mapsSize->setText(calculateDirectorySize(MAPS_PATH));
+    lastMapsDownload->setText(formatCurrentDate());
+    params.put("LastMapsUpdate", formatCurrentDate().toStdString());
+    // Reset the trigger
+    params_memory.putBool("MapDownloadComplete", false);
+  }
 }
 
 void FrogPilotMapsPanel::updateButtonStates() {
