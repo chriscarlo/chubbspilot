@@ -191,15 +191,24 @@ This document summarizes the analysis of the longitudinal control system in open
         *   Calculates `baseline_jerk` using Akima interpolation based on `accel_request` ratio relative to `accel_limits[0]` and car-specific `brake_response` config (from `longitudinal_config.py`).
         *   Performs validity checks on inputs and lead data (`lead_one` from `radarState`).
         *   Calculates dynamic stop buffer (`stop_buffer`) and distance gap (`d_gap = max(lead_one.dRel - stop_buffer, 0.1)`).
-        *   Calculates physics urgency `a_req = (max(vEgo, 0.0)**2 + 0.3 * (-min(vRel, 0.0))**2) / (2.0 * d_gap)` using `CS.vEgo`, `lead_one.vRel` (potentially distance-derived/lagged), and calculated `d_gap`.
-        *   Calculates `urgency` based on `a_req` vs car-specific `comfy_decel` config and `accel_limits[0]` config (both from `longitudinal_config.py`).
+        *   Calculates physics urgency components:
+            *   `a_req` (base urgency from distance/speed) using `CS.vEgo`, `lead_one.vRel` (potentially distance-derived/lagged), and calculated `d_gap`.
+            *   `urg_ttc` (urgency from low TTC) if `lead_one.vRel < -0.5`.
+            *   `urg_lead_decel` (urgency from lead braking hard) if `lead_one.aLeadK < -a_nom`.
+        *   Calculates `final_urgency = max(urgency_base, urg_ttc, urg_lead_decel)`, where `urgency_base` is derived from `a_req` vs car-specific `comfy_decel` config and `accel_limits[0]` config (both from `longitudinal_config.py`).
         *   Calculates `jerk_needed = abs((accel_request - self.accel_last) / DT_CTRL)` (if braking harder).
-        *   Determines `jerk_ceiling = max(baseline_jerk, baseline_jerk + urgency * (1.5 * MAX_ALLOWABLE_JERK - baseline_jerk))`, where `MAX_ALLOWABLE_JERK` is 20.0 m/s³.
+        *   Determines `jerk_ceiling = max(baseline_jerk, baseline_jerk + final_urgency * (1.5 * MAX_ALLOWABLE_JERK - baseline_jerk))`, where `MAX_ALLOWABLE_JERK` is 20.0 m/s³.
         *   Determines final `effective_jerk = min(max(baseline_jerk, jerk_needed), jerk_ceiling)`.
         *   **Applies Jerk Rate Limit (Downward Only)**: `accel = max(accel_request, self.accel_last - effective_jerk * DT_CTRL)`. This prevents the acceleration from decreasing faster than `effective_jerk` allows.
     *   If dynamic braking conditions are *not* met, `accel = accel_request` (no rate limiting applied).
-    *   Stores the potentially rate-limited `accel` in `self.accel_last` for the next iteration.
-    *   Returns the potentially rate-limited `accel` (to be clipped in the calling function, Step 2).
+    *   **NEW: Overreaction Mitigation (Applied after Jerk Limiting)**: This logic aims to improve comfort in non-emergency situations by preventing excessive braking compared to the lead.
+        *   **Conditions:** Checks if a lead is present (`lead_ok_local`), the current command `accel` is negative, the ego is not closing fast (`v_rel_local >= -1.0 m/s`), and the estimated TTC is safe (`ttc_est > 1.5 s`).
+        *   **Dynamic Comfort Margin (`delta`):** If conditions are met, calculates an allowed extra braking margin `delta` based on the lead's deceleration (`lead_dec = lead_one.aLeadK`): `delta = np.clip(0.5 + 0.2 * abs(lead_dec), 0.5, 1.5)`. This margin ranges from 0.5 m/s² (for gentle lead braking) up to 1.5 m/s² (for strong lead braking >= 5.0 m/s²).
+        *   **Acceleration Limit (`accel_limit`):** Calculates a potential upper limit for the acceleration command: `accel_limit = lead_dec - delta`. Since `lead_dec` is negative, this limit allows braking slightly harder than the lead.
+        *   **Anti-Oscillation Application:** The current `accel` command (output from the jerk limiter) is only adjusted *up* to `accel_limit` if the limit is significantly less negative (i.e., relaxes braking) by more than 0.05 m/s² (`if accel < accel_limit - 0.05: accel = accel_limit`). This prevents minor adjustments due to noise.
+        *   **Effect:** This step can potentially increase the `accel` value (make it less negative) compared to the output of the jerk limiter, capping the braking force relative to the lead's braking in non-urgent scenarios.
+    *   Stores the potentially rate-limited and potentially mitigation-adjusted `accel` in `self.accel_last` for the next iteration.
+    *   Returns the potentially rate-limited and potentially mitigation-adjusted `accel` (to be clipped in the calling function, Step 2).
 4.  **Final Clipping (`CarController.update`)**: **Incorrect in original summary.** The final clipping using car config `accel_limits` happens *inside* `HKGLongitudinalTuning.calculate_accel` (Step 2 above), not separately in `CarController.update`.
 5.  **Jerk Calculation for CAN (`CarController.update` -> `HKGLongitudinalController.calculate_and_get_jerk` -> `HKGLongitudinalTuning.make_jerk`)**:
     *   `CarController.update` calls `self.calculate_and_get_jerk(actuators, CS, actuators.longControlState, lead_one)` **after** `calculate_accel` but passes the *original* `actuators` object (containing the planner's `a_desired`), not the final rate-limited `accel`.
