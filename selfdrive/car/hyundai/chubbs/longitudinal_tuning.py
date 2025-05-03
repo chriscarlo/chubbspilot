@@ -227,6 +227,7 @@ class HKGLongitudinalTuning:
                     a_req = (max(CS.out.vEgo, 0.0)**2 + 0.3 * (-min(v_rel, 0.0))**2) / (2.0 * d_gap)
 
                     # Compute urgency
+                    # Base urgency from energy-gap metric
                     urgency = 0.0
                     denom = a_max - a_nom
                     if denom > 1e-3:
@@ -234,6 +235,30 @@ class HKGLongitudinalTuning:
                             urgency = min((a_req - a_nom) / denom, 1.0)
                     elif a_req > a_nom:
                         urgency = 1.0
+
+                    # -----------------------------------------------------------------
+                    # Additional urgency sources to handle fast lead decel / low TTC.
+                    # These additions raise urgency ONLY during true hazards, leaving
+                    # comfort braking (urgency == 0) untouched.
+                    # -----------------------------------------------------------------
+
+                    # 1. Time-to-collision (TTC) based urgency when the gap is closing
+                    #    quickly. Uses relative velocity sign < 0 (closing) and gap.
+                    urg_ttc = 0.0
+                    if lead_ok and v_rel < -0.5:  # ensure meaningful closing rate
+                        ttc = d_gap / max(-v_rel, 1e-3)  # seconds to close the gap
+                        # Start adding urgency when TTC < 3 s, saturate at TTC <= 1 s
+                        urg_ttc = np.clip((3.0 - ttc) / 2.0, 0.0, 1.0)
+
+                    # 2. Lead vehicle decel based urgency. Large negative aLeadK means
+                    #    lead is braking hard even before vRel grows.
+                    v_lead_acc = getattr(lead_one, "aLeadK", 0.0) if lead_ok else 0.0
+                    urg_lead_decel = 0.0
+                    if v_lead_acc < -a_nom:  # braking stronger than comfortable decel
+                        urg_lead_decel = np.clip((-v_lead_acc - a_nom) / (a_max - a_nom), 0.0, 1.0)
+
+                    # Combine urgencies conservatively (take the maximum).
+                    urgency = max(urgency, urg_ttc, urg_lead_decel)
 
                     # Planner-required jerk
                     jerk_needed = 0.0
@@ -267,6 +292,46 @@ class HKGLongitudinalTuning:
             # No dynamic braking limit
             accel = accel_request
 
+        # ------------ Overreaction Mitigation -------------
+        # Reduce unnecessary heavy braking when the ego is not closing
+        # on the lead quickly. This keeps comfort in moderate scenarios
+        # while preserving full authority during genuine emergencies.
+        try:
+            v_rel_local = getattr(lead_one, "vRel", 0.0) if lead_one is not None else 0.0
+            lead_dec = getattr(lead_one, "aLeadK", 0.0) if lead_one is not None else 0.0
+            raw_d_rel_local = getattr(lead_one, "dRel", float("inf")) if lead_one is not None else float("inf")
+            lead_ok_local = (
+                lead_one is not None and
+                getattr(lead_one, "status", 0) > 0 and
+                math.isfinite(raw_d_rel_local) and raw_d_rel_local > 0.0
+            )
+            if lead_ok_local and accel < 0.0:
+                # Estimate simple TTC (only meaningful if v_rel_local < 0)
+                ttc_est = raw_d_rel_local / max(-v_rel_local, 1e-3) if v_rel_local < 0 else float("inf")
+                # Define thresholds – tuned conservatively for comfort
+                closing_fast = v_rel_local < -1.0  # m/s
+                safe_ttc = ttc_est > 1.5           # seconds
+
+                if (not closing_fast) and safe_ttc:
+                    # --- Dynamic comfort margin ---
+                    # Allow the ego to brake only modestly harder than the lead.
+                    # Comfort margin (delta) grows linearly with the magnitude of the lead decel,
+                    # but is clamped to avoid extreme values and oscillations.
+
+                    # |lead_dec| :   0 → 0.5 m/s² extra
+                    #               2.5 → 1.0 m/s² extra
+                    #               5.0 → 1.5 m/s² extra (cap)
+                    delta = np.clip(0.5 + 0.2 * abs(lead_dec), 0.5, 1.5)
+
+                    # To minimise oscillation from sensor noise, only apply the new limit
+                    # if it relaxes braking (i.e., raises accel) by more than 0.05 m/s².
+                    accel_limit = lead_dec - delta  # lead_dec is negative
+                    if accel < accel_limit - 0.05:
+                        accel = accel_limit
+        except Exception as e:
+            # Fail-safe: never allow mitigation logic to break main control path
+            pass
+
         # Save for next iteration
         self.accel_last = accel
         return accel
@@ -278,7 +343,7 @@ class HKGLongitudinalTuning:
                         lead_one: log.RadarState.LeadData = None) -> float:
         """Calculate acceleration with cruise control status handling and final clipping."""
         if self.handle_cruise_cancel(CS):
-            return 0.0
+            return 0.0  # Return 0.0 if cruise is cancelled or overridden
         accel = self.calculate_limited_accel(actuators, CS, lead_one)
         max_accel_upper_limit = self.car_config.accel_limits[1]
         return float(np.clip(accel, self.car_config.accel_limits[0], max_accel_upper_limit))
