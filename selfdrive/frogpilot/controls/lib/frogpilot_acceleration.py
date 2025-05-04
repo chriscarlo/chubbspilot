@@ -1,5 +1,5 @@
 import math
-from openpilot.common.numpy_fast import clip
+from openpilot.common.numpy_fast import clip, interp
 from openpilot.selfdrive.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.selfdrive.controls.lib.longitudinal_planner import A_CRUISE_MIN, get_max_accel
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
@@ -22,13 +22,33 @@ def get_max_accel_eco(v_ego):
 
 def get_max_accel_standard(v_ego):
   v_mph = v_ego * 2.236936
-  return logistic(
-      x=v_mph,
-      lower=2.0,
-      upper=4.0,
-      midpoint=30.0,
-      scale=0.1
-  )
+  # Original logistic curve parameters
+  lower=2.0
+  upper=4.0
+  midpoint=30.0
+  scale=0.1
+
+  # Calculate the standard logistic value for the current speed
+  logistic_val = logistic(v_mph, lower, upper, midpoint, scale)
+
+  # Define low-speed boost parameters
+  BOOST_ACCEL = 3.0  # Desired acceleration at 0 mph
+  BOOST_END_SPEED_MPH = 10.0 * 2.236936 # Speed at which boost fully blends into standard curve (10 m/s)
+
+  # Calculate the standard logistic value *at the end of the boost phase*
+  logistic_val_at_boost_end = logistic(BOOST_END_SPEED_MPH, lower, upper, midpoint, scale)
+
+  if v_mph < BOOST_END_SPEED_MPH:
+    # Linearly interpolate from BOOST_ACCEL at 0 mph down to the standard
+    # curve's value at BOOST_END_SPEED_MPH.
+    # This ensures a smooth transition *into* the standard curve.
+    boosted_val = interp(v_mph, [0.0, BOOST_END_SPEED_MPH], [BOOST_ACCEL, logistic_val_at_boost_end])
+    # Return the boosted value, ensuring it doesn't accidentally dip below the original curve
+    # (though the interp above should handle this correctly given BOOST_ACCEL > initial logistic_val)
+    return max(boosted_val, logistic_val)
+  else:
+    # Above the boost speed, use the original logistic curve
+    return logistic_val
 
 def get_max_accel_sport(v_ego):
   v_mph = v_ego * 2.236936
@@ -126,6 +146,28 @@ class FrogPilotAcceleration:
         get_max_accel_ramp_off(self.max_accel, self.frogpilot_planner.v_cruise, v_ego),
         self.max_accel
       )
+
+    # ---------------------------------------------------------------------
+    # Adaptive catch-up boost:
+    #  – Active only when a valid lead is being tracked *and* ego is falling
+    #    behind its desired follow distance by a noticeable margin.
+    #  – Boost size is proportional to the extra gap, but capped to maintain
+    #    comfort and never exceed the globally allowed acceleration curve.
+    # ---------------------------------------------------------------------
+    if (self.frogpilot_planner.tracking_lead and not frogpilotCarState.trafficModeActive):
+      desired_gap = self.frogpilot_planner.frogpilot_following.desired_follow_distance
+      actual_gap = self.frogpilot_planner.lead_one.dRel
+
+      gap_error = actual_gap - desired_gap  # positive means we are lagging
+
+      if gap_error > 1.0:  # start boosting once >1 m beyond desired
+        # Scale boost gently: +0.05 m/s² per metre of extra gap, up to 1.5 m/s²
+        BOOST_PER_M = 0.05
+        MAX_BOOST = 1.5
+        accel_boost = clip(gap_error * BOOST_PER_M, 0.0, MAX_BOOST)
+
+        self.max_accel = min(self.max_accel + accel_boost,
+                             get_max_allowed_accel(v_ego))
 
     if controlsState.experimentalMode:
       self.min_accel = ACCEL_MIN

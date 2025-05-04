@@ -260,14 +260,20 @@ class HKGLongitudinalTuning:
                     # Combine urgencies conservatively (take the maximum).
                     urgency = max(urgency, urg_ttc, urg_lead_decel)
 
-                    # Planner-required jerk
-                    jerk_needed = 0.0
-                    if accel_request < self.accel_last:
-                        jerk_needed = abs((accel_request - self.accel_last) / self.DT_CTRL)
+                    # Planner-required jerk (ensure non-negative)
+                    jerk_needed = abs((accel_request - self.accel_last) / self.DT_CTRL) if accel_request < self.accel_last else 0.0
 
-                    # Scale ceiling up to 1.5× MAX_ALLOWABLE_JERK
-                    jerk_ceiling = max(baseline_jerk,
-                                       baseline_jerk + urgency * (1.5 * MAX_ALLOWABLE_JERK - baseline_jerk))
+                    # Combine factors conservatively: use the greater of urgency or brake_ratio
+                    # This allows a faster response if the planner requests strong braking *before* urgency is high
+                    combined_factor = max(urgency, brake_ratio)
+
+                    # Scale ceiling up towards a high target based on the combined factor
+                    target_max_jerk = 1.5 * MAX_ALLOWABLE_JERK  # Keep original scaling target
+                    jerk_ceiling = baseline_jerk + combined_factor * (target_max_jerk - baseline_jerk)
+
+                    # Clip the ceiling to the absolute max allowable jerk for safety/realism
+                    # Also ensure it doesn't drop below the baseline
+                    jerk_ceiling = np.clip(jerk_ceiling, baseline_jerk, MAX_ALLOWABLE_JERK)
 
                     # Final effective jerk
                     effective_jerk = min(max(baseline_jerk, jerk_needed), jerk_ceiling)
