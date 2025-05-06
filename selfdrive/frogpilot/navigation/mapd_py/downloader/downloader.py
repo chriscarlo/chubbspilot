@@ -13,8 +13,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import update_maps
 
 # Automatic check interval is defined but not used
-UPDATE_CHECK_INTERVAL_SECONDS = 60 * 15  # 15 minutes
-
+UPDATE_CHECK_INTERVAL_SECONDS = 60 * 60 * 24 * 30  # 30 days
 
 def main():
   """Main loop for map downloader trigger service."""
