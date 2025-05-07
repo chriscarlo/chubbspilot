@@ -145,6 +145,7 @@ class HKGLongitudinalTuning:
     def calculate_limited_accel(self,
                                 actuators: car.CarControl.Actuators,
                                 CS: car.CarState,
+                                frogpilot_toggles,
                                 lead_one: log.RadarState.LeadData = None) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
@@ -350,7 +351,7 @@ class HKGLongitudinalTuning:
         """Calculate acceleration with cruise control status handling and final clipping."""
         if self.handle_cruise_cancel(CS):
             return 0.0  # Return 0.0 if cruise is cancelled or overridden
-        accel = self.calculate_limited_accel(actuators, CS, lead_one)
+        accel = self.calculate_limited_accel(actuators, CS, frogpilot_toggles, lead_one)
         max_accel_upper_limit = self.car_config.accel_limits[1]
         return float(np.clip(accel, self.car_config.accel_limits[0], max_accel_upper_limit))
 
