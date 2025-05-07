@@ -168,6 +168,9 @@ def on_way(pos: Position, segment_id: int, segment_data: SegmentData):
         is_fwd = is_forward(dist_result.line_start_coord, dist_result.line_end_coord, pos.bearing_rad)
         # Assume 'oneway' field: 0=No, 1=Yes (forward), -1=Yes (backward) - NEEDS CONFIRMATION from reader/processor
         # Let's assume 0=No, >0 = Yes (forward) for now based on typical OSM usage
+        # Note: Current reader.py defaults 'oneway' to 0 if not present in data.
+        # This oneway logic will only become effective if actual oneway data is populated.
+        # If 'oneway' is 0 (default), is_way_oneway will be False.
         oneway_val = segment_data.get('oneway', 0) # Default to not oneway
         is_way_oneway = oneway_val != 0 # Simplified check
 
@@ -374,6 +377,10 @@ def next_way(
         is_fwd_next = next_is_forward(m_segment_data, match_coord)
 
         # Skip if it's a one-way street and we're going the wrong way
+        # Note: Current reader.py defaults 'oneway' to 0 if not present in data.
+        # This logic will only become effective if 'oneway' data (e.g., 1 for oneway forward, -1 for oneway backward)
+        # is populated by process_osm.py and available in segment_data.
+        # If 'oneway' is 0 (default), is_way_oneway will be False, and this block is skipped.
         oneway_val = m_segment_data.get('oneway', 0)
         is_way_oneway = oneway_val != 0
         if not is_fwd_next and is_way_oneway:
@@ -571,10 +578,14 @@ def get_progress_along_way(pos: Position, segment_data: SegmentData, on_way_resu
     # If driving backwards (is_fwd=False), progress is total_length - calculated_forward_progress
     # For now, we assume the calling function (mapd_daemon) handles directionality based on is_fwd
     # This function returns progress assuming forward traversal (0 -> N)
+    # Definition: `distanceAlongSegment` is always from the OSM way's start (node 0)
+    # to the vehicle's current projected point. `is_fwd` in OnWayResult indicates
+    # vehicle's travel direction relative to the way's node order.
     total_progress = dist_to_segment_start_node + dist_along_segment
 
     # TODO(?): If !is_fwd, should we return total_length - total_progress?
     # Let's return forward progress for now and let caller adjust.
+    # Current adopted definition: Progress is always from the way's start node (0).
     return total_progress
 
 def get_segment_length(segment_data: SegmentData) -> float:

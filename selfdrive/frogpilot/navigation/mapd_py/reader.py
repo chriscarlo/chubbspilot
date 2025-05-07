@@ -23,9 +23,9 @@ print(f"osm_speed_data_pb2 imported from: {osm_speed_data_pb2.__file__}")
 
 # Find the repository root relative to this file
 # __file__ is selfdrive/frogpilot/navigation/mapd_py/reader.py
-# We need to go up 5 levels to reach the repo root (/home/chris/openpilot/)
+# We need to go up 4 levels to reach the repo root (e.g. /openpilot/)
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_repo_root = os.path.abspath(os.path.join(_script_dir, "../../../../..")) # Adjusted levels
+_repo_root = os.path.abspath(os.path.join(_script_dir, "../../../..")) # Corrected: up 4 levels
 
 # Add repo root to Python path BEFORE attempting the import
 if _repo_root not in sys.path:
@@ -35,10 +35,10 @@ if _repo_root not in sys.path:
 MAP_DATA_DIR = os.path.join(_repo_root, "map_data")
 SCHEMA_DIR = os.path.join(_repo_root, "tools/map_processing")
 
-# Define path to our custom capnp file and schema relative to openpilot root
-# Adjust these paths if necessary
-# DEFAULT_SPEED_LIMIT_DATA_PATH = "map_data/nevada-speedlimits.capnp" # Hardcoded for now -- Replaced by dynamic logic
-# OP_ROOT = "/data/openpilot" # Assume standard openpilot path on device -- Temporarily Disabled for Simulation
+# Constants
+FROGPILOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")) # Corrected: up to selfdrive/frogpilot
+DEFAULT_CAPNP_PATH = os.path.join(FROGPILOT_DIR, 'capnp', 'map_data.capnp')
+WAY_GEOMETRY_MAX_DIST_ERROR_M = 20.0  # Max error allowed to consider a point on the way geometry
 
 # Approximate Bounding Boxes (min_lon, min_lat, max_lon, max_lat)
 REGION_BOUNDS = {

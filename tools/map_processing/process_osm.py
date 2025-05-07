@@ -14,8 +14,12 @@ from collections import defaultdict # Added for collecting index data
 from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
 # Import generated protobuf classes
 from tools.map_processing import osm_speed_data_pb2
-# Import the curvature_to_speed function
-from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import curvature_to_speed
+# REMOVED: from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import curvature_to_speed
+
+# --- ADDED IMPORTS FOR EMBEDDED curvature_to_speed ---
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.numpy_fast import clip
+# --- END ADDED IMPORTS ---
 
 # Load Cap'n Proto schema REMOVED
 # script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -52,10 +56,49 @@ REGION_BOUNDS = {
     # Add more regions here as needed
 }
 
+# --- EMBEDDED curvature_to_speed LOGIC (from selfdrive.frogpilot.controls.lib.chauffeur_vtsc) ---
+# Helper function
+def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
+    """Internal function replicating the original tuned lateral accel logic."""
+    high_accel = 3.2
+    low_accel = 1.5
+    span = high_accel - low_accel
+    center_curvature = 0.064
+    k = 60
+    reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
+    lat_acc = high_accel - reduction
+    return clip(lat_acc, low_accel, high_accel)
+
+# Constants
+CURV_CORR_FACTOR = (CV.MS_TO_MPH ** 2)
+MAX_SPEED_DEFAULT = 70.0 # m/s
+SPEED_INCREASE_FACTOR = 1.0
+
+# Main function
+def curvature_to_speed(abs_curvature_meters: float) -> float:
+    """
+    Calculates a target speed (m/s) directly from curvature (1/radius in meters).
+    """
+    if abs_curvature_meters < 1e-7: # Handle straight roads
+        return MAX_SPEED_DEFAULT
+
+    abs_curvature_scaled = abs_curvature_meters / CURV_CORR_FACTOR
+    base_lat_accel = _original_curvature_based_lat_accel(abs_curvature_scaled)
+
+    try:
+        if base_lat_accel < 0: base_lat_accel = 0
+        base_speed_mps = math.sqrt(base_lat_accel / abs_curvature_meters)
+    except (ValueError, ZeroDivisionError):
+        base_speed_mps = 0.0
+
+    target_speed_mps = base_speed_mps * SPEED_INCREASE_FACTOR
+    return clip(target_speed_mps, 0.0, MAX_SPEED_DEFAULT)
+# --- END EMBEDDED curvature_to_speed LOGIC ---
+
 # Speed parsing function (remains the same)
 def parse_speed_limit(speed_str):
     # --- Log Input --- #
-    # print(f"DEBUG PARSE: Received speed_str: '{speed_str}' (type: {type(speed_str)})", flush=True) # Too verbose
+    print(f"DEBUG PARSE: Received speed_str: '{speed_str}' (type: {type(speed_str)})", flush=True)
     # --- End Log --- #
     if not speed_str or not isinstance(speed_str, str):
         # --- Log Skip --- #
@@ -77,6 +120,7 @@ def parse_speed_limit(speed_str):
             try:
                 speed = float(parts[0])
                 if parts[1] == 'mph':
+                    print(f"DEBUG PARSE: Parsed '{speed_str}' as {speed} MPH, converting to MPS", flush=True)
                     # --- Log Success --- #
                     # print(f"DEBUG PARSE: Parsed '{speed_str}' as {speed} MPH, converting to MPS", flush=True)
                     # --- End Log --- #
@@ -103,7 +147,7 @@ def parse_speed_limit(speed_str):
              # --- End Log --- #
 
     # --- Log Final Fail --- #
-    # print(f"DEBUG PARSE: All parsing failed for '{speed_str}'", flush=True)
+    print(f"DEBUG PARSE: All parsing failed for '{speed_str}'", flush=True)
     # --- End Log --- #
     return None
 
@@ -422,6 +466,7 @@ def main(input_geojsonl, output_basedir):
 
                         valid_curvatures = [float(c) for c in segment_curvatures if math.isfinite(float(c))]
                         segment_msg.curvatures.extend(valid_curvatures)
+                        # Call the local curvature_to_speed function
                         curvature_derived_speeds = [curvature_to_speed(abs(c)) for c in valid_curvatures]
                         segment_msg.curvature_derived_speeds_mps.extend(curvature_derived_speeds)
 
@@ -473,7 +518,7 @@ def main(input_geojsonl, output_basedir):
                                         else: current_osm_id = int(osm_id_val)
 
                                         if current_osm_id:
-                                            # --- Process segment data (copy of main loop logic) ---
+                                            # --- Process segment data (copy of main loop logic) --- #
                                             # ... (duplicate the processing steps: tile assignment, file handle, data extraction, protobuf building, writing, indexing) ...
                                             print("Processing final segment...", current_osm_id) # Placeholder
                                             # NOTE: Need to actually duplicate the ~50 lines of processing logic here or refactor

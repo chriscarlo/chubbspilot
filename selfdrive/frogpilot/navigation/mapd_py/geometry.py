@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 # Constants based on mapd_source/math.go
-R = 6373000.0             # Approximate radius of Earth in meters
+# R = 6373000.0             # Approximate radius of Earth in meters - REPLACED
 TO_RADIANS = math.pi / 180.0
 TO_DEGREES = 180.0 / math.pi
 
@@ -37,7 +37,7 @@ def distance_to_point(lat_a_rad, lon_a_rad, lat_b_rad, lon_b_rad):
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    return R * c  # Distance in meters
+    return EARTH_RADIUS_M * c  # Distance in meters
 
 
 def vector(lat_a_rad, lon_a_rad, lat_b_rad, lon_b_rad):
@@ -165,7 +165,7 @@ def get_curvature(lat_a_deg, lon_a_deg, lat_b_deg, lon_b_deg, lat_c_deg, lon_c_d
     angle = math.acos(cos_angle_arg)
 
     # Arc length is radius * angle (where angle is in radians)
-    # But to replicate the Go code’s return (chord length AB), we use:
+    # But to replicate the Go code's return (chord length AB), we use:
     arc_length = length_a
 
     # Determine the sign of the curvature (left or right turn)
@@ -253,7 +253,7 @@ def cross_track_error_squared(lat1_rad, lon1_rad,
     δ_xt = math.asin(math.sin(d13) * math.sin(θ13 - θ12))
 
     # Convert to metres, then square
-    return (δ_xt * R) ** 2
+    return (δ_xt * EARTH_RADIUS_M) ** 2
 
 
 def fraction_along_segment(lat1_deg, lon1_deg,

@@ -164,6 +164,22 @@ class MapdPyDaemon:
                 self.current_segment_data = None
                 self.current_on_way_result = None
 
+            # Calculate distance along current segment
+            dist_covered_on_current = get_progress_along_way(
+                self.last_valid_pos, self.current_segment_data, self.current_on_way_result
+            )
+            # Defines the distance from the OSM way's start node (node 0)
+            # to the vehicle's current projected point along the way's geometry.
+            msg.liveMapData.currentSegment.distanceAlongSegment = dist_covered_on_current
+        else:
+            # Not on a segment, clear limits (already handled by initialization)
+            # Clear curvature limits as well - REMOVED, no longer needed here
+            # turn_speed_mps = 0.0
+            # dist_to_turn_m = 0.0
+            # turn_speed_valid = False
+            # Keep msg.liveMapData.curvatureDataValid as False (default)
+            pass # Nothing specific needs clearing here anymore
+
         # --- Calculate Speed Limits ---
         current_limit_mps = 0.0
         next_limit_mps = 0.0
@@ -220,11 +236,6 @@ class MapdPyDaemon:
                 msg.liveMapData.currentSegment.curvatureDerivedSpeedsMps = compact_speeds
                 # --- END COMPACT --- #
 
-                # Calculate distance along current segment
-                dist_covered_on_current = get_progress_along_way(
-                    self.last_valid_pos, self.current_segment_data, self.current_on_way_result
-                )
-                msg.liveMapData.currentSegment.distanceAlongSegment = dist_covered_on_current
             else:
                 msg.liveMapData.curvatureDataValid = False
             # -----------------------------------------------------
@@ -246,19 +257,10 @@ class MapdPyDaemon:
                     # Get distance remaining on current segment to add to proactive distance
                     # Placeholder: Replace with accurate distance_to_end_of_way if available
                     dist_remaining_current_proactive = 0.0
-                    coords_current = self.map_reader.get_segment_coords(self.current_segment_id)
-                    if coords_current:
-                        # Placeholder index
-                        current_node_index_proactive = 0
-                        if self.current_on_way_result and hasattr(self.current_on_way_result, 'segment_index'):
-                           current_node_index_proactive = self.current_on_way_result.segment_index
-                        for i in range(current_node_index_proactive, len(coords_current) - 1):
-                             p1 = coords_current[i]
-                             p2 = coords_current[i+1]
-                             dist_remaining_current_proactive += geometry.distance_to_point(
-                                 p1[0] * geometry.TO_RADIANS, p1[1] * geometry.TO_RADIANS,
-                                 p2[0] * geometry.TO_RADIANS, p2[1] * geometry.TO_RADIANS
-                             )
+                    if self.current_segment_data and self.current_on_way_result: # Ensure we have current segment info
+                        dist_remaining_current_proactive = matcher.distance_to_end_of_way(
+                            self.last_valid_pos, self.current_segment_data, self.current_on_way_result
+                        )
                     cumulative_proactive_dist += dist_remaining_current_proactive
                     # --- End distance remaining calculation ---
 
@@ -441,8 +443,8 @@ class MapdPyDaemon:
         msg.liveMapData.speedLimitAheadDistance = float(next_limit_dist) # m
 
         # Add road name if available
-        if is_on_segment and self.current_segment_data and 'name' in self.current_segment_data:
-             msg.liveMapData.currentRoadName = str(self.current_segment_data['name'])
+        if is_on_segment and self.current_segment_data: # Check if current_segment_data is not None
+             msg.liveMapData.currentRoadName = str(self.current_segment_data.get('name', "")) # Use .get for safety
         else:
              msg.liveMapData.currentRoadName = ""
 
