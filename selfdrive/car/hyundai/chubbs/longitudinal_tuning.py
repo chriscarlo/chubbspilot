@@ -74,7 +74,7 @@ class HKGLongitudinalTuning:
         self.car_config = Cartuning.get_car_config(self.CP)
 
     def update_mpc_mode(self, sm: messaging.SubMaster) -> None:
-        if 'controlsState' not in sm.keys() or not sm.valid['controlsState']:
+        if not sm.valid['controlsState']:
             return
         new_mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
         if new_mode != self.current_mode:
