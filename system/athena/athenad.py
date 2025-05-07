@@ -61,6 +61,8 @@ HOURLY_CLEAR_INTERVAL = 3600  # 1 hour in seconds
 # Azure File Share config
 AZURE_SHARE_NAME = "chauffeurlogs"
 AZURE_BASE_DIR   = "rlogs"
+BASE_REALDATA_PATH = "/data/media/0/realdata"
+STAGING_ARCHIVE_DIR = os.path.join(BASE_REALDATA_PATH, "..", "rlog_staging_archives") # e.g., /data/media/0/rlog_staging_archives
 
 # Debug flag - only True when running directly
 DEBUG = __name__ == "__main__"
@@ -270,6 +272,7 @@ class UploadItem:
   progress: float = 0.0
   allow_cellular: bool = True
   azure_subdir: str | None = None
+  original_segment_to_delete: str | None = None # Path to the original segment dir to delete after archive upload
 
   @classmethod
   def from_dict(cls, d: dict) -> UploadItem:
@@ -284,6 +287,7 @@ class UploadItem:
       progress=d.get("progress", 0.0),
       allow_cellular=d.get("allow_cellular", True),
       azure_subdir=d.get("azure_subdir"),
+      original_segment_to_delete=d.get("original_segment_to_delete"),
     )
 
 class AbortTransferException(Exception):
@@ -460,18 +464,33 @@ def upload_handler(end_event: threading.Event) -> None:
 
         # --- Start Deletion Logic ---
         try:
-          source_dir = os.path.dirname(fn)
-          debug_print(f"Attempting to delete archive {fn} and source dir {source_dir}")
-          os.remove(fn)
-          debug_print(f"Deleted archive file: {fn}")
-          shutil.rmtree(source_dir)
-          debug_print(f"Deleted source directory: {source_dir}")
-          cloudlog.event("azure.upload_handler.cleanup_success",
-                         archive_path=fn, source_dir=source_dir)
+          debug_print(f"Attempting to delete uploaded archive file: {item.path}")
+          os.remove(item.path) # Delete the archive from staging/temp location
+          debug_print(f"Deleted archive file: {item.path}")
+
+          if item.original_segment_to_delete:
+            # Ensure the path is a directory and exists before attempting to delete
+            if os.path.isdir(item.original_segment_to_delete):
+              debug_print(f"Attempting to delete original segment directory: {item.original_segment_to_delete}")
+              shutil.rmtree(item.original_segment_to_delete)
+              debug_print(f"Deleted original segment directory: {item.original_segment_to_delete}")
+              cloudlog.event("azure.upload_handler.cleanup_success",
+                             archive_path=item.path, source_dir=item.original_segment_to_delete)
+            else:
+              debug_print(f"Original segment directory not found or already deleted: {item.original_segment_to_delete}")
+              cloudlog.warning("azure.upload_handler.cleanup_skip_source_dir_not_found",
+                               archive_path=item.path, source_dir=item.original_segment_to_delete)
+          elif item.id and "archive" in item.id: # Heuristic for archive items that might be missing the new field (e.g. from old cache)
+            cloudlog.warning("azure.upload_handler.cleanup_missing_original_segment_path",
+                             item_id=item.id, archive_path=item.path)
+            debug_print(f"No original_segment_to_delete path for item: {item.id}, archive: {item.path}")
+
         except OSError as e:
           debug_print(f"Error deleting local files after upload: {e}")
           cloudlog.exception("azure.upload_handler.cleanup_error",
-                             archive_path=fn, source_dir=os.path.dirname(fn), error=str(e))
+                             archive_path=item.path,
+                             source_dir=item.original_segment_to_delete or "N/A",
+                             error=str(e))
         # --- End Deletion Logic ---
 
         upload_queue.task_done()
@@ -537,9 +556,17 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
       return 0
 
   try:
+    os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
+    debug_print(f"Ensured staging directory exists: {STAGING_ARCHIVE_DIR}")
+  except OSError as e:
+    cloudlog.error(f"Could not create or access staging directory {STAGING_ARCHIVE_DIR}: {e}")
+    debug_print(f"Fatal: Could not create/access staging dir {STAGING_ARCHIVE_DIR}: {e}. Archiving cannot proceed.")
+    return 0
+
+  try:
     for subdir in os.listdir(base_path):
       subdir_path = os.path.join(base_path, subdir)
-      if not os.path.isdir(subdir_path) or subdir in processed_dirs:
+      if not os.path.isdir(subdir_path) or subdir_path == STAGING_ARCHIVE_DIR or subdir in processed_dirs:
         continue
 
       try:
@@ -555,50 +582,20 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
       formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
       segment_name = subdir
 
-      # Rename old-format dirs if needed
-      conn_str = get_azure_connection_string()
-      rename_performed_or_exists = False
-      if conn_str:
-        try:
-          existing_dirs = list_azure_directories(conn_str, AZURE_SHARE_NAME, AZURE_BASE_DIR)
-          old_to_rename = None
-          for azure_dir in existing_dirs:
-            if '--' in azure_dir:
-              _, existing_segment = azure_dir.split('--', 1)
-              if existing_segment == segment_name:
-                old_full = f"{AZURE_BASE_DIR}/{azure_dir}"
-                new_full = f"{AZURE_BASE_DIR}/{formatted_date_time}--{segment_name}"
-                if old_full != new_full:
-                  old_to_rename = old_full
-                  break
-                else:
-                  rename_performed_or_exists = True
-                  break
-          if old_to_rename and not rename_performed_or_exists:
-            if rename_azure_directory(conn_str, AZURE_SHARE_NAME, old_to_rename, new_full):
-              cloudlog.event("azure.realdata_handler.renamed",
-                             old_dir=old_to_rename, new_dir=new_full)
-              rename_performed_or_exists = True
-            else:
-              cloudlog.warning("azure.realdata_handler.rename_failed",
-                               old_dir=old_to_rename, new_dir=new_full)
-        except Exception:
-          cloudlog.exception("azure.realdata_handler.rename_check_exception")
-
-      processed_dirs.add(subdir)
-      if rename_performed_or_exists:
-        continue
+      # The complex Azure directory renaming logic that was here (approx. lines 507-532 in original)
+      # has been removed. The azure_file_exists() check in _do_upload_azure for the archive file
+      # is sufficient to prevent re-uploads of existing archives.
 
       # --- New Queueing Logic: compress and upload archive ---
       archive_name = f"{formatted_date_time}--{segment_name}.tar.zst"
-      temp_archive_path = os.path.join(subdir_path, archive_name)
+      archive_filepath_in_staging = os.path.join(STAGING_ARCHIVE_DIR, archive_name)
 
       if zstd is None:
           debug_print("zstandard library not found, cannot create archive. Skipping.")
           continue
 
       try:
-        with open(temp_archive_path, "wb") as raw_f:
+        with open(archive_filepath_in_staging, "wb") as raw_f:
           cctx = zstd.ZstdCompressor(level=3)
           with cctx.stream_writer(raw_f) as zstd_f:
             with tarfile.open(fileobj=zstd_f, mode="w|") as tar:
@@ -610,19 +607,20 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
                   files_added_count += 1
 
         if files_added_count == 0:
-          debug_print(f"No files found for archive {temp_archive_path}, removing empty archive.")
-          os.remove(temp_archive_path)
+          debug_print(f"No files found for archive {archive_filepath_in_staging}, removing empty archive.")
+          if os.path.exists(archive_filepath_in_staging):
+            os.remove(archive_filepath_in_staging)
           continue
 
-        debug_print(f"Created archive for upload: {temp_archive_path}")
+        debug_print(f"Created archive for upload: {archive_filepath_in_staging}")
       except (tarfile.TarError, zstd.ZstdError, OSError) as e:
-        debug_print(f"Failed to create archive {temp_archive_path}: {e}")
-        cloudlog.exception(f"Failed to create archive {archive_name}", error=str(e))
+        debug_print(f"Failed to create archive {archive_filepath_in_staging}: {e}")
+        cloudlog.exception(f"Failed to create archive {archive_name} in {STAGING_ARCHIVE_DIR}", error=str(e))
         try:
-            if os.path.exists(temp_archive_path):
-                os.remove(temp_archive_path)
+            if os.path.exists(archive_filepath_in_staging):
+                os.remove(archive_filepath_in_staging) # Clean up partial/failed archive
         except OSError:
-            pass
+            pass # Ignore cleanup error
         continue
 
       upload_id = f"azure|{segment_name}|archive"
@@ -631,19 +629,24 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
         if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
           is_active_or_queued = True
       if is_active_or_queued:
-        debug_print(f"Archive already active or queued: {upload_id}, skipping")
+        debug_print(f"Archive already active or queued: {upload_id}, skipping {subdir_path}")
+        # If it's already queued, we should probably mark this subdir as processed for this scan
+        # to avoid re-evaluating it constantly if the queue is long.
+        processed_dirs.add(subdir)
         continue
 
       item = UploadItem(
-        path=temp_archive_path,
+        path=archive_filepath_in_staging, # Path to the archive in the staging directory
         created_at=int(creation_time_ts * 1000),
         id=upload_id,
-        azure_subdir=None,
-        allow_cellular=True
+        azure_subdir=None, # Archives go to AZURE_BASE_DIR
+        allow_cellular=True,
+        original_segment_to_delete=subdir_path # Path to the original segment directory
       )
-      debug_print(f"Queueing archive item: {item.id} -> Azure: {AZURE_BASE_DIR}/{archive_name}")
+      debug_print(f"Queueing archive item: {item.id} (Path: {item.path}, Original: {item.original_segment_to_delete}) -> Azure: {AZURE_BASE_DIR}/{archive_name}")
       upload_queue.put_nowait(item)
       queued_count += 1
+      processed_dirs.add(subdir) # Mark as processed for this scan iteration only after successful queuing
 
     if queued_count > 0:
       UploadQueueCache.cache(upload_queue)
@@ -655,7 +658,7 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
 
 def realdata_handler(end_event: threading.Event) -> None:
   global last_clear_time
-  base_path = "/data/media/0/realdata"
+  # base_path = "/data/media/0/realdata" # Now uses BASE_REALDATA_PATH constant
   age_limit_seconds = 24 * 3600
   scan_interval = 300
   processed_dirs: set[str] = set()
@@ -663,7 +666,10 @@ def realdata_handler(end_event: threading.Event) -> None:
   cloudlog.info("Performing initial realdata scan...")
   debug_print("Performing initial realdata scan...")
   try:
-    initial_count = _scan_and_queue_realdata(base_path, age_limit_seconds, processed_dirs)
+    # Ensure staging directory exists before first scan.
+    # _scan_and_queue_realdata also does this, but it's good for clarity here too.
+    os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
+    initial_count = _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs)
     cloudlog.info(f"Initial scan queued {initial_count} archives.")
     debug_print(f"Initial scan queued {initial_count} archives.")
     UploadQueueCache.cache(upload_queue)
@@ -685,7 +691,7 @@ def realdata_handler(end_event: threading.Event) -> None:
         last_clear_time = current_time
       except Exception:
         cloudlog.exception("azure.realdata_handler.hourly_clear.exception")
-    _scan_and_queue_realdata(base_path, age_limit_seconds, processed_dirs)
+    _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs)
     end_event.wait(scan_interval)
   debug_print("Realdata handler thread exiting.")
 
