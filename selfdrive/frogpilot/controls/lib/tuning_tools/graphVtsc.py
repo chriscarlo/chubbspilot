@@ -11,12 +11,12 @@ MAX_SPEED_DEFAULT = 70.0 # m/s
 # --- Embed the target function directly --- (Bypasses imports)
 def _local_test_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
     """Internal function using original sigmoid shape and tuned center."""
-    high_accel = 3.7
+    high_accel = 3.2
     low_accel = 1.5
     span = high_accel - low_accel
     # center_curvature = 0.0482 # Tuned value
-    center_curvature = 0.044
-    k = 40
+    center_curvature = 0.064
+    k = 60
     reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
     lat_acc = high_accel - reduction
     return np.clip(lat_acc, low_accel, high_accel)
