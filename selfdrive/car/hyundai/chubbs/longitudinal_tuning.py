@@ -41,7 +41,7 @@ class HKGLongitudinalTuning:
         self._init_state()
         self._mode_setup()
         self._setup_car_config()
-        self.pm = messaging.PubMaster(['frogPilotCarControl'])
+        self.pm = messaging.PubMaster(['frogpilotCarControl'])
 
     def _setup_controllers(self) -> None:
         self.long_control = LongControl(self.CP)
@@ -475,7 +475,7 @@ class HKGLongitudinalTuning:
         """Calculate acceleration with cruise control status handling and final clipping."""
 
         # Create new message for this cycle
-        msg = messaging.new_message('frogPilotCarControl')
+        msg = messaging.new_message('frogpilotCarControl')
         # dat_to_pass is the actual FrogPilotCarControl struct instance
         dat_to_pass = msg.frogPilotCarControl
 
@@ -491,7 +491,7 @@ class HKGLongitudinalTuning:
             # accel_last should already be set by handle_cruise_cancel
             dat_to_pass.longFinalAccel = 0.0
             dat_to_pass.longAccelPreClip = 0.0
-            self.pm.send('frogPilotCarControl', msg)
+            self.pm.send('frogpilotCarControl', msg)
             return 0.0  # Return 0.0 if cruise is cancelled or overridden
 
         accel = self.calculate_limited_accel(actuators, CS, lead_one, dat_to_pass)
@@ -505,7 +505,7 @@ class HKGLongitudinalTuning:
         dat_to_pass.longFinalAccel = final_accel
 
         # Publish the populated message
-        self.pm.send('frogPilotCarControl', msg)
+        self.pm.send('frogpilotCarControl', msg)
 
         return final_accel
 
