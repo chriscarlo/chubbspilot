@@ -88,14 +88,14 @@ def display_longitudinal_data(fpcc):
   print("\nPress Ctrl+C to exit.")
 
 def main():
-  sm = messaging.SubMaster(['frogpilotCarControl'])
+  sm = messaging.SubMaster(['chauffeurHKGTuning'])
   fpcc_prev = None
 
   while True:
     sm.update()
 
-    if sm.updated['frogpilotCarControl'] and sm.valid['frogpilotCarControl']:
-      fpcc = sm['frogpilotCarControl']
+    if sm.updated['chauffeurHKGTuning'] and sm.valid['chauffeurHKGTuning']:
+      fpcc = sm['chauffeurHKGTuning']
       # Only refresh if data has actually changed (optional, reduces flicker if data is static for a bit)
       # Forcing refresh for now as per user desire to see updates.
       # if fpcc_prev is None or fpcc.logMonoTime != fpcc_prev.logMonoTime:
