@@ -222,9 +222,9 @@ def main():
     start_time = time.monotonic()
     initial_wait_timeout = 10.0 # seconds
 
-    while not (sm.all_alive(ignore=['customReservedRawData4']) and sm.all_valid(ignore=['customReservedRawData4'])):
+    while not (sm.all_alive() and sm.all_valid()):
         sm.update(100) # Wait up to 100ms for messages
-        if not sm.all_alive(ignore=['customReservedRawData4']):
+        if not sm.all_alive():
             print("ERROR: Some services are not running. Exiting.", flush=True)
             # You can add more detailed printing of which services are not alive here
             return
