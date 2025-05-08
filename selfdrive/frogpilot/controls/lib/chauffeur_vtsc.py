@@ -27,11 +27,11 @@ CRUISING_SPEED = 5.0  # m/s
 # It takes scaled curvature (because it was tuned based on MPH-like values).
 def _original_curvature_based_lat_accel(abs_curvature_scaled: float) -> float:
     """Internal function replicating the original tuned lateral accel logic."""
-    high_accel = 3.7
+    high_accel = 3.2
     low_accel = 1.5
     span = high_accel - low_accel
-    center_curvature = 0.044
-    k = 40
+    center_curvature = 0.064
+    k = 60
     reduction = span / (1.0 + math.exp(-k * (abs_curvature_scaled - center_curvature)))
     lat_acc = high_accel - reduction
     return clip(lat_acc, low_accel, high_accel)
@@ -181,6 +181,7 @@ class VisionTurnSpeedController:
 
         self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
+        self.pm = messaging.PubMaster(['frogPilotPlan']) # Added PubMaster
 
         self.prev_v_cruise_cluster = 0.0
 
@@ -190,11 +191,21 @@ class VisionTurnSpeedController:
         # ------------------------------
         # EMA (exponential moving average) for curvature filtering - Keeping curvature filtering for potential future use/analysis
         self.curvature_ema_ratio = 0.3  # lower = more smoothing
-        self._filtered_curvature = None  # filtered maximum curvature value
+        self._filtered_curvature = 0.0  # filtered maximum curvature value - Init to 0.0
 
         # For speed smoothing: filter speed increases only (avoid overshoot when exiting curves)
         self.speed_up_ema_ratio = 0.2
         self._last_model_speed = None
+
+        # Initialize VTSC logging fields
+        self.vtsc_is_enabled_log = False
+        self.vtsc_raw_target_speed_log = 0.0
+        self.vtsc_vision_curvatures_log = []
+        self.vtsc_vision_velocities_log = []
+        self.vtsc_safe_speeds_vision_log = []
+        self.vtsc_safe_speeds_map_log = []
+        self.vtsc_final_safe_speeds_log = []
+        self.vtsc_apex_indices_log = []
 
     def reset(self, v_ego: float) -> None:
         """
@@ -205,9 +216,19 @@ class VisionTurnSpeedController:
         self.planned_speeds[:] = v_ego
 
         # Reset filtering state
-        self._filtered_curvature = None
+        self._filtered_curvature = 0.0 # Reset to 0.0
         # self.curve_active = False # Removed
         self._last_model_speed = None
+
+        # Reset logging fields
+        self.vtsc_is_enabled_log = False
+        self.vtsc_raw_target_speed_log = v_ego
+        self.vtsc_vision_curvatures_log = []
+        self.vtsc_vision_velocities_log = []
+        self.vtsc_safe_speeds_vision_log = []
+        self.vtsc_safe_speeds_map_log = []
+        self.vtsc_final_safe_speeds_log = []
+        self.vtsc_apex_indices_log = []
 
     def update(self, v_ego: float, v_cruise_cluster: float,
                map_speed_profile: tuple[np.ndarray, np.ndarray] | None = None,
@@ -219,10 +240,15 @@ class VisionTurnSpeedController:
         self.sm.update()
         modelData = self.sm['modelV2']
 
+        # Assume not enabled, will be set true if planning occurs
+        self.vtsc_is_enabled_log = False
+
         # If below a certain speed, just reset and do nothing fancy
         if v_ego < CRUISING_SPEED:
             self.reset(v_ego)
             self.prev_v_cruise_cluster = v_cruise_cluster
+            # Publish even on reset/low speed
+            self._publish_frogpilot_plan()
             return v_ego
 
         orientation_rate_raw = modelData.orientationRate.z
@@ -236,9 +262,14 @@ class VisionTurnSpeedController:
         ):
             # Fallback if the model data isn't available
             raw_target = self._single_step_fallback(v_ego, 0.0, turn_aggressiveness)
+            self.vtsc_is_enabled_log = False # Explicitly false for fallback
         else:
+            self.vtsc_is_enabled_log = True # Actively planning
             orientation_rate = np.abs(np.array(orientation_rate_raw, dtype=float))
             velocity_pred = np.array(velocity_pred_raw, dtype=float)
+
+            # Log raw vision velocities before interpolation for N_POINTS_TARGET
+            self.vtsc_vision_velocities_log = velocity_pred_raw[:N_POINTS_TARGET].tolist()
 
             n_points = min(len(orientation_rate), len(velocity_pred))
             # Interpolate or slice to exactly N_POINTS_TARGET points
@@ -263,15 +294,16 @@ class VisionTurnSpeedController:
             # Compute curvature array
             eps = 1e-9
             curvature_target = orientation_rate_target / np.clip(velocity_pred_target, eps, None)
+            self.vtsc_vision_curvatures_log = curvature_target.tolist() # Log calculated curvatures
 
             # ------------------------------
             # Optional: Keep filtering curvature for analysis or other features, but it no longer gates planning
             # ------------------------------
             current_max_curvature = float(np.max(curvature_target)) # Use target array
-            if self._filtered_curvature is None:
-                self._filtered_curvature = current_max_curvature
-            else:
-                self._filtered_curvature = (1 - self.curvature_ema_ratio) * self._filtered_curvature + self.curvature_ema_ratio * current_max_curvature
+            # if self._filtered_curvature is None: # _filtered_curvature is now initialized to 0.0
+            #     self._filtered_curvature = current_max_curvature
+            # else:
+            self._filtered_curvature = (1 - self.curvature_ema_ratio) * self._filtered_curvature + self.curvature_ema_ratio * current_max_curvature
 
             # Curvature extrapolation logic removed - planning always active, so no need to force curve_active based on far point.
             # if current_max_curvature >= self.curv_thresh_enter:
@@ -301,6 +333,8 @@ class VisionTurnSpeedController:
             # Use the minimum of the first two planned points to anticipate decel
             raw_target = min(self.planned_speeds[0], self.planned_speeds[1]) if len(self.planned_speeds) >= 2 else self.planned_speeds[0]
 
+        self.vtsc_raw_target_speed_log = raw_target # Log raw_target before any further modification
+
         # Always clamp raw_target to at most v_cruise_cluster
         # raw_target = min(raw_target, v_cruise_cluster) # NOTE: Speed up EMA filter removed above
         dt = 0.05  # ~20Hz
@@ -317,7 +351,7 @@ class VisionTurnSpeedController:
             accel_cmd = (raw_target - self.prev_target_speed) / dt
 
             # Additional "boost" if we see a big difference to planned max
-            planned_max = np.max(self.planned_speeds)
+            planned_max = np.max(self.planned_speeds) if len(self.planned_speeds) > 0 else raw_target
             if v_cruise_cluster > self.prev_target_speed:
                 ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
                 ratio = clip(ratio, 0.0, 1.0)
@@ -364,7 +398,36 @@ class VisionTurnSpeedController:
         self.prev_target_speed = final_target_speed
         self.prev_v_cruise_cluster = v_cruise_cluster
 
+        self._publish_frogpilot_plan() # Publish FrogPilotPlan with VTSC data
+
         return final_target_speed
+
+    def _publish_frogpilot_plan(self):
+        # Create and send FrogPilotPlan message
+        fp_plan_msg = messaging.new_message('frogPilotPlan')
+        plan = fp_plan_msg.frogPilotPlan
+
+        # Populate VTSC specific logging fields
+        plan.vtscIsEnabled = self.vtsc_is_enabled_log
+        plan.vtscRawTargetSpeed = float(self.vtsc_raw_target_speed_log)
+        plan.vtscCurrentAccel = float(self.current_accel) # Log the final current_accel for this frame
+        plan.vtscFilteredCurvature = float(self._filtered_curvature)
+
+        # Ensure lists are not None and convert numpy arrays to lists if necessary
+        plan.vtscPlannedSpeedsLogging = self.planned_speeds.tolist() if isinstance(self.planned_speeds, np.ndarray) else list(self.planned_speeds)
+        plan.vtscVisionCurvatures = list(self.vtsc_vision_curvatures_log)
+        plan.vtscVisionVelocities = list(self.vtsc_vision_velocities_log)
+        plan.vtscSafeSpeedsVision = list(self.vtsc_safe_speeds_vision_log)
+        plan.vtscSafeSpeedsMap = list(self.vtsc_safe_speeds_map_log)
+        plan.vtscFinalSafeSpeeds = list(self.vtsc_final_safe_speeds_log)
+        plan.vtscApexIndices = [int(x) for x in self.vtsc_apex_indices_log] # Ensure uint16 for Capnp
+
+        # Populate other FrogPilotPlan fields as needed (example, if VTSC controls them directly)
+        # For now, we assume other parts of openpilot populate the rest of FrogPilotPlan
+        # plan.vtscControllingCurve = self.vtsc_is_enabled_log # Example if vtsc directly sets this
+        # plan.vtscSpeed = float(self.prev_target_speed)      # Example: the final output of VTSC for this cycle
+
+        self.pm.send('frogPilotPlan', fp_plan_msg)
 
     def _plan_speed_trajectory(
         self,
@@ -388,6 +451,7 @@ class VisionTurnSpeedController:
             orientation_rate[i] / max(velocity_pred[i], eps)
             for i in range(n)
         ], dtype=float)
+        # self.vtsc_vision_curvatures_log = curvature.tolist() # Already logged in update before interpolation
 
         # (1.5) Estimate distance at each time step based on velocity predictions
         distances_m = np.zeros(n, dtype=float)
@@ -408,21 +472,29 @@ class VisionTurnSpeedController:
                 map_safe_speeds = interp(distances_m, map_dist, map_speeds)
                 # Clamp map speeds just in case interpolation gives weird values
                 map_safe_speeds = np.clip(map_safe_speeds, 0.0, 70.0)
+        self.vtsc_safe_speeds_map_log = map_safe_speeds.tolist()
 
         # (2) Compute safe speeds from lateral accel AND map data
+        safe_speeds_vision_only = np.zeros(n, dtype=float) # For logging
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
             # Calculate vision-based safe speed using curvature_to_speed directly
             abs_curv_vision = abs(curvature[i])
             # Directly get the target speed from curvature
             vision_safe_speed = curvature_to_speed(abs_curv_vision)
+            safe_speeds_vision_only[i] = vision_safe_speed
 
             # Final safe speed is the minimum of vision limit and map limit for this step
             # NOTE: Map speeds from MTSC should now be pre-calculated using curvature_to_speed as well.
             safe_speeds[i] = min(vision_safe_speed, map_safe_speeds[i])
 
+        self.vtsc_safe_speeds_vision_log = safe_speeds_vision_only.tolist()
+        self.vtsc_final_safe_speeds_log = safe_speeds.tolist()
+
         # (3) Apex-based shaping pass (using fixed parameters)
         apex_idxs = find_apexes(curvature, threshold=5e-5)
+        self.vtsc_apex_indices_log = apex_idxs # Log detected apex indices
+
         margin_factor = 4.0      # Substantially increased (from 3.5) to force much earlier deceleration initiation
         decel_mult = 1.0
         accel_mult = 1.2         # Small increase from original (1.0) for better accel feel - REVERTED from 1.6
@@ -596,6 +668,8 @@ class VisionTurnSpeedController:
                 feasible_speed = v_next - desired_acc * effective_dt_i
                 planned[i] = min(planned[i], feasible_speed, safe_speeds[i])
 
+        # self.planned_speeds = planned # self.planned_speeds is updated in the caller (update method)
+        # For logging, vtscPlannedSpeedsLogging is assigned self.planned_speeds in _publish_frogpilot_plan
         return planned
 
     def _find_time_index(self, times: np.ndarray, target_time: float, clip_high=False) -> int:
@@ -627,6 +701,12 @@ class VisionTurnSpeedController:
         abs_curv = abs(curvature)
         # Directly get the target speed from curvature
         safe_speed = curvature_to_speed(abs_curv)
+
+        # For logging in fallback scenarios
+        self.vtsc_vision_curvatures_log = [curvature] * N_POINTS_TARGET # Crude fallback log
+        self.vtsc_safe_speeds_vision_log = [safe_speed] * N_POINTS_TARGET
+        self.vtsc_final_safe_speeds_log = [safe_speed] * N_POINTS_TARGET
+        self.vtsc_planned_speeds = np.full(N_POINTS_TARGET, safe_speed) # Also update internal planned_speeds
 
         # Smoothing logic remains the same, using the calculated safe_speed
         current_lat_acc = curvature * (v_ego ** 2) # Use actual measured curvature for smoothing trigger

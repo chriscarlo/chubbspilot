@@ -145,11 +145,8 @@ class FrogPilotPlanner:
     frogpilotPlan.speedJerkStock = float(J_EGO_COST * self.frogpilot_following.base_speed_jerk)
     frogpilotPlan.tFollow = float(self.frogpilot_following.t_follow)
 
-    # frogpilotPlan.mtscSpeed = float(self.frogpilot_vcruise.vtsc_target) # Incorrectly assigned VTSC target
-    # This field is likely unused or deprecated if MTSC only provides profiles now.
-    # Set to 0 or remove if confirmed unused by consumers.
-    # For now, set to 0 to avoid publishing confusing data.
     frogpilotPlan.mtscSpeed = 0.0
+
     # Determine if VTSC is currently limiting speed by comparing its target
     # to the driver-set cruise speed on the cluster. Use a small epsilon to
     # account for rounding.
