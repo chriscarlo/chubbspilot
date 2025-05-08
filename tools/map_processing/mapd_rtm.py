@@ -125,7 +125,7 @@ def print_map_data(sm):
     print("--- MAPD DAEMON OUTPUT (liveMapData) ---")
     lmd_info = f" LMD_Fix:{int(lmd.lastGps.hasFix)} "
     if lmd.lastGps.hasFix:
-        lmd_info += f"LMD_Lat:{lmd.lastGps.latitude:.5f} LMD_Lon:{lmd.lastGps.longitude:.5f} LMD_Spd:{lmd.lastGps.speed:.1f}m/s LMD_Bear:{lmd.lastGps.bearingDeg:.1f}° "
+        lmd_info += f"LMD_Lat:{lmd.lastGps.latitude:.5f} LMD_Lon:{lmd.lastGps.longitude:.5f} LMD_Spd:{lmd.lastGps.speed:.1f}m/s LMD_Bear:{lmd.lastGps.bearingDeg:.1f} "
     lmd_info += f"LMD_TS:{lmd.lastGps.unixTimestampMillis / 1000.0:.1f} Road:'{lmd.currentRoadName if lmd.currentRoadName else "--"}'"
     print(lmd_info)
 
