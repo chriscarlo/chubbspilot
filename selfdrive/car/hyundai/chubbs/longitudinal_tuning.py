@@ -74,7 +74,7 @@ class HKGLongitudinalTuning:
         from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
         self.car_config = Cartuning.get_car_config(self.CP)
 
-    def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.chauffeurHKGTuning) -> None:
+    def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.ChauffeurHKGTuning) -> None:
         if not sm.valid['controlsState']:
             dat.longControlsStateExperimentalMode = False
             return
@@ -99,7 +99,7 @@ class HKGLongitudinalTuning:
         dat.longTransitioning = self.transitioning
         dat.longModeTransitionTimer = self.mode_transition_timer
 
-    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: custom.chauffeurHKGTuning) -> float:
+    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: custom.ChauffeurHKGTuning) -> float:
         self.jerk_count += 1
         if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
             self.accel_last_jerk = 0.0
@@ -172,7 +172,7 @@ class HKGLongitudinalTuning:
                                 actuators: car.CarControl.Actuators,
                                 CS: car.CarState,
                                 lead_one: log.RadarState.LeadData,
-                                dat: custom.chauffeurHKGTuning) -> float:
+                                dat: custom.ChauffeurHKGTuning) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
         dat.longLongControlState = actuators.longControlState
