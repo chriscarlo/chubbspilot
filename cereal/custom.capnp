@@ -107,7 +107,7 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   vtscApexIndices @45 :List(UInt16);            # Indices of detected apexes in the curvature profile
 }
 
-struct chauffeurHKGTuning @0xa5cd762cd951a455 {
+struct ChauffeurHKGTuning @0xa5cd762cd951a455 {
 
   # Longitudinal Tuning Logs
   longHkgTuningEnabled @0 :Bool;
