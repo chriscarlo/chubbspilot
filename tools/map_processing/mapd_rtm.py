@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 import os
+import sys
 import time
 import math
 import json
 import cereal.messaging as messaging
 from cereal import log
 import traceback # For more detailed error printing
-import sys
+
+# --- BEGIN sys.path modification ---
+# This is important if the script is not in the root of openpilot
+# It tries to ensure that relative imports for mapd_py components work
+# by adding the presumed 'selfdrive' directory to the path.
+# Adjust if your script location or project structure is different.
+try:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Assuming script is in .../tools/map_processing, then openpilot_root is ../../
+    openpilot_root = os.path.abspath(os.path.join(script_dir, "../../"))
+
+    # A common structure is openpilot/selfdrive, so add openpilot_root
+    if openpilot_root not in sys.path:
+        print(f"mapd_rtm.py: Adding {openpilot_root} to sys.path for imports.")
+        sys.path.insert(0, openpilot_root)
+except Exception as e_path:
+    print(f"mapd_rtm.py: Warning - Could not modify sys.path: {e_path}")
+# --- END sys.path modification ---
 
 # --- Add imports for mapd_py components ---
 # Assuming this script is run from a location where these imports work,
@@ -243,22 +261,5 @@ def main():
         traceback.print_exc()
 
 if __name__ == "__main__":
-    # This is important if the script is not in the root of openpilot
-    # It tries to ensure that relative imports for mapd_py components work
-    # by adding the presumed 'selfdrive' directory to the path.
-    # Adjust if your script location or project structure is different.
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Assuming script is in .../tools/map_processing, then openpilot_root is ../../
-    # If script is in selfdrive/frogpilot/tools, then openpilot_root is ../../../
-    # Let's assume it's placed in a way that frogpilot folder is findable
-    # For a script in /openpilot/selfdrive/frogpilot/tools/
-    # openpilot_root = os.path.abspath(os.path.join(script_dir, "../../.."))
-    # For a script in /openpilot/tools/
-    openpilot_root = os.path.abspath(os.path.join(script_dir, ".."))
-
-    # A common structure is openpilot/selfdrive, so add openpilot_root
-    if openpilot_root not in sys.path:
-        print(f"Monitor: Adding {openpilot_root} to sys.path for imports.")
-        sys.path.insert(0, openpilot_root)
-
+    # The sys.path modification logic has been moved to the top of the script.
     main()
