@@ -31,7 +31,7 @@ except Exception as e_path:
 # e.g., from openpilot root, or selfdrive/frogpilot/tools/
 # Adjust sys.path if necessary, or ensure PYTHONPATH is set
 try:
-    from selfdrive.frogpilot.navigation.mapd_py.reader import MapReader, TILE_SIZE_DEG, get_tile_id, REGION_BOUNDS, get_tile_base_dir
+    from selfdrive.frogpilot.navigation.mapd_py.reader import MapReader, TILE_SIZE_DEG, get_tile_id, REGION_BOUNDS, TILE_DATA_BASE_DIR
     from selfdrive.frogpilot.navigation.mapd_py import matcher
     from selfdrive.frogpilot.navigation.mapd_py import geometry # For TO_RADIANS, bearing etc.
 except ImportError as e:
