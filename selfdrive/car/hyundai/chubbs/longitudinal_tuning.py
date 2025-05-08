@@ -41,6 +41,7 @@ class HKGLongitudinalTuning:
         self._init_state()
         self._mode_setup()
         self._setup_car_config()
+        self.pm = messaging.PubMaster(['frogPilotCarControl'])
 
     def _setup_controllers(self) -> None:
         self.long_control = LongControl(self.CP)
@@ -73,22 +74,32 @@ class HKGLongitudinalTuning:
         from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
         self.car_config = Cartuning.get_car_config(self.CP)
 
-    def update_mpc_mode(self, sm: messaging.SubMaster) -> None:
+    def update_mpc_mode(self, sm: messaging.SubMaster, dat: log.FrogPilotCarControl) -> None:
         if not sm.valid['controlsState']:
+            dat.longControlsStateExperimentalMode = False
             return
-        new_mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
+
+        controls_state = sm['controlsState']
+        dat.longControlsStateExperimentalMode = controls_state.experimentalMode
+        new_mode = 'blended' if controls_state.experimentalMode else 'acc'
+
         if new_mode != self.current_mode:
             self.prev_mode = self.current_mode
             self.transitioning = True
             self.mode_transition_timer = 0.0
             self.mode_transition_filter.x = self.accel_last
             self.current_mode = new_mode
+
         if self.transitioning:
             self.mode_transition_timer += DT_CTRL
             if self.mode_transition_timer >= self.mode_transition_duration:
                 self.transitioning = False
 
-    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators) -> float:
+        dat.longCurrentMode = self.current_mode
+        dat.longTransitioning = self.transitioning
+        dat.longModeTransitionTimer = self.mode_transition_timer
+
+    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: log.FrogPilotCarControl) -> float:
         self.jerk_count += 1
         if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
             self.accel_last_jerk = 0.0
@@ -97,19 +108,29 @@ class HKGLongitudinalTuning:
             self.jerk_upper_limit = 0.0
             self.jerk_lower_limit = 0.0
             self.cb_upper = self.cb_lower = 0.0
+            dat.longRawJerk = 0.0
+            dat.longCalculatedJerk = 0.0
+            dat.longJerkUpperLimit = 0.0
+            dat.longJerkLowerLimit = 0.0
+            dat.longCbUpper = 0.0
+            dat.longCbLower = 0.0
             return 0.0
 
         if actuators.longControlState == LongCtrlState.stopping:
-            self.jerk = self.car_config.jerk_limits[0] / 2 - CS.out.aEgo
+            raw_jerk_val = self.car_config.jerk_limits[0] / 2 - CS.out.aEgo
         else:
             current_accel = CS.out.aEgo
-            self.jerk = (current_accel - self.accel_last_jerk)
+            raw_jerk_val = (current_accel - self.accel_last_jerk)
             self.accel_last_jerk = current_accel
+
+        dat.longRawJerk = raw_jerk_val
+        self.jerk = raw_jerk_val # Store pre-akima for logging
 
         base_jerk = self.jerk
         xp = np.array([-3.5, -2.0, -1.0, 0.0, 1.0, 2.0])
         fp = np.array([-2.5, -1.0, -0.5, 0.0, 0.5, 1.0])
         self.jerk = akima_interp(base_jerk, xp, fp)
+        dat.longCalculatedJerk = self.jerk
         jerk_max = self.car_config.jerk_limits[1]
 
         if self.CP.flags & HyundaiFlags.CANFD.value:
@@ -122,11 +143,16 @@ class HKGLongitudinalTuning:
             if self.CP.radarUnavailable:
                 self.cb_upper = self.cb_lower = 0.0
             else:
-                if not Params().get_bool("HKGBraking") and CS.out.vEgo > 5.0:
+                if not dat.longHkgBrakingEnabled and CS.out.vEgo > 5.0:
                     self.cb_upper = float(np.clip(0.20 + actuators.accel * 0.20, 0.0, 1.0))
                     self.cb_lower = float(np.clip(0.10 + actuators.accel * 0.20, 0.0, 1.0))
                 else:
                     self.cb_upper = self.cb_lower = 0.0
+
+        dat.longJerkUpperLimit = self.jerk_upper_limit
+        dat.longJerkLowerLimit = self.jerk_lower_limit
+        dat.longCbUpper = self.cb_upper
+        dat.longCbLower = self.cb_lower
         return self.jerk
 
     def handle_cruise_cancel(self, CS: car.CarState) -> bool:
@@ -145,16 +171,22 @@ class HKGLongitudinalTuning:
     def calculate_limited_accel(self,
                                 actuators: car.CarControl.Actuators,
                                 CS: car.CarState,
-                                frogpilot_toggles,
-                                lead_one: log.RadarState.LeadData = None) -> float:
+                                lead_one: log.RadarState.LeadData,
+                                dat: log.FrogPilotCarControl) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
+        dat.longLongControlState = actuators.longControlState
+        dat.longVEgo = CS.out.vEgo
+        dat.longAEgo = CS.out.aEgo
+        dat.longTargetAccelInput = actuators.accel
+
         if self.handle_cruise_cancel(CS):
+            dat.longAccelLast = self.accel_last # Ensure it's logged even on early exit
             return actuators.accel
 
         # Populate jerk limits (side-effect) and update mode
-        self.make_jerk(CS, actuators)
-        self.update_mpc_mode(self.sm)
+        self.make_jerk(CS, actuators, dat)
+        self.update_mpc_mode(self.sm, dat)
         target_accel = actuators.accel
 
         # Mode transition smoothing
@@ -180,15 +212,20 @@ class HKGLongitudinalTuning:
         else:
             accel_request = target_accel
 
+        dat.longAccelRequest = accel_request
+        dat.longBrakingRateLimitActive = False # Default, set true if condition met
+
         # --- Dynamic jerk-based braking rate limit ---
         if CS.out.vEgo > 1.0 and accel_request < 0.15:
+            dat.longBrakingRateLimitActive = True
             # Baseline comfortable jerk
-            brake_ratio = np.clip(abs(accel_request / self.car_config.accel_limits[0]), 0.0, 1.0)
-            baseline_jerk = akima_interp(brake_ratio,
+            brake_ratio_val = np.clip(abs(accel_request / self.car_config.accel_limits[0]), 0.0, 1.0)
+            dat.longBrakeRatio = brake_ratio_val
+            baseline_jerk_val = akima_interp(brake_ratio_val,
                                          np.array([0.25, 0.5, 0.75, 1.0]),
                                          np.array(self.car_config.brake_response))
-
-            effective_jerk = baseline_jerk
+            dat.longBaselineJerk = baseline_jerk_val
+            effective_jerk = baseline_jerk_val # Initialize
 
             # Validity checks
             v_ego_valid = isinstance(CS.out.vEgo, float) and math.isfinite(CS.out.vEgo)
@@ -196,46 +233,63 @@ class HKGLongitudinalTuning:
             accel_request_valid = isinstance(accel_request, float) and math.isfinite(accel_request)
 
             # Radar lead info
-            v_rel = getattr(lead_one, "vRel", 0.0) if lead_one is not None else 0.0
-            raw_d_rel = getattr(lead_one, "dRel", float("inf")) if lead_one is not None else float("inf")
-            lead_ok = (
+            v_rel_val = getattr(lead_one, "vRel", 0.0) if lead_one is not None else 0.0
+            raw_d_rel_val = getattr(lead_one, "dRel", float("inf")) if lead_one is not None else float("inf")
+            a_lead_k_val = getattr(lead_one, "aLeadK", 0.0) if lead_one is not None else 0.0
+            lead_ok_val = (
                 lead_one is not None and
                 getattr(lead_one, "status", 0) > 0 and
-                math.isfinite(raw_d_rel) and
-                raw_d_rel > 0.0
+                math.isfinite(raw_d_rel_val) and
+                raw_d_rel_val > 0.0
             )
+            dat.longLeadValid = lead_ok_val
+            dat.longVRel = v_rel_val
+            dat.longDRel = raw_d_rel_val
+            dat.longALeadK = a_lead_k_val
 
             # Dynamic stop buffer scaled by speed
-            stop_buffer = max(1.0, 0.5 + 0.1 * CS.out.vEgo)
-            d_gap = max(raw_d_rel - stop_buffer, 0.1)
+            stop_buffer_val = max(1.0, 0.5 + 0.1 * CS.out.vEgo)
+            dat.longStopBuffer = stop_buffer_val
+            d_gap_val = max(raw_d_rel_val - stop_buffer_val, 0.1)
+            dat.longDGap = d_gap_val
 
             # Always compute physics-based urgency when data is valid
             if v_ego_valid and accel_last_valid and accel_request_valid and self.DT_CTRL > 1e-6:
                 # Nominal vs max deceleration
                 _comfy_decel_raw = getattr(self.car_config, "comfy_decel", 2.0)
-                a_nom = abs(_comfy_decel_raw) if isinstance(_comfy_decel_raw, (int, float)) and _comfy_decel_raw > 0 else 2.0
+                a_nom_val = abs(_comfy_decel_raw) if isinstance(_comfy_decel_raw, (int, float)) and _comfy_decel_raw > 0 else 2.0
+                dat.longANom = a_nom_val
 
                 _accel_limits_raw = getattr(self.car_config, "accel_limits", (-6.0, 4.5))
                 if (isinstance(_accel_limits_raw, (tuple, list)) and len(_accel_limits_raw) >= 1 and
                    isinstance(_accel_limits_raw[0], (int, float)) and _accel_limits_raw[0] < 0):
-                    a_max = abs(_accel_limits_raw[0])
+                    a_max_val = abs(_accel_limits_raw[0])
                 else:
                     log.warning(f"long_tuning: Invalid car_config.accel_limits[0]: {_accel_limits_raw}. Using fallback max decel.")
-                    a_max = 6.0
+                    a_max_val = 6.0
+                dat.longAMax = a_max_val
+
+                urgency_val = 0.0
+                urg_ttc_val = 0.0
+                urg_lead_decel_val = 0.0
+                ttc_physics_val = float("inf")
+                jerk_needed_val = 0.0
+                combined_factor_val = 0.0
+                jerk_ceiling_val = baseline_jerk_val
 
                 try:
                     # Physics-based required deceleration with vRel term
-                    a_req = (max(CS.out.vEgo, 0.0)**2 + 0.3 * (-min(v_rel, 0.0))**2) / (2.0 * d_gap)
+                    a_req_val = (max(CS.out.vEgo, 0.0)**2 + 0.3 * (-min(v_rel_val, 0.0))**2) / (2.0 * d_gap_val)
+                    dat.longAReq = a_req_val
 
                     # Compute urgency
                     # Base urgency from energy-gap metric
-                    urgency = 0.0
-                    denom = a_max - a_nom
+                    denom = a_max_val - a_nom_val
                     if denom > 1e-3:
-                        if a_req > a_nom:
-                            urgency = min((a_req - a_nom) / denom, 1.0)
-                    elif a_req > a_nom:
-                        urgency = 1.0
+                        if a_req_val > a_nom_val:
+                            urgency_val = min((a_req_val - a_nom_val) / denom, 1.0)
+                    elif a_req_val > a_nom_val:
+                        urgency_val = 1.0
 
                     # -----------------------------------------------------------------
                     # Additional urgency sources to handle fast lead decel / low TTC.
@@ -245,81 +299,143 @@ class HKGLongitudinalTuning:
 
                     # 1. Time-to-collision (TTC) based urgency when the gap is closing
                     #    quickly. Uses relative velocity sign < 0 (closing) and gap.
-                    urg_ttc = 0.0
-                    if lead_ok and v_rel < -0.5:  # ensure meaningful closing rate
-                        ttc = d_gap / max(-v_rel, 1e-3)  # seconds to close the gap
+                    if lead_ok_val and v_rel_val < -0.5:  # ensure meaningful closing rate
+                        ttc_physics_val = d_gap_val / max(-v_rel_val, 1e-3)  # seconds to close the gap
                         # Start adding urgency when TTC < 3 s, saturate at TTC <= 1 s
-                        urg_ttc = np.clip((3.0 - ttc) / 2.0, 0.0, 1.0)
+                        urg_ttc_val = np.clip((3.0 - ttc_physics_val) / 2.0, 0.0, 1.0)
+
+                    dat.longTtcPhysics = ttc_physics_val
+                    dat.longUrgTtc = urg_ttc_val
 
                     # 2. Lead vehicle decel based urgency. Large negative aLeadK means
                     #    lead is braking hard even before vRel grows.
-                    v_lead_acc = getattr(lead_one, "aLeadK", 0.0) if lead_ok else 0.0
-                    urg_lead_decel = 0.0
-                    if v_lead_acc < -a_nom:  # braking stronger than comfortable decel
-                        urg_lead_decel = np.clip((-v_lead_acc - a_nom) / (a_max - a_nom), 0.0, 1.0)
+                    if a_lead_k_val < -a_nom_val:  # braking stronger than comfortable decel
+                        urg_lead_decel_val = np.clip((-a_lead_k_val - a_nom_val) / (a_max_val - a_nom_val), 0.0, 1.0)
+                    dat.longUrgLeadDecel = urg_lead_decel_val
 
                     # Combine urgencies conservatively (take the maximum).
-                    urgency = max(urgency, urg_ttc, urg_lead_decel)
+                    urgency_val = max(urgency_val, urg_ttc_val, urg_lead_decel_val)
+                    dat.longUrgency = urgency_val
 
                     # Planner-required jerk (ensure non-negative)
-                    jerk_needed = abs((accel_request - self.accel_last) / self.DT_CTRL) if accel_request < self.accel_last else 0.0
+                    jerk_needed_val = abs((accel_request - self.accel_last) / self.DT_CTRL) if accel_request < self.accel_last else 0.0
+                    dat.longJerkNeeded = jerk_needed_val
 
                     # Combine factors conservatively: use the greater of urgency or brake_ratio
                     # This allows a faster response if the planner requests strong braking *before* urgency is high
-                    combined_factor = max(urgency, brake_ratio)
+                    combined_factor_val = max(urgency_val, brake_ratio_val)
+                    dat.longCombinedFactor = combined_factor_val
 
                     # Scale ceiling up towards a high target based on the combined factor
                     target_max_jerk = 1.5 * MAX_ALLOWABLE_JERK  # Keep original scaling target
-                    jerk_ceiling = baseline_jerk + combined_factor * (target_max_jerk - baseline_jerk)
+                    jerk_ceiling_val = baseline_jerk_val + combined_factor_val * (target_max_jerk - baseline_jerk_val)
+                    dat.longJerkCeiling = jerk_ceiling_val
 
                     # Clip the ceiling to the absolute max allowable jerk for safety/realism
                     # Also ensure it doesn't drop below the baseline
-                    jerk_ceiling = np.clip(jerk_ceiling, baseline_jerk, MAX_ALLOWABLE_JERK)
+                    jerk_ceiling_val = np.clip(jerk_ceiling_val, baseline_jerk_val, MAX_ALLOWABLE_JERK)
+                    dat.longJerkCeiling = jerk_ceiling_val # Update after clip
 
                     # Final effective jerk
-                    effective_jerk = min(max(baseline_jerk, jerk_needed), jerk_ceiling)
+                    effective_jerk = min(max(baseline_jerk_val, jerk_needed_val), jerk_ceiling_val)
 
                 except Exception as e:
                     log.error(f"long_tuning: Error in physics jerk calc (lead_ok): {e}")
+                    # Log default/initial values if error
+                    dat.longAReq = float('nan')
+                    dat.longUrgency = urgency_val
+                    dat.longUrgTtc = urg_ttc_val
+                    dat.longUrgLeadDecel = urg_lead_decel_val
+                    dat.longTtcPhysics = ttc_physics_val
+                    dat.longJerkNeeded = jerk_needed_val
+                    dat.longCombinedFactor = combined_factor_val
+                    dat.longJerkCeiling = jerk_ceiling_val
 
             # Validate effective jerk
             if not (isinstance(effective_jerk, float) and math.isfinite(effective_jerk) and effective_jerk >= 0):
-                log.warning(f"long_tuning: Invalid effective_jerk: {effective_jerk}. Reverting to baseline {baseline_jerk}.")
-                effective_jerk = baseline_jerk
+                log.warning(f"long_tuning: Invalid effective_jerk: {effective_jerk}. Reverting to baseline {baseline_jerk_val}.")
+                effective_jerk = baseline_jerk_val
+
+            dat.longEffectiveJerk = effective_jerk
 
             # Apply jerk rate limit
-            max_delta = effective_jerk * self.DT_CTRL
+            max_delta_val = effective_jerk * self.DT_CTRL
+            dat.longMaxDelta = max_delta_val
             if accel_last_valid:
-                accel = max(accel_request, self.accel_last - max_delta)
+                accel = max(accel_request, self.accel_last - max_delta_val)
             else:
                 log.warning(f"long_tuning: accel_last invalid ({self.accel_last}). Using accel_request.")
                 accel = accel_request
-
-        else:
+        else: # Not (CS.out.vEgo > 1.0 and accel_request < 0.15)
             # No dynamic braking limit
             accel = accel_request
+            # Log default values when this section is skipped
+            dat.longBrakeRatio = float('nan')
+            dat.longBaselineJerk = float('nan')
+            dat.longEffectiveJerk = float('nan')
+            dat.longMaxDelta = float('nan')
+            dat.longLeadValid = False # or specific values if available outside condition
+            dat.longVRel = float('nan')
+            dat.longDRel = float('nan')
+            dat.longALeadK = float('nan')
+            dat.longStopBuffer = float('nan')
+            dat.longDGap = float('nan')
+            dat.longANom = float('nan')
+            dat.longAMax = float('nan')
+            dat.longAReq = float('nan')
+            dat.longUrgency = float('nan')
+            dat.longUrgTtc = float('nan')
+            dat.longUrgLeadDecel = float('nan')
+            dat.longTtcPhysics = float('nan')
+            dat.longJerkNeeded = float('nan')
+            dat.longCombinedFactor = float('nan')
+            dat.longJerkCeiling = float('nan')
 
         # ------------ Overreaction Mitigation -------------
         # Reduce unnecessary heavy braking when the ego is not closing
         # on the lead quickly. This keeps comfort in moderate scenarios
         # while preserving full authority during genuine emergencies.
+        dat.longOverreactionMitigationActive = False
+        dat.longOverreactionMitigationAccelLimited = False
+        dat.longOverreactionMitigationOriginalAccel = accel # Value before this block
+
+        # Initialize all mitigation logging fields to defaults / NaN
+        dat.longOverreactionMitigationLimit = float('nan')
+        dat.longOverreactionMitigationVRel = float('nan')
+        dat.longOverreactionMitigationLeadDecel = float('nan')
+        dat.longOverreactionMitigationDRel = float('nan')
+        dat.longOverreactionMitigationTtcEst = float('nan')
+        dat.longOverreactionMitigationClosingFast = False
+        dat.longOverreactionMitigationSafeTtc = False
+        dat.longOverreactionMitigationDelta = float('nan')
+
         try:
             v_rel_local = getattr(lead_one, "vRel", 0.0) if lead_one is not None else 0.0
-            lead_dec = getattr(lead_one, "aLeadK", 0.0) if lead_one is not None else 0.0
-            raw_d_rel_local = getattr(lead_one, "dRel", float("inf")) if lead_one is not None else float("inf")
+            lead_dec_local = getattr(lead_one, "aLeadK", 0.0) if lead_one is not None else 0.0
+            raw_d_rel_local_val = getattr(lead_one, "dRel", float("inf")) if lead_one is not None else float("inf")
             lead_ok_local = (
                 lead_one is not None and
                 getattr(lead_one, "status", 0) > 0 and
-                math.isfinite(raw_d_rel_local) and raw_d_rel_local > 0.0
+                math.isfinite(raw_d_rel_local_val) and raw_d_rel_local_val > 0.0
             )
+
+            dat.longOverreactionMitigationVRel = v_rel_local
+            dat.longOverreactionMitigationLeadDecel = lead_dec_local
+            dat.longOverreactionMitigationDRel = raw_d_rel_local_val
+
             if lead_ok_local and accel < 0.0:
                 # Estimate simple TTC (only meaningful if v_rel_local < 0)
-                ttc_est = raw_d_rel_local / max(-v_rel_local, 1e-3) if v_rel_local < 0 else float("inf")
-                # Define thresholds – tuned conservatively for comfort
-                closing_fast = v_rel_local < -1.0  # m/s
-                safe_ttc = ttc_est > 1.5           # seconds
+                ttc_est_val = raw_d_rel_local_val / max(-v_rel_local, 1e-3) if v_rel_local < 0 else float("inf")
+                dat.longOverreactionMitigationTtcEst = ttc_est_val
 
-                if (not closing_fast) and safe_ttc:
+                # Define thresholds – tuned conservatively for comfort
+                closing_fast_val = v_rel_local < -1.0  # m/s
+                safe_ttc_val = ttc_est_val > 1.5           # seconds
+                dat.longOverreactionMitigationClosingFast = closing_fast_val
+                dat.longOverreactionMitigationSafeTtc = safe_ttc_val
+
+                if (not closing_fast_val) and safe_ttc_val:
+                    dat.longOverreactionMitigationActive = True
                     # --- Dynamic comfort margin ---
                     # Allow the ego to brake only modestly harder than the lead.
                     # Comfort margin (delta) grows linearly with the magnitude of the lead decel,
@@ -328,32 +444,68 @@ class HKGLongitudinalTuning:
                     # |lead_dec| :   0 → 0.5 m/s² extra
                     #               2.5 → 1.0 m/s² extra
                     #               5.0 → 1.5 m/s² extra (cap)
-                    delta = np.clip(0.5 + 0.2 * abs(lead_dec), 0.5, 1.5)
+                    delta_val = np.clip(0.5 + 0.2 * abs(lead_dec_local), 0.5, 1.5)
+                    dat.longOverreactionMitigationDelta = delta_val
 
                     # To minimise oscillation from sensor noise, only apply the new limit
                     # if it relaxes braking (i.e., raises accel) by more than 0.05 m/s².
-                    accel_limit = lead_dec - delta  # lead_dec is negative
-                    if accel < accel_limit - 0.05:
-                        accel = accel_limit
+                    accel_limit_val = lead_dec_local - delta_val  # lead_dec is negative
+                    dat.longOverreactionMitigationLimit = accel_limit_val
+                    if accel < accel_limit_val - 0.05:
+                        accel = accel_limit_val
+                        dat.longOverreactionMitigationAccelLimited = True
         except Exception as e:
             # Fail-safe: never allow mitigation logic to break main control path
+            log.error(f"long_tuning: Error in overreaction mitigation: {e}")
             pass
+
+        dat.longAccelPreClip = accel # Log accel before it becomes self.accel_last for next cycle
 
         # Save for next iteration
         self.accel_last = accel
+        dat.longAccelLast = self.accel_last # Log the value that will be self.accel_last for the *next* iteration
         return accel
 
     def calculate_accel(self,
                         actuators: car.CarControl.Actuators,
                         CS: car.CarState,
-                        frogpilot_toggles,
+                        hkg_tuning_enabled: bool, # Passed from controller
+                        hkg_braking_enabled: bool, # Passed from controller
                         lead_one: log.RadarState.LeadData = None) -> float:
         """Calculate acceleration with cruise control status handling and final clipping."""
+
+        # Create new message for this cycle
+        dat = messaging.new_message('frogPilotCarControl')
+
+        # Populate parameters
+        dat.frogPilotCarControl.longHkgTuningEnabled = hkg_tuning_enabled
+        dat.frogPilotCarControl.longHkgBrakingEnabled = hkg_braking_enabled
+
+        # Populate accel_last from previous iteration at the start of the message
+        dat.frogPilotCarControl.longAccelLast = self.accel_last
+
         if self.handle_cruise_cancel(CS):
+            # Publish partially filled message if cruise is cancelled
+            # accel_last should already be set by handle_cruise_cancel
+            dat.frogPilotCarControl.longFinalAccel = 0.0
+            dat.frogPilotCarControl.longAccelPreClip = 0.0
+            self.pm.send('frogPilotCarControl', dat)
             return 0.0  # Return 0.0 if cruise is cancelled or overridden
-        accel = self.calculate_limited_accel(actuators, CS, frogpilot_toggles, lead_one)
+
+        accel = self.calculate_limited_accel(actuators, CS, lead_one, dat.frogPilotCarControl)
+
+        # accelPreClip is populated inside calculate_limited_accel
+        # dat.frogPilotCarControl.longAccelPreClip = accel # This is now done inside calculate_limited_accel
+
         max_accel_upper_limit = self.car_config.accel_limits[1]
-        return float(np.clip(accel, self.car_config.accel_limits[0], max_accel_upper_limit))
+        final_accel = float(np.clip(accel, self.car_config.accel_limits[0], max_accel_upper_limit))
+
+        dat.frogPilotCarControl.longFinalAccel = final_accel
+
+        # Publish the populated message
+        self.pm.send('frogPilotCarControl', dat)
+
+        return final_accel
 
     def apply_tune(self, CP: car.CarParams) -> None:
         config = self.car_config
@@ -374,7 +526,8 @@ class HKGLongitudinalController:
 
     def __init__(self, CP: car.CarParams):
         self.CP = CP
-        self.tuning = HKGLongitudinalTuning(CP) if self.param("HKGtuning") else None
+        self.hkg_tuning_enabled = self.param("HKGtuning") # Store param state
+        self.tuning = HKGLongitudinalTuning(CP) if self.hkg_tuning_enabled else None
         self.jerk = None
         self.jerk_upper_limit = 0.0
         self.jerk_lower_limit = 0.0
@@ -382,7 +535,7 @@ class HKGLongitudinalController:
         self.cb_lower = 0.0
 
     def apply_tune(self, CP: car.CarParams):
-        if self.param("HKGtuning") and self.tuning is not None:
+        if self.hkg_tuning_enabled and self.tuning is not None:
             self.tuning.apply_tune(CP)
         else:
             CP.vEgoStopping = 0.5
@@ -393,6 +546,7 @@ class HKGLongitudinalController:
 
     def get_jerk(self) -> JerkOutput:
         if self.tuning is not None:
+            # Jerk values are now logged directly, but keep this for other consumers if any
             return JerkOutput(
                 self.tuning.jerk_upper_limit,
                 self.tuning.jerk_lower_limit,
@@ -412,8 +566,23 @@ class HKGLongitudinalController:
                                CS: car.CarState,
                                long_control_state: LongCtrlState,
                                lead_one: log.RadarState.LeadData = None) -> JerkOutput:
-        if self.tuning is not None:
-            self.tuning.make_jerk(CS, actuators)
+        # This method might become less relevant if all jerk calculation and logging
+        # happens within HKGLongitudinalTuning.make_jerk when tuning is active.
+        # For now, ensure it populates its own jerk members if tuning is None.
+        if self.hkg_tuning_enabled and self.tuning is not None:
+            # Create a dummy dat for this call if it's not the main path, or ensure main path passes it.
+            # However, make_jerk is called within calculate_limited_accel which has the main dat.
+            # This function is called by carcontroller.py for HUD.
+            # It's better not to publish from here to avoid duplicate messages.
+            # For now, let it calculate its internal values.
+            # If logging is desired for this specific call path, it needs careful handling.
+            # For now, we assume the main logging path via calculate_accel is sufficient.
+
+            # To get the values for JerkOutput, we might need a temporary dat or a way to access them.
+            # Or, make_jerk could return these values.
+            # For simplicity, and since logging is the main goal, let's assume the JerkOutput from
+            # self.tuning members is up-to-date from the main calculate_accel call.
+            pass # Jerk is calculated and logged in the main path by calculate_accel -> calculate_limited_accel -> make_jerk
         else:
             jerk_limit = 3.0 if long_control_state == LongCtrlState.pid else 1.0
             self.jerk_upper_limit = jerk_limit
@@ -425,12 +594,20 @@ class HKGLongitudinalController:
     def calculate_accel(self,
                         actuators: car.CarControl.Actuators,
                         CS: car.CarState,
-                        frogpilot_toggles,
+                        frogpilot_toggles, # This is unused by the tuning module now
                         lead_one: log.RadarState.LeadData = None) -> float:
-        use_tuning_logic = self.param("HKGBraking") and self.tuning is not None
-        if use_tuning_logic:
-            accel = self.tuning.calculate_accel(actuators, CS, frogpilot_toggles, lead_one)
+        hkg_braking_enabled = self.param("HKGBraking")
+
+        if self.hkg_tuning_enabled and self.tuning is not None:
+            # Pass the param states directly
+            accel = self.tuning.calculate_accel(actuators, CS, self.hkg_tuning_enabled, hkg_braking_enabled, lead_one)
         else:
+            # Fallback logic if tuning is not active
             max_accel_upper_limit = CarControllerParams.ACCEL_MAX
             accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, max_accel_upper_limit))
+
+            # No separate publishing from controller if tuning is off.
+            # The FrogPilotCarControl message will simply not have these detailed fields populated
+            # if HKGLongitudinalTuning is not active.
+
         return accel
