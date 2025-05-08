@@ -98,6 +98,9 @@ _services: dict[str, tuple] = {
   "frogpilotDeviceState": (True, 2., 1),
   "frogpilotNavigation": (True, 1., 10),
   "frogpilotPlan": (True, 20., 5),
+  
+  # chauffeurAI
+  "chauffeurHKGTuning": (True, 100., 10),
 }
 SERVICE_LIST = {name: Service(*vals) for
                 idx, (name, vals) in enumerate(_services.items())}
