@@ -477,7 +477,7 @@ class HKGLongitudinalTuning:
         # Create new message for this cycle
         msg = messaging.new_message('frogpilotCarControl')
         # dat_to_pass is the actual FrogPilotCarControl struct instance
-        dat_to_pass = msg.frogPilotCarControl
+        dat_to_pass = msg.frogpilotCarControl
 
         # Populate parameters
         dat_to_pass.longHkgTuningEnabled = hkg_tuning_enabled
