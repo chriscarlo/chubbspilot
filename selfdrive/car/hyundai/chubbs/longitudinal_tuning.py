@@ -1,6 +1,6 @@
 import numpy as np
 import math  # Needed for isnan, isinf
-from cereal import car, messaging, log
+from cereal import car, messaging, log, custom
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
@@ -74,7 +74,7 @@ class HKGLongitudinalTuning:
         from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
         self.car_config = Cartuning.get_car_config(self.CP)
 
-    def update_mpc_mode(self, sm: messaging.SubMaster, dat: log.FrogPilotCarControl) -> None:
+    def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.FrogPilotCarControl) -> None:
         if not sm.valid['controlsState']:
             dat.longControlsStateExperimentalMode = False
             return
@@ -99,7 +99,7 @@ class HKGLongitudinalTuning:
         dat.longTransitioning = self.transitioning
         dat.longModeTransitionTimer = self.mode_transition_timer
 
-    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: log.FrogPilotCarControl) -> float:
+    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: custom.FrogPilotCarControl) -> float:
         self.jerk_count += 1
         if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
             self.accel_last_jerk = 0.0
@@ -172,7 +172,7 @@ class HKGLongitudinalTuning:
                                 actuators: car.CarControl.Actuators,
                                 CS: car.CarState,
                                 lead_one: log.RadarState.LeadData,
-                                dat: log.FrogPilotCarControl) -> float:
+                                dat: custom.FrogPilotCarControl) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
         dat.longLongControlState = actuators.longControlState
@@ -475,35 +475,37 @@ class HKGLongitudinalTuning:
         """Calculate acceleration with cruise control status handling and final clipping."""
 
         # Create new message for this cycle
-        dat = messaging.new_message('frogPilotCarControl')
+        msg = messaging.new_message('frogPilotCarControl')
+        # dat_to_pass is the actual FrogPilotCarControl struct instance
+        dat_to_pass = msg.frogPilotCarControl
 
         # Populate parameters
-        dat.frogPilotCarControl.longHkgTuningEnabled = hkg_tuning_enabled
-        dat.frogPilotCarControl.longHkgBrakingEnabled = hkg_braking_enabled
+        dat_to_pass.longHkgTuningEnabled = hkg_tuning_enabled
+        dat_to_pass.longHkgBrakingEnabled = hkg_braking_enabled
 
         # Populate accel_last from previous iteration at the start of the message
-        dat.frogPilotCarControl.longAccelLast = self.accel_last
+        dat_to_pass.longAccelLast = self.accel_last
 
         if self.handle_cruise_cancel(CS):
             # Publish partially filled message if cruise is cancelled
             # accel_last should already be set by handle_cruise_cancel
-            dat.frogPilotCarControl.longFinalAccel = 0.0
-            dat.frogPilotCarControl.longAccelPreClip = 0.0
-            self.pm.send('frogPilotCarControl', dat)
+            dat_to_pass.longFinalAccel = 0.0
+            dat_to_pass.longAccelPreClip = 0.0
+            self.pm.send('frogPilotCarControl', msg)
             return 0.0  # Return 0.0 if cruise is cancelled or overridden
 
-        accel = self.calculate_limited_accel(actuators, CS, lead_one, dat.frogPilotCarControl)
+        accel = self.calculate_limited_accel(actuators, CS, lead_one, dat_to_pass)
 
         # accelPreClip is populated inside calculate_limited_accel
-        # dat.frogPilotCarControl.longAccelPreClip = accel # This is now done inside calculate_limited_accel
+        # dat_to_pass.longAccelPreClip = accel # This is now done inside calculate_limited_accel
 
         max_accel_upper_limit = self.car_config.accel_limits[1]
         final_accel = float(np.clip(accel, self.car_config.accel_limits[0], max_accel_upper_limit))
 
-        dat.frogPilotCarControl.longFinalAccel = final_accel
+        dat_to_pass.longFinalAccel = final_accel
 
         # Publish the populated message
-        self.pm.send('frogPilotCarControl', dat)
+        self.pm.send('frogPilotCarControl', msg)
 
         return final_accel
 
