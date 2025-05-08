@@ -41,7 +41,7 @@ class HKGLongitudinalTuning:
         self._init_state()
         self._mode_setup()
         self._setup_car_config()
-        self.pm = messaging.PubMaster(['frogpilotCarControl'])
+        self.pm = messaging.PubMaster(['chauffeurHKGTuning'])
 
     def _setup_controllers(self) -> None:
         self.long_control = LongControl(self.CP)
@@ -74,7 +74,7 @@ class HKGLongitudinalTuning:
         from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
         self.car_config = Cartuning.get_car_config(self.CP)
 
-    def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.FrogPilotCarControl) -> None:
+    def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.chauffeurHKGTuning) -> None:
         if not sm.valid['controlsState']:
             dat.longControlsStateExperimentalMode = False
             return
@@ -99,7 +99,7 @@ class HKGLongitudinalTuning:
         dat.longTransitioning = self.transitioning
         dat.longModeTransitionTimer = self.mode_transition_timer
 
-    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: custom.FrogPilotCarControl) -> float:
+    def make_jerk(self, CS: car.CarState, actuators: car.CarControl.Actuators, dat: custom.chauffeurHKGTuning) -> float:
         self.jerk_count += 1
         if not CS.out.cruiseState.enabled or CS.out.gasPressed or CS.out.brakePressed:
             self.accel_last_jerk = 0.0
@@ -172,7 +172,7 @@ class HKGLongitudinalTuning:
                                 actuators: car.CarControl.Actuators,
                                 CS: car.CarState,
                                 lead_one: log.RadarState.LeadData,
-                                dat: custom.FrogPilotCarControl) -> float:
+                                dat: custom.chauffeurHKGTuning) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
 
         dat.longLongControlState = actuators.longControlState
@@ -475,9 +475,9 @@ class HKGLongitudinalTuning:
         """Calculate acceleration with cruise control status handling and final clipping."""
 
         # Create new message for this cycle
-        msg = messaging.new_message('frogpilotCarControl')
-        # dat_to_pass is the actual FrogPilotCarControl struct instance
-        dat_to_pass = msg.frogpilotCarControl
+        msg = messaging.new_message('chauffeurHKGTuning')
+        # dat_to_pass is the actual chauffeurHKGTuning struct instance
+        dat_to_pass = msg.chauffeurHKGTuning
 
         # Populate parameters
         dat_to_pass.longHkgTuningEnabled = hkg_tuning_enabled
@@ -491,7 +491,7 @@ class HKGLongitudinalTuning:
             # accel_last should already be set by handle_cruise_cancel
             dat_to_pass.longFinalAccel = 0.0
             dat_to_pass.longAccelPreClip = 0.0
-            self.pm.send('frogpilotCarControl', msg)
+            self.pm.send('chauffeurHKGTuning', msg)
             return 0.0  # Return 0.0 if cruise is cancelled or overridden
 
         accel = self.calculate_limited_accel(actuators, CS, lead_one, dat_to_pass)
@@ -505,7 +505,7 @@ class HKGLongitudinalTuning:
         dat_to_pass.longFinalAccel = final_accel
 
         # Publish the populated message
-        self.pm.send('frogpilotCarControl', msg)
+        self.pm.send('chauffeurHKGTuning', msg)
 
         return final_accel
 
@@ -609,7 +609,7 @@ class HKGLongitudinalController:
             accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, max_accel_upper_limit))
 
             # No separate publishing from controller if tuning is off.
-            # The FrogPilotCarControl message will simply not have these detailed fields populated
+            # The chauffeurHKGTuning message will simply not have these detailed fields populated
             # if HKGLongitudinalTuning is not active.
 
         return accel
