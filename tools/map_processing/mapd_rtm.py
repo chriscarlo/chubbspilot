@@ -14,7 +14,7 @@ def print_map_data(sm):
     lmd = sm['liveMapData']
 
     print("--- LiveLocationKalman ---")
-    print(f"  GPS OK: {llk.gpsOK}  Status: {llk.status} ({log.LiveLocationKalman.Status.names[llk.status]})")
+    print(f"  GPS OK: {llk.gpsOK}  Status: {llk.status} ({str(llk.status)})")
     if llk.positionGeodetic.valid:
         print(f"  Lat: {llk.positionGeodetic.value[0]:.6f}, Lon: {llk.positionGeodetic.value[1]:.6f}, Alt: {llk.positionGeodetic.value[2]:.1f}m")
         print(f"  Speed: {llk.velocityDevice.value[0]:.2f} m/s ({(llk.velocityDevice.value[0] * 2.23694):.1f} mph)")
