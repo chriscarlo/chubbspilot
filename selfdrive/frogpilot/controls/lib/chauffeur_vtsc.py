@@ -269,7 +269,7 @@ class VisionTurnSpeedController:
             velocity_pred = np.array(velocity_pred_raw, dtype=float)
 
             # Log raw vision velocities before interpolation for N_POINTS_TARGET
-            self.vtsc_vision_velocities_log = velocity_pred_raw[:N_POINTS_TARGET].tolist()
+            self.vtsc_vision_velocities_log = velocity_pred_raw.tolist()[:N_POINTS_TARGET]
 
             n_points = min(len(orientation_rate), len(velocity_pred))
             # Interpolate or slice to exactly N_POINTS_TARGET points
