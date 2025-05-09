@@ -102,7 +102,6 @@ def build_speed_profile_from_mapdata(
 # ───────────────  WORKER PROCESS  ─────────────────────────────────────────
 def _worker_main(out_q: mp.Queue, cruise_clamp: mp.Value):
     sm = messaging.SubMaster(['liveMapData', 'carState'])
-    logger = messaging.getLogger(__name__)
     while True:
         start = time.monotonic()
 
@@ -126,9 +125,9 @@ def _worker_main(out_q: mp.Queue, cruise_clamp: mp.Value):
                         out_q.get_nowait()
                         out_q.put_nowait((dist, spd))
 
-        except Exception as e:        # broad catch – keeps worker alive but logs failure
-            logger.error(f"ChauffeurMtsc worker exception: {e}", exc_info=True)
-
+        except Exception as e:
+            print(f"ChauffeurMtsc worker exception: {e}")
+        
         # maintain ≈2 Hz cadence
         sleep = 1.0 / PROFILE_RATE_HZ - (time.monotonic() - start)
         if sleep > 0.0:
