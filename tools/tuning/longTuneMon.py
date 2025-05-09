@@ -90,17 +90,30 @@ def display_longitudinal_data(fpcc):
 def main():
   sm = messaging.SubMaster(['chauffeurHKGTuning'])
   fpcc_prev = None
+  no_data_counter = 0
+  print("Waiting for chauffeurHKGTuning messages...")
 
   while True:
     sm.update()
 
-    if sm.updated['chauffeurHKGTuning'] and sm.valid['chauffeurHKGTuning']:
-      fpcc = sm['chauffeurHKGTuning']
-      # Only refresh if data has actually changed (optional, reduces flicker if data is static for a bit)
-      # Forcing refresh for now as per user desire to see updates.
-      # if fpcc_prev is None or fpcc.logMonoTime != fpcc_prev.logMonoTime:
-      display_longitudinal_data(fpcc)
-      fpcc_prev = fpcc # Store for potential future diffing
+    if sm.updated['chauffeurHKGTuning']:
+      if sm.valid['chauffeurHKGTuning']:
+        fpcc = sm['chauffeurHKGTuning']
+        display_longitudinal_data(fpcc)
+        fpcc_prev = fpcc # Store for potential future diffing
+        no_data_counter = 0 # Reset counter on successful data
+      else:
+        if no_data_counter % 20 == 0: # Print every second (20 * 0.05s)
+          clear_screen()
+          print(f"Timestamp: {time.time():.2f} s")
+          print("Invalid data received on chauffeurHKGTuning.")
+        no_data_counter += 1
+    else:
+      if no_data_counter % 20 == 0: # Print every second
+        clear_screen()
+        print(f"Timestamp: {time.time():.2f} s")
+        print("No new data on chauffeurHKGTuning.")
+      no_data_counter += 1
 
     time.sleep(0.05) # Refresh rate control (e.g., 20Hz)
 
