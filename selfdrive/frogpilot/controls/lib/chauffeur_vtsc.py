@@ -181,7 +181,7 @@ class VisionTurnSpeedController:
 
         self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
-        self.pm = messaging.PubMaster(['frogPilotPlan']) # Added PubMaster
+        self.pm = messaging.PubMaster(['frogpilotPlan'])  # Correct service name
 
         self.prev_v_cruise_cluster = 0.0
 
@@ -404,7 +404,8 @@ class VisionTurnSpeedController:
 
     def _publish_frogpilot_plan(self):
         # Create and send FrogPilotPlan message
-        fp_plan_msg = messaging.new_message('frogPilotPlan')
+        fp_plan_msg = messaging.new_message('frogpilotPlan')
+        fp_plan_msg.valid = True
         plan = fp_plan_msg.frogPilotPlan
 
         # Populate VTSC specific logging fields
@@ -427,7 +428,7 @@ class VisionTurnSpeedController:
         # plan.vtscControllingCurve = self.vtsc_is_enabled_log # Example if vtsc directly sets this
         # plan.vtscSpeed = float(self.prev_target_speed)      # Example: the final output of VTSC for this cycle
 
-        self.pm.send('frogPilotPlan', fp_plan_msg)
+        self.pm.send('frogpilotPlan', fp_plan_msg)
 
     def _plan_speed_trajectory(
         self,

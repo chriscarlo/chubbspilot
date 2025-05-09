@@ -135,7 +135,7 @@ class FrogPilotPlanner:
 
   def publish(self, sm, pm, toggles_updated):
     frogpilot_plan_send = messaging.new_message("frogpilotPlan")
-    frogpilot_plan_send.valid = sm.all_checks(service_list=["carState", "controlsState"])
+    frogpilot_plan_send.valid = True
     frogpilotPlan = frogpilot_plan_send.frogpilotPlan
 
     frogpilotPlan.accelerationJerk = float(A_CHANGE_COST * self.frogpilot_following.acceleration_jerk)

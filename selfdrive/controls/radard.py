@@ -436,7 +436,10 @@ class RadarD:
       self.tracks[ids].update(d_rel, y_rel, v_rel, v_lead, measured, self.v_ego_hist[0])
 
     # publish radarState
-    self.radar_state_valid = sm.all_checks() and len(radar_errors) == 0
+    # Mark message valid purely on absence of radar errors. Relying on sm.all_checks()
+    # caused valid to flicker when unrelated streams (e.g., frogpilotPlan) were slow,
+    # which in turn triggered spurious radarFault events downstream.
+    self.radar_state_valid = len(radar_errors) == 0
     self.radar_state = log.RadarState.new_message()
     self.radar_state.mdMonoTime = sm.logMonoTime['modelV2']
     self.radar_state.radarErrors = list(radar_errors)

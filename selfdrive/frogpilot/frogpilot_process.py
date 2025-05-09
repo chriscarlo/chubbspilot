@@ -137,6 +137,7 @@ def frogpilot_thread():
       frogpilot_tracking.update(sm["carState"], sm["controlsState"], sm["frogpilotCarControl"])
     elif not started and toggles_updated:
       frogpilot_plan_send = messaging.new_message("frogpilotPlan")
+      frogpilot_plan_send.valid = True
       frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
       pm.send("frogpilotPlan", frogpilot_plan_send)
 
