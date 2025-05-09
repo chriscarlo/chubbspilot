@@ -102,16 +102,22 @@ def main():
         display_longitudinal_data(fpcc)
         fpcc_prev = fpcc # Store for potential future diffing
         no_data_counter = 0 # Reset counter on successful data
-      else:
+      else: # Data updated, but not valid
         if no_data_counter % 20 == 0: # Print every second (20 * 0.05s)
           clear_screen()
           print(f"Timestamp: {time.time():.2f} s")
           print("Invalid data received on chauffeurHKGTuning.")
-          # Try to print raw bytes
           try:
-            print(f"Raw bytes length: {len(sm.sock['chauffeurHKGTuning'].recv(non_blocking=True))}")
+            # Access raw bytes via sm.bytes when updated but invalid
+            raw_msg_bytes = sm.bytes['chauffeurHKGTuning']
+            if raw_msg_bytes:
+              print(f"Raw bytes length: {len(raw_msg_bytes)}")
+            else:
+              print("Raw bytes are None or empty.")
+          except KeyError:
+            print("chauffeurHKGTuning not in sm.bytes, though updated.")
           except Exception as e:
-            print(f"Could not get raw bytes: {e}")
+            print(f"Error accessing raw bytes: {e}")
         no_data_counter += 1
     else:
       if no_data_counter % 20 == 0: # Print every second
