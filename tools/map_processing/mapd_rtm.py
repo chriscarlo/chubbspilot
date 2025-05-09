@@ -254,7 +254,8 @@ def main():
             # Process LLK for monitor's internal logic at a defined interval
             if sm.updated['liveLocationKalman']:
                 llk_msg_obj = sm['liveLocationKalman']
-                if llk_msg_obj.valid:
+                # Check validity using SubMaster's view of the Event
+                if sm.valid['liveLocationKalman'] and llk_msg_obj is not None:
                     with open(log_file_path, "a") as f_log:
                         log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
                         f_log.write(f"--- {log_timestamp} - liveLocationKalman (valid=True) ---\\n")
@@ -267,7 +268,8 @@ def main():
 
             if sm.updated['liveMapData']: # Or update if actual LMD changes
                 lmd_msg_obj = sm['liveMapData']
-                if lmd_msg_obj.valid:
+                # Check validity using SubMaster's view of the Event
+                if sm.valid['liveMapData'] and lmd_msg_obj is not None:
                     with open(log_file_path, "a") as f_log:
                         log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
                         f_log.write(f"--- {log_timestamp} - liveMapData (valid=True) ---\\n")
