@@ -270,7 +270,7 @@ class HKGLongitudinalTuning:
             brake_ratio_val = np.clip(
                 abs(accel_request / self.car_config.accel_limits[0]), 0.0, 1.0
             )
-+           dat.longBrakeRatio = float(brake_ratio_val) if brake_ratio_val is not None else 0.0
+            dat.longBrakeRatio = float(brake_ratio_val) if brake_ratio_val is not None else 0.0
             baseline_jerk_val = akima_interp(
                 brake_ratio_val,
                 np.array([0.25, 0.5, 0.75, 1.0]),
