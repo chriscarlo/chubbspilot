@@ -33,7 +33,7 @@ def get_max_accel_standard(v_ego):
 
   # Define low-speed boost parameters
   BOOST_ACCEL = 3.0  # Desired acceleration at 0 mph
-  BOOST_END_SPEED_MPH = 10.0 * 2.236936 # Speed at which boost fully blends into standard curve (10 m/s)
+  BOOST_END_SPEED_MPH = 15.0 * 2.236936 # Speed at which boost fully blends into standard curve (10 m/s)
 
   # Calculate the standard logistic value *at the end of the boost phase*
   logistic_val_at_boost_end = logistic(BOOST_END_SPEED_MPH, lower, upper, midpoint, scale)

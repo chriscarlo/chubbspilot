@@ -19,7 +19,7 @@ AUTO_PASS_SPEED_MIN   = 40.0 * CV.MPH_TO_MS   # For auto‑passing
 
 # Advantage threshold: if the lead in the adjacent lane is not at least 2 mph faster,
 # no point in changing lanes (to avoid worthless merges).
-SPEED_DIFF_THRESHOLD = 5.0 * CV.MPH_TO_MS
+SPEED_DIFF_THRESHOLD = 11.0 * CV.MPH_TO_MS
 
 # Desire mappings
 DESIRES = {
@@ -52,9 +52,11 @@ TURN_DESIRES = {
 
 def check_adjacent_lead_speed(direction, radar_tracks, frogpilotPlan, lane_detection_width,
                               v_ego, current_lead_speed, lead_id=-1):
+  return
   """
   Return True if the adjacent lane is clear or has a faster lead (by > SPEED_DIFF_THRESHOLD).
   If there's a lead but it's not strictly faster, no advantage => return False.
+  """
   """
   if not radar_tracks:
     # No radar info => assume it's okay
@@ -89,7 +91,7 @@ def check_adjacent_lead_speed(direction, radar_tracks, frogpilotPlan, lane_detec
     return best_lead_speed > (current_lead_speed + SPEED_DIFF_THRESHOLD)
   else:
     return True
-
+  """
 
 class DesireHelper:
   def __init__(self):
@@ -118,11 +120,25 @@ class DesireHelper:
     # Bookkeeping
     self.prev_one_blinker = False
 
+    # --- SPAS auto-pass blinker timer ---
+    # When auto-passing starts we want to send SPAS blinker messages just long enough
+    # to mimic the stock "3-flash" (<≈2 s) sequence that a quick-flick stalk produces.
+    # After that we stay silent so the BCM can cancel naturally.
+    self.spas_blink_time = 0.0          # seconds remaining to send SPAS frames
+    self.spas_blink_direction = LaneChangeDirection.none
+
+    # Constant: how long to emit SPAS2 frames. 2 s ≈ 3 flashes.
+    self.SPAS_BLINK_DURATION = 2.0
+
     # SubMaster for radar / carState
     self.sm = SubMaster(['liveTracks', 'radarState', 'carControl', 'carState'])
 
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilot_toggles):
     """Main loop logic. Called periodically."""
+
+    # Preserve previous auto-pass state so we can detect rising edge after the
+    # call to check_auto_passing().
+    prev_auto_pass_active = self.auto_passing_active
 
     self.sm.update(0)
 
@@ -139,6 +155,17 @@ class DesireHelper:
 
     # --- Check auto pass logic (will set self.auto_passing_active, direction, etc.) ---
     self.check_auto_passing(carstate, lateral_active, v_ego, frogpilotPlan, frogpilot_toggles, lead_id)
+
+    # --- Start SPAS blinker timer on rising edge of auto-pass ---
+    if self.auto_passing_active and not prev_auto_pass_active:
+      self.spas_blink_time = self.SPAS_BLINK_DURATION
+      self.spas_blink_direction = self.auto_passing_direction
+
+    # Decrement timer
+    if self.spas_blink_time > 0.0:
+      self.spas_blink_time = max(self.spas_blink_time - DT_MDL, 0.0)
+      if self.spas_blink_time == 0.0:
+        self.spas_blink_direction = LaneChangeDirection.none
 
     # Figure out effective blinkers (spoof internally if auto pass is active).
     physical_left = getattr(carstate, 'leftBlinker', False)
@@ -306,8 +333,8 @@ class DesireHelper:
       return
 
     # If we're already in or just finished a lane change, wait for cooldown
-    if (self.lane_change_state != LaneChangeState.off) or (self.lane_change_cooldown > 0.0):
-      return
+    # if (self.lane_change_state != LaneChangeState.off) or (self.lane_change_cooldown > 0.0):
+      # return
 
     # Must be above auto pass speed
     if v_ego < AUTO_PASS_SPEED_MIN:
@@ -317,7 +344,7 @@ class DesireHelper:
     if getattr(carstate, 'leftBlinker', False) or getattr(carstate, 'rightBlinker', False):
       return
 
-    # Must have a valid lead that is slower by at least 2 mph
+    # Must have a valid lead that is slower by at least SPEED_DIFF_THRESHOLD
     if self.v_lead <= 0.0 or (self.v_lead >= (self.v_cruise_cluster - SPEED_DIFF_THRESHOLD)):
       return
 
@@ -373,7 +400,7 @@ class DesireHelper:
     elif right_clear:
       self.auto_passing_direction = LaneChangeDirection.right
     else:
-      return  # neither lane is advantageous => skip
+      return  # neither lane is advantageous => skip (lane unavailable or blind-spot occupied)
 
     # Activate auto pass
     self.auto_passing_active = True
@@ -386,17 +413,14 @@ class DesireHelper:
     ONLY used for automated lane changes through auto-passing,
     NEVER for driver-initiated blinker activations.
     """
-    # Only send SPAS messages when auto-passing is active
-    if self.auto_passing_active:
-      # Determine blinker state based on auto-passing direction
-      left_blinker = (self.auto_passing_direction == LaneChangeDirection.left)
-      right_blinker = (self.auto_passing_direction == LaneChangeDirection.right)
+    # Only send SPAS messages while the blink-timer is active.
+    if self.spas_blink_time > 0.0:
+      left_blinker = (self.spas_blink_direction == LaneChangeDirection.left)
+      right_blinker = (self.spas_blink_direction == LaneChangeDirection.right)
 
-      # Generate SPAS messages for auto-passing
       if left_blinker or right_blinker:
         return hyundaicanfd.create_spas_messages(packer, CAN, frame, left_blinker, right_blinker)
 
-    # Empty list when not auto-passing
     return []
 
 
