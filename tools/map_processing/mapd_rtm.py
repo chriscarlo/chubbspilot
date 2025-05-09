@@ -213,6 +213,7 @@ def print_map_data(sm):
 
 
 def main():
+    print("--- RUNNING MODIFIED SCRIPT CHECKPOINT 1 ---", flush=True) # New print
     initialize_monitor_map_logic() # Initialize monitor's map tools
 
     sm = messaging.SubMaster(['liveMapData', 'liveLocationKalman'], poll='liveLocationKalman')
@@ -222,19 +223,34 @@ def main():
     start_time = time.monotonic()
     initial_wait_timeout = 10.0 # seconds
 
+    print("--- RUNNING MODIFIED SCRIPT CHECKPOINT 2 ---", flush=True) # New print
     while not (sm.all_alive() and sm.all_valid()):
         sm.update(100) # Wait up to 100ms for messages
-        if not sm.all_alive():
-            print("ERROR: Some services are not running. Exiting.", flush=True)
-            # You can add more detailed printing of which services are not alive here
-            return
+
+        llk_alive = sm.alive['liveLocationKalman']
+        lmd_alive = sm.alive['liveMapData']
+        llk_valid = sm.valid['liveLocationKalman']
+        lmd_valid = sm.valid['liveMapData']
+
+        status_msg = f"LLK: alive={llk_alive}, valid={llk_valid} | LMD: alive={lmd_alive}, valid={lmd_valid}"
+        print(status_msg, end="\r", flush=True)
+
         if time.monotonic() - start_time > initial_wait_timeout:
-            print("ERROR: Timeout waiting for initial messages. Some services might be stuck.", flush=True)
-            # You can add more detailed printing of which services are not valid
+            print(f"\nERROR: Timeout waiting for initial messages. Final status: {status_msg}", flush=True)
+            print(f"sm.all_alive() = {sm.all_alive()}, sm.all_valid() = {sm.all_valid()}", flush=True)
+            if not sm.all_alive():
+                if not llk_alive:
+                    print("liveLocationKalman is not alive.", flush=True)
+                if not lmd_alive:
+                    print("liveMapData is not alive.", flush=True)
+            if not sm.all_valid():
+                if not llk_valid:
+                    print("liveLocationKalman is not valid.", flush=True)
+                if not lmd_valid:
+                    print("liveMapData is not valid.", flush=True)
             return
-        print(".", end="", flush=True)
-        # time.sleep(0.05) # Shorter sleep during initial wait
-    print("\nInitial messages received. Starting monitor...")
+        time.sleep(0.1) # Slightly longer sleep to make messages readable if they change fast
+    print(f"\nInitial messages received and valid. Final status: LLK alive={sm.alive['liveLocationKalman']}, valid={sm.valid['liveLocationKalman']} | LMD alive={sm.alive['liveMapData']}, valid={sm.valid['liveMapData']}. Starting monitor...")
 
     last_llk_update_time = 0
     monitor_processing_interval = 0.2 # Process LLK for monitor this often (e.g., 5Hz)
