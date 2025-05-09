@@ -88,8 +88,8 @@ class HKGLongitudinalTuning:
         self.transitioning = False
 
     def _setup_car_config(self) -> None:
-        from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import Cartuning
-        self.car_config = Cartuning.get_car_config(self.CP)
+        from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import CarTuning
+        self.car_config = CarTuning.get_car_config(self.CP)
 
     def update_mpc_mode(self, sm: messaging.SubMaster, dat: custom.ChauffeurHKGTuning) -> None:
         if not sm.valid['controlsState']:

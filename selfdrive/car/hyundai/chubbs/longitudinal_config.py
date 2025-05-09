@@ -758,7 +758,7 @@ CAR_SPECIFIC_CONFIGS = {
     stop_buffer=3.0,
   ),
 }
-class Cartuning:
+class CarTuning:
   @staticmethod
   def get_car_config(CP: car.CarParams) -> CarTuningConfig:
     # Get car type flags from specific configs or determine from car flags
