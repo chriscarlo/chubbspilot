@@ -152,7 +152,7 @@ class HKGLongitudinalTuning:
         xp = np.array([-3.5, -2.0, -1.0, 0.0, 1.0, 2.0])
         fp = np.array([-2.5, -1.0, -0.5, 0.0, 0.5, 1.0])
         self.jerk = akima_interp(base_jerk, xp, fp)
-        dat.longCalculatedJerk = self.jerk
++       dat.longCalculatedJerk = float(self.jerk) if self.jerk is not None else 0.0
         jerk_max = self.car_config.jerk_limits[1]
 
         if self.CP.flags & HyundaiFlags.CANFD.value:
