@@ -7,6 +7,9 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
 
+# Singleton publisher for chauffeurHKGTuning, so we bind exactly once
+_PUB_CHAUFFEUR_HKG = messaging.PubMaster(['chauffeurHKGTuning'])
+
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
 MAX_ALLOWABLE_JERK = 20.0  # Max downward jerk
@@ -41,7 +44,7 @@ class HKGLongitudinalTuning:
         self._init_state()
         self._mode_setup()
         self._setup_car_config()
-        self.pm = messaging.PubMaster(['chauffeurHKGTuning'])
+        self.pm = _PUB_CHAUFFEUR_HKG
 
     def _setup_controllers(self) -> None:
         self.long_control = LongControl(self.CP)
