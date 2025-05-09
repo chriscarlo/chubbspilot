@@ -217,40 +217,31 @@ def main():
     initialize_monitor_map_logic() # Initialize monitor's map tools
 
     sm = messaging.SubMaster(['liveMapData', 'liveLocationKalman'], poll='liveLocationKalman')
+    log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "valid_messages.log")
+    print(f"Logging valid messages to: {log_file_path}")
 
-    print("Waiting for initial messages...")
+    print("Waiting for initial messages (LLK must be alive and valid, LMD must be alive)...")
     # Reduced timeout for faster startup if services are responsive
-    start_time = time.monotonic()
-    initial_wait_timeout = 10.0 # seconds
+    # start_time = time.monotonic() # No longer using timeout for startup
+    # initial_wait_timeout = 10.0 # seconds
 
     print("--- RUNNING MODIFIED SCRIPT CHECKPOINT 2 ---", flush=True) # New print
-    while not (sm.all_alive() and sm.all_valid()):
+    # Wait for LLK to be alive and valid, and LMD to be at least alive.
+    while not (sm.alive['liveLocationKalman'] and sm.valid['liveLocationKalman'] and sm.alive['liveMapData']):
         sm.update(100) # Wait up to 100ms for messages
 
         llk_alive = sm.alive['liveLocationKalman']
         lmd_alive = sm.alive['liveMapData']
         llk_valid = sm.valid['liveLocationKalman']
-        lmd_valid = sm.valid['liveMapData']
+        # lmd_valid is not part of the startup condition anymore, but we can still observe it
+        lmd_valid_current = sm.valid['liveMapData']
 
-        status_msg = f"LLK: alive={llk_alive}, valid={llk_valid} | LMD: alive={lmd_alive}, valid={lmd_valid}"
-        print(status_msg, end="\r", flush=True)
 
-        if time.monotonic() - start_time > initial_wait_timeout:
-            print(f"\nERROR: Timeout waiting for initial messages. Final status: {status_msg}", flush=True)
-            print(f"sm.all_alive() = {sm.all_alive()}, sm.all_valid() = {sm.all_valid()}", flush=True)
-            if not sm.all_alive():
-                if not llk_alive:
-                    print("liveLocationKalman is not alive.", flush=True)
-                if not lmd_alive:
-                    print("liveMapData is not alive.", flush=True)
-            if not sm.all_valid():
-                if not llk_valid:
-                    print("liveLocationKalman is not valid.", flush=True)
-                if not lmd_valid:
-                    print("liveMapData is not valid.", flush=True)
-            return
-        time.sleep(0.1) # Slightly longer sleep to make messages readable if they change fast
-    print(f"\nInitial messages received and valid. Final status: LLK alive={sm.alive['liveLocationKalman']}, valid={sm.valid['liveLocationKalman']} | LMD alive={sm.alive['liveMapData']}, valid={sm.valid['liveMapData']}. Starting monitor...")
+        status_msg = f"LLK: alive={llk_alive}, valid={llk_valid} | LMD: alive={lmd_alive}, valid={lmd_valid_current}"
+        print(status_msg, end="\\r", flush=True)
+        time.sleep(0.1)
+
+    print(f"\\nInitial checks passed. LLK: alive={sm.alive['liveLocationKalman']}, valid={sm.valid['liveLocationKalman']} | LMD: alive={sm.alive['liveMapData']}, valid={sm.valid['liveMapData']}. Starting monitor...")
 
     last_llk_update_time = 0
     monitor_processing_interval = 0.2 # Process LLK for monitor this often (e.g., 5Hz)
@@ -261,12 +252,30 @@ def main():
 
             current_time = time.monotonic()
             # Process LLK for monitor's internal logic at a defined interval
-            if sm.updated['liveLocationKalman'] and (current_time - last_llk_update_time > monitor_processing_interval):
-                process_location_for_monitor(sm['liveLocationKalman'])
-                last_llk_update_time = current_time
-                print_map_data(sm) # Update display when monitor logic runs
-            elif sm.updated['liveMapData']: # Or update if actual LMD changes
-                 print_map_data(sm)
+            if sm.updated['liveLocationKalman']:
+                llk_msg_obj = sm['liveLocationKalman']
+                if llk_msg_obj.valid:
+                    with open(log_file_path, "a") as f_log:
+                        log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
+                        f_log.write(f"--- {log_timestamp} - liveLocationKalman (valid=True) ---\\n")
+                        f_log.write(str(llk_msg_obj))
+                        f_log.write("\\n\\n")
+                if (current_time - last_llk_update_time > monitor_processing_interval):
+                    process_location_for_monitor(llk_msg_obj)
+                    last_llk_update_time = current_time
+                    print_map_data(sm) # Update display when monitor logic runs
+
+            if sm.updated['liveMapData']: # Or update if actual LMD changes
+                lmd_msg_obj = sm['liveMapData']
+                if lmd_msg_obj.valid:
+                    with open(log_file_path, "a") as f_log:
+                        log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
+                        f_log.write(f"--- {log_timestamp} - liveMapData (valid=True) ---\\n")
+                        f_log.write(str(lmd_msg_obj))
+                        f_log.write("\\n\\n")
+                # Always print map data if LMD updated, regardless of its validity for logging purposes
+                # This ensures the console display remains active for LMD changes.
+                print_map_data(sm)
 
 
             time.sleep(0.05) # Main loop sleep, keep it short for responsiveness
