@@ -147,8 +147,14 @@ def print_map_data(sm):
     lmd_info += f'LMD_TS:{lmd.lastGps.unixTimestampMillis/1000.0:.1f} Road:\'{lmd.currentRoadName if lmd.currentRoadName else "--"}\''
     print(lmd_info)
 
-    sl_info = f"  SL V:{int(lmd.speedLimitValid)} Lim:{lmd.speedLimit:.1f} ({(lmd.speedLimit * 2.23694):.0f}) | "
-    sl_info += f"SLA V:{int(lmd.speedLimitAheadValid)} Lim:{lmd.speedLimitAhead:.1f} ({(lmd.speedLimitAhead * 2.23694):.0f}) D:{lmd.speedLimitAheadDistance:.0f}m"
+    # More descriptive speed-limit display so it is clearer what each figure means
+    sl_info = (
+        f"  Current Speed Limit  [valid={int(lmd.speedLimitValid)}]: "
+        f"{lmd.speedLimit:.1f} m/s ({lmd.speedLimit * 2.23694:.0f} mph) | "
+        f"Upcoming Speed Limit [valid={int(lmd.speedLimitAheadValid)}]: "
+        f"{lmd.speedLimitAhead:.1f} m/s ({lmd.speedLimitAhead * 2.23694:.0f} mph) "
+        f"in {lmd.speedLimitAheadDistance:.0f} m"
+    )
     print(sl_info)
 
     cur_seg_id_str = str(lmd.currentSegment.segmentId) if lmd.currentSegment.segmentId != 0 else "N/A"
@@ -256,15 +262,16 @@ def main():
                 llk_msg_obj = sm['liveLocationKalman']
                 # Check validity using SubMaster's view of the Event
                 if sm.valid['liveLocationKalman'] and llk_msg_obj is not None:
-                    print(f"DEBUG: Attempting to log valid LLK message. sm.valid={sm.valid['liveLocationKalman']}", flush=True) # DEBUG PRINT
+                    # print(f"DEBUG: Attempting to log valid LLK message. sm.valid={sm.valid['liveLocationKalman']}", flush=True) # DEBUG PRINT
                     with open(log_file_path, "a") as f_log:
-                        print(f"DEBUG: Opened {log_file_path} for LLK logging.", flush=True) # DEBUG PRINT
+                        # print(f"DEBUG: Opened {log_file_path} for LLK logging.", flush=True) # DEBUG PRINT
                         log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
                         f_log.write(f"--- {log_timestamp} - liveLocationKalman (valid=True) ---\\n")
                         f_log.write(str(llk_msg_obj))
                         f_log.write("\\n\\n")
                 elif sm.valid['liveLocationKalman']:
-                    print(f"DEBUG: LLK is valid but llk_msg_obj is None. This shouldn't happen if updated.", flush=True) # DEBUG PRINT
+                    # print(f"DEBUG: LLK is valid but llk_msg_obj is None. This shouldn't happen if updated.", flush=True) # DEBUG PRINT
+                    pass
 
                 if (current_time - last_llk_update_time > monitor_processing_interval):
                     process_location_for_monitor(llk_msg_obj)
@@ -275,15 +282,16 @@ def main():
                 lmd_msg_obj = sm['liveMapData']
                 # Check validity using SubMaster's view of the Event
                 if sm.valid['liveMapData'] and lmd_msg_obj is not None:
-                    print(f"DEBUG: Attempting to log valid LMD message. sm.valid={sm.valid['liveMapData']}", flush=True) # DEBUG PRINT
+                    # print(f"DEBUG: Attempting to log valid LMD message. sm.valid={sm.valid['liveMapData']}", flush=True) # DEBUG PRINT
                     with open(log_file_path, "a") as f_log:
-                        print(f"DEBUG: Opened {log_file_path} for LMD logging.", flush=True) # DEBUG PRINT
+                        # print(f"DEBUG: Opened {log_file_path} for LMD logging.", flush=True) # DEBUG PRINT
                         log_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
                         f_log.write(f"--- {log_timestamp} - liveMapData (valid=True) ---\\n")
                         f_log.write(str(lmd_msg_obj))
                         f_log.write("\\n\\n")
                 elif sm.valid['liveMapData']:
-                    print(f"DEBUG: LMD is valid but lmd_msg_obj is None. This shouldn't happen if updated.", flush=True) # DEBUG PRINT
+                    # print(f"DEBUG: LMD is valid but lmd_msg_obj is None. This shouldn't happen if updated.", flush=True) # DEBUG PRINT
+                    pass
 
                 # Always print map data if LMD updated, regardless of its validity for logging purposes
                 # This ensures the console display remains active for LMD changes.
