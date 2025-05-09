@@ -181,7 +181,18 @@ class VisionTurnSpeedController:
 
         self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
-        self.pm = messaging.PubMaster(['frogpilotPlan'])  # Correct service name
+
+        # Use a module-level singleton PubMaster to avoid multiple publishers on the same address
+        global _PUB_FROGPILOT_PLAN
+        try:
+            _PUB_FROGPILOT_PLAN
+        except NameError:
+            _PUB_FROGPILOT_PLAN = None
+
+        if _PUB_FROGPILOT_PLAN is None:
+            _PUB_FROGPILOT_PLAN = messaging.PubMaster(['frogpilotPlan'])
+
+        self.pm = _PUB_FROGPILOT_PLAN
 
         self.prev_v_cruise_cluster = 0.0
 
