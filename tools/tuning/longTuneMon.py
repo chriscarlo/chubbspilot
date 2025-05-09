@@ -107,6 +107,11 @@ def main():
           clear_screen()
           print(f"Timestamp: {time.time():.2f} s")
           print("Invalid data received on chauffeurHKGTuning.")
+          # Try to print raw bytes
+          try:
+            print(f"Raw bytes length: {len(sm.sock['chauffeurHKGTuning'].recv(non_blocking=True))}")
+          except Exception as e:
+            print(f"Could not get raw bytes: {e}")
         no_data_counter += 1
     else:
       if no_data_counter % 20 == 0: # Print every second
