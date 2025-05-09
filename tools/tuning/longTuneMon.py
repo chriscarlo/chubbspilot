@@ -26,11 +26,14 @@ def print_row(label, value_str, unit=""):
   """Prints a formatted row."""
   print(f"{label:<45}: {value_str} {unit}")
 
-def display_longitudinal_data(fpcc):
+def display_longitudinal_data(fpcc, log_mono_time_ns):
   """Clears screen and prints formatted longitudinal data."""
   clear_screen()
   print("--- FrogPilot Longitudinal Tuning Monitor ---")
-  print(f"Timestamp: {fpcc.logMonoTime / 1e9:.2f} s\n")
+  if log_mono_time_ns is not None:
+    print(f"Timestamp: {log_mono_time_ns / 1e9:.2f} s\n")
+  else:
+    print("Timestamp: N/A\n")
 
   print_row("HKG Tuning Enabled (Param)", format_value(fpcc.longHkgTuningEnabled, width=7))
   print_row("HKG Braking Enabled (Param)", format_value(fpcc.longHkgBrakingEnabled, width=7))
@@ -99,7 +102,7 @@ def main():
     if sm.updated['chauffeurHKGTuning']:
       if sm.valid['chauffeurHKGTuning']:
         fpcc = sm['chauffeurHKGTuning']
-        display_longitudinal_data(fpcc)
+        display_longitudinal_data(fpcc, sm.logMonoTime['chauffeurHKGTuning'])
         fpcc_prev = fpcc # Store for potential future diffing
         no_data_counter = 0 # Reset counter on successful data
       else: # Data updated, but not valid
