@@ -145,7 +145,7 @@ class HKGLongitudinalTuning:
             raw_jerk_val = current_accel - self.accel_last_jerk
             self.accel_last_jerk = current_accel
 
-        dat.longRawJerk = raw_jerk_val
+        dat.longRawJerk = float(raw_jerk_val)
         self.jerk = raw_jerk_val  # Store pre-akima for logging
 
         base_jerk = self.jerk
@@ -183,10 +183,10 @@ class HKGLongitudinalTuning:
                 else:
                     self.cb_upper = self.cb_lower = 0.0
 
-        dat.longJerkUpperLimit = self.jerk_upper_limit
-        dat.longJerkLowerLimit = self.jerk_lower_limit
-        dat.longCbUpper = self.cb_upper
-        dat.longCbLower = self.cb_lower
+        dat.longJerkUpperLimit = float(self.jerk_upper_limit)
+        dat.longJerkLowerLimit = float(self.jerk_lower_limit)
+        dat.longCbUpper = float(self.cb_upper)
+        dat.longCbLower = float(self.cb_lower)
         return self.jerk
 
     def handle_cruise_cancel(self, CS: car.CarState) -> bool:
