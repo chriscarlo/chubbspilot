@@ -478,6 +478,9 @@ class HKGLongitudinalTuning:
         dat_to_pass.longHkgBrakingEnabled = hkg_braking_enabled
         dat_to_pass.longAccelLast = self.accel_last
 
+        # Mark message as valid before publishing
+        msg.valid = True
+
         if self.handle_cruise_cancel(CS):
             dat_to_pass.longFinalAccel = 0.0
             dat_to_pass.longAccelPreClip = 0.0
@@ -489,6 +492,9 @@ class HKGLongitudinalTuning:
             np.clip(accel, self.car_config.accel_limits[0], self.car_config.accel_limits[1])
         )
         dat_to_pass.longFinalAccel = final_accel
+
+        # Mark message as valid before publishing (redundant, but ensures validity)
+        msg.valid = True
 
         # Publish
         self._get_pubmaster().send('chauffeurHKGTuning', msg)
