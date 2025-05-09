@@ -440,8 +440,21 @@ class HKGLongitudinalTuning:
             dat.longCombinedFactor = float("nan")
             dat.longJerkCeiling = float("nan")
 
-        # Overreaction mitigation block omitted here for brevity; unchanged, fully preserved in file
-        # ...
+        # --- Overreaction Mitigation Logging (Placeholder) ---
+        # TODO: Implement actual overreaction mitigation logic and populate these accurately.
+        dat.longOverreactionMitigationActive = False
+        dat.longOverreactionMitigationAccelLimited = False
+        dat.longOverreactionMitigationOriginalAccel = 0.0
+        dat.longOverreactionMitigationLimit = 0.0
+        dat.longOverreactionMitigationVRel = 0.0
+        dat.longOverreactionMitigationLeadDecel = 0.0
+        dat.longOverreactionMitigationDRel = 0.0
+        dat.longOverreactionMitigationTtcEst = 0.0
+        dat.longOverreactionMitigationClosingFast = False
+        dat.longOverreactionMitigationSafeTtc = False
+        dat.longOverreactionMitigationDelta = 0.0
+        # --- End Overreaction Mitigation Logging ---
+
         # At end of calculate_limited_accel:
         dat.longAccelPreClip = accel
         self.accel_last = accel
