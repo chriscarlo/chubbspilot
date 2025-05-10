@@ -214,9 +214,9 @@ class HKGLongitudinalTuning:
     ) -> float:
         """Adaptive acceleration limiting with dynamic jerk based on TTC urgency."""
         dat.longLongControlState = actuators.longControlState
-        dat.longVEgo = CS.out.vEgo
-        dat.longAEgo = CS.out.aEgo
-        dat.longTargetAccelInput = actuators.accel
+        dat.longVEgo = float(CS.out.vEgo)
+        dat.longAEgo = float(CS.out.aEgo)
+        dat.longTargetAccelInput = float(actuators.accel)
 
         if self.handle_cruise_cancel(CS):
             dat.longAccelLast = self.accel_last  # Ensure it's logged even on early exit
@@ -262,7 +262,7 @@ class HKGLongitudinalTuning:
         else:
             accel_request = target_accel
 
-        dat.longAccelRequest = accel_request
+        dat.longAccelRequest = float(accel_request)
         dat.longBrakingRateLimitActive = False  # Default, set true if condition met
 
         # Ensure variables used in fallback branches are always defined.
@@ -318,7 +318,7 @@ class HKGLongitudinalTuning:
             stop_buffer_val = max(1.0, 0.5 + 0.1 * CS.out.vEgo)
             dat.longStopBuffer = stop_buffer_val
             d_gap_val = max(raw_d_rel_val - stop_buffer_val, 0.1)
-            dat.longDGap = d_gap_val
+            dat.longDGap = float(d_gap_val)
 
             if v_ego_valid and accel_last_valid and accel_request_valid and DT_CTRL > 1e-6:
                 _comfy_decel_raw = getattr(self.car_config, "comfy_decel", 2.0)
@@ -327,7 +327,7 @@ class HKGLongitudinalTuning:
                     if isinstance(_comfy_decel_raw, (int, float)) and _comfy_decel_raw > 0
                     else 2.0
                 )
-                dat.longANom = a_nom_val
+                dat.longANom = float(a_nom_val)
 
                 _accel_limits_raw = getattr(self.car_config, "accel_limits", (-6.0, 4.5))
                 if (
@@ -342,14 +342,14 @@ class HKGLongitudinalTuning:
                         f"long_tuning: Invalid car_config.accel_limits[0]: {_accel_limits_raw}. Using fallback max decel."
                     )
                     a_max_val = 6.0
-                dat.longAMax = a_max_val
+                dat.longAMax = float(a_max_val)
 
                 # base urgency
                 a_req_val = (
                     (max(CS.out.vEgo, 0.0) ** 2 + 0.3 * (-min(v_rel_val, 0.0)) ** 2)
                     / (2.0 * d_gap_val)
                 )
-                dat.longAReq = a_req_val
+                dat.longAReq = float(a_req_val)
 
                 denom = a_max_val - a_nom_val
                 urgency_val = 0.0
@@ -416,8 +416,8 @@ class HKGLongitudinalTuning:
                 )
                 effective_jerk = baseline_jerk_val
 
-            dat.longEffectiveJerk = effective_jerk
-            max_delta_val = effective_jerk * DT_CTRL
+            dat.longEffectiveJerk = float(effective_jerk)
+            max_delta_val = float(effective_jerk * DT_CTRL)
             dat.longMaxDelta = max_delta_val
             if isinstance(self.accel_last, float) and math.isfinite(self.accel_last):
                 accel = max(accel_request, self.accel_last - max_delta_val)
@@ -464,7 +464,7 @@ class HKGLongitudinalTuning:
         # --- End Overreaction Mitigation Logging ---
 
         # At end of calculate_limited_accel:
-        dat.longAccelPreClip = accel
+        dat.longAccelPreClip = float(accel)
         self.accel_last = accel
         dat.longAccelLast = self.accel_last
         return accel
