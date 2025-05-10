@@ -276,7 +276,7 @@ class HKGLongitudinalTuning:
                 np.array([0.25, 0.5, 0.75, 1.0]),
                 np.array(self.car_config.brake_response),
             )
-            dat.longBaselineJerk = baseline_jerk_val
+            dat.longBaselineJerk = float(baseline_jerk_val) if baseline_jerk_val is not None else 0.0
             effective_jerk = baseline_jerk_val
 
             v_ego_valid = (
