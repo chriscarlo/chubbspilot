@@ -335,6 +335,14 @@ def update_maps(now: datetime) -> None:
       mirrored on whatever cadence the driver selects.
     * Now runs **only** when explicitly called, typically triggered by the UI.
     """
+    # FrogPilot: Add toggle to disable map updates
+    if not params.get_bool("EnableMapUpdates"):
+        cloudlog.info("maps: Update from Azure disabled by EnableMapUpdates Param.")
+        # Ensure progress/error params are cleared if we abort early
+        params_memory.remove(DL_ERROR_PARAM)
+        params_memory.remove(DL_PROGRESS_PARAM)
+        return
+
     # sanity checks
     conn = get_azure_connection_string(CONN_STRING_PATH)
     if ShareDirectoryClient is None:

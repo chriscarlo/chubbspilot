@@ -142,6 +142,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("DriverCamera", "0", 1),
   ("DynamicPathWidth", "0", 2),
   ("DynamicPedalsOnUI", "1", 2),
+  ("EnableMapUpdates", "0", 2),
   ("EngageVolume", "101", 2),
   ("ExperimentalGMTune", "0", 2),
   ("ExperimentalModeActivation", "1", 1),
