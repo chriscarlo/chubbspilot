@@ -417,7 +417,7 @@ class VisionTurnSpeedController:
         # Create and send FrogPilotPlan message
         fp_plan_msg = messaging.new_message('frogpilotPlan')
         fp_plan_msg.valid = True
-        plan = fp_plan_msg.frogPilotPlan
+        plan = fp_plan_msg.frogpilotPlan
 
         # Populate VTSC specific logging fields
         plan.vtscIsEnabled = self.vtsc_is_enabled_log
