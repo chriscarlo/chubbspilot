@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import cereal.messaging as messaging
+from msgq import MultiplePublishersError
 
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
@@ -190,7 +191,11 @@ class VisionTurnSpeedController:
             _PUB_FROGPILOT_PLAN = None
 
         if _PUB_FROGPILOT_PLAN is None:
-            _PUB_FROGPILOT_PLAN = messaging.PubMaster(['frogpilotPlan'])
+            try:
+                _PUB_FROGPILOT_PLAN = messaging.PubMaster(['frogpilotPlan'])
+            except MultiplePublishersError:
+                # Another publisher already exists in this process
+                _PUB_FROGPILOT_PLAN = None
 
         self.pm = _PUB_FROGPILOT_PLAN
 
@@ -414,6 +419,8 @@ class VisionTurnSpeedController:
         return final_target_speed
 
     def _publish_frogpilot_plan(self):
+        if self.pm is None:
+            return  # Skip publishing if no PubMaster available
         # Create and send FrogPilotPlan message
         fp_plan_msg = messaging.new_message('frogpilotPlan')
         fp_plan_msg.valid = True

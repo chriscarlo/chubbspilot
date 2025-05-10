@@ -19,6 +19,7 @@ from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPi
 from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_url_pingable, lock_doors, run_thread_with_lock, update_maps, update_openpilot
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
+from msgq import MultiplePublishersError
 
 def assets_checks(model_manager, theme_manager):
   if params_memory.get_bool("DownloadAllModels"):
@@ -87,7 +88,16 @@ def frogpilot_thread():
 
   toggles_last_updated = datetime.datetime.now()
 
-  pm = messaging.PubMaster(["frogpilotPlan"])
+  # Create or reuse a singleton PubMaster for frogpilotPlan
+  try:
+    pm = messaging.PubMaster(["frogpilotPlan"])
+  except MultiplePublishersError:
+    # Another publisher was already created earlier (e.g., by VTSC). Reuse it.
+    from openpilot.selfdrive.frogpilot.controls.lib import chauffeur_vtsc as _vtsc_mod
+    pm = getattr(_vtsc_mod, "_PUB_FROGPILOT_PLAN", None)
+    if pm is None:
+      # Should not happen, but fall back to a dummy PubMaster-less path
+      pm = None
   sm = messaging.SubMaster(["carControl", "carState", "controlsState", "deviceState", "driverMonitoringState",
                             "managerState", "modelV2", "pandaStates", "radarState",
                             "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation"],
