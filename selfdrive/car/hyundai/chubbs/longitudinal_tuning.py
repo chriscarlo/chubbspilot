@@ -470,16 +470,12 @@ class HKGLongitudinalTuning:
         lead_one: log.RadarState.LeadData = None
     ) -> float:
         """Calculate acceleration with cruise control status handling and final clipping."""
-        # Create the outbound message for chauffeurHKGTuning
         msg = messaging.new_message('chauffeurHKGTuning')
 
-        # Some versions of cereal/messaging do NOT automatically initialize the
-        # union when creating a new message for custom events. Attempt to grab
-        # the sub-struct, and if it returns None, explicitly init it.
-        dat_to_pass = msg.chauffeurHKGTuning
-        if dat_to_pass is None:
-            # Explicitly initialise the union field so we can populate it safely
-            dat_to_pass = msg.init('chauffeurHKGTuning')
+        # Explicitly initialise the struct; relying on the implicit pointer has
+        # proven unreliable on some capnp/runtime combinations. This always
+        # returns a valid builder, so subsequent field assignments cannot fail.
+        dat_to_pass = msg.init('chauffeurHKGTuning')
 
         # Populate parameters
         dat_to_pass.longHkgTuningEnabled = hkg_tuning_enabled
