@@ -376,10 +376,10 @@ class HKGLongitudinalTuning:
                     if accel_request < self.accel_last
                     else 0.0
                 )
-                dat.longJerkNeeded = jerk_needed_val
+                dat.longJerkNeeded = float(jerk_needed_val)
 
                 combined_factor_val = max(urgency_val, brake_ratio_val)
-                dat.longCombinedFactor = combined_factor_val
+                dat.longCombinedFactor = float(combined_factor_val)
 
                 target_max_jerk = 1.5 * MAX_ALLOWABLE_JERK
                 jerk_ceiling_val = baseline_jerk_val + combined_factor_val * (
@@ -398,8 +398,8 @@ class HKGLongitudinalTuning:
                 dat.longTtcPhysics = ttc_physics_val
                 dat.longUrgTtc = urg_ttc_val
                 dat.longUrgLeadDecel = urg_lead_decel_val
-                dat.longJerkNeeded = jerk_needed_val
-                dat.longCombinedFactor = combined_factor_val
+                dat.longJerkNeeded = float(jerk_needed_val)
+                dat.longCombinedFactor = float(combined_factor_val)
                 dat.longJerkCeiling = float("nan")
 
             if not (isinstance(effective_jerk, float) and math.isfinite(effective_jerk) and effective_jerk >= 0):
@@ -436,8 +436,8 @@ class HKGLongitudinalTuning:
             dat.longUrgTtc = float("nan")
             dat.longUrgLeadDecel = float("nan")
             dat.longTtcPhysics = float("nan")
-            dat.longJerkNeeded = float("nan")
-            dat.longCombinedFactor = float("nan")
+            dat.longJerkNeeded = float(jerk_needed_val)
+            dat.longCombinedFactor = float(combined_factor_val)
             dat.longJerkCeiling = float("nan")
 
         # --- Overreaction Mitigation Logging (Placeholder) ---
