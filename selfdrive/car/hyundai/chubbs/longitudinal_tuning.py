@@ -365,8 +365,8 @@ class HKGLongitudinalTuning:
                 if lead_ok_val and v_rel_val < -0.5:
                     ttc_physics_val = d_gap_val / max(-v_rel_val, 1e-3)
                     urg_ttc_val = np.clip((3.0 - ttc_physics_val) / 2.0, 0.0, 1.0)
-                dat.longTtcPhysics = ttc_physics_val
-                dat.longUrgTtc = urg_ttc_val
+                dat.longTtcPhysics = float(ttc_physics_val)
+                dat.longUrgTtc = float(urg_ttc_val)
 
                 # lead decel urgency
                 urg_lead_decel_val = 0.0
@@ -374,10 +374,10 @@ class HKGLongitudinalTuning:
                     urg_lead_decel_val = np.clip(
                         (-a_lead_k_val - a_nom_val) / (a_max_val - a_nom_val), 0.0, 1.0
                     )
-                dat.longUrgLeadDecel = urg_lead_decel_val
+                dat.longUrgLeadDecel = float(urg_lead_decel_val)
 
                 urgency_val = max(urgency_val, urg_ttc_val, urg_lead_decel_val)
-                dat.longUrgency = urgency_val
+                dat.longUrgency = float(urgency_val)
 
                 jerk_needed_val = (
                     abs((accel_request - self.accel_last) / DT_CTRL)
@@ -402,10 +402,10 @@ class HKGLongitudinalTuning:
             else:
                 # invalid / skip physics
                 dat.longAReq = float("nan")
-                dat.longUrgency = urgency_val
-                dat.longTtcPhysics = ttc_physics_val
-                dat.longUrgTtc = urg_ttc_val
-                dat.longUrgLeadDecel = urg_lead_decel_val
+                dat.longUrgency = float(urgency_val)
+                dat.longTtcPhysics = float(ttc_physics_val)
+                dat.longUrgTtc = float(urg_ttc_val)
+                dat.longUrgLeadDecel = float(urg_lead_decel_val)
                 dat.longJerkNeeded = float(jerk_needed_val)
                 dat.longCombinedFactor = float(combined_factor_val)
                 dat.longJerkCeiling = float("nan")
