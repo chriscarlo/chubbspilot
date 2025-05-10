@@ -385,10 +385,10 @@ class HKGLongitudinalTuning:
                 jerk_ceiling_val = baseline_jerk_val + combined_factor_val * (
                     target_max_jerk - baseline_jerk_val
                 )
-                dat.longJerkCeiling = jerk_ceiling_val
+                dat.longJerkCeiling = float(jerk_ceiling_val)
 
                 jerk_ceiling_val = np.clip(jerk_ceiling_val, baseline_jerk_val, MAX_ALLOWABLE_JERK)
-                dat.longJerkCeiling = jerk_ceiling_val
+                dat.longJerkCeiling = float(jerk_ceiling_val)
 
                 effective_jerk = min(max(baseline_jerk_val, jerk_needed_val), jerk_ceiling_val)
             else:
@@ -400,7 +400,7 @@ class HKGLongitudinalTuning:
                 dat.longUrgLeadDecel = urg_lead_decel_val
                 dat.longJerkNeeded = jerk_needed_val
                 dat.longCombinedFactor = combined_factor_val
-                dat.longJerkCeiling = jerk_ceiling_val
+                dat.longJerkCeiling = float("nan")
 
             if not (isinstance(effective_jerk, float) and math.isfinite(effective_jerk) and effective_jerk >= 0):
                 log.warning(
