@@ -265,6 +265,14 @@ class HKGLongitudinalTuning:
         dat.longAccelRequest = accel_request
         dat.longBrakingRateLimitActive = False  # Default, set true if condition met
 
+        # Ensure variables used in fallback branches are always defined.
+        jerk_needed_val = 0.0
+        combined_factor_val = 0.0
+        urgency_val = float("nan")
+        ttc_physics_val = float("nan")
+        urg_ttc_val = float("nan")
+        urg_lead_decel_val = float("nan")
+
         if CS.out.vEgo > 1.0 and accel_request < 0.15:
             dat.longBrakingRateLimitActive = True
             brake_ratio_val = np.clip(
