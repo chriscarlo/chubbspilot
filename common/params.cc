@@ -534,6 +534,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"UpdateWheelImage", CLEAR_ON_MANAGER_START},
     {"UseSI", PERSISTENT},
     {"UseVienna", PERSISTENT},
+    {"EnableMapUpdates", PERSISTENT},
     {"VisionTurnControl", PERSISTENT},
     {"VoltSNG", PERSISTENT},
     {"WarningImmediateVolume", PERSISTENT},
