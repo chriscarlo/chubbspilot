@@ -109,6 +109,9 @@ def frogpilot_thread():
                             "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation"],
                             poll="modelV2", ignore_avg_freq=["radarState"])
 
+  # Track whether a frogpilotPlan message was sent this iteration
+  last_send_time = time.monotonic()
+
   while True:
     sm.update()
 
@@ -150,6 +153,7 @@ def frogpilot_thread():
                                sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles, sm)
       if FROGPILOT_PLAN_PUBLISHER:
         frogpilot_planner.publish(sm, FROGPILOT_PLAN_PUBLISHER, toggles_updated)
+        last_send_time = time.monotonic()
       else:
         print("WARNING: frogpilot_planner.publish skipped, FROGPILOT_PLAN_PUBLISHER is None.")
 
@@ -160,8 +164,20 @@ def frogpilot_thread():
         frogpilot_plan_send.valid = True
         frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
         FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", frogpilot_plan_send)
+        last_send_time = time.monotonic()
       else:
         print("WARNING: frogpilotPlan toggle update send skipped, FROGPILOT_PLAN_PUBLISHER is None.")
+
+    # -------------------------------------------------------------------
+    # Safety: ensure the frogpilotPlan stream stays alive even when we did
+    # not have new data to publish in this cycle (e.g., before ignition or
+    # when waiting for model frames). If nothing was sent in the last 0.05 s
+    # (~ 20 Hz period), broadcast a heartbeat message with valid=False so downstream processes don't flag commIssue.
+    # -------------------------------------------------------------------
+    if FROGPILOT_PLAN_PUBLISHER and (time.monotonic() - last_send_time) > 0.05:
+      heartbeat = messaging.new_message("frogpilotPlan")  # valid defaults to False
+      FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", heartbeat)
+      last_send_time = time.monotonic()
 
     started_previously = started
 
