@@ -21,6 +21,9 @@ from openpilot.selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_ur
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
 from msgq import MultiplePublishersError
 
+# Module-level variable to hold the singleton publisher for frogpilotPlan
+FROGPILOT_PLAN_PUBLISHER = None
+
 def assets_checks(model_manager, theme_manager):
   if params_memory.get_bool("DownloadAllModels"):
     run_thread_with_lock("download_all_models", model_manager.download_all_models)
@@ -65,12 +68,25 @@ def update_checks(manually_updated, model_manager, now, theme_manager, frogpilot
 def frogpilot_thread():
   config_realtime_process(5, Priority.CTRL_LOW)
 
+  global FROGPILOT_PLAN_PUBLISHER # Declare usage of the global variable
+
+  # -------------------------------------------------
+  # Initialize the shared frogpilotPlan publisher FIRST
+  # -------------------------------------------------
+  if FROGPILOT_PLAN_PUBLISHER is None:
+    try:
+      FROGPILOT_PLAN_PUBLISHER = messaging.PubMaster(["frogpilotPlan"])
+    except MultiplePublishersError:
+      print("CRITICAL ERROR: MultiplePublishersError occurred in frogpilot_process when initializing FROGPILOT_PLAN_PUBLISHER early.")
+      # Keep as None to allow downstream safety checks.
+
   error_log = CRASHES_DIR / "error.txt"
   if error_log.is_file():
     error_log.unlink()
 
   params_cache = Params("/cache/params")
 
+  # Now it is safe to instantiate components that rely on the shared publisher
   frogpilot_planner = FrogPilotPlanner()
   frogpilot_tracking = FrogPilotTracking()
   frogpilot_variables = FrogPilotVariables()
@@ -88,16 +104,6 @@ def frogpilot_thread():
 
   toggles_last_updated = datetime.datetime.now()
 
-  # Create or reuse a singleton PubMaster for frogpilotPlan
-  try:
-    pm = messaging.PubMaster(["frogpilotPlan"])
-  except MultiplePublishersError:
-    # Another publisher was already created earlier (e.g., by VTSC). Reuse it.
-    from openpilot.selfdrive.frogpilot.controls.lib import chauffeur_vtsc as _vtsc_mod
-    pm = getattr(_vtsc_mod, "_PUB_FROGPILOT_PLAN", None)
-    if pm is None:
-      # Should not happen, but fall back to a dummy PubMaster-less path
-      pm = None
   sm = messaging.SubMaster(["carControl", "carState", "controlsState", "deviceState", "driverMonitoringState",
                             "managerState", "modelV2", "pandaStates", "radarState",
                             "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation"],
@@ -142,14 +148,20 @@ def frogpilot_thread():
     if started and sm.updated["modelV2"]:
       frogpilot_planner.update(sm["carControl"], sm["carState"], sm["controlsState"], sm["frogpilotCarControl"], sm["frogpilotCarState"],
                                sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles, sm)
-      frogpilot_planner.publish(sm, pm, toggles_updated)
+      if FROGPILOT_PLAN_PUBLISHER:
+        frogpilot_planner.publish(sm, FROGPILOT_PLAN_PUBLISHER, toggles_updated)
+      else:
+        print("WARNING: frogpilot_planner.publish skipped, FROGPILOT_PLAN_PUBLISHER is None.")
 
       frogpilot_tracking.update(sm["carState"], sm["controlsState"], sm["frogpilotCarControl"])
     elif not started and toggles_updated:
-      frogpilot_plan_send = messaging.new_message("frogpilotPlan")
-      frogpilot_plan_send.valid = True
-      frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
-      pm.send("frogpilotPlan", frogpilot_plan_send)
+      if FROGPILOT_PLAN_PUBLISHER:
+        frogpilot_plan_send = messaging.new_message("frogpilotPlan")
+        frogpilot_plan_send.valid = True
+        frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
+        FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", frogpilot_plan_send)
+      else:
+        print("WARNING: frogpilotPlan toggle update send skipped, FROGPILOT_PLAN_PUBLISHER is None.")
 
     started_previously = started
 

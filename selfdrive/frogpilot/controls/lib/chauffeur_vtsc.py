@@ -155,6 +155,9 @@ def dynamic_jerk_scale(v_ego_ms: float) -> float:
 # --------------------------
 
 class VisionTurnSpeedController:
+    # Class-level publisher
+    _PUB_FROGPILOT_PLAN = None
+
     def __init__(
         self,
         turn_smoothing_alpha=0.3,
@@ -183,21 +186,13 @@ class VisionTurnSpeedController:
         self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
 
-        # Use a module-level singleton PubMaster to avoid multiple publishers on the same address
-        global _PUB_FROGPILOT_PLAN
-        try:
-            _PUB_FROGPILOT_PLAN
-        except NameError:
-            _PUB_FROGPILOT_PLAN = None
+        # Get the shared publisher instance from frogpilot_process.py
+        from openpilot.selfdrive.frogpilot.frogpilot_process import FROGPILOT_PLAN_PUBLISHER
+        self.pm = FROGPILOT_PLAN_PUBLISHER
 
-        if _PUB_FROGPILOT_PLAN is None:
-            try:
-                _PUB_FROGPILOT_PLAN = messaging.PubMaster(['frogpilotPlan'])
-            except MultiplePublishersError:
-                # Another publisher already exists in this process
-                _PUB_FROGPILOT_PLAN = None
-
-        self.pm = _PUB_FROGPILOT_PLAN
+        if self.pm is None:
+            print("WARNING: VisionTurnSpeedController initialized but FROGPILOT_PLAN_PUBLISHER is None. " +
+                  "VTSC will not be able to publish frogpilotPlan messages.")
 
         self.prev_v_cruise_cluster = 0.0
 
@@ -420,7 +415,14 @@ class VisionTurnSpeedController:
 
     def _publish_frogpilot_plan(self):
         if self.pm is None:
-            return  # Skip publishing if no PubMaster available
+            # Attempt to fetch the shared publisher again (it might be initialized after VTSC was constructed)
+            try:
+                from openpilot.selfdrive.frogpilot.frogpilot_process import FROGPILOT_PLAN_PUBLISHER
+                self.pm = FROGPILOT_PLAN_PUBLISHER
+            except Exception:
+                self.pm = None
+        if self.pm is None:
+            return  # Still unavailable, skip publishing safely
         # Create and send FrogPilotPlan message
         fp_plan_msg = messaging.new_message('frogpilotPlan')
         fp_plan_msg.valid = True
