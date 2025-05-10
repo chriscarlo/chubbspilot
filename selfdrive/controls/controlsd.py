@@ -92,7 +92,27 @@ class Controls:
     # TODO: de-couple controlsd with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
+    # Base ignore list: sensors that don't gate engagement plus the test joystick stream
     ignore = self.sensor_packets + ['testJoystick']
+
+    # Streams that are defined in services.py but never published on a typical road device
+    # (e.g., secondary IMU, GPS raw, video encode indices, etc.).  These should be
+    # excluded from "alive" and average-frequency health checks so they can't trip
+    # the generic Communication-Issue alert.
+    optional_services = [
+      'accelerometer2', 'gyroscope2', 'magnetometer',
+      'lightSensor', 'temperatureSensor', 'temperatureSensor2',
+      'gpsNMEA', 'gpsLocationExternal', 'ubloxGnss', 'ubloxRaw', 'gnssMeasurements',
+      'liveMapData', 'navInstruction', 'navRoute', 'navThumbnail', 'navModel', 'mapRenderState',
+      'qRoadEncodeIdx', 'roadEncodeIdx',
+      'driverEncodeIdx', 'wideRoadEncodeIdx',
+      'livestreamWideRoadEncodeIdx', 'livestreamRoadEncodeIdx', 'livestreamDriverEncodeIdx',
+      'livestreamWideRoadEncodeData', 'livestreamRoadEncodeData', 'livestreamDriverEncodeData',
+      'customReservedRawData0', 'customReservedRawData1', 'customReservedRawData2',
+      'uploaderState', 'errorLogMessage', 'carParams', 'userFlag',
+    ]
+
+    ignore += optional_services
     if SIMULATION:
       ignore += ['driverCameraState', 'managerState']
     if REPLAY:
@@ -104,7 +124,10 @@ class Controls:
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'liveLocationKalman',
                                    'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters',
                                    'testJoystick', 'frogpilotCarState', 'frogpilotPlan'] + self.camera_packets + self.sensor_packets,
-                                  ignore_alive=ignore, ignore_avg_freq=ignore+['radarState', 'testJoystick', 'frogpilotPlan'], ignore_valid=['testJoystick', ],
+                                  ignore_alive=ignore,
+                                  # Average-frequency: ignore everything in `ignore` plus radarState (when present) and frogpilotPlan
+                                  ignore_avg_freq=ignore + ['radarState', 'frogpilotPlan'],
+                                  ignore_valid=['testJoystick', ],
                                   frequency=int(1/DT_CTRL))
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode")
