@@ -471,6 +471,16 @@ class MapdPyDaemon:
 
 
 def main():
+    # Run this Python process with low scheduling priority on core 2 so it
+    # can do heavy shapely/math work without contending with openpilot's
+    # real-time control loops (controlsd/core-0, locationd/core-1 etc.).
+    try:
+        from openpilot.common.realtime import config_realtime_process, Priority
+        config_realtime_process(2, Priority.CTRL_LOW)
+    except Exception as e:
+        # Don't crash if called outside full openpilot environment
+        print(f"mapd_daemon: unable to set realtime priority ({e})")
+
     daemon = MapdPyDaemon()
     rk = Ratekeeper(1.0) # Run at 1 Hz
     while True:
