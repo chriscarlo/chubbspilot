@@ -169,13 +169,18 @@ def frogpilot_thread():
         print("WARNING: frogpilotPlan toggle update send skipped, FROGPILOT_PLAN_PUBLISHER is None.")
 
     # -------------------------------------------------------------------
-    # Safety: ensure the frogpilotPlan stream stays alive even when we did
-    # not have new data to publish in this cycle (e.g., before ignition or
-    # when waiting for model frames). If nothing was sent in the last 0.05 s
-    # (~ 20 Hz period), broadcast a heartbeat message with valid=False so downstream processes don't flag commIssue.
+    # Safety: keep the frogpilotPlan stream alive. If we haven't published
+    # anything in the last 0.05 s (~20 Hz), broadcast a lightweight
+    # heartbeat *marked as valid*.  Using `valid=True` prevents dependent
+    # modules (e.g. paramsd, dmonitoringd) from flagging a commIssue due to
+    # invalid frogpilotPlan packets while still conveying that this packet
+    # does not contain a new plan update.  No other fields need to be set –
+    # consumers already gate on domain-specific sub-fields (speed commands,
+    # events, …) which remain at their default values.
     # -------------------------------------------------------------------
     if FROGPILOT_PLAN_PUBLISHER and (time.monotonic() - last_send_time) > 0.05:
-      heartbeat = messaging.new_message("frogpilotPlan")  # valid defaults to False
+      heartbeat = messaging.new_message("frogpilotPlan")
+      heartbeat.valid = True  # mark as valid so SubMaster.valid stays True
       FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", heartbeat)
       last_send_time = time.monotonic()
 
