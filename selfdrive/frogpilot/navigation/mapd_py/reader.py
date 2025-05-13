@@ -246,7 +246,6 @@ class MapReader:
                                 osm_id, _, _, _, _, offset, size = rec
                                 try:
                                     proto_file.seek(offset)
-                                    _ = proto_file.read(4) # Discard size prefix
                                     message_bytes = proto_file.read(size)
                                     if len(message_bytes) < size: continue
 
