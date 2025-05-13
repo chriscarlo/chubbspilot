@@ -469,10 +469,10 @@ class MapReader:
 
         # --- R-tree Query (Needs Lock) ---
         closest_segment_info = None
-        # Expand the spatial query to ±0.002° (≈ 220 m) which comfortably
-        # covers the 0.0015° (≈ 167 m) distance filter applied below while
-        # remaining small enough to keep the R-tree intersection fast.
-        SEARCH_RADIUS_DEG = 0.002
+        # Use a larger spatial query radius (±0.006° ≈ 660m) to provide adequate
+        # lookahead for highway speeds (75mph = ~30m/s). This gives ~20 seconds
+        # of advance notice for the system to load tiles and prepare speed data.
+        SEARCH_RADIUS_DEG = 0.006
         search_bounds = (lon - SEARCH_RADIUS_DEG, lat - SEARCH_RADIUS_DEG,
                          lon + SEARCH_RADIUS_DEG, lat + SEARCH_RADIUS_DEG)
         with self.loading_lock: # Protect access to rtree_idx and segments_data
@@ -490,7 +490,9 @@ class MapReader:
 
                         try:
                              distance = segment_info['geom'].distance(current_point)
-                             MAX_RELEVANT_DISTANCE_DEGREES = 0.0015
+                             # Increased to ~550m to provide better highway-speed lookahead
+                             # At 75mph (33.5 m/s), this gives ~16 seconds advance notice
+                             MAX_RELEVANT_DISTANCE_DEGREES = 0.005
                              if distance < min_dist and distance < MAX_RELEVANT_DISTANCE_DEGREES:
                                  min_dist = distance
                                  best_candidate_info = segment_info
