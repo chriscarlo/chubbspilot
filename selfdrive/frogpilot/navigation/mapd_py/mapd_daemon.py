@@ -43,7 +43,9 @@ class MapdPyDaemon:
         self.params = Params()
         self.params_memory = Params("/dev/shm/params") # For writing legacy params if needed
 
-        self.map_reader = reader.MapReader()
+        # Initialise the MapReader with the tile-loader worker pinned to CPU 3 to
+        # keep heavy protobuf unpacking off the daemon's main core.
+        self.map_reader = reader.MapReader(worker_cpu=3)
 
         # State variables
         self.last_valid_pos = None      # matcher.Position: Last known valid position
@@ -476,7 +478,10 @@ def main():
     # real-time control loops (controlsd/core-0, locationd/core-1 etc.).
     try:
         from openpilot.common.realtime import config_realtime_process, Priority
-        config_realtime_process(2, Priority.CTRL_LOW)
+        # Allow the process to run on cores 2 *and* 3 so that the dedicated tile
+        # loader thread can be exclusively pinned to core 3 while the rest of the
+        # daemon continues on core 2.  See reader.MapReader initialisation above.
+        config_realtime_process([2, 3], Priority.CTRL_LOW)
     except Exception as e:
         # Don't crash if called outside full openpilot environment
         print(f"mapd_daemon: unable to set realtime priority ({e})")

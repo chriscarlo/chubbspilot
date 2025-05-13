@@ -109,7 +109,7 @@ INDEX_RECORD_SIZE = struct.calcsize(INDEX_RECORD_FORMAT)
 DEFAULT_CACHE_SIZE = 5000 # Max number of segments to keep in memory
 
 class MapReader:
-    def __init__(self, cache_size=DEFAULT_CACHE_SIZE):
+    def __init__(self, cache_size: int = DEFAULT_CACHE_SIZE, worker_cpu: int | None = None):
         print("MapReader (Indexed Tiled PROTOBUF - Threaded) Initializing...")
         self.segments_data = OrderedDict()
         self.cache_size = cache_size
@@ -125,6 +125,23 @@ class MapReader:
         self.worker_thread = threading.Thread(target=self._tile_loader_worker, daemon=True)
         self.worker_thread.start()
         # -------------------------------------------------
+
+        # Optionally pin the tile-loader worker thread to a dedicated CPU core so it
+        # doesn't contend with the MapdPyDaemon's timing-critical main loop.
+        if worker_cpu is not None:
+            try:
+                native_id = getattr(self.worker_thread, "native_id", None)
+                if native_id is not None:
+                    os.sched_setaffinity(native_id, {worker_cpu})
+                    print(f"MapReader: Worker thread pinned to CPU {worker_cpu} (native id={native_id}).")
+            except AttributeError:
+                # os.sched_setaffinity may not be available on some platforms
+                print("MapReader: WARNING – CPU affinity not supported on this platform.")
+            except PermissionError as e:
+                # Non-root or lacking CAP_SYS_NICE/CAP_SYS_ADMIN can fail – continue gracefully
+                print(f"MapReader: WARNING – Failed to set CPU affinity: {e}")
+            except Exception as e:
+                print(f"MapReader: Unexpected error while setting affinity: {e}")
 
         self._determine_initial_region()
         print(f"MapReader Initialized (Cache Size: {self.cache_size}). Ready to load tiles on demand.")

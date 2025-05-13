@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concierge Landing Page</title>
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <script src="/static/js/htmx.min.js" defer></script>
+    <script src="/static/js/app.js" defer></script>
+    <link rel="icon" href="/static/favicon.ico"/>
+    <!-- Tailwind CDN for the prototype; copy locally later if desired -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine (optional) -->
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <!-- HTMX (no local file required) -->
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+    <script>
+      // inject our custom theme overrides
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              /* Canvas & Panels */
+              'bg-1':     '#0d1117',  /* canvas-default */
+              'bg-2':     '#161b22',  /* canvas-overlay */
+              'bg-3':     '#21262d',  /* canvas-inset */
+              /* Elevated surfaces (cards, modals) */
+              'surface':  '#30363d',  /* border-muted */
+              /* Text */
+              'text-primary':   '#c9d1d9',  /* fg-default */
+              'text-secondary': '#8b949e',  /* fg-muted   */
+              'text-muted':     '#6e7681',  /* fg-subtle  */
+              /* Accent (links, buttons) */
+              'accent':    '#58a6ff',  /* accent-fg-default      */
+              'accent-2':  '#539bf5',  /* accent-fg-hover        */
+              /* Borders & dividers */
+              'border':    '#30363d'   /* border-default         */
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="h-full bg-bg-1 text-text-primary">
+    <nav class="bg-bg-1 border-b border-border px-4 py-2 flex items-center">
+      <h1 class="text-xl font-semibold tracking-tight">The Concierge</h1>
+    </nav>
+    <main class="flex items-center justify-center h-[calc(100vh-56px)]">
+      <div
+        class="max-w-md w-full p-6 rounded-lg bg-bg-2 ring-1 ring-border shadow-lg"
+        hx-get="/api/status"
+        hx-trigger="load, every 2s"
+        hx-swap="innerHTML"
+      >
+        <!-- Fallback for no-JS -->
+        <noscript>Please enable JavaScript to see device status.</noscript>
+      </div>
+    </main>
+
+    <!-- client-side render logic -->
+    <script>
+      document.body.addEventListener("htmx:afterSwap", e => {
+        // only act on our card div
+        if (e.detail.target.tagName !== "DIV") return;
+        const status = JSON.parse(e.detail.xhr.responseText);
+        e.detail.target.innerHTML = `
+          <h2 class="text-2xl font-bold mb-4 text-text-primary">
+            Device Status (frame ${status.time})
+          </h2>
+          <table class="w-full text-sm text-text-secondary">
+            <tr>
+              <td class="pr-2">Battery&nbsp;%</td>
+              <td class="text-text-primary">${status.deviceState?.batteryPercent ?? 'N/A'}</td>
+            </tr>
+            <tr>
+              <td>CPU Temp °C</td>
+              <td class="text-text-primary">${status.thermal?.cpuTempC ?? 'N/A'}</td>
+            </tr>
+            <tr>
+              <td>Veh Speed (m/s)</td>
+              <td class="text-text-primary">${status.carState?.vEgo ?? 'N/A'}</td>
+            </tr>
+          </table>
+          <button
+            class="mt-4 px-4 py-2 bg-accent hover:bg-accent-2 rounded text-white transition-colors duration-150"
+          >
+            Refresh Now
+          </button>
+        `;
+      });
+    </script>
+</body>
+</html>

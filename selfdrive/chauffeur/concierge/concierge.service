@@ -1,0 +1,14 @@
+[Unit]
+Description=Concierge Web Console
+After=openpilot.target
+Requires=openpilot.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/openpilot
+ExecStart=/usr/bin/python -m selfdrive.chauffeur.concierge.main
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
