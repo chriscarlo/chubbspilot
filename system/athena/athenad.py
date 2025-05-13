@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from functools import partial
 from queue import Queue
 from typing import cast
+import concurrent.futures
 
 # OpenPilot / system imports
 import cereal.messaging as messaging
@@ -545,15 +546,78 @@ def upload_handler(end_event: threading.Event) -> None:
 # -------------------------------------------------------------------------------
 # Automatic RLog Finder (realdata_handler)
 # -------------------------------------------------------------------------------
-def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed_dirs: set[str]) -> int:
+def _compress_segment_and_queue_on_cpu3(subdir_path: str, segment_name: str, formatted_date_time: str, creation_time_ts: float):
+    """
+    Compresses a single segment to .tar.zst, pins to CPU3, and queues for upload.
+    """
+    try:
+        os.sched_setaffinity(0, {3})  # Pin this thread to CPU core 3
+        debug_print(f"Compression thread for {segment_name} now running on CPU {os.sched_getaffinity(0)}")
+    except Exception as e:
+        cloudlog.warning(f"Failed to set CPU affinity for compression of {segment_name}: {e}")
+        debug_print(f"Warning: Failed to set CPU affinity for {segment_name}: {e}")
+
+    if zstd is None:
+        debug_print(f"zstandard library not found, cannot create archive for {segment_name}. Skipping.")
+        cloudlog.warning(f"zstd not found, skipping archive creation for {segment_name}")
+        return
+
+    archive_name = f"{formatted_date_time}--{segment_name}.tar.zst"
+    archive_filepath_in_staging = os.path.join(STAGING_ARCHIVE_DIR, archive_name)
+
+    try:
+        files_added_count = 0
+        with open(archive_filepath_in_staging, "wb") as raw_f:
+            cctx = zstd.ZstdCompressor(level=3)
+            with cctx.stream_writer(raw_f) as zstd_f:
+                with tarfile.open(fileobj=zstd_f, mode="w|") as tar:
+                    for fname in ['rlog', 'qlog', 'qcamera.ts']:
+                        fpath = os.path.join(subdir_path, fname)
+                        if os.path.isfile(fpath):
+                            tar.add(fpath, arcname=fname)
+                            files_added_count += 1
+
+        if files_added_count == 0:
+            debug_print(f"No files found for archive {archive_filepath_in_staging}, removing empty archive.")
+            if os.path.exists(archive_filepath_in_staging):
+                os.remove(archive_filepath_in_staging)
+            return
+
+        debug_print(f"Created archive for upload: {archive_filepath_in_staging} (processed by thread {threading.get_ident()})")
+
+        upload_id = f"azure|{segment_name}|archive"
+        item = UploadItem(
+            path=archive_filepath_in_staging,
+            created_at=int(creation_time_ts * 1000),
+            id=upload_id,
+            azure_subdir=None,
+            allow_cellular=True,
+            original_segment_to_delete=subdir_path
+        )
+        debug_print(f"Queueing archive item from compression thread: {item.id} (Path: {item.path}) -> Azure: {AZURE_BASE_DIR}/{archive_name}")
+        upload_queue.put_nowait(item)
+        # Note: UploadQueueCache.cache() is called by the main realdata_handler loop
+
+    except (tarfile.TarError, zstd.ZstdError, OSError) as e:
+        debug_print(f"Failed to create archive {archive_filepath_in_staging} in compression thread: {e}")
+        cloudlog.exception(f"Failed to create archive {archive_name} in {STAGING_ARCHIVE_DIR} (compression_thread)", error=str(e))
+        try:
+            if os.path.exists(archive_filepath_in_staging):
+                os.remove(archive_filepath_in_staging)
+        except OSError:
+            pass # Ignore cleanup error
+    except Exception as e:
+        debug_print(f"Unexpected error in compression thread for {segment_name}: {e}")
+        cloudlog.exception(f"Unexpected error in _compress_segment_and_queue_on_cpu3 for {segment_name}", error=str(e))
+
+def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed_dirs: set[str], sm: messaging.SubMaster, compression_executor: concurrent.futures.ThreadPoolExecutor) -> None:
   current_time = time.time()
   one_day_ago_ts = current_time - age_limit_seconds
   found_count = 0
-  queued_count = 0
 
   if not os.path.isdir(base_path):
       cloudlog.error(f"Realdata base path not found: {base_path}")
-      return 0
+      return
 
   try:
     os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
@@ -561,7 +625,7 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
   except OSError as e:
     cloudlog.error(f"Could not create or access staging directory {STAGING_ARCHIVE_DIR}: {e}")
     debug_print(f"Fatal: Could not create/access staging dir {STAGING_ARCHIVE_DIR}: {e}. Archiving cannot proceed.")
-    return 0
+    return
 
   try:
     for subdir in os.listdir(base_path):
@@ -582,79 +646,27 @@ def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed
       formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
       segment_name = subdir
 
-      # The complex Azure directory renaming logic that was here (approx. lines 507-532 in original)
-      # has been removed. The azure_file_exists() check in _do_upload_azure for the archive file
-      # is sufficient to prevent re-uploads of existing archives.
+      # --- Check if device is offroad before attempting compression ---
+      sm.update(0) # Get fresh status for this specific segment
+      if not sm.valid['deviceState'] or sm['deviceState'].started:
+          debug_print(f"Device onroad or deviceState invalid. Skipping compression for {segment_name} ({subdir_path}).")
+          continue # Skip to the next directory/segment
 
-      # --- New Queueing Logic: compress and upload archive ---
-      archive_name = f"{formatted_date_time}--{segment_name}.tar.zst"
-      archive_filepath_in_staging = os.path.join(STAGING_ARCHIVE_DIR, archive_name)
-
-      if zstd is None:
-          debug_print("zstandard library not found, cannot create archive. Skipping.")
-          continue
-
-      try:
-        with open(archive_filepath_in_staging, "wb") as raw_f:
-          cctx = zstd.ZstdCompressor(level=3)
-          with cctx.stream_writer(raw_f) as zstd_f:
-            with tarfile.open(fileobj=zstd_f, mode="w|") as tar:
-              files_added_count = 0
-              for fname in ['rlog', 'qlog', 'qcamera.ts']:
-                fpath = os.path.join(subdir_path, fname)
-                if os.path.isfile(fpath):
-                  tar.add(fpath, arcname=fname)
-                  files_added_count += 1
-
-        if files_added_count == 0:
-          debug_print(f"No files found for archive {archive_filepath_in_staging}, removing empty archive.")
-          if os.path.exists(archive_filepath_in_staging):
-            os.remove(archive_filepath_in_staging)
-          continue
-
-        debug_print(f"Created archive for upload: {archive_filepath_in_staging}")
-      except (tarfile.TarError, zstd.ZstdError, OSError) as e:
-        debug_print(f"Failed to create archive {archive_filepath_in_staging}: {e}")
-        cloudlog.exception(f"Failed to create archive {archive_name} in {STAGING_ARCHIVE_DIR}", error=str(e))
-        try:
-            if os.path.exists(archive_filepath_in_staging):
-                os.remove(archive_filepath_in_staging) # Clean up partial/failed archive
-        except OSError:
-            pass # Ignore cleanup error
-        continue
-
-      upload_id = f"azure|{segment_name}|archive"
-      is_active_or_queued = any(ci and ci.id == upload_id for ci in cur_upload_items.values())
-      with upload_queue.mutex:
-        if any(qi and qi.id == upload_id for qi in list(upload_queue.queue)):
-          is_active_or_queued = True
-      if is_active_or_queued:
-        debug_print(f"Archive already active or queued: {upload_id}, skipping {subdir_path}")
-        # If it's already queued, we should probably mark this subdir as processed for this scan
-        # to avoid re-evaluating it constantly if the queue is long.
-        processed_dirs.add(subdir)
-        continue
-
-      item = UploadItem(
-        path=archive_filepath_in_staging, # Path to the archive in the staging directory
-        created_at=int(creation_time_ts * 1000),
-        id=upload_id,
-        azure_subdir=None, # Archives go to AZURE_BASE_DIR
-        allow_cellular=True,
-        original_segment_to_delete=subdir_path # Path to the original segment directory
+      # Submit compression and queuing to the dedicated executor
+      debug_print(f"Submitting compression task for {segment_name} ({subdir_path}) to executor.")
+      compression_executor.submit(
+          _compress_segment_and_queue_on_cpu3,
+          subdir_path,
+          segment_name,
+          formatted_date_time,
+          creation_time_ts
       )
-      debug_print(f"Queueing archive item: {item.id} (Path: {item.path}, Original: {item.original_segment_to_delete}) -> Azure: {AZURE_BASE_DIR}/{archive_name}")
-      upload_queue.put_nowait(item)
-      queued_count += 1
       processed_dirs.add(subdir) # Mark as processed for this scan iteration only after successful queuing
 
-    if queued_count > 0:
-      UploadQueueCache.cache(upload_queue)
-    debug_print(f"Scan complete. Found {found_count} dirs, queued {queued_count} archives.")
+    UploadQueueCache.cache(upload_queue) # Cache after scan pass, queued items are added by worker
+    debug_print(f"Scan complete. Found {found_count} potential dirs for processing.")
   except Exception:
     cloudlog.exception("azure.realdata_handler.scan_exception")
-
-  return queued_count
 
 def realdata_handler(end_event: threading.Event) -> None:
   global last_clear_time
@@ -663,37 +675,64 @@ def realdata_handler(end_event: threading.Event) -> None:
   scan_interval = 300
   processed_dirs: set[str] = set()
 
+  sm = messaging.SubMaster(['deviceState'])
+
   cloudlog.info("Performing initial realdata scan...")
   debug_print("Performing initial realdata scan...")
-  try:
-    # Ensure staging directory exists before first scan.
-    # _scan_and_queue_realdata also does this, but it's good for clarity here too.
-    os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
-    initial_count = _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs)
-    cloudlog.info(f"Initial scan queued {initial_count} archives.")
-    debug_print(f"Initial scan queued {initial_count} archives.")
-    UploadQueueCache.cache(upload_queue)
-  except Exception:
-    cloudlog.exception("azure.realdata_handler.initial_scan_exception")
 
-  while not end_event.is_set():
-    current_time = time.time()
-    if current_time - last_clear_time >= HOURLY_CLEAR_INTERVAL:
-      cloudlog.info("Hourly Azure queue clear, resetting scan state.")
-      debug_print("Hourly Azure queue clear, resetting scan state.")
-      try:
-        UploadQueueCache.clear_cache()
-        with upload_queue.mutex:
-          while not upload_queue.empty():
-            upload_queue.get_nowait()
-            upload_queue.task_done()
-        processed_dirs.clear()
-        last_clear_time = current_time
-      except Exception:
-        cloudlog.exception("azure.realdata_handler.hourly_clear.exception")
-    _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs)
-    end_event.wait(scan_interval)
-  debug_print("Realdata handler thread exiting.")
+  # Thread pool for compression tasks, pinned to CPU 3
+  compression_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='azure_compress')
+
+  try:
+    try:
+      # Ensure staging directory exists before first scan.
+      os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
+      sm.update(0) # Initial update for the first scan
+      _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs, sm, compression_executor)
+      cloudlog.info(f"Initial scan for realdata started. Items will be queued by compression workers.")
+      debug_print(f"Initial scan for realdata started. Items will be queued by compression workers.")
+      UploadQueueCache.cache(upload_queue) # Cache after initial scan submission pass
+    except Exception:
+      cloudlog.exception("azure.realdata_handler.initial_scan_exception")
+
+    while not end_event.is_set():
+      current_time = time.time()
+      if current_time - last_clear_time >= HOURLY_CLEAR_INTERVAL:
+        cloudlog.info("Hourly Azure queue clear, resetting scan state.")
+        debug_print("Hourly Azure queue clear, resetting scan state.")
+        try:
+          UploadQueueCache.clear_cache()
+          with upload_queue.mutex:
+            # Clear the Python queue. Submitted compression tasks might still run and re-add.
+            # This primarily clears items that were persisted and reloaded.
+            temp_list = []
+            while not upload_queue.empty():
+                try:
+                    temp_list.append(upload_queue.get_nowait())
+                except queue.Empty:
+                    break
+            # For tasks already done from queue perspective but part of this clear
+            for _ in temp_list:
+                try:
+                    upload_queue.task_done()
+                except ValueError: # if task_done() called too many times
+                    pass
+            # Re-add items not yet fully processed by uploader but might be from old cache.
+            # The goal is to clear the *persisted* cache and reset processed_dirs.
+            # Active items in cur_upload_items or newly compressed items will repopulate.
+          processed_dirs.clear()
+          last_clear_time = current_time
+          debug_print("Cleared processed_dirs and ParamStore cache for hourly reset.")
+        except Exception:
+          cloudlog.exception("azure.realdata_handler.hourly_clear.exception")
+
+      sm.update(0) # Update device state before passing to scan function
+      _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs, sm, compression_executor)
+      end_event.wait(scan_interval)
+  finally:
+    debug_print("Shutting down compression executor...")
+    compression_executor.shutdown(wait=True)
+    debug_print("Compression executor shutdown complete. Realdata handler thread exiting.")
 
 
 # -------------------------------------------------------------------------------
