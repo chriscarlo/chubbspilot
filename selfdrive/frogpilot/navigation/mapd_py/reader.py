@@ -246,6 +246,7 @@ class MapReader:
                                 osm_id, _, _, _, _, offset, size = rec
                                 try:
                                     proto_file.seek(offset)
+                                    _ = proto_file.read(4) # Discard size prefix
                                     message_bytes = proto_file.read(size)
                                     if len(message_bytes) < size: continue
 
@@ -468,7 +469,12 @@ class MapReader:
 
         # --- R-tree Query (Needs Lock) ---
         closest_segment_info = None
-        search_bounds = (lon - 1e-4, lat - 1e-4, lon + 1e-4, lat + 1e-4)
+        # Expand the spatial query to ±0.002° (≈ 220 m) which comfortably
+        # covers the 0.0015° (≈ 167 m) distance filter applied below while
+        # remaining small enough to keep the R-tree intersection fast.
+        SEARCH_RADIUS_DEG = 0.002
+        search_bounds = (lon - SEARCH_RADIUS_DEG, lat - SEARCH_RADIUS_DEG,
+                         lon + SEARCH_RADIUS_DEG, lat + SEARCH_RADIUS_DEG)
         with self.loading_lock: # Protect access to rtree_idx and segments_data
             try:
                 nearest_candidates = list(self.rtree_idx.intersection(search_bounds, objects=True))
