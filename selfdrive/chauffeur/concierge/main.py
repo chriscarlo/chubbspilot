@@ -128,6 +128,15 @@ async def test_page(request: Request):
     # return tmpl.render(request=request, browser_title_suffix="- Test", page_title_text="- Test")
     return "<h1>Test Page</h1><p>Under Construction</p><a href='/'>Back to Dashboard</a>"
 
+def main():
+    # This function is called by manager.py
+    import uvicorn
+    app_module_path = "selfdrive.chauffeur.concierge.main:app"
+    uvicorn.run(app_module_path,
+                host="0.0.0.0",
+                port=5055,
+                log_level="info")
+
 if __name__ == "__main__":
     import uvicorn
     # This allows the script to be run directly with `python -m selfdrive.chauffeur.concierge.main`
