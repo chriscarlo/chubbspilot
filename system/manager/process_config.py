@@ -107,11 +107,12 @@ procs = [
 
   # FrogPilot processes
   NativeProcess("classic_modeld", "selfdrive/classic_modeld", ["./classic_modeld"], run_classic_modeld),
-  PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
+  # PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
   PythonProcess("frogpilot_process", "selfdrive.frogpilot.frogpilot_process", always_run),
   PythonProcess("map_downloader", "selfdrive.frogpilot.navigation.mapd_py.downloader.downloader", always_run),
   PythonProcess("mapd_py", "selfdrive.frogpilot.navigation.mapd_py.mapd_daemon", always_run),
   NativeProcess("tinygrad_modeld", "selfdrive/tinygrad_modeld", ["./tinygrad_modeld"], run_tinygrad_modeld),
+  PythonProcess("concierge", "selfdrive.chauffeur.concierge.main", always_run),
 ]
 
 managed_processes = {p.name: p for p in procs}
