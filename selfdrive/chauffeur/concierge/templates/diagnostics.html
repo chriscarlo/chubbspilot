@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block browser_title_suffix %}- Diagnostics{% endblock %}
+
+{% block page_title_text %}- Diagnostics{% endblock %}
+
+{% block content %}
+      <div class="bg-2 p-6 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-bold mb-4 text-accent">System Diagnostics</h2>
+        <p class="text-secondary">This page will display various system diagnostic information.</p>
+        <!-- Placeholder for diagnostic content -->
+        <div class="mt-6">
+          <p class="text-lg font-semibold">Device Status:</p>
+          <p class="text-secondary">All systems normal.</p>
+        </div>
+        <div class="mt-4">
+          <p class="text-lg font-semibold">Recent Events:</p>
+          <ul class="list-disc list-inside text-secondary">
+            <li>System boot completed.</li>
+            <li>Network connection established.</li>
+          </ul>
+        </div>
+      </div>
+{% endblock %}

@@ -6,7 +6,7 @@ Requires=openpilot.target
 [Service]
 Type=simple
 WorkingDirectory=/data/openpilot
-ExecStart=/usr/bin/python -m selfdrive.chauffeur.concierge.main
+ExecStart=/usr/bin/env python3 -m selfdrive.chauffeur.concierge.main
 Restart=on-failure
 User=root
 

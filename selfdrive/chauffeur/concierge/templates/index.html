@@ -1,94 +1,177 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concierge Landing Page</title>
-    <link href="/static/css/tailwind.min.css" rel="stylesheet">
-    <script src="/static/js/htmx.min.js" defer></script>
-    <script src="/static/js/app.js" defer></script>
-    <link rel="icon" href="/static/favicon.ico"/>
-    <!-- Tailwind CDN for the prototype; copy locally later if desired -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine (optional) -->
-    <script src="/static/js/htmx.min.js"></script>
-    <script src="/static/js/app.js"></script>
-    <!-- HTMX (no local file required) -->
-    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <script>
-      // inject our custom theme overrides
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              /* Canvas & Panels */
-              'bg-1':     '#0d1117',  /* canvas-default */
-              'bg-2':     '#161b22',  /* canvas-overlay */
-              'bg-3':     '#21262d',  /* canvas-inset */
-              /* Elevated surfaces (cards, modals) */
-              'surface':  '#30363d',  /* border-muted */
-              /* Text */
-              'text-primary':   '#c9d1d9',  /* fg-default */
-              'text-secondary': '#8b949e',  /* fg-muted   */
-              'text-muted':     '#6e7681',  /* fg-subtle  */
-              /* Accent (links, buttons) */
-              'accent':    '#58a6ff',  /* accent-fg-default      */
-              'accent-2':  '#539bf5',  /* accent-fg-hover        */
-              /* Borders & dividers */
-              'border':    '#30363d'   /* border-default         */
-            }
-          }
-        }
+{% extends "base.html" %}
+
+{% block browser_title_suffix %}- Dashboard{% endblock %}
+
+{% block page_title_text %}{% endblock %} {# Already "The Concierge" from base, no suffix needed for main page header #}
+
+{% block extra_head %}
+    <style>
+      .tile {
+        height: 200px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
       }
-    </script>
-</head>
-<body class="h-full bg-bg-1 text-text-primary">
-    <nav class="bg-bg-1 border-b border-border px-4 py-2 flex items-center">
-      <h1 class="text-xl font-semibold tracking-tight">The Concierge</h1>
-    </nav>
-    <main class="flex items-center justify-center h-[calc(100vh-56px)]">
-      <div
-        class="max-w-md w-full p-6 rounded-lg bg-bg-2 ring-1 ring-border shadow-lg"
-        hx-get="/api/status"
-        hx-trigger="load, every 2s"
-        hx-swap="innerHTML"
-      >
-        <!-- Fallback for no-JS -->
-        <noscript>Please enable JavaScript to see device status.</noscript>
+      .tile:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      }
+      .cardinal-direction {
+        font-size: 3rem;
+        font-weight: bold;
+        line-height: 1;
+      }
+      .heading-degrees {
+        font-size: 1.5rem;
+        color: var(--text-secondary);
+      }
+    </style>
+{% endblock %}
+
+{% block content %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Navigation Tile -->
+        <div
+          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
+          hx-get="/api/status"
+          hx-trigger="load, every 2s"
+          hx-swap="innerHTML"
+          onclick="window.location.href='/navigation'"
+          id="navigation-tile"
+        >
+          <!-- Content will be dynamically replaced -->
+          <div class="flex flex-col items-center justify-center h-full">
+            <div class="cardinal-direction">--</div>
+            <div class="heading-degrees mt-2">-- °</div>
+            <div class="text-secondary mt-4">Navigation</div>
+          </div>
+        </div>
+
+        <!-- Diagnostics Tile -->
+        <div
+          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
+          onclick="window.location.href='/diagnostics'"
+        >
+          <div class="text-3xl font-bold mb-2">
+            <span class="text-accent">Diagnostics</span>
+          </div>
+          <div class="text-secondary">System Health</div>
+        </div>
+
+        <!-- Logs Tile -->
+        <div
+          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
+          onclick="window.location.href='/logs'"
+        >
+          <div class="text-3xl font-bold mb-2">
+            <span class="text-accent">Logs</span>
+          </div>
+          <div class="text-secondary">System Logs</div>
+        </div>
+
+        <!-- Drive Data Tile -->
+        <div
+          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
+          onclick="window.location.href='/drive-data'"
+        >
+          <div class="text-3xl font-bold mb-2">
+            <span class="text-accent">Drive Data</span>
+          </div>
+          <div class="text-secondary">Drive Statistics</div>
+        </div>
+
+        <!-- Test Tile -->
+        <div
+          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
+          onclick="window.location.href='/test'"
+        >
+          <div class="text-3xl font-bold mb-2">
+            <span class="text-accent">Test</span>
+          </div>
+          <div class="text-secondary">System Tests</div>
+        </div>
       </div>
-    </main>
 
     <!-- client-side render logic -->
     <script>
+      // Function to convert degrees to cardinal direction
+      function degreesToCardinal(degrees) {
+        // Ensure degrees are between 0 and 360
+        degrees = (degrees + 360) % 360;
+
+        // Define cardinal directions with corresponding degree ranges
+        const directions = [
+          { name: "N", min: 348.75, max: 360 },
+          { name: "N", min: 0, max: 11.25 },
+          { name: "NNE", min: 11.25, max: 33.75 },
+          { name: "NE", min: 33.75, max: 56.25 },
+          { name: "ENE", min: 56.25, max: 78.75 },
+          { name: "E", min: 78.75, max: 101.25 },
+          { name: "ESE", min: 101.25, max: 123.75 },
+          { name: "SE", min: 123.75, max: 146.25 },
+          { name: "SSE", min: 146.25, max: 168.75 },
+          { name: "S", min: 168.75, max: 191.25 },
+          { name: "SSW", min: 191.25, max: 213.75 },
+          { name: "SW", min: 213.75, max: 236.25 },
+          { name: "WSW", min: 236.25, max: 258.75 },
+          { name: "W", min: 258.75, max: 281.25 },
+          { name: "WNW", min: 281.25, max: 303.75 },
+          { name: "NW", min: 303.75, max: 326.25 },
+          { name: "NNW", min: 326.25, max: 348.75 }
+        ];
+
+        // Find matching direction
+        for (const direction of directions) {
+          if (direction.min <= degrees && degrees <= direction.max) {
+            return direction.name;
+          }
+        }
+
+        return "N"; // Fallback
+      }
+
       document.body.addEventListener("htmx:afterSwap", e => {
-        // only act on our card div
-        if (e.detail.target.tagName !== "DIV") return;
+        // only act on our navigation tile
+        if (e.detail.target.id !== "navigation-tile") return;
+
         const status = JSON.parse(e.detail.xhr.responseText);
-        e.detail.target.innerHTML = `
-          <h2 class="text-2xl font-bold mb-4 text-text-primary">
-            Device Status (frame ${status.time})
-          </h2>
-          <table class="w-full text-sm text-text-secondary">
-            <tr>
-              <td class="pr-2">Battery&nbsp;%</td>
-              <td class="text-text-primary">${status.deviceState?.batteryPercent ?? 'N/A'}</td>
-            </tr>
-            <tr>
-              <td>CPU Temp °C</td>
-              <td class="text-text-primary">${status.thermal?.cpuTempC ?? 'N/A'}</td>
-            </tr>
-            <tr>
-              <td>Veh Speed (m/s)</td>
-              <td class="text-text-primary">${status.carState?.vEgo ?? 'N/A'}</td>
-            </tr>
-          </table>
-          <button
-            class="mt-4 px-4 py-2 bg-accent hover:bg-accent-2 rounded text-white transition-colors duration-150"
-          >
-            Refresh Now
-          </button>
-        `;
+
+        // Check if we have bearing data available
+        let bearing = null;
+        if (status.liveLocationKalman &&
+            status.liveLocationKalman.calibratedOrientationNED &&
+            Array.isArray(status.liveLocationKalman.calibratedOrientationNED.value) &&
+            status.liveLocationKalman.calibratedOrientationNED.value.length >= 3) {
+          // Extract bearing in degrees from calibratedOrientationNED.value[2] (in radians)
+          const bearingRadians = status.liveLocationKalman.calibratedOrientationNED.value[2];
+          bearing = (Math.degrees(bearingRadians) + 360) % 360;
+        }
+
+        // Create the navigation tile content
+        let navContent = `<div class="flex flex-col items-center justify-center h-full">`;
+
+        if (bearing !== null) {
+          const cardinalDirection = degreesToCardinal(bearing);
+          navContent += `
+            <div class="cardinal-direction">${cardinalDirection}</div>
+            <div class="heading-degrees mt-2">${bearing.toFixed(1)}°</div>
+          `;
+        } else {
+          navContent += `
+            <div class="cardinal-direction">--</div>
+            <div class="heading-degrees mt-2">-- °</div>
+          `;
+        }
+
+        navContent += `<div class="text-secondary mt-4">Navigation</div></div>`;
+
+        e.detail.target.innerHTML = navContent;
       });
+
+      // Add Math.degrees function if it doesn't exist
+      if (typeof Math.degrees !== 'function') {
+        Math.degrees = function(radians) {
+          return radians * (180/Math.PI);
+        };
+      }
     </script>
-</body>
-</html>
+{% endblock %}
