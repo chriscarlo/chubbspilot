@@ -4,15 +4,110 @@
 
 {% block page_title_text %}- Diagnostics{% endblock %}
 
+{% block extra_head %}
+<style>
+  .tile {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+  .tile:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  }
+  .active-tile {
+    border: 2px solid var(--color-accent);
+  }
+  .content-area {
+    min-height: 400px;
+  }
+  .log-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .log-file {
+    cursor: pointer;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .log-file:hover {
+    background-color: var(--color-2);
+  }
+  .log-content {
+    font-family: monospace;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    padding: 1rem;
+    background-color: var(--color-2);
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  .back-button {
+    margin-bottom: 1rem;
+    display: inline-block;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-      <div class="bg-2 p-6 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-bold mb-4 text-accent">System Diagnostics</h2>
-        <p class="text-secondary">This page will display various system diagnostic information.</p>
-        <!-- Placeholder for diagnostic content -->
-        <div class="mt-6">
-          <p class="text-lg font-semibold">Device Status:</p>
-          <p class="text-secondary">All systems normal.</p>
-        </div>
+<div class="flex flex-col md:flex-row gap-6">
+  <!-- Left column with diagnostic tiles -->
+  <div class="w-full md:w-1/4">
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="crash-logs-tile">
+      <div class="text-xl font-bold mb-2">
+        <span class="text-accent">Crash Logs</span>
+      </div>
+      <div class="text-secondary">System Crash Reports</div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test1-tile">
+      <div class="text-xl font-bold mb-2">
+        <span class="text-accent">Test 1</span>
+      </div>
+      <div class="text-secondary">Test Section 1</div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test2-tile">
+      <div class="text-xl font-bold mb-2">
+        <span class="text-accent">Test 2</span>
+      </div>
+      <div class="text-secondary">Test Section 2</div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test3-tile">
+      <div class="text-xl font-bold mb-2">
+        <span class="text-accent">Test 3</span>
+      </div>
+      <div class="text-secondary">Test Section 3</div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test4-tile">
+      <div class="text-xl font-bold mb-2">
+        <span class="text-accent">Test 4</span>
+      </div>
+      <div class="text-secondary">Test Section 4</div>
+    </div>
+  </div>
+
+  <!-- Right column with content area -->
+  <div class="w-full md:w-3/4">
+    <div class="bg-2 p-6 rounded-lg shadow-lg content-area" id="content-area">
+      <h2 class="text-2xl font-bold mb-4 text-accent">System Diagnostics</h2>
+      <p class="text-secondary">Select a diagnostic section from the left to view details.</p>
+
+      <!-- Default content -->
+      <div class="mt-6" id="default-content">
+        <p class="text-lg font-semibold">Device Status:</p>
+        <p class="text-secondary">All systems normal.</p>
+
         <div class="mt-4">
           <p class="text-lg font-semibold">Recent Events:</p>
           <ul class="list-disc list-inside text-secondary">
@@ -21,4 +116,185 @@
           </ul>
         </div>
       </div>
+
+      <!-- Crash logs content (initially hidden) -->
+      <div class="hidden" id="crash-logs-content">
+        <h3 class="text-xl font-bold mb-4">System Crash Logs</h3>
+        <div id="log-list-container" class="log-list">
+          <p class="text-secondary">Loading crash logs...</p>
+        </div>
+      </div>
+
+      <!-- Log content view (initially hidden) -->
+      <div class="hidden" id="log-content-view">
+        <button class="back-button bg-surface text-accent p-2 rounded-md" id="back-to-logs">← Back to log list</button>
+        <h3 class="text-xl font-bold mb-2" id="log-filename">Log File</h3>
+        <div class="log-content" id="log-content">
+          Loading log content...
+        </div>
+      </div>
+
+      <!-- Test content areas (initially hidden) -->
+      <div class="hidden" id="test1-content">
+        <h3 class="text-xl font-bold mb-4">Test Section 1</h3>
+        <p class="text-secondary">Test content will appear here.</p>
+      </div>
+
+      <div class="hidden" id="test2-content">
+        <h3 class="text-xl font-bold mb-4">Test Section 2</h3>
+        <p class="text-secondary">Test content will appear here.</p>
+      </div>
+
+      <div class="hidden" id="test3-content">
+        <h3 class="text-xl font-bold mb-4">Test Section 3</h3>
+        <p class="text-secondary">Test content will appear here.</p>
+      </div>
+
+      <div class="hidden" id="test4-content">
+        <h3 class="text-xl font-bold mb-4">Test Section 4</h3>
+        <p class="text-secondary">Test content will appear here.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Tile elements
+    const crashLogsTile = document.getElementById('crash-logs-tile');
+    const test1Tile = document.getElementById('test1-tile');
+    const test2Tile = document.getElementById('test2-tile');
+    const test3Tile = document.getElementById('test3-tile');
+    const test4Tile = document.getElementById('test4-tile');
+
+    // Content areas
+    const defaultContent = document.getElementById('default-content');
+    const crashLogsContent = document.getElementById('crash-logs-content');
+    const logContentView = document.getElementById('log-content-view');
+    const test1Content = document.getElementById('test1-content');
+    const test2Content = document.getElementById('test2-content');
+    const test3Content = document.getElementById('test3-content');
+    const test4Content = document.getElementById('test4-content');
+
+    // Back button
+    const backToLogsBtn = document.getElementById('back-to-logs');
+
+    // Helper function to hide all content sections
+    function hideAllContent() {
+      defaultContent.classList.add('hidden');
+      crashLogsContent.classList.add('hidden');
+      logContentView.classList.add('hidden');
+      test1Content.classList.add('hidden');
+      test2Content.classList.add('hidden');
+      test3Content.classList.add('hidden');
+      test4Content.classList.add('hidden');
+
+      // Remove active class from all tiles
+      crashLogsTile.classList.remove('active-tile');
+      test1Tile.classList.remove('active-tile');
+      test2Tile.classList.remove('active-tile');
+      test3Tile.classList.remove('active-tile');
+      test4Tile.classList.remove('active-tile');
+    }
+
+    // Load crash logs
+    async function loadCrashLogs() {
+      const logListContainer = document.getElementById('log-list-container');
+      try {
+        const response = await fetch('/api/crash-logs');
+        const logs = await response.json();
+
+        if (logs.length === 0) {
+          logListContainer.innerHTML = '<p class="text-secondary">No crash logs found.</p>';
+          return;
+        }
+
+        let html = '<div class="log-files">';
+        logs.forEach(log => {
+          html += `
+            <div class="log-file" data-filename="${log.name}">
+              <div class="font-semibold">${log.name}</div>
+              <div class="text-sm text-secondary">${log.date} - ${log.size}</div>
+            </div>
+          `;
+        });
+        html += '</div>';
+
+        logListContainer.innerHTML = html;
+
+        // Add click event to log files
+        document.querySelectorAll('.log-file').forEach(el => {
+          el.addEventListener('click', async (e) => {
+            const filename = el.dataset.filename;
+            await viewLogFile(filename);
+          });
+        });
+      } catch (error) {
+        logListContainer.innerHTML = `<p class="text-secondary">Error loading logs: ${error.message}</p>`;
+      }
+    }
+
+    // View a specific log file
+    async function viewLogFile(filename) {
+      hideAllContent();
+      logContentView.classList.remove('hidden');
+
+      const logFilename = document.getElementById('log-filename');
+      const logContent = document.getElementById('log-content');
+
+      logFilename.textContent = filename;
+      logContent.textContent = 'Loading log content...';
+
+      try {
+        const response = await fetch(`/api/crash-logs/${filename}`);
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const content = await response.text();
+        logContent.textContent = content;
+      } catch (error) {
+        logContent.textContent = `Error loading log file: ${error.message}`;
+      }
+    }
+
+    // Event listeners for tiles
+    crashLogsTile.addEventListener('click', () => {
+      hideAllContent();
+      crashLogsContent.classList.remove('hidden');
+      crashLogsTile.classList.add('active-tile');
+      loadCrashLogs();
+    });
+
+    test1Tile.addEventListener('click', () => {
+      hideAllContent();
+      test1Content.classList.remove('hidden');
+      test1Tile.classList.add('active-tile');
+    });
+
+    test2Tile.addEventListener('click', () => {
+      hideAllContent();
+      test2Content.classList.remove('hidden');
+      test2Tile.classList.add('active-tile');
+    });
+
+    test3Tile.addEventListener('click', () => {
+      hideAllContent();
+      test3Content.classList.remove('hidden');
+      test3Tile.classList.add('active-tile');
+    });
+
+    test4Tile.addEventListener('click', () => {
+      hideAllContent();
+      test4Content.classList.remove('hidden');
+      test4Tile.classList.add('active-tile');
+    });
+
+    // Back button event
+    backToLogsBtn.addEventListener('click', () => {
+      hideAllContent();
+      crashLogsContent.classList.remove('hidden');
+      crashLogsTile.classList.add('active-tile');
+    });
+  });
+</script>
 {% endblock %}

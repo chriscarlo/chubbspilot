@@ -8,16 +8,21 @@ or
 
 import asyncio
 import json
+import os
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, List
 from contextlib import asynccontextmanager
+import datetime
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from cereal import messaging  # already on the device
+
+# Set CRASH_LOGS_DIR to the actual path on the device
+CRASH_LOGS_DIR = Path("/data/crashes")
 
 BASE = Path(__file__).resolve().parent
 templates = Environment(
@@ -127,6 +132,43 @@ async def test_page(request: Request):
     # tmpl = templates.get_template("test.html")
     # return tmpl.render(request=request, browser_title_suffix="- Test", page_title_text="- Test")
     return "<h1>Test Page</h1><p>Under Construction</p><a href='/'>Back to Dashboard</a>"
+
+# New endpoints for crash logs
+@app.get("/api/crash-logs")
+async def list_crash_logs() -> List[Dict[str, str]]:
+    """Returns a list of crash log files."""
+    try:
+        if not CRASH_LOGS_DIR.exists():
+            return []
+
+        log_files = []
+        for file in CRASH_LOGS_DIR.glob("*.txt"):
+            log_files.append({
+                "name": file.name,
+                "size": f"{file.stat().st_size / 1024:.1f} KB",
+                "date": datetime.datetime.fromtimestamp(file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        # Sort by modification time (newest first)
+        log_files.sort(key=lambda x: datetime.datetime.strptime(x["date"], "%Y-%m-%d %H:%M:%S"), reverse=True)
+        return log_files
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing crash logs: {str(e)}")
+
+@app.get("/api/crash-logs/{filename}")
+async def get_crash_log(filename: str) -> PlainTextResponse:
+    """Returns the content of a specific crash log file."""
+    file_path = CRASH_LOGS_DIR / filename
+
+    # Security check to prevent directory traversal
+    if not file_path.is_relative_to(CRASH_LOGS_DIR) or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    try:
+        with open(file_path, "r") as f:
+            return PlainTextResponse(f.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading log file: {str(e)}")
 
 def main():
     # This function is called by manager.py
