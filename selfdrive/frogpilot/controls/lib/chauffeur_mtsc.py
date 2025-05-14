@@ -127,7 +127,7 @@ def _worker_main(out_q: mp.Queue, cruise_clamp: mp.Value):
 
         except Exception as e:
             print(f"ChauffeurMtsc worker exception: {e}")
-        
+
         # maintain ≈2 Hz cadence
         sleep = 1.0 / PROFILE_RATE_HZ - (time.monotonic() - start)
         if sleep > 0.0:

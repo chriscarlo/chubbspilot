@@ -2401,10 +2401,11 @@ struct Event {
     frogpilotNavigation @110 :Custom.FrogPilotNavigation;
     frogpilotPlan @111 :Custom.FrogPilotPlan;
     chauffeurHKGTuning @112 :Custom.ChauffeurHKGTuning;
-    customReserved6 @113 :Custom.CustomReserved6;
+    chauffeurTurnSpeedControl @113 :Custom.ChauffeurTurnSpeedControl;
     customReserved7 @114 :Custom.CustomReserved7;
     customReserved8 @115 :Custom.CustomReserved8;
     customReserved9 @116 :Custom.CustomReserved9;
+
 
     # *********** legacy + deprecated ***********
     model @9 :Legacy.ModelData; # TODO: rename modelV2 and mark this as deprecated

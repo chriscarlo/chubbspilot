@@ -2800,3 +2800,9 @@ tools/bin/protoc
 tools/bin/protoc
 selfdrive/ui/translations/main_zh-CHT.ts
 selfdrive/ui/qt/onroad/annotated_camera.cc
+
+node_modules/
+
+*.dylib
+*.DSYM
+*.d

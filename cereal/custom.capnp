@@ -92,23 +92,9 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   # Parallel lists to avoid adding a new struct.
   farSpeedPlanDistances @33 :List(Float32); # meters from current pos
   farSpeedPlanSpeeds @34 :List(Float32);    # m/s target speed at distance
-
-  # VTSC Logging
-  vtscIsEnabled @35 :Bool;                      # True if VTSC is actively planning with valid model data
-  vtscRawTargetSpeed @36 :Float32;              # The raw target speed from VTSC's internal logic before final clamping/smoothing in the update method
-  vtscCurrentAccel @37 :Float32;                # The current acceleration value tracked by VTSC's state
-  vtscFilteredCurvature @38 :Float32;           # The EMA-filtered maximum curvature value
-  vtscPlannedSpeedsLogging @39 :List(Float32);  # Copy of VTSC's internal self.planned_speeds array (output of _plan_speed_trajectory)
-  vtscVisionCurvatures @40 :List(Float32);      # Calculated curvature at each point in the VTSC plan horizon
-  vtscVisionVelocities @41 :List(Float32);      # Predicted velocity at each point in the VTSC plan horizon
-  vtscSafeSpeedsVision @42 :List(Float32);      # Calculated safe speed based on vision curvature only, at each point
-  vtscSafeSpeedsMap @43 :List(Float32);         # Safe speed from map data, interpolated at each point in the VTSC plan horizon
-  vtscFinalSafeSpeeds @44 :List(Float32);       # Safe speed (min of vision and map) at each point, before trajectory passes
-  vtscApexIndices @45 :List(UInt16);            # Indices of detected apexes in the curvature profile
 }
 
 struct ChauffeurHKGTuning @0xa5cd762cd951a455 {
-
   # Longitudinal Tuning Logs
   longHkgTuningEnabled @0 :Bool;
   longHkgBrakingEnabled @1 :Bool;
@@ -164,7 +150,22 @@ struct ChauffeurHKGTuning @0xa5cd762cd951a455 {
   longControlsStateExperimentalMode @51 :Bool;
 }
 
-struct CustomReserved6 @0xf98d843bfd7004a3 {
+struct ChauffeurTurnSpeedControl @0xf98d843bfd7004a3 {
+  # VTSC Logging
+  vtscIsEnabled @0 :Bool;                      # True if VTSC is actively planning with valid model data
+  vtscRawTargetSpeed @1 :Float32;              # The raw target speed from VTSC's internal logic before final clamping/smoothing in the update method
+  vtscCurrentAccel @2 :Float32;                # The current acceleration value tracked by VTSC's state
+  vtscFilteredCurvature @3 :Float32;           # The EMA-filtered maximum curvature value
+  vtscPlannedSpeedsLogging @4 :List(Float32);  # Copy of VTSC's internal self.planned_speeds array (output of _plan_speed_trajectory)
+  vtscVisionCurvatures @5 :List(Float32);      # Calculated curvature at each point in the VTSC plan horizon
+  vtscVisionVelocities @6 :List(Float32);      # Predicted velocity at each point in the VTSC plan horizon
+  vtscSafeSpeedsVision @7 :List(Float32);      # Calculated safe speed based on vision curvature only, at each point
+  vtscSafeSpeedsMap @8 :List(Float32);         # Safe speed from map data, interpolated at each point in the VTSC plan horizon
+  vtscFinalSafeSpeeds @9 :List(Float32);       # Safe speed (min of vision and map) at each point, before trajectory passes
+  vtscApexIndices @10 :List(UInt16);            # Indices of detected apexes in the curvature profile
+  vtscPlannerInitSpeed @11 :Float32;           # Initial speed input to the VTSC planner for a given frame
+  vtscUsedVisionVelocities @12 :List(Float32); # The exact vision-based velocity profile used for curvature calculation in the planner
+  vtscPlannerSkipAccelLimit @13 :Bool;         # State of the skip_accel_limit flag for the VTSC planner's forward pass
 }
 
 struct CustomReserved7 @0xb86e6369214c01c8 {

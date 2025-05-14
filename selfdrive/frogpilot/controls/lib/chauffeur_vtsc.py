@@ -73,8 +73,6 @@ def curvature_to_speed(abs_curvature_meters: float) -> float:
     # Clip to a reasonable maximum speed
     return clip(target_speed_mps, 0.0, MAX_SPEED_DEFAULT)
 
-# --- End of new/modified functions ---
-
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
     """
     Compute lateral acceleration limit based on speed and an aggressiveness factor.
@@ -155,7 +153,7 @@ def dynamic_jerk_scale(v_ego_ms: float) -> float:
 # --------------------------
 
 class VisionTurnSpeedController:
-    # Class-level publisher
+    # Class-level publisher (No longer used for chauffeurTurnSpeedControl)
     _PUB_FROGPILOT_PLAN = None
 
     def __init__(
@@ -186,13 +184,8 @@ class VisionTurnSpeedController:
         self.planned_speeds = np.zeros(N_POINTS_TARGET, dtype=float) # Use new horizon length
         self.sm = messaging.SubMaster(['modelV2'])
 
-        # Get the shared publisher instance from frogpilot_process.py
-        from openpilot.selfdrive.frogpilot.frogpilot_process import FROGPILOT_PLAN_PUBLISHER
-        self.pm = FROGPILOT_PLAN_PUBLISHER
-
-        if self.pm is None:
-            print("WARNING: VisionTurnSpeedController initialized but FROGPILOT_PLAN_PUBLISHER is None. " +
-                  "VTSC will not be able to publish frogpilotPlan messages.")
+        # Get the singleton publisher instance
+        self.publisher = _VTSCPublisher.get_instance()
 
         self.prev_v_cruise_cluster = 0.0
 
@@ -217,6 +210,9 @@ class VisionTurnSpeedController:
         self.vtsc_safe_speeds_map_log = []
         self.vtsc_final_safe_speeds_log = []
         self.vtsc_apex_indices_log = []
+        self.vtsc_planner_init_speed_log = 0.0
+        self.vtsc_used_vision_velocities_log = []
+        self.vtsc_planner_skip_accel_limit_log = False
 
     def reset(self, v_ego: float) -> None:
         """
@@ -240,6 +236,9 @@ class VisionTurnSpeedController:
         self.vtsc_safe_speeds_map_log = []
         self.vtsc_final_safe_speeds_log = []
         self.vtsc_apex_indices_log = []
+        self.vtsc_planner_init_speed_log = v_ego
+        self.vtsc_used_vision_velocities_log = []
+        self.vtsc_planner_skip_accel_limit_log = False
 
     def update(self, v_ego: float, v_cruise_cluster: float,
                map_speed_profile: tuple[np.ndarray, np.ndarray] | None = None,
@@ -259,7 +258,7 @@ class VisionTurnSpeedController:
             self.reset(v_ego)
             self.prev_v_cruise_cluster = v_cruise_cluster
             # Publish even on reset/low speed
-            self._publish_frogpilot_plan()
+            self._publish_chauffeur_vtsc_data()
             return v_ego
 
         orientation_rate_raw = modelData.orientationRate.z
@@ -302,6 +301,9 @@ class VisionTurnSpeedController:
             # Ensure times corresponds to the target number of points
             times_target = np.array(ModelConstants.T_IDXS[:N_POINTS_TARGET], dtype=float)
 
+            # Store the actual velocity profile used for curvature calculation
+            self.vtsc_used_vision_velocities_log = velocity_pred_target.tolist()
+
             # Compute curvature array
             eps = 1e-9
             curvature_target = orientation_rate_target / np.clip(velocity_pred_target, eps, None)
@@ -332,6 +334,10 @@ class VisionTurnSpeedController:
             if len(self.planned_speeds) != N_POINTS_TARGET:
                 self.planned_speeds = np.resize(self.planned_speeds, N_POINTS_TARGET)
                 self.planned_speeds[:] = self.prev_target_speed # Re-initialize with current speed
+
+            # Log inputs to _plan_speed_trajectory
+            self.vtsc_planner_init_speed_log = self.prev_target_speed
+            self.vtsc_planner_skip_accel_limit_log = is_bump_up
 
             self.planned_speeds = self._plan_speed_trajectory(
                 orientation_rate_target, # Use target array
@@ -409,46 +415,33 @@ class VisionTurnSpeedController:
         self.prev_target_speed = final_target_speed
         self.prev_v_cruise_cluster = v_cruise_cluster
 
-        self._publish_frogpilot_plan() # Publish FrogPilotPlan with VTSC data
+        self._publish_chauffeur_vtsc_data() # Publish ChauffeurTurnSpeedControl with VTSC data
 
         return final_target_speed
 
-    def _publish_frogpilot_plan(self):
-        if self.pm is None:
-            # Attempt to fetch the shared publisher again (it might be initialized after VTSC was constructed)
-            try:
-                from openpilot.selfdrive.frogpilot.frogpilot_process import FROGPILOT_PLAN_PUBLISHER
-                self.pm = FROGPILOT_PLAN_PUBLISHER
-            except Exception:
-                self.pm = None
-        if self.pm is None:
-            return  # Still unavailable, skip publishing safely
-        # Create and send FrogPilotPlan message
-        fp_plan_msg = messaging.new_message('frogpilotPlan')
-        fp_plan_msg.valid = True
-        plan = fp_plan_msg.frogpilotPlan
+    def _publish_chauffeur_vtsc_data(self):
+        # Construct the message and populate its fields here
+        msg = messaging.new_message('chauffeurTurnSpeedControl')
+        msg.valid = True
+        chauffeurTurnSpeedControl = msg.chauffeurTurnSpeedControl
 
-        # Populate VTSC specific logging fields
-        plan.vtscIsEnabled = self.vtsc_is_enabled_log
-        plan.vtscRawTargetSpeed = float(self.vtsc_raw_target_speed_log)
-        plan.vtscCurrentAccel = float(self.current_accel) # Log the final current_accel for this frame
-        plan.vtscFilteredCurvature = float(self._filtered_curvature)
+        chauffeurTurnSpeedControl.vtscIsEnabled = self.vtsc_is_enabled_log
+        chauffeurTurnSpeedControl.vtscRawTargetSpeed = float(self.vtsc_raw_target_speed_log)
+        chauffeurTurnSpeedControl.vtscCurrentAccel = float(self.current_accel)
+        chauffeurTurnSpeedControl.vtscFilteredCurvature = float(self._filtered_curvature)
+        chauffeurTurnSpeedControl.vtscPlannedSpeedsLogging = self.planned_speeds.tolist() if isinstance(self.planned_speeds, np.ndarray) else list(self.planned_speeds)
+        chauffeurTurnSpeedControl.vtscVisionCurvatures = list(self.vtsc_vision_curvatures_log)
+        chauffeurTurnSpeedControl.vtscVisionVelocities = list(self.vtsc_vision_velocities_log)
+        chauffeurTurnSpeedControl.vtscSafeSpeedsVision = list(self.vtsc_safe_speeds_vision_log)
+        chauffeurTurnSpeedControl.vtscSafeSpeedsMap = list(self.vtsc_safe_speeds_map_log)
+        chauffeurTurnSpeedControl.vtscFinalSafeSpeeds = list(self.vtsc_final_safe_speeds_log)
+        chauffeurTurnSpeedControl.vtscApexIndices = [int(x) for x in self.vtsc_apex_indices_log]
+        chauffeurTurnSpeedControl.vtscPlannerInitSpeed = float(self.vtsc_planner_init_speed_log)
+        chauffeurTurnSpeedControl.vtscUsedVisionVelocities = list(self.vtsc_used_vision_velocities_log)
+        chauffeurTurnSpeedControl.vtscPlannerSkipAccelLimit = bool(self.vtsc_planner_skip_accel_limit_log)
 
-        # Ensure lists are not None and convert numpy arrays to lists if necessary
-        plan.vtscPlannedSpeedsLogging = self.planned_speeds.tolist() if isinstance(self.planned_speeds, np.ndarray) else list(self.planned_speeds)
-        plan.vtscVisionCurvatures = list(self.vtsc_vision_curvatures_log)
-        plan.vtscVisionVelocities = list(self.vtsc_vision_velocities_log)
-        plan.vtscSafeSpeedsVision = list(self.vtsc_safe_speeds_vision_log)
-        plan.vtscSafeSpeedsMap = list(self.vtsc_safe_speeds_map_log)
-        plan.vtscFinalSafeSpeeds = list(self.vtsc_final_safe_speeds_log)
-        plan.vtscApexIndices = [int(x) for x in self.vtsc_apex_indices_log] # Ensure uint16 for Capnp
-
-        # Populate other FrogPilotPlan fields as needed (example, if VTSC controls them directly)
-        # For now, we assume other parts of openpilot populate the rest of FrogPilotPlan
-        # plan.vtscControllingCurve = self.vtsc_is_enabled_log # Example if vtsc directly sets this
-        # plan.vtscSpeed = float(self.prev_target_speed)      # Example: the final output of VTSC for this cycle
-
-        self.pm.send('frogpilotPlan', fp_plan_msg)
+        # Pass the fully constructed message to the singleton publisher
+        self.publisher.chauffeurTurnSpeedControl(msg) # Changed method call from publish
 
     def _plan_speed_trajectory(
         self,
@@ -690,7 +683,7 @@ class VisionTurnSpeedController:
                 planned[i] = min(planned[i], feasible_speed, safe_speeds[i])
 
         # self.planned_speeds = planned # self.planned_speeds is updated in the caller (update method)
-        # For logging, vtscPlannedSpeedsLogging is assigned self.planned_speeds in _publish_frogpilot_plan
+        # For logging, vtscPlannedSpeedsLogging is assigned self.planned_speeds in _publish_chauffeur_vtsc_data
         return planned
 
     def _find_time_index(self, times: np.ndarray, target_time: float, clip_high=False) -> int:
@@ -728,6 +721,10 @@ class VisionTurnSpeedController:
         self.vtsc_safe_speeds_vision_log = [safe_speed] * N_POINTS_TARGET
         self.vtsc_final_safe_speeds_log = [safe_speed] * N_POINTS_TARGET
         self.vtsc_planned_speeds = np.full(N_POINTS_TARGET, safe_speed) # Also update internal planned_speeds
+        # Populate new log fields for fallback scenario
+        self.vtsc_planner_init_speed_log = v_ego # In fallback, init_speed effectively v_ego for this step
+        self.vtsc_used_vision_velocities_log = [v_ego] * N_POINTS_TARGET # Crude fallback for used velocities
+        self.vtsc_planner_skip_accel_limit_log = False # Default to False in fallback
 
         # Smoothing logic remains the same, using the calculated safe_speed
         current_lat_acc = curvature * (v_ego ** 2) # Use actual measured curvature for smoothing trigger
@@ -743,3 +740,33 @@ class VisionTurnSpeedController:
             raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
 
         return raw_target
+
+class _VTSCPublisher:
+    _instance = None
+    _pub_master = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+            # Initialize PubMaster only once when the singleton instance is created
+            try:
+                cls._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
+            except Exception as e:
+                print(f"Error initializing PubMaster in _VTSCPublisher: {e}")
+                cls._pub_master = None # Ensure it's None if init fails
+        return cls._instance
+
+    def chauffeurTurnSpeedControl(self, msg): # Renamed method from publish
+        if self._pub_master is None:
+            print("ERROR: _VTSCPublisher's pub_master is None. Attempting re-init or skipping publish.")
+            try:
+                _VTSCPublisher._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
+                if _VTSCPublisher._pub_master is None:
+                     print("ERROR: Failed to re-initialize PubMaster in _VTSCPublisher. Cannot publish.")
+                     return
+            except Exception as e:
+                print(f"Error re-initializing PubMaster in _VTSCPublisher: {e}")
+                return
+        # The message (msg) is now expected to be fully populated by the caller
+        self._pub_master.send('chauffeurTurnSpeedControl', msg)
