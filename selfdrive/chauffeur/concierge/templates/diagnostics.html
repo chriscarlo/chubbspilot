@@ -99,7 +99,129 @@
     color: var(--text-secondary);
     font-style: italic;
   }
+  .debug-log-output {
+    background-color: #000; /* Black background */
+    color: #0f0; /* Green text */
+    font-family: monospace;
+    font-size: 0.75rem; /* Smaller font */
+    padding: 0.5rem;
+    margin: 1rem; /* top, right, bottom, left margin */
+    border: 1px solid #333; /* Darker border */
+    border-radius: 0.25rem;
+    max-height: 35vh; /* Increased max-height */
+    overflow-y: auto;    /* Scroll for overflow */
+    white-space: pre-wrap; /* Respect newlines and spaces */
+    word-break: break-all; /* Break long lines */
+  }
+  /* New styles for the terminal */
+  #test4-display.active-terminal-view {
+      /* Mobile: Simple block, scrolls if content overflows max-height */
+      padding: 0 !important;
+      height: auto;
+      max-height: 75vh; /* Or whatever feels right for mobile */
+      overflow-y: auto;
+      overflow-x: hidden;
+      background-color: #000; /* Moved background here */
+      /* display: flex; Removed for mobile, re-added for desktop */
+      /* flex-direction: column; Removed for mobile */
+  }
+  .terminal-container {
+    /* Mobile: Not a flex container by default, just normal block flow */
+    width: 100%;
+    color: #0f0;
+    font-family: monospace;
+    padding: 1rem;
+    box-sizing: border-box; /* Ensure padding is included in width */
+    /* display: flex; Removed for mobile */
+    /* flex-direction: column; Removed for mobile */
+    /* align-items: flex-start; Removed for mobile */
+    /* height: auto; Default for block */
+    /* min-height: 0; Not strictly needed if not flex item */
+  }
+  .terminal-warning {
+    width: 100%;
+    box-sizing: border-box;
+    /* margin-bottom: 1rem; Optional, if spacing needed */
+  }
+  .terminal-output {
+    width: 100%;
+    white-space: pre-wrap;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .terminal-input-area {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex; /* Keep this for prompt + input field alignment */
+    align-items: center;
+  }
+
+  @media (min-width: 768px) {
+    #test4-display.active-terminal-view {
+        display: flex; /* Re-introduce flex for desktop layout */
+        flex-direction: column;
+        height: calc(100vh - 150px);
+        max-height: calc(100vh - 150px);
+        overflow: hidden; /* No scroll on this outer, children handle it */
+        /* background-color is inherited or already set */
+    }
+    .terminal-container {
+        display: flex; /* Re-introduce flex */
+        flex-direction: column;
+        height: 100%;
+        /* align-items: stretch; Default for flex column children unless overridden */
+        /* width, color, font, padding, box-sizing are inherited or already set */
+    }
+    .terminal-output {
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: 0%;
+        overflow-y: auto;
+        min-height: 0; /* Crucial for flex-grow with overflow */
+        /* width, white-space, margin-bottom, font-size are inherited or already set */
+    }
+    /* .terminal-input-area styling for desktop is largely the same as mobile */
+  }
+  .terminal-output .command-echo {
+    color: #888; /* Grey for the echoed command */
+  }
+  .terminal-output .stdout {
+    color: #0f0; /* Green for stdout */
+  }
+  .terminal-output .stderr {
+    color: #f00; /* Red for stderr */
+  }
+  .terminal-output .exit-code {
+    color: #ff0; /* Yellow for exit code */
+    font-style: italic;
+  }
+  .terminal-input-area .prompt {
+    color: #0f0; /* Green prompt */
+    margin-right: 0.5rem;
+  }
+  .terminal-input {
+    flex-grow: 1;
+    background-color: transparent;
+    border: none;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 0.9rem;
+    padding: 0.25rem;
+  }
+  .terminal-input:focus {
+    outline: none;
+  }
+  .terminal-warning {
+    color: #ff0; /* Yellow */
+    background-color: #330;
+    padding: 0.5rem;
+    border: 1px solid #ff0;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+  }
 </style>
+<script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -136,9 +258,9 @@
 
     <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test4-tile" data-content-id="test4-display">
       <div class="text-lg font-bold mb-1">
-        <span class="text-accent">Test 4</span>
+        <span class="text-accent">Terminal</span>
       </div>
-      <div class="text-sm text-secondary">Test Section 4</div>
+      <div class="text-sm text-secondary">Device Command Line</div>
     </div>
   </div>
 
@@ -151,9 +273,12 @@
       </div>
 
       <div id="crash-logs-display" class="hidden diagnostic-content-section">
+        <!-- NEW dedicated placeholder for debug output -->
+        <div id="crash-logs-debug-output-container"></div>
+
         <!-- This will be populated with log file tiles -->
         <div id="log-list-container-tiles" class="log-list-container-tiles">
-          <p class="text-secondary p-4">Loading crash logs...</p>
+          <p class="text-secondary p-4">Loading crash logs...</p> <!-- Initial message -->
         </div>
       </div>
 
@@ -177,9 +302,19 @@
         <h3 class="text-xl font-bold mb-4">Test Section 3</h3>
         <p class="text-secondary">Content for Test 3 will appear here.</p>
       </div>
-      <div id="test4-display" class="hidden diagnostic-content-section p-6">
-        <h3 class="text-xl font-bold mb-4">Test Section 4</h3>
-        <p class="text-secondary">Content for Test 4 will appear here.</p>
+      <div id="test4-display" class="hidden diagnostic-content-section p-0">
+        <div class="terminal-container">
+          <div class="terminal-warning">
+            <strong>WARNING:</strong> Commands entered here are executed directly on the device. Use with extreme caution.
+          </div>
+          <div class="terminal-output" id="terminal-output-area">
+            <div>Welcome to the Concierge Device Terminal. Type a command and press Enter.</div>
+          </div>
+          <div class="terminal-input-area">
+            <span class="prompt">device:/$</span>
+            <input type="text" id="terminal-input-field" class="terminal-input" placeholder="Enter command...">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -198,6 +333,17 @@
     const logViewerContent = document.getElementById('log-viewer-content');
     const backToLogsListBtn = document.getElementById('back-to-logs-list');
     const emptyStateContent = document.getElementById('empty-state-content');
+    // NEW: Get the dedicated debug output container
+    const debugOutputContainer = document.getElementById('crash-logs-debug-output-container');
+
+    // Terminal elements for Test 4
+    const terminalOutputArea = document.getElementById('terminal-output-area');
+    const terminalInputField = document.getElementById('terminal-input-field');
+    const terminalPromptElement = document.querySelector('.terminal-input-area .prompt');
+    let ansi_up_instance = null; // Declare globally, instantiate after script load
+    if (typeof AnsiUp === 'function') { // Check if AnsiUp constructor is available
+        ansi_up_instance = new AnsiUp();
+    }
 
     let activeNavTile = null;
 
@@ -205,8 +351,14 @@
       contentSections.forEach(section => {
         if (section.id === sectionId) {
           section.classList.remove('hidden');
+          if (section.id === 'test4-display') {
+            section.classList.add('active-terminal-view');
+          }
         } else {
           section.classList.add('hidden');
+          if (section.id === 'test4-display') {
+            section.classList.remove('active-terminal-view');
+          }
         }
       });
     }
@@ -225,25 +377,47 @@
         if (contentId === 'crash-logs-display') {
           loadCrashLogTiles();
         }
+        // If Test 4 (terminal) is selected, focus the input field
+        if (contentId === 'test4-display' && terminalInputField) {
+            terminalInputField.focus();
+        }
       });
     });
 
     async function loadCrashLogTiles() {
-      logListContainerTiles.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
+      // Clear previous content from specific areas
+      debugOutputContainer.innerHTML = ''; // Clear previous debug output
+      logListContainerTiles.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>'; // Reset log list area
+
+      let debugDisplayHtml = '';
+
       try {
         const response = await fetch('/api/crash-logs');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const logs = await response.json();
+        const responseData = await response.json();
 
-        if (logs.length === 0) {
-          logListContainerTiles.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
+        if (responseData.debug_messages && Array.isArray(responseData.debug_messages)) {
+          debugDisplayHtml = '<div class="debug-log-output">';
+          debugDisplayHtml += '<strong>[DEBUG_MODE_ENGAGED] Processing Log Query:</strong>\n';
+          debugDisplayHtml += responseData.debug_messages.join('\n');
+          debugDisplayHtml += '</div>';
+          debugOutputContainer.innerHTML = debugDisplayHtml; // Populate dedicated debug container
+        }
+
+        if (!response.ok) {
+            let errorMessage = responseData.detail || `HTTP error! status: ${response.status}`;
+            throw new Error(errorMessage);
+        }
+
+        const actualLogFiles = responseData.files;
+        logListContainerTiles.innerHTML = ''; // Clear "Loading..." message from log tiles area
+
+        if (!actualLogFiles || actualLogFiles.length === 0) {
+          // If debug info was already displayed, it remains. Then add the "No logs found" message.
+          logListContainerTiles.innerHTML += '<p class="text-secondary p-4">No crash logs found (or accessible) matching *.txt pattern.</p>';
           return;
         }
 
-        // Clear previous tiles
-        logListContainerTiles.innerHTML = '';
-
-        logs.forEach(log => {
+        actualLogFiles.forEach(log => {
           const logTile = document.createElement('div');
           logTile.className = 'log-file-tile';
           logTile.dataset.filename = log.name;
@@ -254,9 +428,12 @@
           logTile.addEventListener('click', () => viewLogFile(log.name));
           logListContainerTiles.appendChild(logTile);
         });
+
       } catch (error) {
         console.error('Error loading crash log tiles:', error);
-        logListContainerTiles.innerHTML = `<p class="text-red-500 p-4">Error loading logs: ${error.message}</p>`;
+        // If debug info was already displayed (e.g. via debugOutputContainer.innerHTML = debugDisplayHtml), it remains.
+        // Then, add the error message to the logListContainerTiles.
+        logListContainerTiles.innerHTML = `<p class="text-red-500 p-4"><strong>SYSTEM ERROR ENCOUNTERED:</strong><br><br>${error.message.replace(/\n/g, '<br>')}</p>`;
       }
     }
 
@@ -287,6 +464,93 @@
 
     // Initialize with the empty state visible
     showContentSection('empty-state-content');
+
+    // --- Terminal Logic for Test 4 ---
+    if (terminalInputField && terminalOutputArea) {
+        terminalInputField.addEventListener('keypress', async function(event) {
+            if (event.key === 'Enter') {
+                const command = terminalInputField.value.trim();
+                if (command) {
+                    appendToTerminalOutput(`device:/$ ${command}`, 'command-echo');
+                    terminalInputField.value = ''; // Clear input
+                    await executeAndDisplayCommand(command);
+                }
+            }
+        });
+    }
+
+    async function executeAndDisplayCommand(commandString) {
+        try {
+            const response = await fetch('/api/execute-command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command: commandString })
+            });
+
+            const result = await response.json();
+
+            // Update the prompt with the CWD from the response
+            if (result.cwd && terminalPromptElement) {
+                // Make the prompt more shell-like, e.g., device:/data/openpilot$
+                let friendlyCwd = result.cwd;
+                // Basic substitution for a potential home directory if you implement that
+                // const homeDir = "/data/openpilot"; // Example home
+                // if (friendlyCwd.startsWith(homeDir)) {
+                //    friendlyCwd = "~" + friendlyCwd.substring(homeDir.length);
+                // }
+                // if (friendlyCwd === "/") friendlyCwd = "/"; // Keep root as /
+                // else if (friendlyCwd.startsWith("/")) friendlyCwd = friendlyCwd.split('/').pop() || "/"; // Show last part or / if root
+
+                terminalPromptElement.textContent = `device:${friendlyCwd}$`;
+            }
+
+            // Optional: Display API's own debug messages for the command execution
+            // if (result.debug_messages && result.debug_messages.length > 0 && result.debug_messages.some(msg => msg.startsWith("[API_CMD]"))) {
+            //     appendToTerminalOutput(`API CMD Debug:\n${result.debug_messages.filter(m => m.startsWith("[API_CMD]")).join('\n')}`, 'command-echo');
+            // }
+
+            if (result.stdout) {
+                // Convert ANSI to HTML if the command was 'ls' and library instance is available
+                if (result.is_ls_command && ansi_up_instance) {
+                    const htmlOutput = ansi_up_instance.ansi_to_html(result.stdout);
+                    appendToTerminalOutput(htmlOutput, 'stdout', true); // true for isHtml
+                } else {
+                    appendToTerminalOutput(result.stdout, 'stdout', false); // false for isHtml (plain text)
+                }
+            }
+            if (result.stderr) {
+                // Stderr is usually not colored by ls, but could be by other programs.
+                // For now, treat stderr as plain text.
+                // In future, could also check for ANSI codes in stderr if needed.
+                appendToTerminalOutput(result.stderr, 'stderr', false);
+            }
+            // Only show exit code if it's not 0
+            if (result.exit_code !== 0) {
+                appendToTerminalOutput(`Exit Code: ${result.exit_code}`, 'exit-code');
+            }
+
+        } catch (error) {
+            console.error('Error executing command via API:', error);
+            appendToTerminalOutput(`CLIENT ERROR: Failed to send command or parse response: ${error.message}`, 'stderr');
+        }
+        terminalOutputArea.scrollTop = terminalOutputArea.scrollHeight; // Scroll to bottom
+    }
+
+    function appendToTerminalOutput(textOrHtml, typeClass, isHtml = false) {
+        const line = document.createElement('div');
+        if (typeClass) {
+            line.classList.add(typeClass);
+        }
+        if (isHtml) {
+            line.innerHTML = textOrHtml; // Use innerHTML for HTML content
+        } else {
+            line.textContent = textOrHtml; // Use textContent for plain text
+        }
+        terminalOutputArea.appendChild(line);
+        terminalOutputArea.scrollTop = terminalOutputArea.scrollHeight; // Scroll to bottom
+    }
 
   });
 </script>

@@ -10,9 +10,12 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List
+from typing import AsyncGenerator, Dict, List, Any
 from contextlib import asynccontextmanager
 import datetime
+import subprocess
+from pydantic import BaseModel # For request body validation
+import shlex # For parsing cd command arguments safely
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, PlainTextResponse
@@ -133,27 +136,258 @@ async def test_page(request: Request):
     # return tmpl.render(request=request, browser_title_suffix="- Test", page_title_text="- Test")
     return "<h1>Test Page</h1><p>Under Construction</p><a href='/'>Back to Dashboard</a>"
 
+# Model for the command execution request
+class CommandRequest(BaseModel):
+    command: str
+
+# --- BEGIN CWD Management (Simple Global for Single User/Device Context) ---
+# WARNING: This simple CWD management is not suitable for multi-user or multi-process environments.
+# A more robust session-based CWD management would be needed for broader applications.
+# For openpilot device context, this might be acceptable if concierge is single-instance.
+
+# Global variable to store the current working directory for the terminal session
+# Initialize to a sensible default, e.g., the openpilot directory or root.
+# Ensure this path exists on the device.
+_terminal_cwd = Path("/data/openpilot")
+if not _terminal_cwd.is_dir(): # Fallback if /data/openpilot doesn't exist
+    _terminal_cwd = Path("/")
+
+# Helper to get the CWD as a string
+def get_current_terminal_cwd_str() -> str:
+    global _terminal_cwd
+    return str(_terminal_cwd)
+
+# Helper to attempt to change CWD
+def set_current_terminal_cwd(new_path_str: str) -> tuple[bool, str]:
+    global _terminal_cwd
+    current_original_cwd = Path.cwd() # Save python process CWD
+    target_path = Path(new_path_str)
+
+    try:
+        # Attempt to change directory to validate and resolve the path
+        # We use a temporary chdir for python's process to validate,
+        # but the _terminal_cwd is what subprocess will use.
+        if not target_path.is_absolute():
+            # Convert relative path to absolute based on current _terminal_cwd
+            target_path = (_terminal_cwd / target_path).resolve()
+        else:
+            target_path = target_path.resolve() # Resolve an absolute path (e.g. removes ../)
+
+        if not target_path.is_dir():
+            return False, f"cd: no such file or directory: {new_path_str}"
+
+        # Validate if we can actually chdir to it (permission check)
+        os.chdir(target_path) # This changes the CWD of the FastAPI *worker process*
+        _terminal_cwd = Path.cwd() # Update our stored CWD to the new, resolved path
+        message = f"Changed directory to {str(_terminal_cwd)}"
+        success = True
+    except FileNotFoundError:
+        message = f"cd: no such file or directory: {new_path_str}"
+        success = False
+    except PermissionError:
+        message = f"cd: permission denied: {new_path_str}"
+        success = False
+    except Exception as e:
+        message = f"cd: error changing directory to {new_path_str}: {str(e)}"
+        success = False
+    finally:
+        os.chdir(current_original_cwd) # IMPORTANT: Restore python process CWD
+
+    return success, message
+# --- END CWD Management ---
+
+# Endpoint to execute a shell command
+@app.post("/api/execute-command")
+async def execute_command_endpoint(payload: CommandRequest) -> Dict[str, Any]:
+    debug_messages = []
+    command_to_run = payload.command.strip() # Ensure leading/trailing whitespace is removed
+
+    current_subprocess_cwd = get_current_terminal_cwd_str()
+    debug_messages.append(f"[API_CMD] Current CWD for subprocess: {current_subprocess_cwd}")
+    debug_messages.append(f"[API_CMD] Received raw command: '{command_to_run}'")
+
+    if not command_to_run:
+        debug_messages.append("[API_CMD] Error: Command cannot be empty.")
+        # Return current CWD even for empty command errors
+        return {"error": "Command cannot be empty", "debug_messages": debug_messages, "cwd": current_subprocess_cwd, "exit_code": -100}
+
+    # --- CD Command Handling ---
+    original_command_for_display = command_to_run # Save before potential modification for ls
+
+    if command_to_run.startswith("cd ") or command_to_run == "cd":
+        parts = shlex.split(command_to_run) # Use shlex to handle spaces/quotes in paths
+        target_dir = ""
+        if len(parts) > 1:
+            target_dir = parts[1]
+        elif command_to_run == "cd": # `cd` alone usually goes to home, let's try our _terminal_cwd's parent or root
+            # For simplicity, `cd` without args could go to the initial _terminal_cwd or a predefined home.
+            # Let's make `cd` alone go to the initial default directory `/data/openpilot` for now.
+            # More sophisticated handling would involve a concept of $HOME for the terminal session.
+            initial_default_dir = Path("/data/openpilot")
+            if not initial_default_dir.is_dir(): initial_default_dir = Path("/")
+            target_dir = str(initial_default_dir)
+            debug_messages.append(f"[API_CMD] 'cd' without args, targeting default: {target_dir}")
+
+        if not target_dir: # e.g. if command was just "cd " with spaces
+             # No directory specified, could treat as no-op or error. Let's make it a no-op for now.
+            debug_messages.append("[API_CMD] 'cd' with no target directory. No operation performed.")
+            return {
+                "command_executed": command_to_run,
+                "stdout": "",
+                "stderr": "",
+                "exit_code": 0,
+                "cwd": current_subprocess_cwd, # Return current CWD
+                "debug_messages": debug_messages
+            }
+
+        debug_messages.append(f"[API_CMD] Intercepted 'cd' command. Target: '{target_dir}'")
+        success, message = set_current_terminal_cwd(target_dir)
+        new_cwd_str = get_current_terminal_cwd_str() # Get potentially updated CWD
+        debug_messages.append(f"[API_CMD] cd result: success={success}, message='{message}', new CWD for session: {new_cwd_str}")
+
+        return {
+            "command_executed": command_to_run,
+            "stdout": "" if success else "",
+            "stderr": message if not success else "",
+            "exit_code": 0 if success else 1, # Standard exit code for failed cd
+            "cwd": new_cwd_str, # Return the new CWD
+            "debug_messages": debug_messages
+        }
+    # --- END CD Command Handling ---
+
+    # --- LS Color Handling ---
+    # If the command is 'ls' or starts with 'ls ', inject '--color=always'
+    # This is a simplified approach; robustly adding flags to any part of a complex shell command is harder.
+    is_ls_command = False
+    if command_to_run.startswith("ls ") or command_to_run == "ls":
+        is_ls_command = True
+        parts = shlex.split(command_to_run)
+        # Check if a color flag is already present
+        has_color_flag = any(part.startswith("--color") for part in parts)
+        if not has_color_flag:
+            # Insert --color=always after the 'ls' command itself
+            if parts[0] == "ls":
+                parts.insert(1, "--color=always")
+            # If ls is part of a more complex command, this might not be the right place,
+            # but for simple `ls` or `ls -l`, etc., this is okay.
+            command_to_run = shlex.join(parts)
+            debug_messages.append(f"[API_CMD] Modified command for color output: {command_to_run}")
+    # --- END LS Color Handling ---
+
+    try:
+        process = subprocess.run(
+            command_to_run,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=current_subprocess_cwd # Use the stored CWD for the subprocess
+        )
+        stdout = process.stdout.strip()
+        stderr = process.stderr.strip()
+        exit_code = process.returncode
+
+        debug_messages.append(f"[API_CMD] STDOUT: {stdout}") # This will now contain ANSI codes for ls
+        debug_messages.append(f"[API_CMD] STDERR: {stderr}")
+        debug_messages.append(f"[API_CMD] Exit Code: {exit_code}")
+
+        return {
+            "command_executed": original_command_for_display, # Return the command as typed by user
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": exit_code,
+            "cwd": current_subprocess_cwd,
+            "is_ls_command": is_ls_command, # Add flag for frontend
+            "debug_messages": debug_messages
+        }
+    except subprocess.TimeoutExpired:
+        timeout_msg = f"Error: Command '{original_command_for_display}' timed out after 30 seconds."
+        debug_messages.append(f"[API_CMD] {timeout_msg}")
+        return {
+            "command_executed": original_command_for_display,
+            "stdout": "",
+            "stderr": timeout_msg,
+            "exit_code": -1,
+            "cwd": current_subprocess_cwd,
+            "is_ls_command": False,
+            "debug_messages": debug_messages
+        }
+    except Exception as e:
+        error_message = f"General error executing command '{original_command_for_display}': {str(e)}"
+        debug_messages.append(f"[API_CMD] {error_message}")
+        return {
+            "command_executed": original_command_for_display,
+            "stdout": "",
+            "stderr": error_message,
+            "exit_code": -2,
+            "cwd": current_subprocess_cwd,
+            "is_ls_command": False,
+            "debug_messages": debug_messages
+        }
+
 # New endpoints for crash logs
 @app.get("/api/crash-logs")
-async def list_crash_logs() -> List[Dict[str, str]]:
-    """Returns a list of crash log files."""
+async def list_crash_logs() -> Dict[str, Any]:
+    debug_messages = []
+    debug_messages.append(f"[API] list_crash_logs: Attempting to list logs from {CRASH_LOGS_DIR}")
     try:
-        if not CRASH_LOGS_DIR.exists():
-            return []
+        resolved_path = CRASH_LOGS_DIR.resolve()
+        debug_messages.append(f"[API] Resolved path: {resolved_path}")
+        exists = CRASH_LOGS_DIR.exists()
+        is_dir = CRASH_LOGS_DIR.is_dir()
+        debug_messages.append(f"[API] Path {CRASH_LOGS_DIR} exists: {exists}, Is directory: {is_dir}")
 
-        log_files = []
-        for file in CRASH_LOGS_DIR.glob("*.txt"):
-            log_files.append({
-                "name": file.name,
-                "size": f"{file.stat().st_size / 1024:.1f} KB",
-                "date": datetime.datetime.fromtimestamp(file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-            })
+        if not exists:
+            debug_messages.append(f"[API] CRASH_LOGS_DIR {CRASH_LOGS_DIR} does not exist.")
+            return {"files": [], "debug_messages": debug_messages}
+        if not is_dir:
+            debug_messages.append(f"[API] CRASH_LOGS_DIR {CRASH_LOGS_DIR} is not a directory.")
+            return {"files": [], "debug_messages": debug_messages}
 
-        # Sort by modification time (newest first)
-        log_files.sort(key=lambda x: datetime.datetime.strptime(x["date"], "%Y-%m-%d %H:%M:%S"), reverse=True)
-        return log_files
+        # Try listing with os.listdir for more raw feedback
+        try:
+            raw_listing = os.listdir(CRASH_LOGS_DIR)
+            debug_messages.append(f"[API] os.listdir output for {CRASH_LOGS_DIR}: {raw_listing}")
+        except Exception as e_listdir:
+            debug_messages.append(f"[API] Error during os.listdir for {CRASH_LOGS_DIR}: {str(e_listdir)}")
+            # Continue, but note the error, glob might still work or provide more info
+
+        log_files_found_by_glob = list(CRASH_LOGS_DIR.glob("*.txt"))
+        debug_messages.append(f"[API] Files found by {CRASH_LOGS_DIR.name}.glob('*.txt'): {len(log_files_found_by_glob)}")
+        if not log_files_found_by_glob:
+            debug_messages.append(f"[API] No *.txt files found in {CRASH_LOGS_DIR}.")
+            # Potentially list all files if no .txt files are found, for more context
+            all_files_in_dir = list(CRASH_LOGS_DIR.glob("*"))
+            debug_messages.append(f"[API] All items found by {CRASH_LOGS_DIR.name}.glob('*'): {len(all_files_in_dir)}")
+            for f_idx, f_path in enumerate(all_files_in_dir):
+                debug_messages.append(f"[API] All item {f_idx}: {f_path.name} (Is file: {f_path.is_file()})")
+        else:
+            for f_idx, f_path in enumerate(log_files_found_by_glob):
+                debug_messages.append(f"[API] Globbed .txt file {f_idx}: {f_path.name}")
+
+        log_files_data = []
+        for file_path_obj in log_files_found_by_glob:
+            debug_messages.append(f"[API] Processing globbed file: {file_path_obj.name}")
+            try:
+                stat_info = file_path_obj.stat()
+                log_files_data.append({
+                    "name": file_path_obj.name,
+                    "size": f"{stat_info.st_size / 1024:.1f} KB",
+                    "date": datetime.datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                })
+                debug_messages.append(f"[API] Successfully statted {file_path_obj.name}")
+            except Exception as e_stat:
+                debug_messages.append(f"[API] Error statting file {file_path_obj.name}: {str(e_stat)}")
+
+        log_files_data.sort(key=lambda x: datetime.datetime.strptime(x["date"], "%Y-%m-%d %H:%M:%S"), reverse=True)
+        debug_messages.append(f"[API] Returning {len(log_files_data)} log files after processing and sorting.")
+        return {"files": log_files_data, "debug_messages": debug_messages}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error listing crash logs: {str(e)}")
+        debug_messages.append(f"[API] General error in list_crash_logs: {str(e)}")
+        # Construct detail string with all debug messages for the HTTPException
+        error_detail = "\n".join(debug_messages)
+        raise HTTPException(status_code=500, detail=f"[API] Error listing crash logs:\n{error_detail}")
 
 @app.get("/api/crash-logs/{filename}")
 async def get_crash_log(filename: str) -> PlainTextResponse:
