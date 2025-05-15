@@ -567,7 +567,8 @@ class HKGLongitudinalController:
     def __init__(self, CP: car.CarParams):
         self.CP = CP
         self.hkg_tuning_enabled = self.param("HKGtuning")
-        self.tuning = HKGLongitudinalTuning(CP) if self.hkg_tuning_enabled else None
+        # Only initialize the tuning object (and its publisher) if HKGtuning is enabled AND CP is not passive
+        self.tuning = HKGLongitudinalTuning(CP) if self.hkg_tuning_enabled and not CP.passive else None
         self.jerk_upper_limit = 0.0
         self.jerk_lower_limit = 0.0
         self.cb_upper = 0.0
