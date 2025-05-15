@@ -9,7 +9,7 @@ def format_value(value):
             return str(value) # For complex objects, just use string representation
         return json.dumps(value, separators=(',', ':'))
     if isinstance(value, str) and (' ' in value or '=' in value or ',' in value or '"' in value):
-        return f'"{value.replace("\"", "\\\"")}"'
+        return f'"{value.replace('"', '\\"')}"'
     if isinstance(value, float):
         return f"{value:.4f}" # Format floats to 4 decimal places for brevity
     if value is None:
