@@ -60,11 +60,11 @@
     font-family: monospace;
     font-size: 0.75rem; /* Smaller font */
     padding: 0.5rem; /* Inner padding for text */
-    /* margin: 1rem; -- Removed, parent .diagnostic-content-section handles outer spacing */
     border: 1px solid #333; /* Darker border */
     border-radius: 0.25rem;
     max-height: 25vh; /* Adjusted max-height */
     overflow-y: auto;    /* Scroll for overflow */
+    scrollbar-gutter: stable; /* ADDED for consistent scrollbar spacing */
     white-space: pre-wrap; /* Respect newlines and spaces */
     word-break: break-all; /* Break long lines */
     margin-bottom: 1rem; /* Space below this debug box */
@@ -76,9 +76,9 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
     gap: 1rem;
-    /* padding: 1rem; -- Removed, parent .diagnostic-content-section (#crash-logs-display) has it */
     flex-grow: 1; /* Takes remaining vertical space in flex column */
     overflow-y: auto; /* Scroll its own content */
+    scrollbar-gutter: stable; /* ADDED for consistent scrollbar spacing */
     min-height: 0; /* Crucial for flex children that need to scroll */
   }
 
