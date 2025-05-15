@@ -19,10 +19,6 @@ from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPi
 from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_url_pingable, lock_doors, run_thread_with_lock, update_maps, update_openpilot
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
-from msgq import MultiplePublishersError
-
-# Module-level variable to hold the singleton publisher for frogpilotPlan
-FROGPILOT_PLAN_PUBLISHER = None
 
 def assets_checks(model_manager, theme_manager):
   if params_memory.get_bool("DownloadAllModels"):
@@ -66,22 +62,7 @@ def update_checks(manually_updated, model_manager, now, theme_manager, frogpilot
   time.sleep(1)
 
 def frogpilot_thread():
-  try:                       # pin to core 3 if it exists, else skip
-    config_realtime_process(3, Priority.CTRL_LOW)
-  except OSError:
-    pass
-
-  global FROGPILOT_PLAN_PUBLISHER # Declare usage of the global variable
-
-  # -------------------------------------------------
-  # Initialize the shared frogpilotPlan publisher FIRST
-  # -------------------------------------------------
-  if FROGPILOT_PLAN_PUBLISHER is None:
-    try:
-      FROGPILOT_PLAN_PUBLISHER = messaging.PubMaster(["frogpilotPlan"])
-    except MultiplePublishersError:
-      print("CRITICAL ERROR: MultiplePublishersError occurred in frogpilot_process when initializing FROGPILOT_PLAN_PUBLISHER early.")
-      # Keep as None to allow downstream safety checks.
+  config_realtime_process(5, Priority.CTRL_LOW)
 
   error_log = CRASHES_DIR / "error.txt"
   if error_log.is_file():
@@ -89,7 +70,6 @@ def frogpilot_thread():
 
   params_cache = Params("/cache/params")
 
-  # Now it is safe to instantiate components that rely on the shared publisher
   frogpilot_planner = FrogPilotPlanner()
   frogpilot_tracking = FrogPilotTracking()
   frogpilot_variables = FrogPilotVariables()
@@ -107,13 +87,11 @@ def frogpilot_thread():
 
   toggles_last_updated = datetime.datetime.now()
 
+  pm = messaging.PubMaster(["frogpilotPlan"])
   sm = messaging.SubMaster(["carControl", "carState", "controlsState", "deviceState", "driverMonitoringState",
                             "managerState", "modelV2", "pandaStates", "radarState",
                             "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation"],
                             poll="modelV2", ignore_avg_freq=["radarState"])
-
-  # Track whether a frogpilotPlan message was sent this iteration
-  last_send_time = time.monotonic()
 
   while True:
     sm.update()
@@ -154,38 +132,13 @@ def frogpilot_thread():
     if started and sm.updated["modelV2"]:
       frogpilot_planner.update(sm["carControl"], sm["carState"], sm["controlsState"], sm["frogpilotCarControl"], sm["frogpilotCarState"],
                                sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles, sm)
-      if FROGPILOT_PLAN_PUBLISHER:
-        frogpilot_planner.publish(sm, FROGPILOT_PLAN_PUBLISHER, toggles_updated)
-        last_send_time = time.monotonic()
-      else:
-        print("WARNING: frogpilot_planner.publish skipped, FROGPILOT_PLAN_PUBLISHER is None.")
+      frogpilot_planner.publish(sm, pm, toggles_updated)
 
       frogpilot_tracking.update(sm["carState"], sm["controlsState"], sm["frogpilotCarControl"])
     elif not started and toggles_updated:
-      if FROGPILOT_PLAN_PUBLISHER:
-        frogpilot_plan_send = messaging.new_message("frogpilotPlan")
-        frogpilot_plan_send.valid = True
-        frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
-        FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", frogpilot_plan_send)
-        last_send_time = time.monotonic()
-      else:
-        print("WARNING: frogpilotPlan toggle update send skipped, FROGPILOT_PLAN_PUBLISHER is None.")
-
-    # -------------------------------------------------------------------
-    # Safety: keep the frogpilotPlan stream alive. If we haven't published
-    # anything in the last 0.05 s (~20 Hz), broadcast a lightweight
-    # heartbeat *marked as valid*.  Using `valid=True` prevents dependent
-    # modules (e.g. paramsd, dmonitoringd) from flagging a commIssue due to
-    # invalid frogpilotPlan packets while still conveying that this packet
-    # does not contain a new plan update.  No other fields need to be set –
-    # consumers already gate on domain-specific sub-fields (speed commands,
-    # events, …) which remain at their default values.
-    # -------------------------------------------------------------------
-    if FROGPILOT_PLAN_PUBLISHER and (time.monotonic() - last_send_time) > 0.05:
-      heartbeat = messaging.new_message("frogpilotPlan")
-      heartbeat.valid = True  # mark as valid so SubMaster.valid stays True
-      FROGPILOT_PLAN_PUBLISHER.send("frogpilotPlan", heartbeat)
-      last_send_time = time.monotonic()
+      frogpilot_plan_send = messaging.new_message("frogpilotPlan")
+      frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
+      pm.send("frogpilotPlan", frogpilot_plan_send)
 
     started_previously = started
 

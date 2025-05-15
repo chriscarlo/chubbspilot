@@ -799,3 +799,9 @@ INFO:     127.0.0.1:54280 - "GET /diagnostics HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54280 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:54280 - "POST /api/execute-command HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54280 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34306 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34312 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51962 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51962 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51962 - "GET /static/css/tailwind.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49044 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
