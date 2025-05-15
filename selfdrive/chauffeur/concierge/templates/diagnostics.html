@@ -771,24 +771,38 @@
     function showContentSection(sectionId, associatedTile) {
       closeCurrentEventSource(); // Close any active SSE stream when switching main sections
 
-      // If the target is our new real-time monitors, delegate to its specific function
-      if (sectionId === 'realtime-monitors-display') {
-        showMonitorSelectionGrid();
-      } else {
-        // Original logic for other tiles
+      // Hide all content sections first, then show the target one.
+      // This simplifies logic and prevents multiple sections from being visible if IDs overlap or logic is complex.
       contentSections.forEach(section => {
-        if (section.id === sectionId) {
-          section.classList.remove('hidden');
-            if (section.id === 'test4-display') { // Terminal specific class
-            section.classList.add('active-terminal-view');
-          }
-        } else {
-          section.classList.add('hidden');
-          if (section.id === 'test4-display') {
+        section.classList.add('hidden');
+        // Special handling for terminal active class
+        if (section.id === 'test4-display') {
             section.classList.remove('active-terminal-view');
-          }
+        }
+        // Special handling for log viewer if it's one of the main content sections (it is)
+        if (section.id === 'log-viewer-display') {
+            // Keep it hidden unless explicitly shown (e.g., by displayLogContent)
         }
       });
+
+      const targetSection = document.getElementById(sectionId);
+
+      if (sectionId === 'realtime-monitors-display') {
+        if (targetSection) targetSection.classList.remove('hidden'); // Show the container
+        showMonitorSelectionGrid(); // Populate it
+      } else if (sectionId === 'crash-logs-display') {
+        if (targetSection) targetSection.classList.remove('hidden');
+        fetchCrashLogs(); // Fetch logs when this section is shown
+      } else if (sectionId === 'log-viewer-display') {
+        // This section is typically shown by displayLogContent, not directly by a nav tile.
+        // If a nav tile were to show it, it would need a filename.
+        // For now, clicking a nav tile for 'log-viewer-display' (if one existed) would show an empty viewer.
+        if (targetSection) targetSection.classList.remove('hidden');
+      } else if (targetSection) { // For other simple sections like test1, test3, empty-state
+        targetSection.classList.remove('hidden');
+        if (sectionId === 'test4-display') { // Terminal specific class
+            targetSection.classList.add('active-terminal-view');
+        }
       }
 
       // Handle active tile styling
@@ -825,19 +839,15 @@
     // Initial state: No tile pre-selected, show empty-state-content.
     showContentSection('empty-state-content', null);
 
-    // --- Placeholder for existing JS functionality for other tiles (Crash Logs, Terminal, CPU Equalizer) ---
-    // Make sure the existing `fetchCrashLogs`, `displayLogContent`, terminal logic, CPU equalizer logic etc.
-    // are preserved and work correctly with the new structure.
-    // The `showContentSection` has been modified, so ensure compatibility.
-    // Example:
-    // const crashLogsTile = document.getElementById('crash-logs-tile');
-    // if(crashLogsTile) { /* ... existing event listeners ... */ }
-
-    // Back button for log viewer (if it's part of the original script for crash logs)
+    // Back button for log viewer
     const backToLogsListBtn = document.getElementById('back-to-logs-list');
     if (backToLogsListBtn) {
         backToLogsListBtn.addEventListener('click', function() {
-            // Assuming showContentSection handles showing the crash-logs-display (log list)
+            // Hide log viewer, show crash logs list (which will trigger fetch)
+            const logViewerDisplay = document.getElementById('log-viewer-display');
+            if (logViewerDisplay) logViewerDisplay.classList.add('hidden');
+
+            // Show the crash logs section and trigger a fetch
             showContentSection('crash-logs-display', document.getElementById('crash-logs-tile'));
         });
     }
@@ -928,7 +938,123 @@
             }
         });
     }
-    // Ensure other existing initializations and functions are preserved.
+
+    // ***** START NEW/RESTORED CRASH LOGS FUNCTIONS *****
+    async function fetchCrashLogs() {
+      const logListContainer = document.getElementById('log-list-container-tiles');
+      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
+
+      function appendDebugMessage(message, isError = false, source = "FE") {
+          if (debugOutputContainer) {
+              const ts = new Date().toLocaleTimeString();
+              const entry = document.createElement('div');
+              entry.textContent = `[${ts}] [${source}] ${message}`;
+              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
+              debugOutputContainer.appendChild(entry);
+              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
+          }
+      }
+
+      if (logListContainer) logListContainer.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
+      if (debugOutputContainer) debugOutputContainer.innerHTML = ''; // Clear previous debug messages
+
+      appendDebugMessage("Attempting to fetch crash logs from /api/crash-logs...");
+
+      try {
+          const response = await fetch('/api/crash-logs');
+          appendDebugMessage(`Received response status: ${response.status}`);
+
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendDebugMessage(`Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
+              if (logListContainer) logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">Failed to load crash logs. Check debug output.</p>';
+              return;
+          }
+
+          const data = await response.json();
+          appendDebugMessage("Successfully parsed JSON response.");
+
+          if (data.debug_messages && Array.isArray(data.debug_messages)) {
+              data.debug_messages.forEach(msg => appendDebugMessage(msg, false, "BE"));
+          }
+
+          if (logListContainer) {
+              logListContainer.innerHTML = ''; // Clear "Loading..."
+              if (data.files && data.files.length > 0) {
+                  data.files.forEach(logFile => {
+                      const tile = document.createElement('div');
+                      tile.className = 'log-file-tile';
+                      tile.dataset.filename = logFile.name;
+                      tile.innerHTML = `
+                          <div class="log-name">${escapeHtml(logFile.name)}</div>
+                          <div class="log-details">
+                              <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
+                          </div>
+                      `;
+                      tile.addEventListener('click', () => displayLogContent(logFile.name));
+                      logListContainer.appendChild(tile);
+                  });
+                  appendDebugMessage(`Displayed ${data.files.length} log files.`);
+              } else {
+                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
+                  appendDebugMessage("No crash log files returned from API.");
+              }
+          }
+      } catch (error) {
+          console.error('Error in fetchCrashLogs:', error);
+          appendDebugMessage(`CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
+          if (logListContainer) {
+              logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">An error occurred while loading crash logs. See debug output and console.</p>';
+          }
+      }
+    }
+
+    async function displayLogContent(filename) {
+      const logViewerFilename = document.getElementById('log-viewer-filename');
+      const logViewerContent = document.getElementById('log-viewer-content');
+      const crashLogsDisplay = document.getElementById('crash-logs-display');
+      const logViewerDisplay = document.getElementById('log-viewer-display');
+      const debugOutputContainer = document.getElementById('crash-logs-debug-output'); // Continue using same debug for simplicity
+
+      function appendDebugMessage(message, isError = false, source = "FE") { // Local helper
+          if (debugOutputContainer) {
+              const ts = new Date().toLocaleTimeString();
+              const entry = document.createElement('div');
+              entry.textContent = `[${ts}] [${source}] ${message}`;
+              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
+              debugOutputContainer.appendChild(entry);
+              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
+          }
+      }
+
+      appendDebugMessage(`Fetching content for log: ${filename}`);
+      if (logViewerFilename) logViewerFilename.textContent = filename;
+      if (logViewerContent) logViewerContent.innerHTML = '<p class="text-secondary p-4">Loading log content...</p>';
+
+      // Hide log list, show viewer
+      if (crashLogsDisplay) crashLogsDisplay.classList.add('hidden');
+      if (logViewerDisplay) logViewerDisplay.classList.remove('hidden');
+      // Consider setting active tile if needed, or manage section visibility more centrally
+
+      try {
+          const response = await fetch(`/api/crash-logs/${filename}`);
+          appendDebugMessage(`Content fetch status for ${filename}: ${response.status}`);
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendDebugMessage(`Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
+              if (logViewerContent) logViewerContent.textContent = `Error loading log: ${response.statusText}`;
+              return;
+          }
+          const content = await response.text();
+          if (logViewerContent) logViewerContent.textContent = content; // Display as preformatted text
+          appendDebugMessage(`Successfully loaded content for ${filename}.`);
+      } catch (error) {
+          console.error('Error in displayLogContent:', error);
+          appendDebugMessage(`CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
+          if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
+      }
+    }
+    // ***** END NEW/RESTORED CRASH LOGS FUNCTIONS *****
   });
 </script>
 {% endblock %}
