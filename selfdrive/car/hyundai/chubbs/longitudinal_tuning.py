@@ -7,7 +7,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
 import time # Added for sleep
-from cereal.messaging.messaging_pyx import MultiplePublishersError # Specific import for the error
+from msgq.ipc_pyx import MultiplePublishersError # Corrected import path
 
 # --- Singleton Publisher Class for HKG Tuning Data ---
 class _HKGTuningPublisher:
