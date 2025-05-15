@@ -17,6 +17,7 @@ import subprocess
 from pydantic import BaseModel # For request body validation
 import shlex # For parsing cd command arguments safely
 import zmq # ADDED ZMQ IMPORT
+import zmq.asyncio # <- make the Context class visible
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, PlainTextResponse
