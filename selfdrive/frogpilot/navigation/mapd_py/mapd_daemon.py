@@ -223,9 +223,9 @@ class MapdPyDaemon:
                 log_event("DAEMON", "DEBUG", "MATCHER_CALL_GET_PROGRESS_ALONG_WAY_START",
                           segment_id=self.current_segment_id,
                           pos_lat=self.last_valid_pos.latitude)
-            dist_covered_on_current = get_progress_along_way(
-                self.last_valid_pos, self.current_segment_data, self.current_on_way_result
-            )
+                dist_covered_on_current = get_progress_along_way(
+                    self.last_valid_pos, self.current_segment_data, self.current_on_way_result
+                )
                 log_event("DAEMON", "DEBUG", "MATCHER_CALL_GET_PROGRESS_ALONG_WAY_END",
                           segment_id=self.current_segment_id,
                           progress_m=dist_covered_on_current)
@@ -451,7 +451,7 @@ class MapdPyDaemon:
                 for i, next_way_item in enumerate(next_ways_results):
                     next_segment_id_pub = next_way_item.segment_id
                     log_event("DAEMON", "DEBUG", "READER_ACCESS_SEGMENT_DATA_NEXT_SEG_START", segment_id=next_segment_id_pub)
-                        next_segment_data_pub = self.map_reader.segments_data.get(next_segment_id_pub)
+                    next_segment_data_pub = self.map_reader.segments_data.get(next_segment_id_pub)
                     log_event("DAEMON", "DEBUG", "READER_ACCESS_SEGMENT_DATA_NEXT_SEG_END",
                               segment_id=next_segment_id_pub,
                               data_found=(next_segment_data_pub is not None))
@@ -460,7 +460,7 @@ class MapdPyDaemon:
                         log_event("DAEMON", "WARN", "NEXT_SEGMENTS_POPULATION_FAIL_NO_SEG_DATA", segment_id=next_segment_id_pub)
                         continue # Skip if data not available (should be rare if proactive loading works)
 
-                        seg_len_pub = get_segment_length(next_segment_data_pub)
+                    seg_len_pub = get_segment_length(next_segment_data_pub)
                     curv_speeds_next_raw = next_segment_data_pub.get('curvature_derived_speeds_mps', [])
                     coords_next_raw = self.map_reader.get_segment_coords(next_segment_id_pub)
                     distances_next_raw = []
@@ -487,7 +487,7 @@ class MapdPyDaemon:
                                 )
                                 cumulative_node_dist_next += segment_dist_n
                                 distances_next_raw.append(cumulative_node_dist_next)
-                                 else:
+                            else:
                                 distances_next_raw.append(cumulative_node_dist_next)
 
                     # --- COMPACT BEFORE ASSIGNING --- #
@@ -498,16 +498,16 @@ class MapdPyDaemon:
                               raw_speed_count=len(curv_speeds_next_raw),
                               compact_dist_count=len(compact_distances_next),
                               compact_speed_count=len(compact_speeds_next))
-                        # --- END COMPACT --- #
+                    # --- END COMPACT --- #
 
-                        next_seg_struct = log.LiveMapData.NextSegmentData.new_message(
-                            segmentId=next_segment_id_pub,
+                    next_seg_struct = log.LiveMapData.NextSegmentData.new_message(
+                        segmentId=next_segment_id_pub,
                         distanceToStart=cumulative_dist_to_start_of_next_segment_for_msg, # This is distance from VEHICLE to START of this specific next_segment
-                            segmentLength=seg_len_pub,
-                            curvatureDerivedSpeedsMps=compact_speeds_next, # Use compacted data
-                            distancesForSpeeds=compact_distances_next  # Use compacted data
-                        )
-                        next_segments_list.append(next_seg_struct)
+                        segmentLength=seg_len_pub,
+                        curvatureDerivedSpeedsMps=compact_speeds_next, # Use compacted data
+                        distancesForSpeeds=compact_distances_next  # Use compacted data
+                    )
+                    next_segments_list.append(next_seg_struct)
                     # For the *following* segment in the list, its distanceToStart will be incremented by current one's length
                     cumulative_dist_to_start_of_next_segment_for_msg += seg_len_pub
                     log_event("DAEMON", "TRACE", "NEXT_SEGMENT_ADDED_TO_MSG",
