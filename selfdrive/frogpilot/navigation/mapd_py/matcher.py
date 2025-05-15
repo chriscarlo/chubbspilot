@@ -1,34 +1,35 @@
 import math
 from collections import namedtuple
 from rtree import index as rtree_index
-import datetime # Added for logging
-import json # Added for logging
+# import datetime # No longer needed directly
+# import json # No longer needed directly
 
 # Local imports (assuming reader.py and geometry.py are in the same directory)
 from . import geometry
 from . import reader # Although MapReader might be instantiated elsewhere
+from .logging_utils import log_event # IMPORT CENTRALIZED LOGGER
 
 # --- Logging Utility (simplified, to be centralized later) ---
-def format_value_matcher(value):
-    if isinstance(value, (list, dict)):
-        # For lists/dicts, use a compact JSON representation unless it's a known complex object
-        if hasattr(value, '__dict__') and not isinstance(value, (list, dict, str, int, float, bool)):
-            return str(value) # For complex objects, just use string representation
-        return json.dumps(value, separators=(',', ':'))
-    if isinstance(value, str) and (' ' in value or '=' in value or ',' in value or '"' in value):
-        processed_value = value.replace('"', '\"')
-        return f'"{processed_value}"'
-    if isinstance(value, float):
-        return f"{value:.4f}"
-    if value is None:
-        return "None"
-    return str(value)
+# def format_value_matcher(value):
+#     if isinstance(value, (list, dict)):
+#         # For lists/dicts, use a compact JSON representation unless it\'s a known complex object
+#         if hasattr(value, \'__dict__\') and not isinstance(value, (list, dict, str, int, float, bool)):
+#             return str(value) # For complex objects, just use string representation
+#         return json.dumps(value, separators=(\',\', \':\'))
+#     if isinstance(value, str) and (\' \' in value or \'=\' in value or \',\' in value or \'\"\' in value):
+#         processed_value = value.replace(\'\"\', \'\\\"\')
+#         return f\'\"{processed_value}\"\'
+#     if isinstance(value, float):
+#         return f\"{value:.4f}\"
+#     if value is None:
+#         return "None"
+#     return str(value)
 
-def log_event_matcher(module_name: str, level: str, event_description: str, **kwargs):
-    timestamp = datetime.datetime.utcnow().isoformat(timespec='milliseconds') + "Z"
-    details = ", ".join(f"{key}={format_value_matcher(value)}" for key, value in kwargs.items())
-    log_message = f"[{timestamp}] [{module_name.upper()}] [{level.upper()}] {event_description}: {details if details else 'No details'}"
-    print(log_message, flush=True)
+# def log_event_matcher(module_name: str, level: str, event_description: str, **kwargs):
+#     timestamp = datetime.datetime.utcnow().isoformat(timespec=\'milliseconds\') + "Z"
+#     details = ", ".join(f\"{key}={format_value_matcher(value)}\" for key, value in kwargs.items())
+#     log_message = f\"[{timestamp}] [{module_name.upper()}] [{level.upper()}] {event_description}: {details if details else \'No details\'}\"
+#     print(log_message, flush=True)
 # --- End Logging Utility ---
 
 # REMOVE Placeholder Classes and offline_capnp stub
@@ -98,14 +99,14 @@ def distance_to_way(pos: Position, segment_id: int, segment_data: SegmentData) -
     Calculates the minimum distance from a Position to a Way segment.
     Returns a DistanceResult namedtuple or None if segment data is invalid.
     """
-    log_event_matcher("MATCHER", "TRACE", "DISTANCE_TO_WAY_START", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, num_coords_in_segment=len(segment_data.get('geom', {}).coords) if segment_data.get('geom') else 0)
+    log_event("MATCHER", "TRACE", "DISTANCE_TO_WAY_START", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, num_coords_in_segment=len(segment_data.get('geom', {}).coords) if segment_data.get('geom') else 0)
     min_distance_m = float('inf')
     min_node_start_coord = None
     min_node_end_coord = None
 
     coords = _get_coords_from_segment(segment_data)
     if len(coords) < 2:
-        log_event_matcher("MATCHER", "WARN", "DISTANCE_TO_WAY_FAIL_INSUFFICIENT_COORDS", segment_id=segment_id, num_coords=len(coords))
+        log_event("MATCHER", "WARN", "DISTANCE_TO_WAY_FAIL_INSUFFICIENT_COORDS", segment_id=segment_id, num_coords=len(coords))
         return None
 
     pos_lat_rad = pos.latitude * geometry.TO_RADIANS
@@ -128,7 +129,7 @@ def distance_to_way(pos: Position, segment_id: int, segment_data: SegmentData) -
             line_lat_deg * geometry.TO_RADIANS,
             line_lon_deg * geometry.TO_RADIANS
         )
-        log_event_matcher("MATCHER", "TRACE", "DISTANCE_TO_WAY_SUB_SEGMENT_EVAL", segment_id=segment_id, sub_segment_index=i, start_node=(node_start_lat, node_start_lon), end_node=(node_end_lat, node_end_lon), projected_point=(line_lat_deg, line_lon_deg), distance_m=distance_m)
+        log_event("MATCHER", "TRACE", "DISTANCE_TO_WAY_SUB_SEGMENT_EVAL", segment_id=segment_id, sub_segment_index=i, start_node=(node_start_lat, node_start_lon), end_node=(node_end_lat, node_end_lon), projected_point=(line_lat_deg, line_lon_deg), distance_m=distance_m)
 
         if distance_m < min_distance_m:
             min_distance_m = distance_m
@@ -136,7 +137,7 @@ def distance_to_way(pos: Position, segment_id: int, segment_data: SegmentData) -
             min_node_end_coord = (node_end_lat, node_end_lon)
 
     if min_node_start_coord is None:
-         log_event_matcher("MATCHER", "WARN", "DISTANCE_TO_WAY_FAIL_NO_MIN_COORD_FOUND", segment_id=segment_id) # Should not happen
+         log_event("MATCHER", "WARN", "DISTANCE_TO_WAY_FAIL_NO_MIN_COORD_FOUND", segment_id=segment_id) # Should not happen
          return None # Should not happen if len(coords) >= 2
 
     result = DistanceResult(
@@ -145,7 +146,7 @@ def distance_to_way(pos: Position, segment_id: int, segment_data: SegmentData) -
         line_end_coord=min_node_end_coord,
         distance_m=min_distance_m
     )
-    log_event_matcher("MATCHER", "DEBUG", "DISTANCE_TO_WAY_SUCCESS", segment_id=segment_id, distance_m=result.distance_m, line_start_coord=result.line_start_coord, line_end_coord=result.line_end_coord)
+    log_event("MATCHER", "DEBUG", "DISTANCE_TO_WAY_SUCCESS", segment_id=segment_id, distance_m=result.distance_m, line_start_coord=result.line_start_coord, line_end_coord=result.line_end_coord)
     return result
 
 def is_forward(line_start_coord: CoordinatesTuple, line_end_coord: CoordinatesTuple, bearing_rad: float):
@@ -166,7 +167,7 @@ def is_forward(line_start_coord: CoordinatesTuple, line_end_coord: CoordinatesTu
         bearing_delta_rad -= 2 * math.pi
 
     is_fwd_result = math.cos(bearing_delta_rad) >= 0
-    log_event_matcher("MATCHER", "TRACE", "IS_FORWARD_CHECK", line_start=line_start_coord, line_end=line_end_coord, vehicle_bearing_rad=bearing_rad, way_bearing_rad=way_bearing_rad, delta_rad=bearing_delta_rad, result=is_fwd_result)
+    log_event("MATCHER", "TRACE", "IS_FORWARD_CHECK", line_start=line_start_coord, line_end=line_end_coord, vehicle_bearing_rad=bearing_rad, way_bearing_rad=way_bearing_rad, delta_rad=bearing_delta_rad, result=is_fwd_result)
     return is_fwd_result
 
 def on_way(pos: Position, segment_id: int, segment_data: SegmentData):
@@ -174,10 +175,10 @@ def on_way(pos: Position, segment_id: int, segment_data: SegmentData):
     Checks if the position is likely on the given way segment.
     Returns an OnWayResult namedtuple.
     """
-    log_event_matcher("MATCHER", "DEBUG", "ON_WAY_START", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, segment_geom_type=type(segment_data.get('geom')).__name__ if segment_data.get('geom') else "None")
+    log_event("MATCHER", "DEBUG", "ON_WAY_START", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, segment_geom_type=type(segment_data.get('geom')).__name__ if segment_data.get('geom') else "None")
     geom = segment_data.get('geom')
     if not geom or not hasattr(geom, 'bounds'):
-        log_event_matcher("MATCHER", "WARN", "ON_WAY_FAIL_NO_GEOM_OR_BOUNDS", segment_id=segment_id, has_geom=(geom is not None), has_bounds=hasattr(geom, 'bounds') if geom else False)
+        log_event("MATCHER", "WARN", "ON_WAY_FAIL_NO_GEOM_OR_BOUNDS", segment_id=segment_id, has_geom=(geom is not None), has_bounds=hasattr(geom, 'bounds') if geom else False)
         return OnWayResult(False, None, float('inf'), False, None, None)
 
     # Basic bounding box check using Shapely bounds (minx, miny, maxx, maxy) -> (minlon, minlat, maxlon, maxlat)
@@ -186,13 +187,13 @@ def on_way(pos: Position, segment_id: int, segment_data: SegmentData):
     padding = 0.0001 # Roughly 11 meters padding
     bbox_check_passed = (min_lat - padding <= pos.latitude <= max_lat + padding and
                          min_lon - padding <= pos.longitude <= max_lon + padding)
-    log_event_matcher("MATCHER", "TRACE", "ON_WAY_BOUNDING_BOX_CHECK", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, geom_bounds=(min_lon,min_lat,max_lon,max_lat), padding=padding, passed=bbox_check_passed)
+    log_event("MATCHER", "TRACE", "ON_WAY_BOUNDING_BOX_CHECK", segment_id=segment_id, pos_lat=pos.latitude, pos_lon=pos.longitude, geom_bounds=(min_lon,min_lat,max_lon,max_lat), padding=padding, passed=bbox_check_passed)
     if not bbox_check_passed:
         return OnWayResult(False, None, float('inf'), False, None, None)
 
     dist_result = distance_to_way(pos, segment_id, segment_data)
     if dist_result is None or dist_result.distance_m == float('inf'):
-        log_event_matcher("MATCHER", "INFO", "ON_WAY_FAIL_DISTANCE_TO_WAY_INVALID", segment_id=segment_id, dist_result_is_none=(dist_result is None), dist_is_inf=dist_result.distance_m == float('inf') if dist_result else False)
+        log_event("MATCHER", "INFO", "ON_WAY_FAIL_DISTANCE_TO_WAY_INVALID", segment_id=segment_id, dist_result_is_none=(dist_result is None), dist_is_inf=dist_result.distance_m == float('inf') if dist_result else False)
         return OnWayResult(False, segment_id, float('inf'), False, None, None)
 
     lanes = segment_data.get('lanes', 2) # Default to 2 lanes if not specified
@@ -201,25 +202,25 @@ def on_way(pos: Position, segment_id: int, segment_data: SegmentData):
 
     road_width_estimate = float(lanes) * LANE_WIDTH
     max_dist_threshold = 5.0 + road_width_estimate
-    log_event_matcher("MATCHER", "TRACE", "ON_WAY_DISTANCE_THRESHOLD_CALC", segment_id=segment_id, calculated_dist_m=dist_result.distance_m, lanes=lanes, road_width_estimate=road_width_estimate, max_dist_threshold=max_dist_threshold)
+    log_event("MATCHER", "TRACE", "ON_WAY_DISTANCE_THRESHOLD_CALC", segment_id=segment_id, calculated_dist_m=dist_result.distance_m, lanes=lanes, road_width_estimate=road_width_estimate, max_dist_threshold=max_dist_threshold)
 
     if dist_result.distance_m < max_dist_threshold:
         is_fwd = is_forward(dist_result.line_start_coord, dist_result.line_end_coord, pos.bearing_rad)
         oneway_val = segment_data.get('oneway', 0) # Default to not oneway
         is_way_oneway = oneway_val != 0 # Simplified check
-        log_event_matcher("MATCHER", "TRACE", "ON_WAY_DIRECTION_CHECK", segment_id=segment_id, vehicle_is_forward_on_segment=is_fwd, segment_oneway_value=oneway_val, is_segment_oneway=is_way_oneway)
+        log_event("MATCHER", "TRACE", "ON_WAY_DIRECTION_CHECK", segment_id=segment_id, vehicle_is_forward_on_segment=is_fwd, segment_oneway_value=oneway_val, is_segment_oneway=is_way_oneway)
 
         if not is_fwd and is_way_oneway:
             # Going wrong way on a oneway street
-            log_event_matcher("MATCHER", "INFO", "ON_WAY_FAIL_WRONG_WAY_ONEWAY", segment_id=segment_id, dist_m=dist_result.distance_m, is_fwd=is_fwd)
+            log_event("MATCHER", "INFO", "ON_WAY_FAIL_WRONG_WAY_ONEWAY", segment_id=segment_id, dist_m=dist_result.distance_m, is_fwd=is_fwd)
             return OnWayResult(False, segment_id, dist_result.distance_m, is_fwd, dist_result.line_start_coord, dist_result.line_end_coord)
         else:
             # On way or going correct direction on oneway
-            log_event_matcher("MATCHER", "DEBUG", "ON_WAY_SUCCESS", segment_id=segment_id, dist_m=dist_result.distance_m, is_fwd=is_fwd)
+            log_event("MATCHER", "DEBUG", "ON_WAY_SUCCESS", segment_id=segment_id, dist_m=dist_result.distance_m, is_fwd=is_fwd)
             return OnWayResult(True, segment_id, dist_result.distance_m, is_fwd, dist_result.line_start_coord, dist_result.line_end_coord)
     else:
         # Too far from the way
-        log_event_matcher("MATCHER", "INFO", "ON_WAY_FAIL_TOO_FAR", segment_id=segment_id, dist_m=dist_result.distance_m, threshold_m=max_dist_threshold)
+        log_event("MATCHER", "INFO", "ON_WAY_FAIL_TOO_FAR", segment_id=segment_id, dist_m=dist_result.distance_m, threshold_m=max_dist_threshold)
         return OnWayResult(False, segment_id, dist_result.distance_m, False, None, None)
 
 def get_way_start_end(segment_data: SegmentData, is_fwd: bool) -> tuple[CoordinatesTuple | None, CoordinatesTuple | None]:
@@ -227,19 +228,19 @@ def get_way_start_end(segment_data: SegmentData, is_fwd: bool) -> tuple[Coordina
     Gets the first and last coordinate nodes (lat, lon) of a way based on travel direction.
     Returns (None, None) if segment data is invalid or has < 1 node.
     """
-    log_event_matcher("MATCHER", "TRACE", "GET_WAY_START_END_START", segment_id=segment_data.get('id', 'UnknownID'), is_fwd=is_fwd)
+    log_event("MATCHER", "TRACE", "GET_WAY_START_END_START", segment_id=segment_data.get('id', 'UnknownID'), is_fwd=is_fwd)
     coords = _get_coords_from_segment(segment_data)
     num_nodes = len(coords)
 
     if num_nodes == 0:
-        log_event_matcher("MATCHER", "WARN", "GET_WAY_START_END_FAIL_NO_COORDS", segment_id=segment_data.get('id', 'UnknownID'))
+        log_event("MATCHER", "WARN", "GET_WAY_START_END_FAIL_NO_COORDS", segment_id=segment_data.get('id', 'UnknownID'))
         return None, None
     if num_nodes == 1:
-        log_event_matcher("MATCHER", "DEBUG", "GET_WAY_START_END_SINGLE_NODE", segment_id=segment_data.get('id', 'UnknownID'), node=coords[0])
+        log_event("MATCHER", "DEBUG", "GET_WAY_START_END_SINGLE_NODE", segment_id=segment_data.get('id', 'UnknownID'), node=coords[0])
         return coords[0], coords[0]
 
     start_node, end_node = (coords[0], coords[num_nodes - 1]) if is_fwd else (coords[num_nodes - 1], coords[0])
-    log_event_matcher("MATCHER", "TRACE", "GET_WAY_START_END_SUCCESS", segment_id=segment_data.get('id', 'UnknownID'), start_node=start_node, end_node=end_node, num_nodes=num_nodes)
+    log_event("MATCHER", "TRACE", "GET_WAY_START_END_SUCCESS", segment_id=segment_data.get('id', 'UnknownID'), start_node=start_node, end_node=end_node, num_nodes=num_nodes)
     return start_node, end_node
 
 def get_current_way(
@@ -254,42 +255,42 @@ def get_current_way(
     Searches in order: current candidate -> predicted next ways -> nearby ways via R-tree.
     Returns a CurrentWayResult namedtuple, or None if no way is found.
     """
-    log_event_matcher("MATCHER", "DEBUG", "GET_CURRENT_WAY_START", current_candidate_id=current_segment_id_candidate, num_next_segment_results=len(next_segment_results), pos_lat=pos.latitude)
+    log_event("MATCHER", "DEBUG", "GET_CURRENT_WAY_START", current_candidate_id=current_segment_id_candidate if current_segment_id_candidate is not None else "None", num_next_results=len(next_segment_results), pos_lat=pos.latitude)
     all_segments = map_reader.segments_data
     rtree = map_reader.rtree_idx
 
     # 1. Check the candidate from the previous cycle
     if current_segment_id_candidate is not None and current_segment_id_candidate in all_segments:
-        log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREVIOUS_CANDIDATE", candidate_id=current_segment_id_candidate)
+        log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREVIOUS_CANDIDATE", candidate_id=current_segment_id_candidate)
         candidate_data = all_segments[current_segment_id_candidate]
         on_way_result = on_way(pos, current_segment_id_candidate, candidate_data)
         if on_way_result.on_way:
-            log_event_matcher("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_PREVIOUS_CANDIDATE", segment_id=current_segment_id_candidate, on_way_details=on_way_result)
+            log_event("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_PREVIOUS_CANDIDATE", segment_id=current_segment_id_candidate, on_way_details=on_way_result)
             return CurrentWayResult(segment_id=current_segment_id_candidate, on_way_result=on_way_result)
         else:
-            log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_PREVIOUS_CANDIDATE_ONWAY_CHECK", candidate_id=current_segment_id_candidate, on_way_dist_m=on_way_result.distance_m)
+            log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_PREVIOUS_CANDIDATE_ONWAY_CHECK", candidate_id=current_segment_id_candidate, on_way_dist_m=on_way_result.distance_m)
 
     # 2. Check the predicted next ways from the previous cycle
     if next_segment_results:
-        log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREDICTED_NEXT_WAYS", num_predicted=len(next_segment_results))
+        log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREDICTED_NEXT_WAYS", num_predicted=len(next_segment_results))
         for i, next_res in enumerate(next_segment_results):
             segment_id = next_res.segment_id
-            log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREDICTED_WAY", predicted_index=i, segment_id=segment_id)
+            log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_CHECKING_PREDICTED_WAY", predicted_index=i, segment_id=segment_id)
             if segment_id in all_segments:
                  segment_data = all_segments[segment_id]
                  on_way_result = on_way(pos, segment_id, segment_data)
                  if on_way_result.on_way:
-                    log_event_matcher("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_PREDICTED_WAY", segment_id=segment_id, on_way_details=on_way_result)
+                    log_event("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_PREDICTED_WAY", segment_id=segment_id, on_way_details=on_way_result)
                     return CurrentWayResult(segment_id=segment_id, on_way_result=on_way_result)
                  else:
-                    log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_PREDICTED_WAY_ONWAY_CHECK", segment_id=segment_id, on_way_dist_m=on_way_result.distance_m)
+                    log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_PREDICTED_WAY_ONWAY_CHECK", segment_id=segment_id, on_way_dist_m=on_way_result.distance_m)
             else:
-                log_event_matcher("MATCHER", "WARN", "GET_CURRENT_WAY_PREDICTED_WAY_NOT_IN_CACHE", segment_id=segment_id)
+                log_event("MATCHER", "WARN", "GET_CURRENT_WAY_PREDICTED_WAY_NOT_IN_CACHE", segment_id=segment_id)
 
     # 3. Search nearby ways using R-tree
     # Use the reader's method which already incorporates R-tree search
     # Note: get_segment_data_at updates loaded tiles and queries rtree
-    log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_CALLING_READER_GET_SEGMENT_DATA_AT", pos_lat=pos.latitude, pos_lon=pos.longitude)
+    log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_CALLING_READER_GET_SEGMENT_DATA_AT", pos_lat=pos.latitude, pos_lon=pos.longitude)
     # closest_segment_info = map_reader.get_segment_data_at(pos.latitude, pos.longitude)
     # ^ This was the old way. The daemon now calls get_segment_data_at and passes the result to on_way.
     # This function get_current_way seems to be deprecated or its role changed. For now, assuming it might still be called
@@ -305,19 +306,19 @@ def get_current_way(
     # For safety, I will comment out the call to map_reader.get_segment_data_at here as it's redundant with daemon's flow.
 
     # If the R-Tree search was intended here:
-    # log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_USING_RTREE_SEARCH_VIA_READER")
+    # log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_USING_RTREE_SEARCH_VIA_READER")
     # closest_segment_info = map_reader.get_segment_data_at(pos.latitude, pos.longitude, pos.bearing_rad)
-    # log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_READER_RTREE_RESULT", found=(closest_segment_info is not None), segment_id=closest_segment_info.get('id') if closest_segment_info else "None")
+    # log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_READER_RTREE_RESULT", found=(closest_segment_info is not None), segment_id=closest_segment_info.get('id') if closest_segment_info else "None")
     # if closest_segment_info:
     #     segment_id = closest_segment_info.get('id')
     #     on_way_result = on_way(pos, segment_id, closest_segment_info)
     #     if on_way_result.on_way:
-    #         log_event_matcher("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_RTREE_SEARCH", segment_id=segment_id, on_way_details=on_way_result)
+    #         log_event("MATCHER", "INFO", "GET_CURRENT_WAY_SUCCESS_RTREE_SEARCH", segment_id=segment_id, on_way_details=on_way_result)
     #         return CurrentWayResult(segment_id=segment_id, on_way_result=on_way_result)
     #     else:
-    #         log_event_matcher("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_RTREE_ONWAY_CHECK", segment_id=segment_id, on_way_dist_m=on_way_result.distance_m)
+    #         log_event("MATCHER", "TRACE", "GET_CURRENT_WAY_FAIL_RTREE_ONWAY_CHECK", segment_id=segment_id, on_way_dist_m=on_way_result.distance_m)
 
-    log_event_matcher("MATCHER", "INFO", "GET_CURRENT_WAY_FAIL_NO_MATCHING_WAY_FOUND")
+    log_event("MATCHER", "INFO", "GET_CURRENT_WAY_FAIL_NO_MATCHING_WAY_FOUND")
     return None # No matching way found
 
 # Helper - Checks coordinate equality with tolerance
@@ -338,7 +339,7 @@ def matching_ways(
     Excludes the current_segment_id itself.
     Uses R-tree for spatial pre-filtering.
     """
-    log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_START", current_segment_id=current_segment_id, match_coord=match_coord)
+    log_event("MATCHER", "TRACE", "MATCHING_WAYS_START", current_segment_id=current_segment_id, match_coord=match_coord)
     matches = []
     # Define a small search box around the match_coord for R-tree query
     search_dist_deg = 0.00001  # Approx 1.1 meter, for exact node matches
@@ -348,39 +349,39 @@ def matching_ways(
         match_coord[1] + search_dist_deg,  # max_lon
         match_coord[0] + search_dist_deg   # max_lat
     )
-    log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_RTREE_QUERY", bounds=search_bounds)
+    log_event("MATCHER", "TRACE", "MATCHING_WAYS_RTREE_QUERY", bounds=search_bounds)
     try:
         candidate_items = list(rtree.intersection(search_bounds, objects=True))
-        log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_RTREE_CANDIDATES", num_candidates=len(candidate_items))
+        log_event("MATCHER", "TRACE", "MATCHING_WAYS_RTREE_CANDIDATES", num_candidates=len(candidate_items))
     except Exception as e:
-        log_event_matcher("MATCHER", "ERROR", "MATCHING_WAYS_RTREE_EXCEPTION", error=str(e))
+        log_event("MATCHER", "ERROR", "MATCHING_WAYS_RTREE_EXCEPTION", error=str(e))
         return []
 
     for item in candidate_items:
         segment_id = item.object
         if segment_id == current_segment_id:
-            log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_SKIP_CURRENT_SEGMENT", segment_id=segment_id)
+            log_event("MATCHER", "TRACE", "MATCHING_WAYS_SKIP_CURRENT_SEGMENT", segment_id=segment_id)
             continue  # Don't connect to itself
 
         segment_data = all_segments.get(segment_id)
         if not segment_data:
-            log_event_matcher("MATCHER", "WARN", "MATCHING_WAYS_CANDIDATE_DATA_MISSING", segment_id=segment_id)
+            log_event("MATCHER", "WARN", "MATCHING_WAYS_CANDIDATE_DATA_MISSING", segment_id=segment_id)
             continue
 
         coords = _get_coords_from_segment(segment_data)
         if not coords:
-            log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_NO_COORDS", segment_id=segment_id)
+            log_event("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_NO_COORDS", segment_id=segment_id)
             continue
 
         # Check if the start or end node of the candidate segment matches match_coord
         if (_coords_equal(coords[0], match_coord) or
                 _coords_equal(coords[-1], match_coord)):
             matches.append(segment_id)
-            log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_MATCH_SUCCESS", segment_id=segment_id, start_node=coords[0], end_node=coords[-1])
+            log_event("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_MATCH_SUCCESS", segment_id=segment_id, start_node=coords[0], end_node=coords[-1])
         else:
-            log_event_matcher("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_NODE_MISMATCH", segment_id=segment_id, start_node=coords[0], end_node=coords[-1], match_coord=match_coord)
+            log_event("MATCHER", "TRACE", "MATCHING_WAYS_CANDIDATE_NODE_MISMATCH", segment_id=segment_id, start_node=coords[0], end_node=coords[-1], match_coord=match_coord)
 
-    log_event_matcher("MATCHER", "DEBUG", "MATCHING_WAYS_END", num_matches=len(matches), matched_ids=matches)
+    log_event("MATCHER", "DEBUG", "MATCHING_WAYS_END", num_matches=len(matches), matched_ids=matches)
     return matches
 
 # Modified: Accepts segment_data dictionary and match coordinate tuple
@@ -390,25 +391,25 @@ def next_is_forward(next_segment_data: SegmentData, match_coord: CoordinatesTupl
     given that it connects at match_coord (lat, lon).
     Returns True if forward, False otherwise.
     """
-    log_event_matcher("MATCHER", "TRACE", "NEXT_IS_FORWARD_START", segment_id=next_segment_data.get('id', 'UnknownID'), match_coord=match_coord)
+    log_event("MATCHER", "TRACE", "NEXT_IS_FORWARD_START", segment_id=next_segment_data.get('id', 'UnknownID'), match_coord=match_coord)
     coords = _get_coords_from_segment(next_segment_data)
     if len(coords) < 2:
-        log_event_matcher("MATCHER", "WARN", "NEXT_IS_FORWARD_FAIL_INSUFFICIENT_COORDS", segment_id=next_segment_data.get('id', 'UnknownID'), num_coords=len(coords))
+        log_event("MATCHER", "WARN", "NEXT_IS_FORWARD_FAIL_INSUFFICIENT_COORDS", segment_id=next_segment_data.get('id', 'UnknownID'), num_coords=len(coords))
         return False  # Or raise error, but returning False is safer for now
 
     # If the first node of the next segment matches the connection point,
     # then travel on the next segment is forward.
     is_fwd = _coords_equal(coords[0], match_coord)
-    log_event_matcher("MATCHER", "TRACE", "NEXT_IS_FORWARD_END", segment_id=next_segment_data.get('id', 'UnknownID'), result=is_fwd, first_node=coords[0])
+    log_event("MATCHER", "TRACE", "NEXT_IS_FORWARD_END", segment_id=next_segment_data.get('id', 'UnknownID'), result=is_fwd, first_node=coords[0])
     return is_fwd
 
 # Modified: Accepts segment_data dictionary and match coordinate tuple
 def _get_candidate_bearing_node(segment_data: SegmentData, is_fwd: bool, match_coord: CoordinatesTuple) -> CoordinatesTuple | None:
     """ Helper to get the coordinate (lat, lon) used for curvature calculation. """
-    log_event_matcher("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_START", segment_id=segment_data.get('id', 'UnknownID'), is_fwd=is_fwd, match_coord=match_coord)
+    log_event("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_START", segment_id=segment_data.get('id', 'UnknownID'), is_fwd=is_fwd, match_coord=match_coord)
     coords = _get_coords_from_segment(segment_data)
     if not coords:
-        log_event_matcher("MATCHER", "WARN", "_GET_CANDIDATE_BEARING_NODE_FAIL_NO_COORDS", segment_id=segment_data.get('id', 'UnknownID'))
+        log_event("MATCHER", "WARN", "_GET_CANDIDATE_BEARING_NODE_FAIL_NO_COORDS", segment_id=segment_data.get('id', 'UnknownID'))
         return None
 
     if is_fwd:
@@ -416,17 +417,17 @@ def _get_candidate_bearing_node(segment_data: SegmentData, is_fwd: bool, match_c
         # match_coord should be coords[0]
         # Bearing node is coords[1] if it exists
         if len(coords) > 1 and _coords_equal(coords[0], match_coord):
-            log_event_matcher("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_SUCCESS_FWD", segment_id=segment_data.get('id', 'UnknownID'), bearing_node=coords[1])
+            log_event("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_SUCCESS_FWD", segment_id=segment_data.get('id', 'UnknownID'), bearing_node=coords[1])
             return coords[1]
     else:
         # Travel is from coords[-1] to coords[-2]...
         # match_coord should be coords[-1]
         # Bearing node is coords[-2] if it exists
         if len(coords) > 1 and _coords_equal(coords[-1], match_coord):
-            log_event_matcher("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_SUCCESS_REV", segment_id=segment_data.get('id', 'UnknownID'), bearing_node=coords[-2])
+            log_event("MATCHER", "TRACE", "_GET_CANDIDATE_BEARING_NODE_SUCCESS_REV", segment_id=segment_data.get('id', 'UnknownID'), bearing_node=coords[-2])
             return coords[-2]
 
-    log_event_matcher("MATCHER", "WARN", "_GET_CANDIDATE_BEARING_NODE_FAIL_NO_SUITABLE_NODE", segment_id=segment_data.get('id', 'UnknownID'), num_coords=len(coords), first_coord=coords[0] if coords else "None", last_coord=coords[-1] if coords else "None")
+    log_event("MATCHER", "WARN", "_GET_CANDIDATE_BEARING_NODE_FAIL_NO_SUITABLE_NODE", segment_id=segment_data.get('id', 'UnknownID'), num_coords=len(coords), first_coord=coords[0] if coords else "None", last_coord=coords[-1] if coords else "None")
     return None
 
 # Heavily Modified: Uses MapReader's data/index instead of Offline object
@@ -600,12 +601,12 @@ def distance_to_end_of_way(pos: Position, segment_data: SegmentData, on_way_resu
 
 def distance_from_start_to_node(coords: list[CoordinatesTuple], node_index: int) -> float:
     """Calculates distance along geometry from start (index 0) to node_index."""
-    log_event_matcher("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_START", num_coords=len(coords), target_node_index=node_index)
+    log_event("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_START", num_coords=len(coords), target_node_index=node_index)
     if not coords or node_index < 0 or node_index >= len(coords):
-        log_event_matcher("MATCHER", "WARN", "DISTANCE_FROM_START_TO_NODE_FAIL_INVALID_INPUTS", num_coords=len(coords), target_node_index=node_index)
+        log_event("MATCHER", "WARN", "DISTANCE_FROM_START_TO_NODE_FAIL_INVALID_INPUTS", num_coords=len(coords), target_node_index=node_index)
         return 0.0
     if node_index == 0:
-        log_event_matcher("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_SUCCESS_NODE_0", result=0.0)
+        log_event("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_SUCCESS_NODE_0", result=0.0)
         return 0.0
 
     dist_m = 0.0
@@ -617,9 +618,9 @@ def distance_from_start_to_node(coords: list[CoordinatesTuple], node_index: int)
             n2_lat * geometry.TO_RADIANS, n2_lon * geometry.TO_RADIANS
         )
         dist_m += segment_len
-        log_event_matcher("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_SUB_SEGMENT", sub_idx_from=i, sub_idx_to=i+1, length_m=segment_len, cumulative_dist_m=dist_m)
+        log_event("MATCHER", "TRACE", "DISTANCE_FROM_START_TO_NODE_SUB_SEGMENT", sub_idx_from=i, sub_idx_to=i+1, length_m=segment_len, cumulative_dist_m=dist_m)
 
-    log_event_matcher("MATCHER", "DEBUG", "DISTANCE_FROM_START_TO_NODE_SUCCESS", target_node_index=node_index, total_dist_m=dist_m)
+    log_event("MATCHER", "DEBUG", "DISTANCE_FROM_START_TO_NODE_SUCCESS", target_node_index=node_index, total_dist_m=dist_m)
     return dist_m
 
 def get_progress_along_way(pos: Position, segment_data: SegmentData, on_way_result: OnWayResult) -> float:
@@ -690,15 +691,15 @@ def get_progress_along_way(pos: Position, segment_data: SegmentData, on_way_resu
 
 def get_segment_length(segment_data: SegmentData) -> float:
     """Calculates the total length of a way segment geometry in meters."""
-    log_event_matcher("MATCHER", "TRACE", "GET_SEGMENT_LENGTH_START", segment_id=segment_data.get('id', 'UnknownID'))
+    log_event("MATCHER", "TRACE", "GET_SEGMENT_LENGTH_START", segment_id=segment_data.get('id', 'UnknownID'))
     coords = _get_coords_from_segment(segment_data)
     if not coords or len(coords) < 2:
-        log_event_matcher("MATCHER", "WARN", "GET_SEGMENT_LENGTH_FAIL_INSUFFICIENT_COORDS", segment_id=segment_data.get('id', 'UnknownID'), num_coords=len(coords))
+        log_event("MATCHER", "WARN", "GET_SEGMENT_LENGTH_FAIL_INSUFFICIENT_COORDS", segment_id=segment_data.get('id', 'UnknownID'), num_coords=len(coords))
         return 0.0
 
     # This is equivalent to distance_from_start_to_node(coords, len(coords)-1)
     total_length = distance_from_start_to_node(coords, len(coords)-1)
-    log_event_matcher("MATCHER", "DEBUG", "GET_SEGMENT_LENGTH_SUCCESS", segment_id=segment_data.get('id', 'UnknownID'), total_length_m=total_length)
+    log_event("MATCHER", "DEBUG", "GET_SEGMENT_LENGTH_SUCCESS", segment_id=segment_data.get('id', 'UnknownID'), total_length_m=total_length)
     return total_length
 
 MIN_WAY_DIST_M = 500.0 # Lookahead distance

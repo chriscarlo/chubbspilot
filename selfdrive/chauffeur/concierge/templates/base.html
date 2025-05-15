@@ -8,6 +8,363 @@
     <script src="/static/js/htmx.min.js" defer></script>
     <script src="/static/js/app.js" defer></script>
     <link rel="icon" href="/static/favicon.ico"/>
+    <style>
+      /* Global Scrollbar Styles */
+      /* For WebKit browsers (Chrome, Safari, Edge, Opera) */
+      body::-webkit-scrollbar {
+        width: 10px; /* Width of the scrollbar */
+      }
+      body::-webkit-scrollbar-track {
+        background: #222; /* Dark grey track */
+        border-radius: 5px;
+      }
+      body::-webkit-scrollbar-thumb {
+        background: #555; /* Medium grey thumb */
+        border-radius: 5px;
+      }
+      body::-webkit-scrollbar-thumb:hover {
+        background: #777; /* Lighter grey thumb on hover */
+      }
+
+      /* For Firefox */
+      html {
+        scrollbar-width: thin; /* Or "auto" or "none" */
+        scrollbar-color: #555 #222; /* thumb track */
+      }
+
+      /* Ensure .hidden class works reliably */
+      .hidden {
+        display: none !important;
+      }
+      .tile { /* For left navigation tiles */
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        min-height: 90px; /* MODIFIED: Adjusted min-height for uniformity */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+      }
+      .tile:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.25);
+      }
+      .active-tile {
+        border: 2px solid var(--color-accent);
+        box-shadow: 0 0 10px var(--color-accent); /* Glow effect for active tile */
+      }
+      .action-area {
+        min-height: calc(100vh - 150px); /* Adjust based on nav/footer height */
+        background-color: var(--color-1); /* Darker background for "empty" state */
+      }
+      .log-list-container-tiles { /* For the grid of log file tiles */
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
+        gap: 1rem;
+        padding: 1rem;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      .log-file-tile { /* Styling for individual log file tiles in the action area */
+        cursor: pointer;
+        padding: 1rem;
+        background-color: var(--color-2);
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+        transition: all 0.2s ease-in-out;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100px;
+      }
+      .log-file-tile:hover {
+        background-color: var(--color-surface);
+        border-color: var(--color-accent);
+      }
+      .log-file-tile .log-name {
+        font-weight: 600;
+        word-break: break-all; /* Prevent long names from breaking layout */
+      }
+      .log-file-tile .log-details {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+      }
+      .log-content-viewer {
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-x: auto;
+        padding: 1.5rem;
+        background-color: var(--color-2); /* Slightly different from action-area for contrast */
+        border-radius: 0.5rem;
+        margin: 1rem;
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+        border: 1px solid var(--color-border);
+      }
+      .back-button {
+        margin: 1rem; /* Positioned within the action area */
+        display: inline-block;
+        background-color: var(--color-surface);
+        color: var(--color-accent);
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        border: 1px solid var(--color-accent);
+      }
+      .back-button:hover {
+        background-color: var(--color-accent);
+        color: var(--color-1);
+      }
+      .empty-action-area {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+      .debug-log-output {
+        background-color: #000; /* Black background */
+        color: #0f0; /* Green text */
+        font-family: monospace;
+        font-size: 0.75rem; /* Smaller font */
+        padding: 0.5rem;
+        margin: 1rem; /* top, right, bottom, left margin */
+        border: 1px solid #333; /* Darker border */
+        border-radius: 0.25rem;
+        max-height: 35vh; /* Increased max-height */
+        overflow-y: auto;    /* Scroll for overflow */
+        white-space: pre-wrap; /* Respect newlines and spaces */
+        word-break: break-all; /* Break long lines */
+      }
+      /* New styles for the terminal */
+      #test4-display.active-terminal-view {
+          /* Mobile: Simple block, scrolls if content overflows max-height */
+          padding: 0 !important;
+          height: auto;
+          max-height: 75vh; /* Or whatever feels right for mobile */
+          overflow-y: auto;
+          overflow-x: hidden;
+          background-color: #000; /* Moved background here */
+          /* display: flex; Removed for mobile, re-added for desktop */
+          /* flex-direction: column; Removed for mobile */
+      }
+      .terminal-container {
+        /* Mobile: Not a flex container by default, just normal block flow */
+        width: 100%;
+        color: #0f0;
+        font-family: monospace;
+        padding: 1rem;
+        box-sizing: border-box; /* Ensure padding is included in width */
+        /* display: flex; Removed for mobile */
+        /* flex-direction: column; Removed for mobile */
+        /* align-items: flex-start; Removed for mobile */
+        /* height: auto; Default for block */
+        /* min-height: 0; Not strictly needed if not flex item */
+      }
+      .terminal-warning {
+        width: 100%;
+        box-sizing: border-box;
+        /* margin-bottom: 1rem; Optional, if spacing needed */
+      }
+      .terminal-output {
+        width: 100%;
+        white-space: pre-wrap;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+      .terminal-input-area {
+        width: 100%;
+        box-sizing: border-box;
+        display: flex; /* Keep this for prompt + input field alignment */
+        align-items: center;
+      }
+
+      @media (min-width: 768px) {
+        #test4-display.active-terminal-view {
+            display: flex; /* Re-introduce flex for desktop layout */
+            flex-direction: column;
+            height: calc(100vh - 150px);
+            max-height: calc(100vh - 150px);
+            overflow: hidden; /* No scroll on this outer, children handle it */
+            /* background-color is inherited or already set */
+        }
+        .terminal-container {
+            display: flex; /* Re-introduce flex */
+            flex-direction: column;
+            height: 100%;
+            /* align-items: stretch; Default for flex column children unless overridden */
+            /* width, color, font, padding, box-sizing are inherited or already set */
+        }
+        .terminal-output {
+            /* flex-grow: 1; --- REMOVED to prevent greedy expansion */
+            flex-shrink: 1; /* Allow shrinking if overall content is too much */
+            flex-basis: auto; /* Height based on content */
+            overflow-y: auto; /* Scroll its own content if it gets too tall */
+            /* min-height: 0; --- REMOVED as it's related to flex-grow */
+            /* width, white-space, margin-bottom, font-size are inherited or already set */
+        }
+        /* .terminal-input-area styling for desktop is largely the same as mobile */
+      }
+
+      /* REMOVED Custom Scrollbar for Terminal Output section */
+
+      .terminal-output .command-echo {
+        color: #888; /* Grey for the echoed command */
+      }
+      .terminal-output .stdout {
+        color: #0f0; /* Green for stdout */
+      }
+      .terminal-output .stderr {
+        color: #f00; /* Red for stderr */
+      }
+      .terminal-output .exit-code {
+        color: #ff0; /* Yellow for exit code */
+        font-style: italic;
+      }
+      .terminal-output .stdout.ls-output-columns {
+        column-count: 3; /* Display ls output in 3 columns */
+        column-gap: 1rem; /* Space between columns */
+        /* white-space: pre-wrap; is inherited from .terminal-output, which is good */
+      }
+      .terminal-input-area .prompt {
+        color: #0f0; /* Green prompt */
+        margin-right: 0.5rem;
+      }
+      .terminal-input {
+        flex-grow: 1;
+        background-color: transparent;
+        border: none;
+        color: #0f0;
+        font-family: monospace;
+        font-size: 0.9rem;
+        padding: 0.25rem;
+      }
+      .terminal-input:focus {
+        outline: none;
+      }
+      .terminal-warning {
+        color: #ff0; /* Yellow */
+        background-color: #330;
+        padding: 0.5rem;
+        border: 1px solid #ff0;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+        font-size: 0.8rem;
+      }
+
+      /* CPU Equalizer Styles */
+      #cpu-equalizer-display-wrapper { /* Wrapper to control visibility and background */
+        width: 100%;
+        height: 100%;
+        display: flex; /* Use flex to center #cpu-equalizer-container */
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #0000AA; /* Deep blue background like the image */
+        padding: 2rem;
+        box-sizing: border-box;
+        overflow: hidden; /* Prevent content from spilling if perspective goes awry */
+      }
+
+      #cpu-equalizer-container {
+        display: flex;
+        gap: 15px; /* Spacing between bars */
+        align-items: flex-end; /* Bars grow upwards */
+        /* height: 200px; Set dynamically or by parent */
+        /* Attempting a similar perspective to the image */
+        transform-style: preserve-3d;
+        perspective: 400px; /* Adjust for desired depth */
+      }
+
+      .cpu-bar-wrapper { /* Wrapper for each bar to apply perspective */
+        transform: rotateX(30deg) rotateY(0deg) scaleY(1.2); /* Leans back, adjust scale for height impression */
+        transform-origin: bottom center;
+      }
+
+      .cpu-bar {
+        width: 45px; /* Width of each bar */
+        height: 180px; /* Fixed total height for the bar's segment area */
+        display: flex;
+        flex-direction: column-reverse; /* Segments stack from bottom up */
+        background-color: rgba(0, 0, 0, 0.2); /* Slightly visible bar background */
+        border: 1px solid #000055; /* Darker blue border */
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.6), 3px 3px 6px rgba(0,0,0,0.4);
+        border-radius: 3px 3px 0 0; /* Slightly rounded top corners */
+      }
+
+      .cpu-segment {
+        width: 100%;
+        flex-shrink: 0; /* Prevent segments from shrinking */
+        /* height is calculated: (bar_height / num_segments) - margin */
+        background-color: #2a2a4a; /* Dark, slightly bluish unlit segment color */
+        transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+        border-bottom: 1px solid rgba(0,0,0,0.3); /* Separator line */
+      }
+
+      /* Lit segment colors - inspired by the image */
+      .cpu-segment.level-1 { background-color: #00ff00; box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00 inset; } /* Bright Green */
+      .cpu-segment.level-2 { background-color: #90ee90; box-shadow: 0 0 5px #90ee90, 0 0 8px #90ee90 inset; } /* Light Green / Yellowish Green */
+      .cpu-segment.level-3 { background-color: #ffff00; box-shadow: 0 0 6px #ffff00, 0 0 12px #ffff00 inset; } /* Yellow */
+      .cpu-segment.level-4 { background-color: #ffa500; box-shadow: 0 0 7px #ffa500, 0 0 14px #ffa500 inset; } /* Orange */
+      .cpu-segment.level-5 { background-color: #ff4500; box-shadow: 0 0 8px #ff4500, 0 0 16px #ff4500 inset; } /* Reddish-Orange */
+      .cpu-segment.level-6 { background-color: #ff0000; box-shadow: 0 0 9px #ff0000, 0 0 18px #ff0000 inset; } /* Red */
+
+      /* Styles for Monitor Selection Grid */
+      .monitor-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Responsive grid */
+        gap: 1rem;
+        padding: 1rem;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+      }
+      .monitor-button {
+        padding: 1.5rem 1rem;
+        background-color: var(--color-2);
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        font-size: 1rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .monitor-button:hover {
+        background-color: var(--color-surface);
+        border-color: var(--color-accent);
+        transform: translateY(-2px);
+      }
+      #mapd-log-output-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        box-sizing: border-box;
+      }
+      #mapd-log-output {
+        flex-grow: 1;
+        background-color: #000; /* Black background for log area */
+        color: #0f0; /* Green text, similar to terminal */
+        font-family: monospace;
+        font-size: 0.85rem;
+        padding: 1rem;
+        border: 1px solid #333;
+        border-radius: 0.25rem;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-top: 0.5rem; /* Space from back button */
+      }
+
+    </style>
+    <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full bg-1 text-primary font-sans">

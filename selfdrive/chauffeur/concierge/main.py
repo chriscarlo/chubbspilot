@@ -16,6 +16,7 @@ import datetime
 import subprocess
 from pydantic import BaseModel # For request body validation
 import shlex # For parsing cd command arguments safely
+import zmq # ADDED ZMQ IMPORT
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, PlainTextResponse
@@ -76,6 +77,17 @@ async def lifespan(app_instance: FastAPI):
         except asyncio.CancelledError:
             print("Poller task successfully cancelled on shutdown.")
 
+# ZMQ context for mapd logs subscriber - can be global for the app instance
+# It's better to create one context per application. FastAPI lifespan can manage this for production,
+# but for a single subscriber, a module-level context is often acceptable.
+_mapd_log_zmq_context = None
+
+def get_mapd_log_zmq_context():
+    global _mapd_log_zmq_context
+    if _mapd_log_zmq_context is None:
+        _mapd_log_zmq_context = zmq.asyncio.Context() # Use asyncio context for FastAPI
+    return _mapd_log_zmq_context
+
 # ──────────────────── FastAPI app ──────────────────────
 app = FastAPI(title="Concierge", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
@@ -135,6 +147,44 @@ async def test_page(request: Request):
     # tmpl = templates.get_template("test.html")
     # return tmpl.render(request=request, browser_title_suffix="- Test", page_title_text="- Test")
     return "<h1>Test Page</h1><p>Under Construction</p><a href='/'>Back to Dashboard</a>"
+
+@app.get("/mapd_logs_stream")
+async def mapd_logs_sse_stream() -> StreamingResponse:
+    async def log_event_source() -> AsyncGenerator[str, None]:
+        context = get_mapd_log_zmq_context()
+        socket = context.socket(zmq.SUB)
+        socket.connect("tcp://localhost:8607") # Address of mapd_py ZMQ publisher
+        socket.subscribe("") # Subscribe to all messages
+
+        poller = zmq.asyncio.Poller() # Use asyncio poller
+        poller.register(socket, zmq.POLLIN)
+
+        try:
+            while True:
+                events = await poller.poll(timeout=1000) # Poll with a timeout, await for asyncio
+                if socket in dict(events):
+                    message = await socket.recv_string() # await for asyncio
+                    yield f"data: {message}\n\n"
+                else:
+                    # Send a keep-alive SSE comment if no message for 1s
+                    yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            print("MapD log stream cancelled by client disconnect or server shutdown.")
+            # This is expected when the client disconnects or server shuts down
+            pass # Allow finally to clean up
+        except Exception as e:
+            print(f"Error in MapD log stream: {e}")
+            # Optionally, send an error to the client if the stream is still open
+            # yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+        finally:
+            print("Cleaning up MapD log stream ZMQ socket...")
+            if not socket.closed:
+                poller.unregister(socket)
+                socket.LINGER = 0 # Ensure immediate close
+                socket.close()
+            print("MapD log stream ZMQ socket closed.")
+
+    return StreamingResponse(log_event_source(), media_type="text/event-stream")
 
 # Model for the command execution request
 class CommandRequest(BaseModel):
