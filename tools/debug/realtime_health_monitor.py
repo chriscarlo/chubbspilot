@@ -204,7 +204,7 @@ def main():
                     if len(cp.safetyConfigs):
                         for i, sc in enumerate(cp.safetyConfigs):
                             print(f"  Safety Config [{i}]:")
-                            print(f"    Safety Model: {sc.safetyModel.raw} ({(lambda x: 'deprecated' if x else 'current')(sc.safetyModelDeprecated)})")
+                            print(f"    Safety Model: {sc.safetyModel.raw}")
                             print(f"    Safety Param: {sc.safetyParam}")
                     else:
                         print("  Safety Configs: None")
