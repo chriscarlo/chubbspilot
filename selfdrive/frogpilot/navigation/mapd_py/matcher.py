@@ -16,7 +16,8 @@ def format_value_matcher(value):
             return str(value) # For complex objects, just use string representation
         return json.dumps(value, separators=(',', ':'))
     if isinstance(value, str) and (' ' in value or '=' in value or ',' in value or '"' in value):
-        return f'"{value.replace("\"", "\\\"")}"'
+        processed_value = value.replace('"', '\"')
+        return f'"{processed_value}"'
     if isinstance(value, float):
         return f"{value:.4f}"
     if value is None:
