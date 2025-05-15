@@ -507,29 +507,35 @@ def main():
 
 if __name__ == "__main__":
     import uvicorn
-    # This allows the script to be run directly with `python -m selfdrive.chauffeur.concierge.main`
-    # and be started by the systemd service file in the same manner.
-    # The --reload flag is typically for development, so we omit it here for a service context.
-    # Uvicorn will pick up the `app` instance from this file.
-    # MODIFIED: Use a fully qualified path for the app for robustness
-    app_module_path = "selfdrive.chauffeur.concierge.main:app"
-
-    # Check for --dev flag for reload functionality
     import sys
-    from datetime import datetime # For timestamping log entries
+    import os # Added for path manipulation and directory creation
+    from datetime import datetime
+    from pathlib import Path # Ensure Path is imported if not already in global scope of __main__
 
-    # Ensure BASE is accessible here or define log path relative to script
     # BASE is defined globally: BASE = Path(__file__).resolve().parent
-    # Workspace root would be BASE.parent.parent
-    log_file_path = BASE.parent.parent / "concierge_server.log"
+    LOG_DIR = BASE / "logs"
+    log_file_path = LOG_DIR / "concierge_server.log"
 
     original_stdout = sys.stdout
     original_stderr = sys.stderr
-
-    print(f"[CONCIERGE_SETUP] Server output will be logged to: {log_file_path}") # This goes to original stdout before redirection
-
     log_file_handle = None
+
     try:
+        print(f"[CONCIERGE_SETUP_ATTEMPT] Attempting to set up logging.", file=original_stdout)
+        print(f"[CONCIERGE_SETUP_ATTEMPT] Base path: {BASE}", file=original_stdout)
+        print(f"[CONCIERGE_SETUP_ATTEMPT] Log directory targeted: {LOG_DIR}", file=original_stdout)
+
+        if not LOG_DIR.exists():
+            print(f"[CONCIERGE_SETUP_ATTEMPT] Log directory {LOG_DIR} does not exist. Attempting to create it.", file=original_stdout)
+            try:
+                LOG_DIR.mkdir(parents=True, exist_ok=True)
+                print(f"[CONCIERGE_SETUP_ATTEMPT] Successfully created log directory: {LOG_DIR}", file=original_stdout)
+            except Exception as e_mkdir:
+                print(f"[CONCIERGE_SETUP_FAIL] Failed to create log directory {LOG_DIR}: {e_mkdir}", file=original_stderr)
+                # Continue without file logging if directory creation fails
+                raise # Re-raise to prevent starting server if logging dir is critical
+
+        print(f"[CONCIERGE_SETUP_ATTEMPT] Server output will be logged to: {log_file_path}", file=original_stdout)
         log_file_handle = open(log_file_path, 'a')
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_file_handle.write(f"\n--- Server process started at {timestamp} ---\n")
@@ -538,31 +544,60 @@ if __name__ == "__main__":
         sys.stdout = log_file_handle
         sys.stderr = log_file_handle
 
-        print(f"[CONCIERGE_SETUP] stdout and stderr redirected to {log_file_path}") # This goes to the log file
+        print(f"[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to {log_file_path}") # This goes to the log file
 
+    except Exception as e_log_setup:
+        print(f"[CONCIERGE_SETUP_FAIL] FAILED TO SETUP FILE LOGGING: {e_log_setup}", file=original_stderr)
+        print(f"[CONCIERGE_SETUP_FAIL] Server will run with console logging only.", file=original_stderr)
+        # Reset to original streams if redirection partially occurred and then failed
+        if sys.stdout == log_file_handle and log_file_handle is not None: sys.stdout = original_stdout
+        if sys.stderr == log_file_handle and log_file_handle is not None: sys.stderr = original_stderr
+        if log_file_handle is not None: log_file_handle.close(); log_file_handle = None # Ensure closed if opened
+
+    # Server execution block
+    server_exit_code = 0
+    try:
         should_reload = "--dev" in sys.argv
+        app_module_path = "selfdrive.chauffeur.concierge.main:app" # Moved here for clarity
 
+        print(f"[UVICORN_START] Starting Uvicorn for {app_module_path}...") # Goes to log file or console
         uvicorn.run(app_module_path,
                     host="0.0.0.0",
                     port=5055,
-                    log_level="info", # Uvicorn's own log level
+                    log_level="info",
                     reload=should_reload,
                     reload_dirs=["selfdrive/chauffeur/concierge"] if should_reload else None)
     except Exception as e_main:
-        # If redirection happened, print to original stderr, otherwise to current (possibly file) stderr
         print_target = original_stderr if log_file_handle and sys.stderr == log_file_handle else sys.stderr
-        print(f"CRITICAL ERROR in __main__ before/during uvicorn.run: {e_main}", file=print_target)
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        error_msg = f"[{current_time}] CRITICAL ERROR in __main__ during uvicorn.run: {type(e_main).__name__}: {e_main}"
+        print(error_msg, file=print_target)
+        if log_file_handle: # Also try to write to log file if open
+            print(error_msg, file=log_file_handle)
         import traceback
         traceback.print_exc(file=print_target)
-    finally:
-        print("[CONCIERGE_SHUTDOWN] Server process ended or uvicorn.run exited.") # Goes to log file
-        if sys.stdout == log_file_handle: # Restore only if we redirected
-            sys.stdout = original_stdout
-        if sys.stderr == log_file_handle: # Restore only if we redirected
-            sys.stderr = original_stderr
         if log_file_handle:
+            traceback.print_exc(file=log_file_handle)
+        server_exit_code = 1 # Indicate error
+    finally:
+        final_message_target = sys.stdout # This will be the log file if redirection was successful, else original stdout
+        if final_message_target == original_stderr : final_message_target = original_stdout # safety for rare case
+
+        print(f"[UVICORN_END] Uvicorn process for {app_module_path} has exited.", file=final_message_target)
+
+        if log_file_handle:
+            print("[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.", file=final_message_target)
             timestamp_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_file_handle.write(f"--- Server process ended or streams restored at {timestamp_end} ---\n")
             log_file_handle.flush()
             log_file_handle.close()
-        print("[CONCIERGE_SHUTDOWN] stdout/stderr restored. Log file closed.") # Goes to original stdout
+            # Restore original stdout/stderr after log file is closed
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            print("[CONCIERGE_SHUTDOWN_CONSOLE] stdout/stderr restored. Log file closed.", file=original_stdout)
+        else:
+            print("[CONCIERGE_SHUTDOWN_CONSOLE] Server process ended. File logging was not active.", file=original_stdout)
+
+        if server_exit_code != 0:
+            print(f"[CONCIERGE_EXIT] Exiting with code {server_exit_code} due to critical error during server run.", file=original_stderr)
+            # sys.exit(server_exit_code) # Optionally force exit code
