@@ -443,7 +443,7 @@
 
       // CPU Equalizer specific logic
       if (sectionId === 'empty-state-content') {
-        emptyStateParentDiv.classList.remove('empty-action-area'); // Remove centering for wrapper
+        emptyStateParentDiv.classList.add('empty-action-area'); // Ensure it has this class for height and flex centering
         cpuEqualizerDisplayWrapper.classList.remove('hidden');
         emptyStateMessage.classList.add('hidden');
         startCpuLoadUpdates();
