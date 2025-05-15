@@ -66,7 +66,10 @@ def update_checks(manually_updated, model_manager, now, theme_manager, frogpilot
   time.sleep(1)
 
 def frogpilot_thread():
-  config_realtime_process(5, Priority.CTRL_LOW)
+  try:                       # pin to core 3 if it exists, else skip
+    config_realtime_process(3, Priority.CTRL_LOW)
+  except OSError:
+    pass
 
   global FROGPILOT_PLAN_PUBLISHER # Declare usage of the global variable
 
