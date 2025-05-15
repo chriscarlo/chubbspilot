@@ -5,14 +5,15 @@ import sys
 import traceback
 from collections import defaultdict
 
-print(">>> [DEBUG] Starting health monitor script...", file=sys.stderr)
+debug = False  # <<< SET TO True FOR DEBUG LOGGING
+
 try:
     import cereal.messaging as messaging
-    print(">>> [DEBUG] cereal.messaging imported.", file=sys.stderr)
+    if debug: print(">>> [DEBUG] cereal.messaging imported.", file=sys.stderr)
     from cereal import services
-    print(">>> [DEBUG] cereal.services imported.", file=sys.stderr)
+    if debug: print(">>> [DEBUG] cereal.services imported.", file=sys.stderr)
     from openpilot.common.params import Params
-    print(">>> [DEBUG] openpilot.common.params.Params imported.", file=sys.stderr)
+    if debug: print(">>> [DEBUG] openpilot.common.params.Params imported.", file=sys.stderr)
 except Exception as e:
     print("!!! [ERROR] Exception during import:", file=sys.stderr)
     traceback.print_exc(file=sys.stderr)
@@ -27,7 +28,7 @@ PARAMSD_INPUTS = ["carState", "liveCalibration", "controlsState"]
 def get_nominal_freq(service_name):
     spec = services.SERVICE_LIST[service_name]
     freq = spec.frequency if spec.frequency > 0 else 1.0
-    print(f">>> [DEBUG] get_nominal_freq({service_name}) = {freq}", file=sys.stderr)
+    if debug: print(f">>> [DEBUG] get_nominal_freq({service_name}) = {freq}", file=sys.stderr)
     return freq
 
 def get_status_flags(sm, service_name, avg_freq, last_rx_time):
@@ -47,24 +48,24 @@ def get_status_flags(sm, service_name, avg_freq, last_rx_time):
     if freq_low and sm.frame > 100:
         health_str.append(f"FREQ_LOW({avg_freq:.1f}<{nominal_freq*THRESH_FACTOR:.1f})")
         ok = False
-    print(f">>> [DEBUG] get_status_flags({service_name}): valid={is_valid}, alive={is_alive}, freq_low={freq_low}, status={'OK' if ok else ', '.join(health_str)}", file=sys.stderr)
+    if debug: print(f">>> [DEBUG] get_status_flags({service_name}): valid={is_valid}, alive={is_alive}, freq_low={freq_low}, status={'OK' if ok else ', '.join(health_str)}", file=sys.stderr)
     return (", ".join(health_str) if not ok else "OK", ok)
 
 def main():
-    print(">>> [DEBUG] Entering main()", file=sys.stderr)
+    if debug: print(">>> [DEBUG] Entering main()", file=sys.stderr)
     parser = argparse.ArgumentParser(description="Real-time health monitor for Cereal services.")
     parser.add_argument("-d", "--duration", type=float, default=0,
                         help="How many seconds to run (default: 0, for indefinite)")
     parser.add_argument("-r", "--refresh", type=float, default=0.5,
                         help="How often to print status in seconds (default: 0.5)")
     args = parser.parse_args()
-    print(f">>> [DEBUG] Parsed args: duration={args.duration}, refresh={args.refresh}", file=sys.stderr)
+    if debug: print(f">>> [DEBUG] Parsed args: duration={args.duration}, refresh={args.refresh}", file=sys.stderr)
 
     try:
         params = Params()
-        print(">>> [DEBUG] Params() instantiated.", file=sys.stderr)
+        if debug: print(">>> [DEBUG] Params() instantiated.", file=sys.stderr)
         ublox = params.get_bool("UbloxAvailable")
-        print(f">>> [DEBUG] UbloxAvailable: {ublox}", file=sys.stderr)
+        if debug: print(f">>> [DEBUG] UbloxAvailable: {ublox}", file=sys.stderr)
         gps_service = "gpsLocationExternal" if ublox else "gpsLocation"
     except Exception as e:
         print("!!! [ERROR] Exception fetching Params or UbloxAvailable:", file=sys.stderr)
@@ -88,11 +89,11 @@ def main():
         "managerState",
     ]
     monitored_services = sorted(set(core_services))
-    print(f">>> [DEBUG] Monitored services: {monitored_services}", file=sys.stderr)
+    if debug: print(f">>> [DEBUG] Monitored services: {monitored_services}", file=sys.stderr)
 
     try:
         sm = messaging.SubMaster(monitored_services)
-        print(">>> [DEBUG] SubMaster initialized.", file=sys.stderr)
+        if debug: print(">>> [DEBUG] SubMaster initialized.", file=sys.stderr)
     except Exception as e:
         print("!!! [ERROR] Exception initializing SubMaster:", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
@@ -105,17 +106,17 @@ def main():
     start_time = time.monotonic()
     next_print_time = start_time
 
-    print(">>> [DEBUG] Entering main monitoring loop...", file=sys.stderr)
+    if debug: print(">>> [DEBUG] Entering main monitoring loop...", file=sys.stderr)
 
     try:
         while True:
             loop_start_time = time.monotonic()
-            print(f">>> [DEBUG] Main loop, elapsed={loop_start_time-start_time:.2f}s", file=sys.stderr)
+            if debug: print(f">>> [DEBUG] Main loop, elapsed={loop_start_time-start_time:.2f}s", file=sys.stderr)
             if args.duration > 0 and (loop_start_time - start_time) >= args.duration:
-                print(f">>> [DEBUG] Duration reached ({args.duration}s), breaking loop.", file=sys.stderr)
+                if debug: print(f">>> [DEBUG] Duration reached ({args.duration}s), breaking loop.", file=sys.stderr)
                 break
 
-            print(">>> [DEBUG] Calling sm.update(0)...", file=sys.stderr)
+            if debug: print(">>> [DEBUG] Calling sm.update(0)...", file=sys.stderr)
             try:
                 sm.update(0)
             except Exception as e:
@@ -123,14 +124,14 @@ def main():
                 traceback.print_exc(file=sys.stderr)
                 raise
 
-            print(">>> [DEBUG] Processing received messages...", file=sys.stderr)
+            if debug: print(">>> [DEBUG] Processing received messages...", file=sys.stderr)
             for service in monitored_services:
                 if sm.updated[service]:
-                    print(f">>> [DEBUG] sm.updated[{service}] is True", file=sys.stderr)
+                    if debug: print(f">>> [DEBUG] sm.updated[{service}] is True", file=sys.stderr)
                     counters[service] += 1
                     if first_rx_times[service] == 0:
                         first_rx_times[service] = loop_start_time
-                        print(f">>> [DEBUG] First rx for {service} at {loop_start_time}", file=sys.stderr)
+                        if debug: print(f">>> [DEBUG] First rx for {service} at {loop_start_time}", file=sys.stderr)
                     last_rx_times[service] = loop_start_time
 
             if loop_start_time >= next_print_time:
@@ -141,7 +142,7 @@ def main():
                 for service in monitored_services:
                     elapsed_service_time = max(last_rx_times[service] - first_rx_times[service], 1e-6) if first_rx_times[service] > 0 else 0
                     avg_freq = counters[service] / elapsed_service_time if elapsed_service_time > 0 else 0.0
-                    print(f">>> [DEBUG] {service}: count={counters[service]}, elapsed={elapsed_service_time:.3f}, avg_freq={avg_freq:.3f}", file=sys.stderr)
+                    if debug: print(f">>> [DEBUG] {service}: count={counters[service]}, elapsed={elapsed_service_time:.3f}, avg_freq={avg_freq:.3f}", file=sys.stderr)
                     status_str, is_ok = get_status_flags(sm, service, avg_freq, last_rx_times[service])
                     prefix = "  " if is_ok else "[!] "
                     print(f"{prefix}{service:<23} {avg_freq:<10.1f} {status_str:<30}")
@@ -150,7 +151,7 @@ def main():
                 # Special checks
                 try:
                     llk_msg = sm['liveLocationKalman']
-                    print(">>> [DEBUG] Checking liveLocationKalman.inputsOK", file=sys.stderr)
+                    if debug: print(">>> [DEBUG] Checking liveLocationKalman.inputsOK", file=sys.stderr)
                     if sm.recv_frame['liveLocationKalman'] > 0:
                         if not llk_msg.inputsOK:
                             print("\n[!!!] liveLocationKalman.inputsOK is FALSE. Checking dependencies:")
@@ -192,7 +193,7 @@ def main():
 
             processing_time = time.monotonic() - loop_start_time
             sleep_time = max(0, (1.0 / (1.0/args.refresh if args.refresh > 0 else 10.0)) - processing_time)
-            print(f">>> [DEBUG] Loop sleep_time={sleep_time:.3f}s (processing_time={processing_time:.3f}s)", file=sys.stderr)
+            if debug: print(f">>> [DEBUG] Loop sleep_time={sleep_time:.3f}s (processing_time={processing_time:.3f}s)", file=sys.stderr)
             time.sleep(sleep_time)
 
     except KeyboardInterrupt:
