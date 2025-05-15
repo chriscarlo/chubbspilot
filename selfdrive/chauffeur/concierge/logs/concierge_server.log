@@ -1,0 +1,801 @@
+
+--- Server process started at 2025-05-15 08:12:35 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [84558]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51412 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51412 - "GET /static/css/tailwind.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51412 - "GET /static/js/htmx.min.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51412 - "GET /static/js/app.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51412 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57828 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39154 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39154 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53528 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42138 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42138 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42138 - "GET /api/crash-logs HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.
+INFO:     127.0.0.1:42148 - "GET /mapd_logs_stream HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] log_event_source started.
+[MAPD_STREAM_SETUP] Got ZMQ context: <class 'zmq.asyncio.Context'>
+[MAPD_STREAM_SETUP] Created ZMQ SUB socket: <class 'zmq.asyncio.Socket'>
+[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...
+[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...
+[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.
+[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...
+[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.
+[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...
+[MAPD_STREAM_FINALLY] Attempting to unregister poller.
+[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.
+[MAPD_STREAM_FINALLY] Closing ZMQ socket.
+[MAPD_STREAM_FINALLY] ZMQ socket closed.
+[MAPD_STREAM_FINALLY] Cleanup finished.
+INFO:     127.0.0.1:34996 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34996 - "GET /api/crash-logs HTTP/1.1" 200 OK
+
+--- Server process started at 2025-05-15 08:23:13 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [86151]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56318 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /drive-data HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56334 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59874 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59890 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [86151]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 08:52:35 ---
+
+--- Server process started at 2025-05-15 08:52:39 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [86685]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52956 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52956 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52956 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52956 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52956 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52966 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52982 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41372 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41372 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41372 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [86685]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 08:56:08 ---
+
+--- Server process started at 2025-05-15 08:56:13 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [86948]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56852 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56852 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [86948]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:01:17 ---
+
+--- Server process started at 2025-05-15 09:01:19 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [87165]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50818 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50818 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50818 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50830 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50830 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50830 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50830 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87165]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:05:45 ---
+
+--- Server process started at 2025-05-15 09:05:47 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [87376]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58118 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58130 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58130 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58130 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58130 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58130 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58130 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58130 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87376]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:06:09 ---
+
+--- Server process started at 2025-05-15 09:06:36 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [87482]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57752 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57752 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57752 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57752 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57752 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57752 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57752 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57760 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57760 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57760 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87482]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:07:37 ---
+
+--- Server process started at 2025-05-15 09:07:38 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [87609]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58578 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58578 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58578 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58578 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58578 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50538 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50538 - "GET /navigation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50538 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50538 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50538 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87609]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:10:50 ---
+
+--- Server process started at 2025-05-15 09:10:51 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [87897]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:39490 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39490 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39490 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39490 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39490 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39490 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39494 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42678 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33128 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87897]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:18:11 ---
+
+--- Server process started at 2025-05-15 09:18:14 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [88160]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:34786 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34786 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34786 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34786 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34786 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34786 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34802 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [88160]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:22:47 ---
+
+--- Server process started at 2025-05-15 09:22:50 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [88449]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58116 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58116 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [88449]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:31:25 ---
+
+--- Server process started at 2025-05-15 09:31:28 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [88765]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52120 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52120 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52120 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52120 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52120 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52120 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52136 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52148 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38718 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38734 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58316 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58316 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58332 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58332 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49852 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [88765]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:38:47 ---
+
+--- Server process started at 2025-05-15 09:38:49 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [89067]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:45010 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45010 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45010 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45010 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45010 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45010 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45022 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45022 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45032 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45032 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45032 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45032 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [89067]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:43:31 ---
+
+--- Server process started at 2025-05-15 09:43:34 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [89348]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60168 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60168 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60168 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60168 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60168 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60168 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60176 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60176 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55536 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55536 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55544 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55544 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [89348]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:52:19 ---
+
+--- Server process started at 2025-05-15 09:52:21 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [89675]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42208 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42208 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42208 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42208 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42208 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42208 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42218 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42218 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42230 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42230 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42230 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42230 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [89675]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 09:54:40 ---
+
+--- Server process started at 2025-05-15 09:54:41 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [89857]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:33774 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33774 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33774 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33774 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33774 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33774 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33774 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33774 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40108 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40108 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:44772 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44772 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48922 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48922 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:37040 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37040 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58902 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58918 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58918 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55258 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55258 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55258 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55258 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55258 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55258 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45444 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45444 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45460 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45460 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:32846 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32846 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:32846 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32846 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32846 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32846 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:32856 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32856 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40036 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40036 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40042 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40042 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38080 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38080 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38088 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38088 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38088 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38088 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38088 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38088 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56714 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56714 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56714 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56714 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50632 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50632 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33724 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33724 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33732 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33732 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33732 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33732 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33732 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33732 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59474 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59474 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [89857]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:27:50 ---
+
+--- Server process started at 2025-05-15 10:27:52 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [90794]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52042 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52042 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52042 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [90794]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:36:38 ---
+
+--- Server process started at 2025-05-15 10:36:39 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [91089]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:47864 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47864 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47864 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47864 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47864 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47864 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47864 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47864 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [91089]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:37:34 ---
+
+--- Server process started at 2025-05-15 10:37:35 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [91270]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58964 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58964 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58964 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58964 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58976 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58994 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58982 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58982 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58982 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33142 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33142 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33142 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33148 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33148 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33148 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [91270]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:52:21 ---
+
+--- Server process started at 2025-05-15 10:52:22 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [91882]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49982 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49982 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36140 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36140 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36140 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [91882]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:54:56 ---
+
+--- Server process started at 2025-05-15 10:54:57 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [92157]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51738 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51738 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51738 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51738 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51738 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51738 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51738 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51738 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [92157]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 10:56:40 ---
+
+--- Server process started at 2025-05-15 10:56:42 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [92296]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:34380 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34380 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34380 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34380 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34380 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34380 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34388 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34388 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59698 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59698 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [92296]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 11:03:50 ---
+
+--- Server process started at 2025-05-15 11:03:51 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [92662]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:34852 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34852 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34852 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34852 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34852 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34852 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34852 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34860 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51032 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51032 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51038 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51038 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47520 - "GET /api/crash-logs HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.
+INFO:     127.0.0.1:47520 - "GET /mapd_logs_stream HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] log_event_source started.
+[MAPD_STREAM_SETUP] Got ZMQ context: <class 'zmq.asyncio.Context'>
+[MAPD_STREAM_SETUP] Created ZMQ SUB socket: <class 'zmq.asyncio.Socket'>
+[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...
+[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...
+[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.
+[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...
+[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.
+[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...
+[MAPD_STREAM_FINALLY] Attempting to unregister poller.
+[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.
+[MAPD_STREAM_FINALLY] Closing ZMQ socket.
+[MAPD_STREAM_FINALLY] ZMQ socket closed.
+[MAPD_STREAM_FINALLY] Cleanup finished.
+INFO:     127.0.0.1:47532 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47532 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47532 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47532 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48856 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48856 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48856 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48856 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48870 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48870 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41630 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41630 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41630 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41630 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41638 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41638 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54280 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54280 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54280 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54280 - "POST /api/execute-command HTTP/1.1" 200 OK

@@ -10,25 +10,7 @@
   .hidden {
     display: none !important;
   }
-  .tile { /* For left navigation tiles */
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    min-height: 90px; /* MODIFIED: Adjusted min-height for uniformity */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    text-align: center;
-  }
-  .tile:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.25);
-  }
-  .active-tile {
-    border: 2px solid var(--color-accent);
-    box-shadow: 0 0 10px var(--color-accent); /* Glow effect for active tile */
-  }
+  /* REMOVED .tile, .tile:hover, .active-tile styles as they are now in base.html */
 
   /* UPDATED: Styles for main content sections */
   .action-area { /* Parent of action-area-content */
@@ -170,79 +152,19 @@
   /* Terminal styles */
   #test4-display.active-terminal-view {
       padding: 0 !important; /* Terminal needs full bleed */
-      height: 100%; /* Fill .diagnostic-content-section parent */
-      /* max-height: 75vh; -- From original, but height: 100% within flex parent is better */
-      /* overflow-y: auto; -- terminal-container or terminal-output handles scroll */
-      /* overflow-x: hidden; */
+      height: 448px; /* Match left nav stack (5 * (70px tile + 24px margin)) */
+      min-height: 150px; /* Minimum resizable height for drag functionality */
+      overflow: hidden; /* Child xterm container is 100% height, manage overflow here */
       background-color: #000;
       display: flex;
       flex-direction: column;
+      position: relative; /* For potential future absolute positioned elements or pseudo-elements for handle */
+      /* cursor: ns-resize; /* We'll apply this conditionally in JS or to a specific handle area */
   }
 
-  .terminal-container {
-    width: 100%;
-    color: #0f0;
-    font-family: monospace;
-    padding: 1rem; /* Padding inside the black terminal area */
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    /* align-items: flex-start; */
-    height: 100%; /* Fill parent #test4-display */
-  }
-  .terminal-warning {
-    width: 100%;
-    box-sizing: border-box;
-    color: #ff0;
-    background-color: #330;
-    padding: 0.5rem;
-    border: 1px solid #ff0;
-    border-radius: 0.25rem;
-    margin-bottom: 1rem;
-    font-size: 0.8rem;
-    flex-shrink: 0;
-  }
-  .terminal-output {
-    width: 100%;
-    white-space: pre-wrap;
-    /* margin-bottom: 0.5rem; -- Input area is now always at bottom */
-    font-size: 0.9rem;
-    flex-grow: 1; /* Output area takes available space */
-    overflow-y: auto; /* Scroll output */
-    min-height: 0; /* For flex scroll */
-  }
-  .terminal-input-area {
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0; /* Keep input area from shrinking */
-    margin-top: 0.5rem; /* Space above input area */
-  }
-
-  /* Desktop specific overrides for terminal if any (original was more about mobile first) */
-  /* @media (min-width: 768px) { ... } -- Current setup is responsive enough */
-
-  .terminal-output .command-echo { color: #888; }
-  .terminal-output .stdout { color: #0f0; }
-  .terminal-output .stderr { color: #f00; }
-  .terminal-output .exit-code { color: #ff0; font-style: italic; }
-  .terminal-output .stdout.ls-output-columns {
-    column-count: 3;
-    column-gap: 1rem;
-  }
-  .terminal-input-area .prompt { color: #0f0; margin-right: 0.5rem; }
-  .terminal-input {
-    flex-grow: 1;
-    background-color: transparent;
-    border: none;
-    color: #0f0;
-    font-family: monospace;
-    font-size: 0.9rem;
-    padding: 0.25rem;
-  }
-  .terminal-input:focus { outline: none; }
-
+  /* REMOVED .terminal-container and related styles, as Xterm.js handles its own viewport and styling. */
+  /* Styles for .terminal-output .command-echo, .stdout, .stderr, .exit-code will be handled by xterm for now */
+  /* .terminal-input-area and .terminal-input styles are also removed */
 
   /* CPU Equalizer Styles */
   #cpu-equalizer-display-wrapper {
@@ -347,8 +269,27 @@
   }
   /* MapD debug output uses .debug-log-output, which has margin-bottom: 1rem */
 
+  #right-column-diagnostics {
+    flex-shrink: 0; /* Prevent this column from shrinking in height due to flex rules */
+  }
+
+  /* Resize handle for terminal */
+  #test4-display { position: relative; }
+  #terminal-resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 12px; /* Slightly taller for easier grab */
+    cursor: ns-resize;
+    z-index: 1000; /* ensure it is on top of xterm layers */
+    /* background: rgba(255,0,0,0.05);  uncomment to visualize handle */
+  }
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -369,7 +310,7 @@
 
     <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="realtime-monitors-tile" data-content-id="realtime-monitors-display">
       <div class="text-lg font-bold mb-1">
-        <span class="text-accent">Real-Time Monitors</span>
+        <span class="text-accent">Monitors</span>
       </div>
     </div>
 
@@ -387,7 +328,7 @@
   </div>
 
   <!-- Right "action area" (85%) -->
-  <div class="w-full md:w-[85%]">
+  <div class="w-full md:w-[85%]" id="right-column-diagnostics">
     <div class="action-area p-0 rounded-lg shadow-lg" id="action-area-content">
       <!-- Content will be dynamically injected here -->
       <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
@@ -438,17 +379,8 @@
       </div>
       <!-- MODIFIED: Added .p-0 class here because terminal content manages its own padding and needs full bleed bg -->
       <div id="test4-display" class="hidden diagnostic-content-section p-0">
-        <div class="terminal-container"> <!-- terminal-container has its own padding -->
-          <div>Welcome to the Concierge Device Terminal. Type a command and press Enter.</div>
-          <div class="terminal-input-area">
-            <span class="prompt">device:/$</span>
-            <input type="text" id="terminal-input-field" class="terminal-input">
-          </div>
-          <div class="terminal-output" id="terminal-output-area">
-            <!-- Command output will appear here -->
-          </div>
-          <!-- Input area will be moved here by JS after each command -->
-        </div>
+        <div id="xterm-terminal-container" style="width: 100%; height: 100%;"></div>
+        <div id="terminal-resize-handle"></div>
       </div>
     </div>
   </div>
@@ -457,6 +389,13 @@
 <script>
   let currentEventSource = null; // To keep track of the active SSE connection
   const ansi_up = new AnsiUp(); // Initialize AnsiUp
+  let xtermInstance = null; // To hold the Xterm.js instance
+  let fitAddon = null; // To hold the FitAddon instance
+  let currentCommand = ''; // Buffer for the current command line
+  let currentPrompt = 'device:/$ '; // Store current prompt
+
+  const RESIZE_HANDLE_HEIGHT = 10; // px, draggable area height at the bottom
+  const MIN_TERMINAL_HEIGHT = 150; // px, matches CSS min-height
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -632,11 +571,162 @@
     const cpuEqualizerDisplayWrapper = document.getElementById('cpu-equalizer-display-wrapper');
     const emptyStateMessage = document.getElementById('empty-state-message');
 
-    // Terminal elements (ensure these are defined if used by original script)
-    const terminalOutputArea = document.getElementById('terminal-output-area');
-    const terminalInputField = document.getElementById('terminal-input-field');
-
     let activeNavTile = null;
+
+    function visibleLength(str) {
+      // Remove ANSI escape sequences before measuring length
+      const ansiRegex = /\x1B\[[0-9;]*m/g;
+      return str.replace(ansiRegex, '').length;
+    }
+
+    function formatLsOutputToColumns(output, terminalCols) {
+      const rawLines = output.split('\n');
+      const items = rawLines.map(line => line.trim().replace(/^(\x08)+/, '')).filter(item => item !== '');
+      if (items.length === 0) return '';
+
+      const itemPadding = 2;
+
+      const maxPossibleInitialNumColumns = Math.max(1, Math.min(items.length, Math.floor(terminalCols / (itemPadding + 1))));
+
+      let bestConfig = {
+        numCols: 1,
+        columns: [items.slice()],
+        colWidths: [Math.max(...items.map(visibleLength))]
+      };
+
+      for (let colsTry = maxPossibleInitialNumColumns; colsTry >= 2; colsTry--) {
+        const columns = Array.from({ length: colsTry }, () => []);
+        const colWidths = new Array(colsTry).fill(0);
+
+        items.forEach((item, idx) => {
+          const colIdx = idx % colsTry;
+          columns[colIdx].push(item);
+          const vlen = visibleLength(item);
+          if (vlen > colWidths[colIdx]) colWidths[colIdx] = vlen;
+        });
+
+        const totalWidth = colWidths.reduce((a, b) => a + b, 0) + (colsTry - 1) * itemPadding;
+        if (totalWidth <= terminalCols) {
+          bestConfig = { numCols: colsTry, columns, colWidths };
+          break;
+        }
+      }
+
+      const { numCols, columns, colWidths } = bestConfig;
+      const numRows = Math.max(...columns.map(col => col.length));
+      let out = '';
+      for (let r = 0; r < numRows; r++) {
+        let line = '';
+        for (let c = 0; c < numCols; c++) {
+          const item = columns[c][r] ?? '';
+          const pad = colWidths[c] - visibleLength(item);
+          line += item + ' '.repeat(pad);
+          if (c < numCols - 1) line += ' '.repeat(itemPadding);
+        }
+        out += line + '\r\n';
+      }
+      return out;
+    }
+
+    // Fetch current user and host for prompt
+    let currentUser = 'device';
+    let currentHost = 'concierge';
+    async function setUserAndHost() {
+      try {
+        const userResp = await fetch('/api/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'whoami' })
+        });
+        const userData = await userResp.json();
+        if (userData.stdout) currentUser = userData.stdout.trim();
+      } catch (e) { console.warn('Could not fetch current user', e); }
+
+      try {
+        const hostResp = await fetch('/api/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'hostname' })
+        });
+        const hostData = await hostResp.json();
+        if (hostData.stdout) currentHost = hostData.stdout.trim();
+      } catch (e) { console.warn('Could not fetch hostname', e); }
+    }
+
+    // Modify initializeXterm to await user fetch
+    async function initializeXterm() {
+      if (!xtermInstance && document.getElementById('xterm-terminal-container')) {
+        await setUserAndHost();
+        xtermInstance = new Terminal({
+          cursorBlink: true,
+          convertEol: true,
+          theme: { background: '#000000', foreground: '#00FF00', cursor: '#00FF00' }
+        });
+        fitAddon = new FitAddon.FitAddon();
+        xtermInstance.loadAddon(fitAddon);
+        xtermInstance.open(document.getElementById('xterm-terminal-container'));
+        try { fitAddon.fit(); } catch {}
+        currentPrompt = `${currentUser}@${currentHost}:$ `;
+        xtermInstance.write('Welcome to the Concierge Device Terminal (Xterm.js)\r\n');
+        xtermInstance.write(currentPrompt);
+
+        xtermInstance.onData(async (data) => {
+          const code = data.charCodeAt(0);
+          if (code === 13) { // Enter key
+            if (currentCommand.trim().length > 0) {
+              xtermInstance.write('\r\n'); // Echo newline
+              const cmdToExecute = currentCommand.trim();
+              try {
+                const response = await fetch('/api/execute-command', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ command: cmdToExecute })
+                });
+                const result = await response.json();
+
+                if (result.stdout) {
+                  if (result.is_ls_command && xtermInstance) {
+                    const formattedOutput = formatLsOutputToColumns(result.stdout, xtermInstance.cols);
+                    xtermInstance.write(formattedOutput.replace(/\n/g, '\r\n'));
+                  } else {
+                    xtermInstance.write(result.stdout.replace(/\n/g, '\r\n'));
+                  }
+                }
+                if (result.stderr) {
+                  // Write stderr in a different color if possible, or just write it.
+                  // For now, just write. Xterm can be configured with more colors.
+                  // Consider prefixing with an error indicator or using xterm's styling for errors.
+                  xtermInstance.write(`\x1b[31m${result.stderr.replace(/\n/g, '\r\n')}\x1b[0m`); // Red for stderr
+                }
+                if (result.cwd) {
+                  currentPrompt = `${currentUser}@${currentHost}:${result.cwd}$ `;
+                }
+              } catch (error) {
+                console.error("Error executing command:", error);
+                xtermInstance.write(`\r\n\x1b[31mError: ${error.message.replace(/\n/g, '\r\n')}\x1b[0m`);
+              }
+            }
+            currentCommand = '';
+            xtermInstance.write('\r\n' + currentPrompt);
+          } else if (code === 127 || code === 8) { // Backspace (127 for DEL, 8 for BS)
+            if (currentCommand.length > 0) {
+              xtermInstance.write('\b \b'); // Move cursor back, erase char, move back again
+              currentCommand = currentCommand.slice(0, -1);
+            }
+          } else if (code < 32) { // Ignore other control characters for now
+            return;
+          } else { // Printable character
+            currentCommand += data;
+            xtermInstance.write(data);
+          }
+        });
+      }
+      if (xtermInstance && fitAddon && document.getElementById('test4-display').classList.contains('active-terminal-view')) {
+        try { fitAddon.fit(); } catch {}
+      }
+    }
 
     function showContentSection(sectionId, associatedTile) {
       closeCurrentEventSource(); // Close any active SSE stream when switching main sections
@@ -645,13 +735,8 @@
       // This simplifies logic and prevents multiple sections from being visible if IDs overlap or logic is complex.
       contentSections.forEach(section => {
         section.classList.add('hidden');
-        // Special handling for terminal active class
         if (section.id === 'test4-display') {
             section.classList.remove('active-terminal-view');
-        }
-        // Special handling for log viewer if it's one of the main content sections (it is)
-        if (section.id === 'log-viewer-display') {
-            // Keep it hidden unless explicitly shown (e.g., by displayLogContent)
         }
       });
 
@@ -672,6 +757,22 @@
         targetSection.classList.remove('hidden');
         if (sectionId === 'test4-display') { // Terminal specific class
             targetSection.classList.add('active-terminal-view');
+            initializeXterm().then(() => {
+                if (xtermInstance) {
+                    setTimeout(() => xtermInstance.focus(), 0);
+                }
+                const terminalDisplayElement = document.getElementById('test4-display');
+                if (terminalDisplayElement && xtermInstance && fitAddon) {
+                    setTimeout(() => {
+                        makeTerminalResizable(terminalDisplayElement, xtermInstance, fitAddon);
+                        try {
+                            if (fitAddon) fitAddon.fit();
+                        } catch(e) { console.warn("FitAddon failed after resizer attach:", e); }
+                    }, 50); // 50ms delay
+                }
+            }).catch(error => {
+                console.error("Error during Xterm initialization or resize setup:", error);
+            });
         }
       }
 
@@ -718,94 +819,9 @@
             if (logViewerDisplay) logViewerDisplay.classList.add('hidden');
 
             // Show the crash logs section and trigger a fetch
-            showContentSection('crash-logs-display', document.getElementById('crash-logs-tile'));
-        });
-    }
-
-    // Terminal specific logic
-    if (terminalInputField && terminalOutputArea) {
-        const promptSpan = document.querySelector('.terminal-input-area .prompt');
-
-        terminalInputField.addEventListener('keypress', async function(e) {
-            if (e.key === 'Enter') {
-                const command = terminalInputField.value.trim();
-                // terminalInputField.value = ''; // Clear input immediately
-
-                if (command) {
-                    // Echo the command
-                    const echoDiv = document.createElement('div');
-                    const currentPromptText = promptSpan.textContent;
-                    echoDiv.innerHTML = `<span class="prompt">${escapeHtml(currentPromptText)}</span> <span class="command-echo">${escapeHtml(command)}</span>`;
-                    terminalOutputArea.appendChild(echoDiv);
-                    terminalOutputArea.scrollTop = terminalOutputArea.scrollHeight; // Scroll after echo
-
-                    try {
-                        const response = await fetch('/api/execute-command', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ command: command })
-                        });
-                        const data = await response.json();
-
-                        if (data.stdout) {
-                            const stdoutDiv = document.createElement('div');
-                            if (data.is_ls_command) {
-                                // Trim trailing whitespace/newlines from ls output before converting to HTML
-                                const trimmedStdout = data.stdout.trimEnd();
-                                stdoutDiv.innerHTML = ansi_up.ansi_to_html(trimmedStdout);
-                                stdoutDiv.classList.add('ls-output-columns');
-                            } else {
-                                stdoutDiv.textContent = data.stdout;
-                            }
-                            stdoutDiv.classList.add('stdout');
-                            terminalOutputArea.appendChild(stdoutDiv);
-                        }
-                        if (data.stderr) {
-                            const stderrDiv = document.createElement('div');
-                            stderrDiv.textContent = data.stderr;
-                            stderrDiv.className = 'stderr';
-                            terminalOutputArea.appendChild(stderrDiv);
-                        }
-
-                        // Update prompt with new CWD
-                        if (data.cwd) {
-                            promptSpan.textContent = data.cwd + '$ ';
-                        }
-
-                    } catch (error) {
-                        console.error("Error executing command:", error);
-                        const errorDiv = document.createElement('div');
-                        errorDiv.textContent = `Error: ${error.message}`;
-                        errorDiv.className = 'stderr';
-                        terminalOutputArea.appendChild(errorDiv);
-                    } finally {
-                        terminalInputField.value = ''; // Clear input after processing
-
-                        // Move the input area to the bottom of the terminal container
-                        const terminalContainer = document.querySelector('.terminal-container');
-                        const inputArea = document.querySelector('.terminal-input-area');
-                        if (terminalContainer && inputArea) {
-                            terminalContainer.appendChild(inputArea);
-                        }
-
-                        terminalOutputArea.scrollTop = terminalOutputArea.scrollHeight;
-                        terminalInputField.focus(); // Keep focus on input
-                    }
-                } else {
-                  // If command is empty, still ensure prompt is there if somehow cleared
-                  // and scroll to keep view consistent, and refocus.
-                  // Also ensure input area is at the bottom.
-                  const terminalContainer = document.querySelector('.terminal-container');
-                  const inputArea = document.querySelector('.terminal-input-area');
-                  if (terminalContainer && inputArea) {
-                      terminalContainer.appendChild(inputArea);
-                  }
-                  terminalOutputArea.scrollTop = terminalOutputArea.scrollHeight;
-                  terminalInputField.focus();
-                }
-            }
+            // Ensure the correct tile is passed if its selection is desired
+            const crashLogsTile = document.getElementById('crash-logs-tile');
+            showContentSection('crash-logs-display', crashLogsTile);
         });
     }
 
@@ -950,6 +966,40 @@
           appendDebugMessage(`CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
           if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
       }
+    }
+
+    function makeTerminalResizable(terminalDisplayElement, xtermInstanceRef, fitAddonRef) {
+      const handle = document.getElementById('terminal-resize-handle');
+      if (!terminalDisplayElement || !handle) {
+        console.error("makeTerminalResizable: terminalDisplayElement is null");
+        return;
+      }
+      console.log("Attaching resizer to handle:", handle);
+
+      let isResizing = false;
+      let lastDownY = 0;
+      let initialHeight = 0;
+
+      handle.addEventListener('mousemove', function(e) { handle.style.cursor='ns-resize'; });
+
+      handle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        lastDownY = e.clientY;
+        initialHeight = terminalDisplayElement.clientHeight;
+        e.preventDefault();
+
+        function move(eMove){
+          if(!isResizing) return;
+          const delta = eMove.clientY - lastDownY;
+          let newH = initialHeight + delta;
+          if(newH < MIN_TERMINAL_HEIGHT) newH = MIN_TERMINAL_HEIGHT;
+          terminalDisplayElement.style.height = newH + 'px';
+          if(fitAddonRef){ try{fitAddonRef.fit();}catch{} }
+        }
+        function up(){ isResizing=false; document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up);}
+        document.addEventListener('mousemove',move);
+        document.addEventListener('mouseup',up);
+      });
     }
     // ***** END NEW/RESTORED CRASH LOGS FUNCTIONS *****
   });

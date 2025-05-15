@@ -40,8 +40,9 @@
         cursor: pointer;
         transition: all 0.2s ease-in-out;
         padding: 1rem;
-        margin-bottom: 1rem;
-        min-height: 90px; /* MODIFIED: Adjusted min-height for uniformity */
+        margin-bottom: 1.5rem; /* match gap-6 on index tiles (24px) */
+        height: 70px;
+        overflow: hidden; /* Ensure text overflow does not grow tile */
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -56,7 +57,7 @@
         box-shadow: 0 0 10px var(--color-accent); /* Glow effect for active tile */
       }
       .action-area {
-        min-height: calc(100vh - 150px); /* Adjust based on nav/footer height */
+        min-height: calc(460px); /* Adjust based on nav/footer height */
         background-color: var(--color-1); /* Darker background for "empty" state */
       }
       .log-list-container-tiles { /* For the grid of log file tiles */

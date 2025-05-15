@@ -340,13 +340,54 @@ class MapdPyDaemon:
                           current_way_res=current_way_res,
                           pos=self.last_valid_pos,
                           map_reader=self.map_reader)
+
+                # Initialize variables for calculating next speed limit ahead
+                calculated_next_speed_limit_mps = 0.0
+                calculated_distance_to_speed_limit_change = 0.0
+                found_next_limit = False
+
+                current_segment_remaining_dist_val = 0.0
+                if is_on_segment and self.current_segment_data and self.current_on_way_result and self.last_valid_pos:
+                    current_segment_remaining_dist_val = matcher.distance_to_end_of_way(
+                        self.last_valid_pos,
+                        self.current_segment_data,
+                        self.current_on_way_result
+                    )
+
+                if next_ways_results and is_on_segment and self.current_segment_data:
+                    current_speed_for_comparison = self.current_segment_data.get('speed_mps', 0.0)
+                    cumulative_dist_to_next_segment = current_segment_remaining_dist_val
+
+                    for next_way_item_calc in next_ways_results:
+                        next_segment_id_calc = next_way_item_calc.segment_id
+                        next_segment_data_calc = self.map_reader.segments_data.get(next_segment_id_calc)
+
+                        if not next_segment_data_calc:
+                            log_event("DAEMON", "WARN", "NEXT_SPEED_LIMIT_CALC_SKIP_NO_DATA", segment_id=next_segment_id_calc)
+                            break # Cannot proceed without segment data
+
+                        next_segment_actual_speed_mps = next_segment_data_calc.get('speed_mps', 0.0)
+
+                        if next_segment_actual_speed_mps > 0 and abs(next_segment_actual_speed_mps - current_speed_for_comparison) > 1e-3:
+                            calculated_next_speed_limit_mps = next_segment_actual_speed_mps
+                            calculated_distance_to_speed_limit_change = cumulative_dist_to_next_segment
+                            found_next_limit = True
+                            log_event("DAEMON", "DEBUG", "NEXT_SPEED_LIMIT_FOUND",
+                                      next_limit_mps=calculated_next_speed_limit_mps,
+                                      dist_to_change_m=calculated_distance_to_speed_limit_change,
+                                      on_segment_id=next_segment_id_calc)
+                            break # Found the first change
+
+                        segment_len_calc = get_segment_length(next_segment_data_calc)
+                        cumulative_dist_to_next_segment += segment_len_calc
+
                 log_event("DAEMON", "DEBUG", "MATCHER_CALL_FIND_NEXT_WAYS_END",
                           num_next_ways=len(next_ways_results),
-                          next_limit_mps=next_limit_mps_res,
-                          next_limit_dist_m=next_limit_dist_res)
+                          next_limit_mps=calculated_next_speed_limit_mps, # Use calculated value
+                          next_limit_dist_m=calculated_distance_to_speed_limit_change) # Use calculated value
 
-                next_limit_mps = next_limit_mps_res
-                next_limit_dist = next_limit_dist_res
+                next_limit_mps = calculated_next_speed_limit_mps # Assign from calculated value
+                next_limit_dist = calculated_distance_to_speed_limit_change # Assign from calculated value
 
                 # --- Proactive Tile Loading for Next Segments ---
                 PROACTIVE_LOAD_DISTANCE_LIMIT = 2000 # meters (2km)
@@ -560,7 +601,7 @@ class MapdPyDaemon:
         msg.liveMapData.speedLimitValid = is_on_segment and current_limit_mps > 0
         msg.liveMapData.speedLimit = float(current_limit_mps) # m/s
 
-        msg.liveMapData.speedLimitAheadValid = is_on_segment and next_limit_mps > 0 and next_limit_dist > 0
+        msg.liveMapData.speedLimitAheadValid = is_on_segment and found_next_limit and next_limit_mps > 0 and next_limit_dist >= 0
         msg.liveMapData.speedLimitAhead = float(next_limit_mps) # m/s
         msg.liveMapData.speedLimitAheadDistance = float(next_limit_dist) # m
 
