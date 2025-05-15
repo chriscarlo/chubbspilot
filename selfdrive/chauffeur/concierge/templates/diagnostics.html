@@ -544,7 +544,8 @@
       </div>
 
       <div id="crash-logs-display" class="hidden diagnostic-content-section">
-        <!-- NEW dedicated placeholder for debug output -->
+        <!-- Re-added debug output container for crash logs -->
+        <div id="crash-logs-debug-output" class="debug-log-output" style="margin-bottom: 1rem;"></div>
 
         <!-- This will be populated with log file tiles -->
         <div id="log-list-container-tiles" class="log-list-container-tiles">
@@ -673,17 +674,57 @@
     backButton.onclick = showMonitorSelectionGrid;
     container.appendChild(backButton);
 
+    // New debug div for MapD logs
+    const mapdDebugDiv = document.createElement('div');
+    mapdDebugDiv.id = 'mapd-log-debug-output';
+    mapdDebugDiv.className = 'debug-log-output'; // Using existing style
+    mapdDebugDiv.style.margin = '0.5rem 0'; // Adjust margin for this context
+    container.appendChild(mapdDebugDiv);
+
     const logOutputDiv = document.createElement('div');
     logOutputDiv.id = 'mapd-log-output';
-    logOutputDiv.textContent = 'Connecting to MapD Log Stream...'; // Initial message
+    // Initial message will now go to mapdDebugDiv
     container.appendChild(logOutputDiv);
 
     monitorsDisplay.appendChild(container);
 
+    // Update debug div with initial message
+    if (mapdDebugDiv) {
+        mapdDebugDiv.innerHTML = ''; // Clear previous
+        const ts = new Date().toLocaleTimeString();
+        const connMsg = document.createElement('div');
+        connMsg.textContent = `[${ts}] Connecting to MapD Log Stream...`;
+        mapdDebugDiv.appendChild(connMsg);
+        mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
+    }
+    logOutputDiv.textContent = ''; // Main log area starts empty or with a non-status message
+
     currentEventSource = new EventSource('/mapd_logs_stream');
-    logOutputDiv.textContent = ''; // Clear "Connecting..." message
+    let firstMapdMessageReceived = false;
+
+    currentEventSource.onopen = function() {
+      if (mapdDebugDiv) {
+        const ts = new Date().toLocaleTimeString();
+        const openMsg = document.createElement('div');
+        openMsg.textContent = `[${ts}] EventSource connection opened. Waiting for data...`;
+        mapdDebugDiv.appendChild(openMsg);
+        mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
+      }
+    };
 
     currentEventSource.onmessage = function(event) {
+      if (!firstMapdMessageReceived) {
+        if (mapdDebugDiv) {
+            mapdDebugDiv.innerHTML = ''; // Clear "Connecting..." and "Opened..."
+            const ts = new Date().toLocaleTimeString();
+            const connMsg = document.createElement('div');
+            connMsg.textContent = `[${ts}] Connected. Receiving logs...`;
+            mapdDebugDiv.appendChild(connMsg);
+            mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
+        }
+        logOutputDiv.innerHTML = ''; // Clear main area placeholder if any
+        firstMapdMessageReceived = true;
+      }
       const newLogEntry = document.createElement('div');
       newLogEntry.textContent = event.data;
       logOutputDiv.appendChild(newLogEntry);
@@ -691,9 +732,23 @@
     };
 
     currentEventSource.onerror = function(event) {
-      console.error("EventSource failed:", event);
-      logOutputDiv.textContent += '\nError connecting to log stream. See console for details.';
-      currentEventSource.close();
+      console.error("MapD EventSource failed:", event);
+      if (mapdDebugDiv) {
+          const ts = new Date().toLocaleTimeString();
+          const errorMsgDiv = document.createElement('div');
+          errorMsgDiv.style.color = 'var(--color-error-text, #ff6b6b)'; // A reddish color
+          errorMsgDiv.textContent = `[${ts}] Error connecting to MapD Log Stream. Check browser console.`;
+          mapdDebugDiv.appendChild(errorMsgDiv);
+          mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
+      }
+      // Display a clearer error in the main log area if it's empty
+      if (logOutputDiv.textContent.trim() === '') {
+          logOutputDiv.innerHTML = '<p style="color: var(--color-error-text, #ff6b6b); padding: 1rem;">Failed to connect to the MapD log stream. Please check the debug messages above and the browser console for more details.</p>';
+      }
+      if (currentEventSource) { // Check if it's not already null due to multiple error events
+        currentEventSource.close();
+        currentEventSource = null; // Ensure it's marked as closed
+      }
     };
   }
 
