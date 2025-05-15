@@ -179,15 +179,43 @@ def main():
                     print("!!! [ERROR] Exception in liveParameters check:", file=sys.stderr)
                     traceback.print_exc(file=sys.stderr)
 
-                try:
-                    manager_msg = sm['managerState']
-                    if sm.recv_frame['managerState'] > 0:
-                        not_running = [p.name for p in manager_msg.processes if not p.running and p.shouldBeRunning]
-                        if not_running:
-                            print(f"\n[!!!] Processes not running: {', '.join(not_running)}")
-                except Exception as e:
-                    print("!!! [ERROR] Exception in managerState check:", file=sys.stderr)
-                    traceback.print_exc(file=sys.stderr)
+                manager_msg = sm['managerState']
+                if sm.recv_frame['managerState'] > 0:
+                    processes_not_running = []
+                    boardd_running = "N/A"
+                    for p in manager_msg.processes:
+                        if p.name == 'boardd':
+                            boardd_running = str(p.running)
+                        if not p.running and p.shouldBeRunning:
+                            processes_not_running.append(p.name)
+
+                    print(f"\n--- Process States ---")
+                    print(f"  boardd running: {boardd_running}")
+                    if processes_not_running:
+                        print(f"  [!!!] Other processes not running but should be: {', '.join(processes_not_running)}")
+
+                # PandaStates detailed check
+                if sm.recv_frame['pandaStates'] > 0 and len(sm['pandaStates']) > 0:
+                    ps = sm['pandaStates'][0] # Assuming one panda
+                    print("\n--- Panda Details (pandaStates[0]) ---")
+                    print(f"  Panda Type: {ps.pandaType.raw}")
+                    print(f"  Ignition Line: {ps.ignitionLine}")
+                    print(f"  Ignition CAN: {ps.ignitionCan}")
+                    print(f"  Controls Allowed: {ps.controlsAllowed}")
+                    print(f"  Safety Model: {ps.safetyModel.raw} (Param: {ps.safetyParam})")
+                    print(f"  Safety RX Checks Invalid: {ps.safetyRxChecksInvalid}")
+                    print(f"  Fault Status: {ps.faultStatus.raw}")
+                    if list(ps.faults):
+                        print(f"  Active Faults: {[f.raw for f in ps.faults]}")
+                    else:
+                        print(f"  Active Faults: None")
+
+                    # Highlight if carState is dead but panda seems to have ignition
+                    car_state_alive = last_rx_times['carState'] > 0 and (loop_start_time - last_rx_times['carState']) < (ALIVE_FACTOR / get_nominal_freq('carState'))
+                    if not car_state_alive and (ps.ignitionLine or ps.ignitionCan):
+                        print("  [!!!] carState is NOT_ALIVE, but Panda reports IGNITION ON!")
+                    if not ps.controlsAllowed:
+                        print("  [!] Panda controls NOT allowed.")
 
                 next_print_time = loop_start_time + args.refresh
 
