@@ -150,39 +150,78 @@ async def test_page(request: Request):
 
 @app.get("/mapd_logs_stream")
 async def mapd_logs_sse_stream() -> StreamingResponse:
+    print("[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.")
     async def log_event_source() -> AsyncGenerator[str, None]:
-        context = get_mapd_log_zmq_context()
-        socket = context.socket(zmq.SUB)
-        socket.connect("tcp://localhost:8607") # Address of mapd_py ZMQ publisher
-        socket.subscribe("") # Subscribe to all messages
-
-        poller = zmq.asyncio.Poller() # Use asyncio poller
-        poller.register(socket, zmq.POLLIN)
-
+        socket = None # Initialize for finally block
+        poller = None # Initialize for finally block
+        connection_active = True
         try:
-            while True:
-                events = await poller.poll(timeout=1000) # Poll with a timeout, await for asyncio
+            print("[MAPD_STREAM_SETUP] log_event_source started.")
+            context = get_mapd_log_zmq_context()
+            print(f"[MAPD_STREAM_SETUP] Got ZMQ context: {type(context)}")
+
+            socket = context.socket(zmq.SUB)
+            print(f"[MAPD_STREAM_SETUP] Created ZMQ SUB socket: {type(socket)}")
+
+            # Set linger to 0 before connect for SUB sockets that should close fast on error/shutdown
+            socket.setsockopt(zmq.LINGER, 0)
+            print("[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.")
+
+            print("[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...")
+            socket.connect("tcp://localhost:8607")
+            print("[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.")
+
+            print("[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...")
+            socket.subscribe("")
+            print("[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.")
+
+            poller = zmq.asyncio.Poller()
+            poller.register(socket, zmq.POLLIN)
+            print("[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...")
+
+            while connection_active:
+                events = await poller.poll(timeout=1000) # Poll with a timeout
                 if socket in dict(events):
-                    message = await socket.recv_string() # await for asyncio
-                    yield f"data: {message}\n\n"
+                    message = await socket.recv_string()
+                    # print(f"[MAPD_STREAM_DATA] Received ZMQ: {message[:100]}...") # Uncomment for verbose data logging
+                    yield f"data: {message}\\n\\n"
                 else:
-                    # Send a keep-alive SSE comment if no message for 1s
-                    yield ": keepalive\n\n"
+                    # print("[MAPD_STREAM_KEEPALIVE] Sending keep-alive.") # Uncomment for verbose keep-alive logging
+                    yield ": keepalive\\n\\n"
         except asyncio.CancelledError:
-            print("MapD log stream cancelled by client disconnect or server shutdown.")
-            # This is expected when the client disconnects or server shuts down
-            pass # Allow finally to clean up
+            print("[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.")
+            connection_active = False
         except Exception as e:
-            print(f"Error in MapD log stream: {e}")
-            # Optionally, send an error to the client if the stream is still open
-            # yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+            import traceback
+            tb_str = traceback.format_exc()
+            print(f"[MAPD_STREAM_ERROR] Error in MapD log stream: {type(e).__name__}: {e}\\nTraceback:\\n{tb_str}")
+            connection_active = False
+            # Consider yielding a specific error to client if stream is still partially up
+            # yield f"event: error\\ndata: {json.dumps({'type': type(e).__name__, 'message': str(e), 'detail': 'Check server logs.'})}\\n\\n"
         finally:
-            print("Cleaning up MapD log stream ZMQ socket...")
-            if not socket.closed:
-                poller.unregister(socket)
-                socket.LINGER = 0 # Ensure immediate close
+            print("[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...")
+            if poller and socket and not socket.closed: # Check if socket is valid and not closed before unregister
+                print("[MAPD_STREAM_FINALLY] Attempting to unregister poller.")
+                try:
+                    if socket in poller.sockets: # Check if socket is actually registered
+                         poller.unregister(socket)
+                         print("[MAPD_STREAM_FINALLY] Poller unregistered.")
+                    else:
+                         print("[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.")
+                except KeyError:
+                    print("[MAPD_STREAM_FINALLY] Socket already unregistered (KeyError).")
+                except Exception as e_unreg:
+                     print(f"[MAPD_STREAM_FINALLY] Error unregistering poller: {type(e_unreg).__name__}: {e_unreg}")
+
+            if socket and not socket.closed:
+                print("[MAPD_STREAM_FINALLY] Closing ZMQ socket.")
                 socket.close()
-            print("MapD log stream ZMQ socket closed.")
+                print("[MAPD_STREAM_FINALLY] ZMQ socket closed.")
+            elif socket and socket.closed:
+                print("[MAPD_STREAM_FINALLY] ZMQ socket was already closed.")
+            else:
+                print("[MAPD_STREAM_FINALLY] No ZMQ socket instance to close or was None.")
+            print("[MAPD_STREAM_FINALLY] Cleanup finished.")
 
     return StreamingResponse(log_event_source(), media_type="text/event-stream")
 
@@ -477,11 +516,53 @@ if __name__ == "__main__":
 
     # Check for --dev flag for reload functionality
     import sys
-    should_reload = "--dev" in sys.argv
+    from datetime import datetime # For timestamping log entries
 
-    uvicorn.run(app_module_path,
-                host="0.0.0.0",
-                port=5055,
-                log_level="info",
-                reload=should_reload,
-                reload_dirs=["selfdrive/chauffeur/concierge"] if should_reload else None)
+    # Ensure BASE is accessible here or define log path relative to script
+    # BASE is defined globally: BASE = Path(__file__).resolve().parent
+    # Workspace root would be BASE.parent.parent
+    log_file_path = BASE.parent.parent / "concierge_server.log"
+
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    print(f"[CONCIERGE_SETUP] Server output will be logged to: {log_file_path}") # This goes to original stdout before redirection
+
+    log_file_handle = None
+    try:
+        log_file_handle = open(log_file_path, 'a')
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_file_handle.write(f"\n--- Server process started at {timestamp} ---\n")
+        log_file_handle.flush()
+
+        sys.stdout = log_file_handle
+        sys.stderr = log_file_handle
+
+        print(f"[CONCIERGE_SETUP] stdout and stderr redirected to {log_file_path}") # This goes to the log file
+
+        should_reload = "--dev" in sys.argv
+
+        uvicorn.run(app_module_path,
+                    host="0.0.0.0",
+                    port=5055,
+                    log_level="info", # Uvicorn's own log level
+                    reload=should_reload,
+                    reload_dirs=["selfdrive/chauffeur/concierge"] if should_reload else None)
+    except Exception as e_main:
+        # If redirection happened, print to original stderr, otherwise to current (possibly file) stderr
+        print_target = original_stderr if log_file_handle and sys.stderr == log_file_handle else sys.stderr
+        print(f"CRITICAL ERROR in __main__ before/during uvicorn.run: {e_main}", file=print_target)
+        import traceback
+        traceback.print_exc(file=print_target)
+    finally:
+        print("[CONCIERGE_SHUTDOWN] Server process ended or uvicorn.run exited.") # Goes to log file
+        if sys.stdout == log_file_handle: # Restore only if we redirected
+            sys.stdout = original_stdout
+        if sys.stderr == log_file_handle: # Restore only if we redirected
+            sys.stderr = original_stderr
+        if log_file_handle:
+            timestamp_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_file_handle.write(f"--- Server process ended or streams restored at {timestamp_end} ---\n")
+            log_file_handle.flush()
+            log_file_handle.close()
+        print("[CONCIERGE_SHUTDOWN] stdout/stderr restored. Log file closed.") # Goes to original stdout
