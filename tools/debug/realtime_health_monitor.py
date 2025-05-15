@@ -87,6 +87,7 @@ def main():
         "modelV2",
         "pandaStates",
         "managerState",
+        "carParams",
     ]
     monitored_services = sorted(set(core_services))
     if debug: print(f">>> [DEBUG] Monitored services: {monitored_services}", file=sys.stderr)
@@ -182,17 +183,34 @@ def main():
                 manager_msg = sm['managerState']
                 if sm.recv_frame['managerState'] > 0:
                     processes_not_running = []
-                    boardd_running = "N/A"
+                    pandad_running = "N/A"
                     for p in manager_msg.processes:
-                        if p.name == 'boardd':
-                            boardd_running = str(p.running)
+                        if p.name == 'pandad':
+                            pandad_running = str(p.running)
                         if not p.running and p.shouldBeRunning:
                             processes_not_running.append(p.name)
 
                     print(f"\n--- Process States ---")
-                    print(f"  boardd running: {boardd_running}")
+                    print(f"  pandad running: {pandad_running}")
                     if processes_not_running:
                         print(f"  [!!!] Other processes not running but should be: {', '.join(processes_not_running)}")
+
+                # CarParams detailed check
+                if sm.updated['carParams'] and sm.recv_frame['carParams'] > 0:
+                    cp = sm['carParams']
+                    print("\n--- CarParams Details ---")
+                    print(f"  Car Fingerprint: {cp.carFingerprint}")
+                    print(f"  Alternative Experience: {cp.alternativeExperience}")
+                    if len(cp.safetyConfigs):
+                        for i, sc in enumerate(cp.safetyConfigs):
+                            print(f"  Safety Config [{i}]:")
+                            print(f"    Safety Model: {sc.safetyModel.raw} ({(lambda x: 'deprecated' if x else 'current')(sc.safetyModelDeprecated)})")
+                            print(f"    Safety Param: {sc.safetyParam}")
+                    else:
+                        print("  Safety Configs: None")
+                    # You can add more CarParams fields here if needed, e.g.:
+                    # print(f"  Steer Ratio: {cp.steerRatio}")
+                    # print(f"  Enable Gas Interceptor: {cp.enableGasInterceptor}")
 
                 # PandaStates detailed check
                 if sm.recv_frame['pandaStates'] > 0 and len(sm['pandaStates']) > 0:
