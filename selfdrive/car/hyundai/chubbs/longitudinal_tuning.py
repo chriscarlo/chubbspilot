@@ -6,6 +6,8 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
+import time # Added for sleep
+from cereal.messaging.messaging_pyx import MultiplePublishersError # Specific import for the error
 
 # --- Singleton Publisher Class for HKG Tuning Data ---
 class _HKGTuningPublisher:
@@ -16,10 +18,28 @@ class _HKGTuningPublisher:
     def get_instance(cls):
         if cls._instance is None:
             cls._instance = cls()
-            try:
-                cls._pub_master = messaging.PubMaster(['chauffeurHKGTuning'])
-            except Exception as e:
-                print(f"Error initializing PubMaster in _HKGTuningPublisher: {e}")
+            initialized = False
+            attempts = 0
+            max_attempts = 5 # Try 5 times
+            retry_delay = 0.5 # Seconds to wait between retries
+
+            while not initialized and attempts < max_attempts:
+                try:
+                    cls._pub_master = messaging.PubMaster(['chauffeurHKGTuning'])
+                    initialized = True
+                    if attempts > 0:
+                        print(f"WARN: _HKGTuningPublisher succeeded initializing PubMaster after {attempts + 1} attempts.")
+                except MultiplePublishersError as e:
+                    attempts += 1
+                    print(f"WARN: _HKGTuningPublisher: MultiplePublishersError on attempt {attempts}/{max_attempts}. Retrying in {retry_delay}s... Error: {e}")
+                    time.sleep(retry_delay)
+                except Exception as e:
+                    print(f"ERROR: Error initializing PubMaster in _HKGTuningPublisher: {e}")
+                    cls._pub_master = None
+                    break # Break on other exceptions
+
+            if not initialized:
+                print(f"ERROR: _HKGTuningPublisher failed to initialize PubMaster after {max_attempts} attempts. Publisher will be disabled.")
                 cls._pub_master = None
         return cls._instance
 
@@ -510,7 +530,7 @@ class HKGLongitudinalTuning:
         if self.handle_cruise_cancel(CS):
             chauffeurHKGTuning.longFinalAccel = 0.0
             chauffeurHKGTuning.longAccelPreClip = 0.0
-            self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
+            # self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
             return 0.0
 
         accel = self.calculate_limited_accel(actuators, CS, lead_one, chauffeurHKGTuning)
@@ -523,7 +543,7 @@ class HKGLongitudinalTuning:
         msg.valid = True
 
         # Publish
-        self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
+        # self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
         return final_accel
 
     def apply_tune(self, CP: car.CarParams) -> None:
