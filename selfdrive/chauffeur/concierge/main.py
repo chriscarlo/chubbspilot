@@ -402,18 +402,21 @@ async def list_crash_logs() -> Dict[str, Any]:
             debug_messages.append(f"[API] Error during os.listdir for {CRASH_LOGS_DIR}: {str(e_listdir)}")
             # Continue, but note the error, glob might still work or provide more info
 
-        log_files_found_by_glob = list(CRASH_LOGS_DIR.glob("*.txt"))
-        debug_messages.append(f"[API] Files found by {CRASH_LOGS_DIR.name}.glob('*.txt'): {len(log_files_found_by_glob)}")
+        txt_files = list(CRASH_LOGS_DIR.glob("*.txt"))
+        log_files = list(CRASH_LOGS_DIR.glob("*.log"))
+        log_files_found_by_glob = list(set(txt_files + log_files)) # Combine and remove duplicates
+
+        debug_messages.append(f"[API] Files found by glob ('*.txt', '*.log'): {len(log_files_found_by_glob)}")
         if not log_files_found_by_glob:
-            debug_messages.append(f"[API] No *.txt files found in {CRASH_LOGS_DIR}.")
-            # Potentially list all files if no .txt files are found, for more context
+            debug_messages.append(f"[API] No *.txt or *.log files found in {CRASH_LOGS_DIR}.")
+            # Potentially list all files if no .txt or .log files are found, for more context
             all_files_in_dir = list(CRASH_LOGS_DIR.glob("*"))
             debug_messages.append(f"[API] All items found by {CRASH_LOGS_DIR.name}.glob('*'): {len(all_files_in_dir)}")
             for f_idx, f_path in enumerate(all_files_in_dir):
                 debug_messages.append(f"[API] All item {f_idx}: {f_path.name} (Is file: {f_path.is_file()})")
         else:
-            for f_idx, f_path in enumerate(log_files_found_by_glob):
-                debug_messages.append(f"[API] Globbed .txt file {f_idx}: {f_path.name}")
+            for f_idx, f_path in enumerate(log_files_found_by_glob): # Ensure this iterates over the combined list
+                debug_messages.append(f"[API] Globbed file {f_idx}: {f_path.name}")
 
         log_files_data = []
         for file_path_obj in log_files_found_by_glob:
