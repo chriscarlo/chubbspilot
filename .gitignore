@@ -2808,3 +2808,9 @@ node_modules/
 *.dylib
 *.DSYM
 *.d
+openpilot/__init__.py.bak
+openpilot/selfdrive
+openpilot/system
+openpilot/third_party
+openpilot/tools
+openpilot/common
