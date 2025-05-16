@@ -1463,8 +1463,6 @@
         }
 
         xtermInstance.write('Welcome to Concierge Device Terminal (Xterm.js)\r\n');
-        // Show current directory in welcome message
-        xtermInstance.write(`\x1b[32mCurrent directory: /data/openpilot\x1b[0m\r\n`);
         xtermInstance.write(currentPrompt);
 
         // Add command history support
