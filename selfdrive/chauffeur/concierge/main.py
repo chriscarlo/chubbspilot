@@ -18,6 +18,8 @@ from pydantic import BaseModel # For request body validation
 import shlex # For parsing cd command arguments safely
 import zmq # ADDED ZMQ IMPORT
 import zmq.asyncio # <- make the Context class visible
+import re # For parsing capnp files
+import sys # Added to access the current Python interpreter
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, PlainTextResponse
@@ -28,6 +30,11 @@ from cereal import messaging  # already on the device
 
 # Set CRASH_LOGS_DIR to the actual path on the device
 CRASH_LOGS_DIR = Path("/data/crashes")
+
+# Path to openpilot root, assuming main.py is in selfdrive/chauffeur/concierge
+OPENPILOT_ROOT_PATH = Path(__file__).resolve().parent.parent.parent.parent
+CEREAL_PATH = OPENPILOT_ROOT_PATH / "cereal"
+LOG_CAPNP_PATH = CEREAL_PATH / "log.capnp"
 
 BASE = Path(__file__).resolve().parent
 templates = Environment(
@@ -82,6 +89,8 @@ async def lifespan(app_instance: FastAPI):
 # It's better to create one context per application. FastAPI lifespan can manage this for production,
 # but for a single subscriber, a module-level context is often acceptable.
 _mapd_log_zmq_context = None
+_service_monitor_process: asyncio.subprocess.Process | None = None
+_service_monitor_active_services: List[str] = []
 
 def get_mapd_log_zmq_context():
     global _mapd_log_zmq_context
@@ -148,6 +157,204 @@ async def test_page(request: Request):
     # tmpl = templates.get_template("test.html")
     # return tmpl.render(request=request, browser_title_suffix="- Test", page_title_text="- Test")
     return "<h1>Test Page</h1><p>Under Construction</p><a href='/'>Back to Dashboard</a>"
+
+@app.get("/api/monitorable-services")
+async def api_monitorable_services_endpoint() -> Dict[str, List[str]]:
+    return parse_capnp_services()
+
+class StartMonitoringRequest(BaseModel):
+    services: List[str]
+
+@app.post("/api/start-service-monitoring")
+async def start_service_monitoring_endpoint(payload: StartMonitoringRequest):
+    global _service_monitor_process, _service_monitor_active_services
+    services = payload.services
+    if _service_monitor_process and _service_monitor_process.returncode is None:
+        raise HTTPException(status_code=400, detail="Monitoring is already in progress.")
+    if not services:
+        raise HTTPException(status_code=400, detail="No services selected for monitoring.")
+
+    _service_monitor_active_services = services
+    # Build absolute path to the monitor script and invoke it with the current Python interpreter. Using
+    # sys.executable avoids relying on executable bits being set on the script file.
+    script_path = str(OPENPILOT_ROOT_PATH / "tools" / "debug" / "monitor_service.py")
+    command = [sys.executable, "-u", script_path] + services + ["-r", "0.25", "-d", "0"]  # -u for unbuffered output so SSE is timely
+
+    print(f"[MONITOR_START] Attempting to run command: {' '.join(command)} from CWD: {OPENPILOT_ROOT_PATH}")
+
+    try:
+        _service_monitor_process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=OPENPILOT_ROOT_PATH # Explicitly set CWD to openpilot root
+        )
+        print(f"[MONITOR_START] Subprocess started with PID: {_service_monitor_process.pid}")
+        # Give a brief moment for the process to start or fail early
+        await asyncio.sleep(0.1)
+        if _service_monitor_process.returncode is not None: # Process exited immediately
+            stderr_output = b""
+            if _service_monitor_process.stderr:
+                 stderr_output = await _service_monitor_process.stderr.read()
+            _service_monitor_process = None # Clear the process
+            _service_monitor_active_services = []
+            error_detail = f"Failed to start monitoring script. Exit code: {_service_monitor_process.returncode}. Stderr: {stderr_output.decode('utf-8', errors='ignore')}"
+            print(f"[MONITOR_START_FAIL] {error_detail}")
+            raise HTTPException(status_code=500, detail=error_detail)
+
+    except FileNotFoundError:
+        _service_monitor_process = None
+        _service_monitor_active_services = []
+        error_detail = f"Error: The monitoring script '{script_path}' was not found. CWD: {OPENPILOT_ROOT_PATH}"
+        print(f"[MONITOR_START_FAIL] {error_detail}")
+        raise HTTPException(status_code=500, detail=error_detail)
+    except Exception as e:
+        _service_monitor_process = None
+        _service_monitor_active_services = []
+        error_detail = f"An unexpected error occurred while trying to start the monitoring script: {str(e)}"
+        print(f"[MONITOR_START_FAIL] {error_detail}")
+        raise HTTPException(status_code=500, detail=error_detail)
+
+    return {"message": f"Started monitoring services: {', '.join(services)}"}
+
+@app.get("/stream/service-monitoring")
+async def stream_service_monitoring_sse() -> StreamingResponse:
+    global _service_monitor_process, _service_monitor_active_services
+
+    async def event_generator():
+        if not _service_monitor_process or not _service_monitor_process.stdout:
+            yield f"event: error\ndata: {json.dumps({'message': 'Monitoring process not started or stdout not available.'})}\n\n"
+            print("[MONITOR_STREAM_ERROR] Process not started for SSE.")
+            return
+
+        print("[MONITOR_STREAM] SSE Stream started.")
+        try:
+            while True:
+                if _service_monitor_process.stdout:
+                    try:
+                        line_bytes = await asyncio.wait_for(_service_monitor_process.stdout.readline(), timeout=1.0)
+                    except asyncio.TimeoutError:
+                        # Timeout reading line, check if process is still alive
+                        if _service_monitor_process.returncode is not None:
+                            print("[MONITOR_STREAM] Process ended (timeout on readline).")
+                            break
+                        yield ": keepalive\\n\\n" # Send keepalive if process is running but no output
+                        continue
+
+                    if not line_bytes: # EOF
+                        if _service_monitor_process.returncode is not None:
+                            print("[MONITOR_STREAM] Process ended (EOF on readline).")
+                            break
+                        await asyncio.sleep(0.1)
+                        continue
+
+                    line = line_bytes.decode('utf-8', errors='ignore').strip()
+                    if not line:
+                        continue
+
+                    parsed_data = {}
+                    service_entries = line.split('\t')
+                    for entry in service_entries:
+                        parts = entry.strip().split('|')
+                        if len(parts) == 4:
+                            service_name = parts[0].strip()
+                            try:
+                                freq_str = parts[1].strip().replace(" Hz", "")
+                                freq = float(freq_str) if freq_str != "-.-" else -1.0 # Handle placeholder for no data
+                                valid = "valid=True" in parts[2]
+                                alive = "alive=True" in parts[3]
+                                parsed_data[service_name] = {"freq": freq, "valid": valid, "alive": alive, "raw": entry.strip()}
+                            except ValueError:
+                                print(f"[MONITOR_STREAM_PARSE_ERROR] Value error parsing for {service_name} from '{parts[1].strip()}' in '{entry}'")
+                                parsed_data[service_name] = {"error": "parse_value_error", "raw": entry.strip()}
+                            except IndexError:
+                                print(f"[MONITOR_STREAM_PARSE_ERROR] Index error parsing '{entry}'")
+                                # Attempt to find service name if possible
+                                for s_name_active in _service_monitor_active_services:
+                                    if s_name_active in entry:
+                                        parsed_data[s_name_active] = {"error": "parse_index_error", "raw": entry.strip()}
+                                        break
+                        elif entry: # Non-empty entry that doesn't match format
+                             # Try to associate with an active service if possible
+                            found_service_for_malformed = False
+                            for s_name_active in _service_monitor_active_services:
+                                if s_name_active in entry:
+                                     parsed_data[s_name_active] = {"status": "malformed", "raw": entry.strip()}
+                                     found_service_for_malformed = True
+                                     break
+                            if not found_service_for_malformed:
+                                if "unknown_entries" not in parsed_data: parsed_data["unknown_entries"] = []
+                                parsed_data["unknown_entries"].append(entry.strip())
+
+
+                    if parsed_data: # Only yield if we have something to send
+                        yield f"data: {json.dumps(parsed_data)}\n\n"
+
+                if _service_monitor_process.returncode is not None: # Process ended
+                    print(f"[MONITOR_STREAM] Monitoring process ended with code: {_service_monitor_process.returncode}")
+                    break
+                # await asyncio.sleep(0.01) # Removed to rely on readline timeout or data availability
+
+            # Check for stderr after process loop
+            if _service_monitor_process and _service_monitor_process.stderr:
+                stderr_bytes = await _service_monitor_process.stderr.read()
+                stderr_output = stderr_bytes.decode('utf-8', errors='ignore').strip()
+                if stderr_output:
+                    print(f"[MONITOR_STREAM_STDERR] {stderr_output}")
+                    yield f"event: error\ndata: {json.dumps({'message': 'Monitoring process stderr', 'detail': stderr_output})}\n\n"
+
+            yield f"event: close\ndata: {json.dumps({'message': 'Monitoring stream ended.'})}\n\n"
+
+        except asyncio.CancelledError:
+            print("[MONITOR_STREAM] SSE Stream cancelled by client.")
+            # Important: If client disconnects, try to stop the backend script
+            await stop_service_monitoring_endpoint_route() # Call the stop function
+        except Exception as e:
+            import traceback
+            tb_str = traceback.format_exc()
+            print(f"[MONITOR_STREAM_ERROR] General error in service monitoring stream: {e}\n{tb_str}")
+            yield f"event: error\ndata: {json.dumps({'message': 'Stream error', 'detail': str(e)})}\n\n"
+        finally:
+            print("[MONITOR_STREAM] SSE Stream generator finished.")
+            # If the process is still running when the stream naturally ends (e.g. client didn't explicitly stop via button but closed tab)
+            # we should also stop it. This is somewhat redundant with CancelledError handling but safer.
+            if _service_monitor_process and _service_monitor_process.returncode is None:
+                print("[MONITOR_STREAM] Stream ended, ensuring process is stopped.")
+                await stop_service_monitoring_endpoint_route()
+
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.post("/api/stop-service-monitoring")
+async def stop_service_monitoring_endpoint_route(): # Renamed to avoid conflict with internal call
+    global _service_monitor_process, _service_monitor_active_services
+    if _service_monitor_process and _service_monitor_process.returncode is None:
+        try:
+            print(f"[MONITOR_STOP] Attempting to terminate PID: {_service_monitor_process.pid}")
+            _service_monitor_process.terminate()
+            # Wait for a short period for the process to terminate.
+            # A more robust solution might involve SIGKILL after a timeout if terminate isn't effective.
+            await asyncio.wait_for(_service_monitor_process.wait(), timeout=5.0)
+            print(f"[MONITOR_STOP] Terminated service monitoring process PID: {_service_monitor_process.pid}. Exit code: {_service_monitor_process.returncode}")
+        except asyncio.TimeoutError:
+            print(f"[MONITOR_STOP_WARN] Timeout waiting for process {_service_monitor_process.pid} to terminate. Sending SIGKILL.")
+            _service_monitor_process.kill()
+            await _service_monitor_process.wait()
+            print(f"[MONITOR_STOP] Killed service monitoring process PID: {_service_monitor_process.pid}. Exit code: {_service_monitor_process.returncode}")
+        except ProcessLookupError:
+            print(f"[MONITOR_STOP] Process {_service_monitor_process.pid if _service_monitor_process else 'Unknown'} already terminated (ProcessLookupError).")
+        except Exception as e:
+            print(f"[MONITOR_STOP_ERROR] Error terminating process: {e}")
+        finally: # Ensure globals are reset
+            _service_monitor_process = None
+            _service_monitor_active_services = []
+        return {"message": "Service monitoring stopped."}
+
+    # Reset globals even if process was already stopped or not found
+    _service_monitor_process = None
+    _service_monitor_active_services = []
+    return {"message": "No active service monitoring process to stop or already stopped."}
 
 @app.get("/mapd_logs_stream")
 async def mapd_logs_sse_stream() -> StreamingResponse:
@@ -496,6 +703,61 @@ async def get_crash_log(filename: str) -> PlainTextResponse:
             return PlainTextResponse(f.read())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading log file: {str(e)}")
+
+# Helper function to parse service names from log.capnp
+def parse_capnp_services() -> Dict[str, List[str]]:
+    capnp_services = []
+    custom_services = []
+    print(f"[SERVICE_PARSER_DEBUG] Attempting to parse: {LOG_CAPNP_PATH}")
+    try:
+        with open(LOG_CAPNP_PATH, "r") as f:
+            content = f.read()
+        print(f"[SERVICE_PARSER_DEBUG] Read {LOG_CAPNP_PATH}, content length: {len(content)}")
+
+        # Regex to find the Event struct, allowing for an optional @id
+        event_struct_regex = r"struct Event(?:\s*@[\w\d]+)?\s*{([\s\S]*?)}"
+        event_struct_match = re.search(event_struct_regex, content, re.DOTALL)
+
+        if event_struct_match:
+            print("[SERVICE_PARSER_DEBUG] Found Event struct match.")
+            event_struct_content = event_struct_match.group(1)
+            print(f"[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):\n{event_struct_content[:1000]}")
+
+            # Directly find service definitions within the whole Event struct content
+            service_matches = re.finditer(r"\s*(\w+)\s*@\d+\s*:\s*([\w.]+)\s*;", event_struct_content)
+            services_found_count = 0
+            for match in service_matches:
+                services_found_count += 1
+                service_name = match.group(1)
+                data_type = match.group(2)
+                print(f"[SERVICE_PARSER_DEBUG] Raw match: Name='{service_name}', Type='{data_type}'")
+
+                if "DEPRECATED" in service_name.upper() or service_name.endswith("DEPRECATED"):
+                    print(f"[SERVICE_PARSER_DEBUG] Skipping deprecated: {service_name}")
+                    continue
+                if service_name in ["sendcan", "can", "logMessage", "errorLogMessage"]:
+                    print(f"[SERVICE_PARSER_DEBUG] Skipping internal/common: {service_name}")
+                    continue
+
+                if data_type.startswith("Custom."):
+                    print(f"[SERVICE_PARSER_DEBUG] Adding to custom_services: {service_name}")
+                    custom_services.append(service_name)
+                elif not data_type.startswith("Legacy."):
+                    print(f"[SERVICE_PARSER_DEBUG] Adding to capnp_services: {service_name}")
+                    capnp_services.append(service_name)
+                else:
+                    print(f"[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: {service_name} (Type: {data_type})")
+            print(f"[SERVICE_PARSER_DEBUG] Total raw service matches found: {services_found_count}")
+        else:
+            print("[SERVICE_PARSER] Could not find Event struct in log.capnp")
+
+    except FileNotFoundError:
+        print(f"[SERVICE_PARSER] Error: {LOG_CAPNP_PATH} not found.")
+    except Exception as e:
+        print(f"[SERVICE_PARSER] Error parsing log.capnp: {e}")
+
+    print(f"[SERVICE_PARSER_DEBUG] Returning: capnp_services={len(capnp_services)}, custom_services={len(custom_services)}")
+    return {"capnp_services": sorted(list(set(capnp_services))), "custom_services": sorted(list(set(custom_services)))}
 
 def main():
     # This function is called by manager.py

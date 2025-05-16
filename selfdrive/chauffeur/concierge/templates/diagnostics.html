@@ -285,6 +285,353 @@
     z-index: 1000; /* ensure it is on top of xterm layers */
     /* background: rgba(255,0,0,0.05);  uncomment to visualize handle */
   }
+
+  /* Service Monitor Specific Styles */
+  #service-monitor-control-display {
+    /* This is a .diagnostic-content-section, padding handled by base */
+    align-items: center; /* Center the initial button and subsequent structures */
+  }
+
+  .service-monitor-root-button {
+    padding: 1rem 1.5rem;
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem; /* Space for the T-branches */
+  }
+  .service-monitor-root-button:hover {
+    background-color: var(--color-accent-2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+  }
+
+  .service-monitor-branches {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 1rem;
+    height: auto; /* Let it grow as needed */
+    overflow: visible; /* Allow pearl strings to be visible */
+    transition: height 0.5s ease-out, opacity 0.5s ease-out;
+    opacity: 0;
+    position: relative;
+  }
+  .service-monitor-branches.visible {
+    height: auto; /* Remove fixed height for debugging/visibility */
+    opacity: 1;
+  }
+  .service-monitor-branch-line-container {
+      position: absolute;
+      bottom: calc(50% - 1px); /* Vertically center the line part of T */
+      left: 0;
+      right: 0;
+      height: 2px;
+      display: flex;
+      justify-content: center;
+  }
+  .service-monitor-branch-line {
+    width: 0%; /* Animated width */
+    height: 2px;
+    background-color: var(--color-accent);
+    transition: width 0.5s ease-out 0.3s; /* Delay width animation */
+  }
+  .service-monitor-branches.visible .service-monitor-branch-line {
+      width: 40%; /* e.g. 40% of total width for the T bar */
+  }
+
+  .service-category-container {
+    display: flex;
+    flex-direction: column; /* Categories stack vertically for now, pearls go down */
+    align-items: center;
+    width: 50%; /* Each category takes half of the branch space */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease-out 0.6s, transform 0.4s ease-out 0.6s; /* Delay appearance */
+  }
+  .service-monitor-branches.visible .service-category-container {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .service-category-button {
+    padding: 0.75rem 1.25rem;
+    background-color: var(--color-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem; /* Space before pearls if directly under */
+    position: relative; /* For vertical connector line */
+    z-index: 1; /* Above the horizontal T-bar */
+  }
+  .service-category-button:hover {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent);
+  }
+  .service-category-button::before { /* Vertical line connecting to T-bar */
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 0px; /* Animated height */
+    background-color: var(--color-accent);
+    transition: height 0.3s ease-out 0.5s; /* Delay height animation */
+  }
+   .service-monitor-branches.visible .service-category-button::before {
+      height: 1rem; /* Height of the vertical connector */
+   }
+
+
+  .service-pearl-string-container {
+    margin-top: 0.5rem;
+    width: auto;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* max-height: 0; */ /* Initially hidden - Temporarily REMOVE for debugging visibility */
+    height: auto; /* Fallback if max-height was the issue */
+    overflow: hidden;
+    /* transition: max-height 0.8s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease-out; */ /* Temp REMOVE */
+    opacity: 0; /* Base state */
+  }
+  .service-pearl-string-container.visible {
+    /* max-height: 50vh; */ /* Temp REMOVE */
+    height: auto; /* Ensure it can take space */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    opacity: 1; /* Ensure visible */
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background-color: var(--color-2);
+  }
+
+  .service-pearl-tile {
+    background-color: var(--color-surface);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    position: relative;
+    opacity: 1; /* DEBUG: Force visible */
+    transform: translateY(0); /* DEBUG: Force visible */
+    /* animation: fadeInPearl 0.5s forwards; */ /* DEBUG: Temporarily disable animation */
+  }
+  /* Staggered animation for pearls - Keep these commented out for now */
+  /* .service-pearl-string-container.visible .service-pearl-tile:nth-child(1) { animation-delay: 0.1s; } */
+  /* .service-pearl-string-container.visible .service-pearl-tile:nth-child(2) { animation-delay: 0.18s; } */
+  /* ... etc. ... */
+
+  /* @keyframes fadeInPearl {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  } */ /* DEBUG: Temporarily disable keyframe */
+
+  .service-pearl-tile:not(:first-child)::before { /* Connector line above each pearl */
+    content: '';
+    position: absolute;
+    bottom: 100%; /* Start from top of this tile */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1.5px;
+    height: 0.5rem; /* Length of the connector line (margin-bottom of tile) */
+    background-color: var(--color-accent-2);
+    opacity: 0.7;
+  }
+
+  .service-pearl-tile.selected {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent-2);
+    box-shadow: 0 0 10px var(--color-accent);
+  }
+  .service-pearl-tile:hover:not(.selected) {
+    background-color: var(--color-3);
+    border-color: var(--color-accent);
+  }
+
+  .service-monitor-action-buttons {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+  .service-monitor-action-buttons button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn {
+    background-color: #28a745; /* Green */
+    color: white;
+    border: none;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn:hover {
+    background-color: #218838;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn:disabled {
+    background-color: var(--color-muted);
+    cursor: not-allowed;
+  }
+
+
+  /* Live Service Monitor Display */
+  #live-service-monitor-display {
+    /* .diagnostic-content-section handles base flex/padding */
+    gap: 1rem; /* Gap between control buttons and grid, or between items if stacked */
+  }
+  .live-monitor-controls {
+      display: flex;
+      justify-content: flex-end; /* Align stop button to the right */
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+  }
+  .live-monitor-controls .stop-monitoring-btn {
+    background-color: #dc3545; /* Red */
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+   .live-monitor-controls .stop-monitoring-btn:hover {
+    background-color: #c82333;
+   }
+
+
+  .live-monitors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    flex-grow: 1;
+    overflow-y: auto; /* Scroll if many cards */
+    scrollbar-gutter: stable;
+    min-height: 0; /* For flex scroll */
+  }
+
+  .live-monitor-card {
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  .live-monitor-card .service-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+  }
+  .live-monitor-card .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+  .live-monitor-card .metric-label {
+    color: var(--text-secondary);
+  }
+  .live-monitor-card .metric-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 60px; /* Ensure some space for values */
+    text-align: right;
+  }
+  .live-monitor-card .metric-value.status-true {
+    color: #28a745; /* Green */
+  }
+  .live-monitor-card .metric-value.status-false {
+    color: #dc3545; /* Red */
+  }
+  .live-monitor-card .metric-value.freq-no-data {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .live-monitor-card .raw-data-output {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background-color: var(--color-1);
+      padding: 0.3rem 0.5rem;
+      border-radius: 0.25rem;
+      margin-top: 0.5rem;
+      white-space: pre;
+      overflow-x: auto;
+  }
+   /* Subtle pulse for updating values */
+  .value-update-pulse {
+    animation: pulseColor 0.7s ease-out;
+  }
+  @keyframes pulseColor {
+    0% { color: var(--color-accent-2); transform: scale(1.05); }
+    70% { color: var(--color-accent-2); transform: scale(1.05); }
+    100% { color: var(--text-primary); transform: scale(1); } /* Or original status color */
+  }
+  .live-monitor-card .metric-value.status-true.value-update-pulse { animation-name: pulseGreen; }
+  .live-monitor-card .metric-value.status-false.value-update-pulse { animation-name: pulseRed; }
+
+  @keyframes pulseGreen {
+    0% { color: #52d670; transform: scale(1.05); } 70% { color: #52d670; transform: scale(1.05); } 100% { color: #28a745; transform: scale(1); }
+  }
+  @keyframes pulseRed {
+    0% { color: #ff5c6c; transform: scale(1.05); } 70% { color: #ff5c6c; transform: scale(1.05); } 100% { color: #dc3545; transform: scale(1); }
+  }
+
+
+  /* Styles for MapD Log Stream view (retained) */
+  #mapd-log-output-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  #mapd-log-output {
+    flex-grow: 1;
+    background-color: #000;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 0;
+  }
+
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -297,20 +644,20 @@
   <!-- Left column with diagnostic tiles (15%) -->
   <div class="w-full md:w-[15%] flex-shrink-0">
     <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="crash-logs-tile" data-content-id="crash-logs-display">
-      <div class="text-lg font-bold mb-1"> <!-- Adjusted text size -->
+      <div class="text-lg font-bold mb-1">
         <span class="text-accent">Crash Logs</span>
       </div>
     </div>
 
-    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test1-tile" data-content-id="test1-display">
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="service-monitor-tile" data-content-id="service-monitor-control-display">
       <div class="text-lg font-bold mb-1">
-        <span class="text-accent">Test 1</span>
+        <span class="text-accent">Monitor Services</span>
       </div>
     </div>
 
-    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="realtime-monitors-tile" data-content-id="realtime-monitors-display">
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="mapd-direct-log-tile" data-content-id="realtime-monitors-display">
       <div class="text-lg font-bold mb-1">
-        <span class="text-accent">Monitors</span>
+        <span class="text-accent">MapD Log</span>
       </div>
     </div>
 
@@ -330,54 +677,56 @@
   <!-- Right "action area" (85%) -->
   <div class="w-full md:w-[85%]" id="right-column-diagnostics">
     <div class="action-area p-0 rounded-lg shadow-lg" id="action-area-content">
-      <!-- Content will be dynamically injected here -->
       <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
-          <!-- CPU Equalizer will go into a wrapper inside here -->
           <div id="cpu-equalizer-display-wrapper" class="hidden">
-              <div id="cpu-equalizer-container">
-                  <!-- Bars will be generated by JS -->
-              </div>
+              <div id="cpu-equalizer-container"></div>
           </div>
-          <div id="empty-state-message">
-              Select an option from the left.
-          </div>
+          <div id="empty-state-message">Select an option from the left.</div>
       </div>
 
       <div id="crash-logs-display" class="hidden diagnostic-content-section">
-        <!-- Re-added debug output container for crash logs -->
         <div id="crash-logs-debug-output" class="debug-log-output"></div>
-
-        <!-- This will be populated with log file tiles and group headers -->
         <div id="log-list-container-tiles" class="log-list-container-tiles">
-          <p class="text-secondary p-4">Loading crash logs...</p> <!-- Initial message -->
+          <p class="text-secondary p-4">Loading crash logs...</p>
         </div>
       </div>
 
       <div id="log-viewer-display" class="hidden diagnostic-content-section">
         <button class="back-button" id="back-to-logs-list">← Back to Log List</button>
-        <h3 class="text-xl font-bold mb-2" id="log-viewer-filename"></h3> <!-- No padding on h3, parent .diagnostic-content-section handles it -->
-        <div class="log-content-viewer" id="log-viewer-content">
-          Loading log content...
+        <h3 class="text-xl font-bold mb-2" id="log-viewer-filename"></h3>
+        <div class="log-content-viewer" id="log-viewer-content">Loading log content...</div>
+      </div>
+
+      <!-- Service Monitor Control Display -->
+      <div id="service-monitor-control-display" class="hidden diagnostic-content-section">
+        <div id="service-monitor-debug-output" class="debug-log-output" style="max-height: 15vh;"></div>
+        <div id="service-monitor-ui-root" class="flex flex-col items-center w-full">
+            <!-- Root button, T-branches, and pearl strings will be dynamically added here by JS -->
+        </div>
+        <div class="service-monitor-action-buttons">
+            <button class="start-monitoring-btn hidden" id="start-selected-services-btn" disabled>Monitor Selected</button>
         </div>
       </div>
 
-      <div id="test1-display" class="hidden diagnostic-content-section">
-        <h3 class="text-xl font-bold mb-4">Test Section 1</h3>
-        <p class="text-secondary">Content for Test 1 will appear here.</p>
+      <!-- Live Service Monitor Display -->
+      <div id="live-service-monitor-display" class="hidden diagnostic-content-section">
+        <div id="live-monitor-debug-output" class="debug-log-output" style="max-height:10vh;"></div>
+        <div class="live-monitor-controls">
+            <button class="stop-monitoring-btn" id="stop-live-monitoring-btn">Stop Monitoring</button>
+        </div>
+        <div id="live-monitors-grid" class="live-monitors-grid">
+            <!-- Live service cards will be injected here by JS -->
+        </div>
       </div>
 
-      <!-- MODIFIED: Removed p-0 to allow .diagnostic-content-section to apply its padding -->
       <div id="realtime-monitors-display" class="hidden diagnostic-content-section">
-        <!-- Content for monitor selection or specific monitor will go here -->
-        <!-- JS will populate this. If monitor grid is shown, it won't have its own extra padding. -->
-        <!-- If mapd log is shown, #mapd-log-output-container won't need its own padding. -->
+        <!-- Content for direct MapD Log via button -->
       </div>
 
       <div id="test3-display" class="hidden diagnostic-content-section">
         <h3 class="text-xl font-bold mb-4">Test Section 3</h3>
         <p class="text-secondary">Content for Test 3 will appear here.</p>
       </div>
-      <!-- MODIFIED: Added .p-0 class here because terminal content manages its own padding and needs full bleed bg -->
       <div id="test4-display" class="hidden diagnostic-content-section p-0">
         <div id="xterm-terminal-container" style="width: 100%; height: 100%;"></div>
         <div id="terminal-resize-handle"></div>
@@ -387,15 +736,34 @@
 </div>
 
 <script>
-  let currentEventSource = null; // To keep track of the active SSE connection
-  const ansi_up = new AnsiUp(); // Initialize AnsiUp
-  let xtermInstance = null; // To hold the Xterm.js instance
-  let fitAddon = null; // To hold the FitAddon instance
-  let currentCommand = ''; // Buffer for the current command line
-  let currentPrompt = 'device:/$ '; // Store current prompt
+  let currentEventSource = null; // For MapD logs primarily
+  let serviceMonitorEventSource = null; // For the new service monitor
+  const ansi_up = new AnsiUp();
+  let xtermInstance = null;
+  let fitAddon = null;
+  let currentCommand = '';
+  let currentPrompt = 'device:/$ ';
+  let currentUser = 'device'; // For xterm prompt
+  let currentHost = 'concierge'; // For xterm prompt
 
-  const RESIZE_HANDLE_HEIGHT = 10; // px, draggable area height at the bottom
-  const MIN_TERMINAL_HEIGHT = 150; // px, matches CSS min-height
+  const RESIZE_HANDLE_HEIGHT = 10;
+  const MIN_TERMINAL_HEIGHT = 150;
+
+  // --- Debug helpers ---
+  function getDebugOutput(id) { return document.getElementById(id); }
+  function appendDebug(areaId, message, isError = false) {
+    const area = getDebugOutput(areaId);
+    if (area) {
+      const ts = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.textContent = `[${ts}] ${message}`;
+      if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
+      area.appendChild(entry);
+      area.scrollTop = area.scrollHeight;
+    } else {
+      console.warn(`Debug area ${areaId} not found for message: ${message}`);
+    }
+  }
 
   function escapeHtml(unsafe) {
     return unsafe
@@ -410,103 +778,77 @@
     if (currentEventSource) {
       currentEventSource.close();
       currentEventSource = null;
-      console.log("Previous EventSource closed.");
+      console.log("MapD EventSource closed.");
+    }
+  }
+  function closeServiceMonitorEventSource() {
+    if (serviceMonitorEventSource) {
+      serviceMonitorEventSource.close();
+      serviceMonitorEventSource = null;
+      appendDebug('live-monitor-debug-output', "Service Monitor EventSource closed.");
     }
   }
 
-  function showMonitorSelectionGrid() {
+  function showOldMonitorSelectionGrid() {
     closeCurrentEventSource();
-    const actionContent = document.getElementById('action-area-content'); // Main content area
+    closeServiceMonitorEventSource();
     const monitorsDisplay = document.getElementById('realtime-monitors-display');
 
-    // Hide all other primary content sections
     document.querySelectorAll('.diagnostic-content-section').forEach(s => s.classList.add('hidden'));
-
-    // Show the container for monitors and clear it
     monitorsDisplay.classList.remove('hidden');
-    monitorsDisplay.innerHTML = ''; // Clear previous content (e.g., log viewer)
+    monitorsDisplay.innerHTML = '';
 
     const grid = document.createElement('div');
     grid.className = 'monitor-grid';
 
-    const monitorButtons = [
-      { id: 'mapd-log-btn', text: 'MapD Log Stream' },
-      { id: 'monitor-a-btn', text: 'Monitor A (Placeholder)' },
-      { id: 'monitor-b-btn', text: 'Monitor B (Placeholder)' },
-      { id: 'monitor-c-btn', text: 'Monitor C (Placeholder)' }
-    ];
+    const mapdButton = document.createElement('div');
+    mapdButton.className = 'monitor-button';
+    mapdButton.id = 'mapd-log-btn';
+    mapdButton.textContent = 'MapD Log Stream';
+    grid.appendChild(mapdButton);
+    mapdButton.addEventListener('click', showMapdLog);
 
-    monitorButtons.forEach(btnInfo => {
-      const button = document.createElement('div');
-      button.className = 'monitor-button';
-      button.id = btnInfo.id;
-      button.textContent = btnInfo.text;
-      grid.appendChild(button);
-
-      if (btnInfo.id === 'mapd-log-btn') {
-        button.addEventListener('click', showMapdLog);
-      } else {
-        // Placeholder action for other monitors
-        button.addEventListener('click', () => {
-          closeCurrentEventSource();
-          monitorsDisplay.innerHTML = `
-            <button class="back-button" onclick="showMonitorSelectionGrid()">← Back to Monitors</button>
-            <div class="p-6">
-              <h3 class="text-xl font-bold mb-4">${btnInfo.text}</h3>
-              <p class="text-secondary">Content for ${btnInfo.text} will appear here.</p>
-            </div>
-          `;
-        });
-      }
-    });
     monitorsDisplay.appendChild(grid);
   }
 
   function showMapdLog() {
     closeCurrentEventSource();
     const monitorsDisplay = document.getElementById('realtime-monitors-display');
-    monitorsDisplay.innerHTML = ''; // Clear grid
+    monitorsDisplay.innerHTML = '';
 
     const container = document.createElement('div');
     container.id = 'mapd-log-output-container';
-    // Apply styles for flex layout, height 100%.
-    // Padding is now handled by parent #realtime-monitors-display (.diagnostic-content-section)
     container.style.height = '100%';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
-    // container.style.padding = '1rem'; // REMOVED - Parent provides padding
-    container.style.boxSizing = 'border-box'; // Keep for safety, though less critical without own padding
+    container.style.boxSizing = 'border-box';
 
     const backButton = document.createElement('button');
     backButton.className = 'back-button';
-    backButton.textContent = '← Back to Monitors';
-    backButton.onclick = showMonitorSelectionGrid;
+    backButton.textContent = '← Back to Diagnostics Tiles';
+    backButton.onclick = () => showContentSection('empty-state-content', null);
     container.appendChild(backButton);
 
-    // New debug div for MapD logs
     const mapdDebugDiv = document.createElement('div');
-    mapdDebugDiv.id = 'mapd-log-debug-output';
-    mapdDebugDiv.className = 'debug-log-output'; // Using existing style
-    mapdDebugDiv.style.margin = '0.5rem 0'; // Adjust margin for this context
+    mapdDebugDiv.id = 'mapd-log-debug-sub-output';
+    mapdDebugDiv.className = 'debug-log-output';
+    mapdDebugDiv.style.margin = '0.5rem 0';
     container.appendChild(mapdDebugDiv);
 
     const logOutputDiv = document.createElement('div');
     logOutputDiv.id = 'mapd-log-output';
-    // Initial message will now go to mapdDebugDiv
     container.appendChild(logOutputDiv);
-
     monitorsDisplay.appendChild(container);
 
-    // Update debug div with initial message
     if (mapdDebugDiv) {
-        mapdDebugDiv.innerHTML = ''; // Clear previous
+        mapdDebugDiv.innerHTML = '';
         const ts = new Date().toLocaleTimeString();
         const connMsg = document.createElement('div');
         connMsg.textContent = `[${ts}] Connecting to MapD Log Stream...`;
         mapdDebugDiv.appendChild(connMsg);
         mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
     }
-    logOutputDiv.textContent = ''; // Main log area starts empty or with a non-status message
+    logOutputDiv.textContent = '';
 
     currentEventSource = new EventSource('/mapd_logs_stream');
     let firstMapdMessageReceived = false;
@@ -524,20 +866,20 @@
     currentEventSource.onmessage = function(event) {
       if (!firstMapdMessageReceived) {
         if (mapdDebugDiv) {
-            mapdDebugDiv.innerHTML = ''; // Clear "Connecting..." and "Opened..."
+            mapdDebugDiv.innerHTML = '';
             const ts = new Date().toLocaleTimeString();
             const connMsg = document.createElement('div');
             connMsg.textContent = `[${ts}] Connected. Receiving logs...`;
             mapdDebugDiv.appendChild(connMsg);
             mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
         }
-        logOutputDiv.innerHTML = ''; // Clear main area placeholder if any
+        logOutputDiv.innerHTML = '';
         firstMapdMessageReceived = true;
       }
       const newLogEntry = document.createElement('div');
       newLogEntry.textContent = event.data;
       logOutputDiv.appendChild(newLogEntry);
-      logOutputDiv.scrollTop = logOutputDiv.scrollHeight; // Auto-scroll to bottom
+      logOutputDiv.scrollTop = logOutputDiv.scrollHeight;
     };
 
     currentEventSource.onerror = function(event) {
@@ -545,73 +887,402 @@
       if (mapdDebugDiv) {
           const ts = new Date().toLocaleTimeString();
           const errorMsgDiv = document.createElement('div');
-          errorMsgDiv.style.color = 'var(--color-error-text, #ff6b6b)'; // A reddish color
-          errorMsgDiv.textContent = `[${ts}] Error connecting to MapD Log Stream. Check browser console.`;
+          errorMsgDiv.style.color = 'var(--color-error-text, #ff6b6b)';
+          errorMsgDiv.textContent = `[${ts}] Error connecting to MapD Log Stream.`;
           mapdDebugDiv.appendChild(errorMsgDiv);
           mapdDebugDiv.scrollTop = mapdDebugDiv.scrollHeight;
       }
-      // Display a clearer error in the main log area if it's empty
       if (logOutputDiv.textContent.trim() === '') {
-          logOutputDiv.innerHTML = '<p style="color: var(--color-error-text, #ff6b6b); padding: 1rem;">Failed to connect to the MapD log stream. Please check the debug messages above and the browser console for more details.</p>';
+          logOutputDiv.innerHTML = '<p style="color: var(--color-error-text, #ff6b6b); padding: 1rem;">Failed to connect to the MapD log stream.</p>';
       }
-      if (currentEventSource) { // Check if it's not already null due to multiple error events
+      if (currentEventSource) {
         currentEventSource.close();
-        currentEventSource = null; // Ensure it's marked as closed
+        currentEventSource = null;
       }
     };
   }
 
+  // --- NEW SERVICE MONITOR LOGIC ---
+  const selectedServices = new Set();
+  let serviceMonitorUIRoot = null; // Will be assigned in DOMContentLoaded
+  let startSelectedServicesBtn = null;
+  let stopLiveMonitoringBtn = null;
+  let liveMonitorsGrid = null;
+  let serviceMonitorDebugOutput = null;
+  let liveMonitorDebugOutput = null;
+
+  function initializeServiceMonitorElements() {
+    serviceMonitorUIRoot = document.getElementById('service-monitor-ui-root');
+    startSelectedServicesBtn = document.getElementById('start-selected-services-btn');
+    stopLiveMonitoringBtn = document.getElementById('stop-live-monitoring-btn');
+    liveMonitorsGrid = document.getElementById('live-monitors-grid');
+    serviceMonitorDebugOutput = document.getElementById('service-monitor-debug-output');
+    liveMonitorDebugOutput = document.getElementById('live-monitor-debug-output');
+
+    if(startSelectedServicesBtn) startSelectedServicesBtn.addEventListener('click', startMonitoringSelectedServices);
+    if(stopLiveMonitoringBtn) stopLiveMonitoringBtn.addEventListener('click', stopLiveMonitoring);
+  }
+
+  function showServiceMonitorControl() {
+    if (!serviceMonitorUIRoot) initializeServiceMonitorElements();
+    appendDebug('service-monitor-debug-output', "Initializing Service Monitor UI.");
+    closeCurrentEventSource();
+    closeServiceMonitorEventSource();
+
+    serviceMonitorUIRoot.innerHTML = '';
+    selectedServices.clear();
+    updateStartButtonState();
+
+    const rootButton = document.createElement('button');
+    rootButton.className = 'service-monitor-root-button';
+    rootButton.textContent = 'Load Available Services';
+    serviceMonitorUIRoot.appendChild(rootButton);
+
+    const branchesContainer = document.createElement('div');
+    branchesContainer.className = 'service-monitor-branches';
+    serviceMonitorUIRoot.appendChild(branchesContainer);
+
+    const branchLineContainer = document.createElement('div');
+    branchLineContainer.className = 'service-monitor-branch-line-container';
+    const branchLine = document.createElement('div');
+    branchLine.className = 'service-monitor-branch-line';
+    branchLineContainer.appendChild(branchLine);
+    branchesContainer.appendChild(branchLineContainer);
+
+    rootButton.onclick = async () => {
+        appendDebug('service-monitor-debug-output', "Root button clicked. Fetching services...");
+        rootButton.disabled = true;
+        rootButton.textContent = 'Loading...';
+        try {
+            const response = await fetch('/api/monitorable-services');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Failed to fetch services: ${response.status} ${errText}`);
+            }
+            const servicesData = await response.json();
+            appendDebug('service-monitor-debug-output', `Services fetched: ${servicesData.capnp_services.length} standard, ${servicesData.custom_services.length} custom.`);
+
+            rootButton.classList.add('hidden');
+
+            const standardContainer = createServiceCategory(servicesData.capnp_services, 'Standard Services (log.capnp)', 'standard');
+            const customContainer = createServiceCategory(servicesData.custom_services, 'Custom Services (custom.capnp)', 'custom');
+
+            branchesContainer.appendChild(standardContainer);
+            branchesContainer.appendChild(customContainer);
+
+            setTimeout(() => {
+                 branchesContainer.classList.add('visible');
+            }, 50);
+
+        } catch (error) {
+            appendDebug('service-monitor-debug-output', `Error fetching services: ${error.message}`, true);
+            rootButton.disabled = false;
+            rootButton.textContent = 'Retry Load Services';
+        }
+    };
+  }
+
+  function createServiceCategory(services, categoryName, categoryKey) {
+    const categoryContainer = document.createElement('div');
+    categoryContainer.className = 'service-category-container';
+
+    const categoryButton = document.createElement('button');
+    categoryButton.className = 'service-category-button';
+    categoryButton.textContent = categoryName;
+    categoryContainer.appendChild(categoryButton);
+
+    const pearlStringContainer = document.createElement('div');
+    pearlStringContainer.className = 'service-pearl-string-container';
+    pearlStringContainer.id = `pearl-string-${categoryKey}`;
+    categoryContainer.appendChild(pearlStringContainer);
+
+    categoryButton.onclick = () => {
+        const pearlStringId = pearlStringContainer.id;
+        appendDebug('service-monitor-debug-output', `Category '${categoryName}' clicked. Pearl container ID: ${pearlStringId}`);
+
+        const isCurrentlyVisible = pearlStringContainer.classList.contains('visible');
+        appendDebug('service-monitor-debug-output', `Pearl string '${pearlStringId}' isCurrentlyVisible: ${isCurrentlyVisible}`);
+
+        // Hide any other open pearl strings
+        document.querySelectorAll('.service-pearl-string-container.visible').forEach(psc => {
+            if (psc.id !== pearlStringId) {
+                psc.classList.remove('visible');
+                appendDebug('service-monitor-debug-output', `Hid other pearl string: ${psc.id}`);
+            }
+        });
+
+        // Determine if we are about to show it
+        const showThisPearlString = !isCurrentlyVisible;
+
+        // Always clear and repopulate if we are about to show it and it's empty, or just toggle if already populated
+        if (showThisPearlString) {
+            appendDebug('service-monitor-debug-output', `Preparing to show pearl string '${pearlStringId}'. Services count: ${services.length}`);
+            pearlStringContainer.innerHTML = ''; // Clear previous content before populating
+
+            if (services.length > 0) {
+                services.forEach((service, index) => {
+                    const pearlTile = document.createElement('div');
+                    pearlTile.className = 'service-pearl-tile';
+                    pearlTile.textContent = service;
+                    pearlTile.dataset.serviceName = service;
+
+                    if (selectedServices.has(service)) {
+                        pearlTile.classList.add('selected');
+                    }
+
+                    pearlTile.onclick = () => {
+                        pearlTile.classList.toggle('selected');
+                        if (pearlTile.classList.contains('selected')) {
+                            selectedServices.add(service);
+                        } else {
+                            selectedServices.delete(service);
+                        }
+                        updateStartButtonState();
+                    };
+                    pearlStringContainer.appendChild(pearlTile);
+                });
+                appendDebug('service-monitor-debug-output', `Populated '${pearlStringId}' with ${services.length} pearl tiles.`);
+            } else {
+                pearlStringContainer.innerHTML = `<p class="text-secondary p-2 text-sm italic">No services found in this category.</p>`;
+                appendDebug('service-monitor-debug-output', `No services for '${pearlStringId}', added 'no services' message.`);
+            }
+        } else {
+             appendDebug('service-monitor-debug-output', `Preparing to hide pearl string '${pearlStringId}'.`);
+        }
+
+        // Now toggle visibility
+        pearlStringContainer.classList.toggle('visible', showThisPearlString);
+        appendDebug('service-monitor-debug-output', `Pearl string '${pearlStringId}' classList after toggle: ${pearlStringContainer.classList}`);
+    };
+    return categoryContainer;
+  }
+
+  function updateStartButtonState() {
+    if (!startSelectedServicesBtn) return;
+    if (selectedServices.size > 0) {
+        startSelectedServicesBtn.disabled = false;
+        startSelectedServicesBtn.classList.remove('hidden');
+    } else {
+        startSelectedServicesBtn.disabled = true;
+        startSelectedServicesBtn.classList.add('hidden');
+    }
+  }
+
+  async function startMonitoringSelectedServices() {
+    if (selectedServices.size === 0) {
+        appendDebug('service-monitor-debug-output', "No services selected to monitor.", true);
+        return;
+    }
+    appendDebug('live-monitor-debug-output', `Starting monitoring for: ${Array.from(selectedServices).join(', ')}`);
+    startSelectedServicesBtn.disabled = true;
+    startSelectedServicesBtn.textContent = 'Starting...';
+
+    try {
+        const response = await fetch('/api/start-service-monitoring', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ services: Array.from(selectedServices) })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || "Failed to start monitoring from API.");
+        }
+        appendDebug('live-monitor-debug-output', "Monitoring started via API. Switching to live view.");
+
+        showContentSection('live-service-monitor-display', document.getElementById('service-monitor-tile'));
+        liveMonitorsGrid.innerHTML = '';
+
+        selectedServices.forEach(serviceName => {
+            const card = createLiveMonitorCard(serviceName);
+            liveMonitorsGrid.appendChild(card);
+        });
+        connectToServiceMonitorStream();
+    } catch (error) {
+        appendDebug('live-monitor-debug-output', `Error starting monitoring: ${error.message}`, true);
+        appendDebug('service-monitor-debug-output', `Error starting monitoring: ${error.message}`, true);
+    } finally {
+        startSelectedServicesBtn.disabled = false;
+        startSelectedServicesBtn.textContent = 'Monitor Selected';
+    }
+  }
+
+  function createLiveMonitorCard(serviceName) {
+    const card = document.createElement('div');
+    card.className = 'live-monitor-card';
+    card.id = `monitor-card-${serviceName.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    card.innerHTML = `
+        <div class="service-name">${escapeHtml(serviceName)}</div>
+        <div class="metric">
+            <span class="metric-label">Frequency:</span>
+            <span class="metric-value freq-value freq-no-data" id="freq-${serviceName}">-- Hz</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Valid:</span>
+            <span class="metric-value valid-value status-false" id="valid-${serviceName}">No</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Alive:</span>
+            <span class="metric-value alive-value status-false" id="alive-${serviceName}">No</span>
+        </div>
+        <div class="raw-data-output hidden" id="raw-${serviceName}"></div>
+    `;
+    return card;
+  }
+
+  function updateLiveMonitorCard(serviceName, data) {
+    const cardIdBase = serviceName.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const freqEl = document.getElementById(`freq-${cardIdBase}`);
+    const validEl = document.getElementById(`valid-${cardIdBase}`);
+    const aliveEl = document.getElementById(`alive-${cardIdBase}`);
+    const rawEl = document.getElementById(`raw-${cardIdBase}`);
+
+    if (!freqEl || !validEl || !aliveEl) { // Card might have been removed if monitor stopped
+        // appendDebug('live-monitor-debug-output', `Card elements for ${serviceName} not found. Update skipped.`);
+        return;
+    }
+
+    if (data.error) {
+        freqEl.textContent = "Error";
+        validEl.textContent = "Error"; validEl.className = 'metric-value valid-value status-false';
+        aliveEl.textContent = "Error"; aliveEl.className = 'metric-value alive-value status-false';
+        if (rawEl) { rawEl.textContent = `Error: ${data.error} | Raw: ${data.raw || 'N/A'}`; rawEl.classList.remove('hidden');}
+        return;
+    }
+    if (data.status === 'malformed') {
+        freqEl.textContent = "Malformed";
+        validEl.textContent = "N/A"; validEl.className = 'metric-value valid-value status-false';
+        aliveEl.textContent = "N/A"; aliveEl.className = 'metric-value alive-value status-false';
+        if (rawEl) { rawEl.textContent = `Malformed data received: ${data.raw || 'N/A'}`; rawEl.classList.remove('hidden'); }
+        return;
+    }
+
+    const oldFreqText = freqEl.textContent;
+    const newFreqText = data.freq === -1.0 ? "-- Hz" : `${data.freq.toFixed(1)} Hz`;
+    freqEl.textContent = newFreqText;
+    freqEl.className = data.freq === -1.0 ? 'metric-value freq-value freq-no-data' : 'metric-value freq-value';
+    if (oldFreqText !== newFreqText && data.freq !== -1.0) {
+        freqEl.classList.add('value-update-pulse');
+        setTimeout(() => freqEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    const oldValidText = validEl.textContent;
+    const newValidText = data.valid ? "Yes" : "No";
+    validEl.textContent = newValidText;
+    validEl.className = data.valid ? 'metric-value valid-value status-true' : 'metric-value valid-value status-false';
+      if (oldValidText !== newValidText) {
+        validEl.classList.add('value-update-pulse');
+        setTimeout(() => validEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    const oldAliveText = aliveEl.textContent;
+    const newAliveText = data.alive ? "Yes" : "No";
+    aliveEl.textContent = newAliveText;
+    aliveEl.className = data.alive ? 'metric-value alive-value status-true' : 'metric-value alive-value status-false';
+    if (oldAliveText !== newAliveText) {
+        aliveEl.classList.add('value-update-pulse');
+        setTimeout(() => aliveEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    // if (rawEl && data.raw) { rawEl.textContent = data.raw; /* rawEl.classList.remove('hidden'); */ }
+  }
+
+  function connectToServiceMonitorStream() {
+    closeServiceMonitorEventSource();
+    appendDebug('live-monitor-debug-output', "Connecting to service monitor SSE stream...");
+    serviceMonitorEventSource = new EventSource('/stream/service-monitoring');
+
+    serviceMonitorEventSource.onopen = () => {
+        appendDebug('live-monitor-debug-output', "Service monitor SSE connection opened.");
+    };
+
+    serviceMonitorEventSource.onmessage = (event) => {
+        try {
+            const parsedEventData = JSON.parse(event.data);
+            for (const serviceNameKey in parsedEventData) {
+                if (serviceNameKey === "unknown_entries") {
+                    appendDebug('live-monitor-debug-output', `Unknown entries from monitor: ${parsedEventData.unknown_entries.join(', ')}`, true);
+                    continue;
+                }
+                updateLiveMonitorCard(serviceNameKey, parsedEventData[serviceNameKey]);
+            }
+        } catch (e) {
+            appendDebug('live-monitor-debug-output', `Error parsing SSE data: ${e.message}. Data: ${event.data.substring(0,200)}`, true);
+        }
+    };
+
+    serviceMonitorEventSource.addEventListener('error', (event) => {
+        let errorDetail = 'Unknown SSE error. Check console.';
+        if (event.data) { try { errorDetail = JSON.parse(event.data).message || event.data; } catch { errorDetail = event.data; }}
+        appendDebug('live-monitor-debug-output', `Service monitor SSE error: ${errorDetail}`, true);
+        if (serviceMonitorEventSource && serviceMonitorEventSource.readyState === EventSource.CLOSED) {
+            appendDebug('live-monitor-debug-output', "SSE connection permanently closed.", true);
+        }
+    });
+
+    serviceMonitorEventSource.addEventListener('close', (event) => {
+        appendDebug('live-monitor-debug-output', "SSE stream 'close' event received. Monitoring ended.");
+        closeServiceMonitorEventSource();
+    });
+  }
+
+  async function stopLiveMonitoring() {
+    appendDebug('live-monitor-debug-output', "Stop button clicked. Attempting to stop monitoring.");
+    closeServiceMonitorEventSource();
+
+    try {
+        const response = await fetch('/api/stop-service-monitoring', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || "Failed to stop monitoring via API.");
+        }
+        appendDebug('live-monitor-debug-output', "Monitoring stopped via API.");
+    } catch (error) {
+        appendDebug('live-monitor-debug-output', `Error stopping monitoring: ${error.message}`, true);
+    } finally {
+        showContentSection('service-monitor-control-display', document.getElementById('service-monitor-tile'));
+        appendDebug('service-monitor-debug-output', "Live monitoring UI closed. Select 'Monitor Services' again.");
+    }
+  }
+
+  // --- Document Ready and Event Listeners ---
   document.addEventListener('DOMContentLoaded', function() {
     const navTiles = document.querySelectorAll('.tile');
-    const actionAreaContent = document.getElementById('action-area-content');
     const contentSections = document.querySelectorAll('.diagnostic-content-section');
-
-    // CPU Equalizer elements (ensure these are defined if used by original script)
-    const emptyStateParentDiv = document.getElementById('empty-state-content');
-    const cpuEqualizerDisplayWrapper = document.getElementById('cpu-equalizer-display-wrapper');
-    const emptyStateMessage = document.getElementById('empty-state-message');
-
     let activeNavTile = null;
 
+    initializeServiceMonitorElements(); // Get handles to service monitor buttons etc.
+
+    // Original visibleLength and formatLsOutputToColumns for terminal - keep if needed
     function visibleLength(str) {
-      // Remove ANSI escape sequences before measuring length
       const ansiRegex = /\x1B\[[0-9;]*m/g;
       return str.replace(ansiRegex, '').length;
     }
-
     function formatLsOutputToColumns(output, terminalCols) {
       const rawLines = output.split('\n');
       const items = rawLines.map(line => line.trim().replace(/^(\x08)+/, '')).filter(item => item !== '');
       if (items.length === 0) return '';
-
       const itemPadding = 2;
-
       const maxPossibleInitialNumColumns = Math.max(1, Math.min(items.length, Math.floor(terminalCols / (itemPadding + 1))));
-
       let bestConfig = {
         numCols: 1,
         columns: [items.slice()],
         colWidths: [Math.max(...items.map(visibleLength))]
       };
-
       for (let colsTry = maxPossibleInitialNumColumns; colsTry >= 2; colsTry--) {
         const columns = Array.from({ length: colsTry }, () => []);
         const colWidths = new Array(colsTry).fill(0);
-
         items.forEach((item, idx) => {
           const colIdx = idx % colsTry;
           columns[colIdx].push(item);
           const vlen = visibleLength(item);
           if (vlen > colWidths[colIdx]) colWidths[colIdx] = vlen;
         });
-
         const totalWidth = colWidths.reduce((a, b) => a + b, 0) + (colsTry - 1) * itemPadding;
         if (totalWidth <= terminalCols) {
           bestConfig = { numCols: colsTry, columns, colWidths };
           break;
         }
       }
-
       const { numCols, columns, colWidths } = bestConfig;
       const numRows = Math.max(...columns.map(col => col.length));
       let out = '';
@@ -628,9 +1299,79 @@
       return out;
     }
 
-    // Fetch current user and host for prompt
-    let currentUser = 'device';
-    let currentHost = 'concierge';
+    // Centralized function to show content sections
+    window.showContentSection = (sectionId, associatedTile) => { // Make it global for back buttons
+      if (sectionId !== 'live-service-monitor-display') {
+          closeServiceMonitorEventSource();
+      }
+      if (sectionId !== 'realtime-monitors-display') {
+          closeCurrentEventSource();
+      }
+
+      contentSections.forEach(section => {
+        section.classList.add('hidden');
+        if (section.id === 'test4-display') {
+            section.classList.remove('active-terminal-view');
+        }
+      });
+
+      const targetSection = document.getElementById(sectionId);
+      if (!targetSection) {
+          console.error("Target section not found: ", sectionId);
+          // Show empty state as fallback if target is missing
+          document.getElementById('empty-state-content').classList.remove('hidden');
+          if (activeNavTile) activeNavTile.classList.remove('active-tile');
+          activeNavTile = null;
+          return;
+      }
+
+      targetSection.classList.remove('hidden');
+
+      if (sectionId === 'realtime-monitors-display') {
+        showOldMonitorSelectionGrid();
+      } else if (sectionId === 'service-monitor-control-display') {
+        showServiceMonitorControl();
+      } else if (sectionId === 'crash-logs-display') {
+        fetchCrashLogs();
+      } else if (sectionId === 'test4-display') {
+        targetSection.classList.add('active-terminal-view');
+        initializeXterm().then(() => {
+            if (xtermInstance && fitAddon) {
+                setTimeout(() => {
+                    try { fitAddon.fit(); xtermInstance.focus(); }
+                    catch(e){ console.warn("Xterm fit/focus error on show: ", e);}
+                    makeTerminalResizable(document.getElementById('test4-display'), xtermInstance, fitAddon);
+                }, 50);
+            }
+        }).catch(console.error);
+      }
+      // live-service-monitor-display is usually shown programmatically by startMonitoringSelectedServices
+
+      if (activeNavTile) activeNavTile.classList.remove('active-tile');
+      if (associatedTile) {
+        associatedTile.classList.add('active-tile');
+        activeNavTile = associatedTile;
+      } else {
+        activeNavTile = null;
+      }
+    };
+
+    navTiles.forEach(tile => {
+      tile.addEventListener('click', function() {
+        const contentId = this.dataset.contentId;
+        showContentSection(contentId, this);
+      });
+    });
+
+    showContentSection('empty-state-content', null);
+
+    const backToLogsListBtn = document.getElementById('back-to-logs-list');
+    if (backToLogsListBtn) {
+        backToLogsListBtn.addEventListener('click', function() {
+            showContentSection('crash-logs-display', document.getElementById('crash-logs-tile'));
+        });
+    }
+
     async function setUserAndHost() {
       try {
         const userResp = await fetch('/api/execute-command', {
@@ -653,7 +1394,6 @@
       } catch (e) { console.warn('Could not fetch hostname', e); }
     }
 
-    // Modify initializeXterm to await user fetch
     async function initializeXterm() {
       if (!xtermInstance && document.getElementById('xterm-terminal-container')) {
         await setUserAndHost();
@@ -666,39 +1406,33 @@
         xtermInstance.loadAddon(fitAddon);
         xtermInstance.open(document.getElementById('xterm-terminal-container'));
         try { fitAddon.fit(); } catch {}
-        currentPrompt = `${currentUser}@${currentHost}:$ `;
-        xtermInstance.write('Welcome to the Concierge Device Terminal (Xterm.js)\r\n');
+        currentPrompt = `${currentUser}@${currentHost}:~$ `;
+        xtermInstance.write('Welcome to Concierge Device Terminal (Xterm.js)\r\n');
         xtermInstance.write(currentPrompt);
 
         xtermInstance.onData(async (data) => {
           const code = data.charCodeAt(0);
-          if (code === 13) { // Enter key
+          if (code === 13) {
             if (currentCommand.trim().length > 0) {
-              xtermInstance.write('\r\n'); // Echo newline
+              xtermInstance.write('\r\n');
               const cmdToExecute = currentCommand.trim();
               try {
                 const response = await fetch('/api/execute-command', {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ command: cmdToExecute })
                 });
                 const result = await response.json();
-
                 if (result.stdout) {
                   if (result.is_ls_command && xtermInstance) {
                     const formattedOutput = formatLsOutputToColumns(result.stdout, xtermInstance.cols);
                     xtermInstance.write(formattedOutput.replace(/\n/g, '\r\n'));
                   } else {
-                    xtermInstance.write(result.stdout.replace(/\n/g, '\r\n'));
+                    xtermInstance.write(ansi_up.ansi_to_html(result.stdout).replace(/<br\/>/g, '\r\n').replace(/<[^>]+>/g, ''));// basic strip tags
                   }
                 }
                 if (result.stderr) {
-                  // Write stderr in a different color if possible, or just write it.
-                  // For now, just write. Xterm can be configured with more colors.
-                  // Consider prefixing with an error indicator or using xterm's styling for errors.
-                  xtermInstance.write(`\x1b[31m${result.stderr.replace(/\n/g, '\r\n')}\x1b[0m`); // Red for stderr
+                  xtermInstance.write(`\x1b[31m${result.stderr.replace(/\n/g, '\r\n')}\x1b[0m`);
                 }
                 if (result.cwd) {
                   currentPrompt = `${currentUser}@${currentHost}:${result.cwd}$ `;
@@ -710,284 +1444,36 @@
             }
             currentCommand = '';
             xtermInstance.write('\r\n' + currentPrompt);
-          } else if (code === 127 || code === 8) { // Backspace (127 for DEL, 8 for BS)
+          } else if (code === 127 || code === 8) {
             if (currentCommand.length > 0) {
-              xtermInstance.write('\b \b'); // Move cursor back, erase char, move back again
+              xtermInstance.write('\b \b');
               currentCommand = currentCommand.slice(0, -1);
             }
-          } else if (code < 32) { // Ignore other control characters for now
+          } else if (code < 32) {
             return;
-          } else { // Printable character
+          } else {
             currentCommand += data;
             xtermInstance.write(data);
           }
         });
       }
+      // Refit on show if already initialized
       if (xtermInstance && fitAddon && document.getElementById('test4-display').classList.contains('active-terminal-view')) {
-        try { fitAddon.fit(); } catch {}
-      }
-    }
-
-    function showContentSection(sectionId, associatedTile) {
-      closeCurrentEventSource(); // Close any active SSE stream when switching main sections
-
-      // Hide all content sections first, then show the target one.
-      // This simplifies logic and prevents multiple sections from being visible if IDs overlap or logic is complex.
-      contentSections.forEach(section => {
-        section.classList.add('hidden');
-        if (section.id === 'test4-display') {
-            section.classList.remove('active-terminal-view');
-        }
-      });
-
-      const targetSection = document.getElementById(sectionId);
-
-      if (sectionId === 'realtime-monitors-display') {
-        if (targetSection) targetSection.classList.remove('hidden'); // Show the container
-        showMonitorSelectionGrid(); // Populate it
-      } else if (sectionId === 'crash-logs-display') {
-        if (targetSection) targetSection.classList.remove('hidden');
-        fetchCrashLogs(); // Fetch logs when this section is shown
-      } else if (sectionId === 'log-viewer-display') {
-        // This section is typically shown by displayLogContent, not directly by a nav tile.
-        // If a nav tile were to show it, it would need a filename.
-        // For now, clicking a nav tile for 'log-viewer-display' (if one existed) would show an empty viewer.
-        if (targetSection) targetSection.classList.remove('hidden');
-      } else if (targetSection) { // For other simple sections like test1, test3, empty-state
-        targetSection.classList.remove('hidden');
-        if (sectionId === 'test4-display') { // Terminal specific class
-            targetSection.classList.add('active-terminal-view');
-            initializeXterm().then(() => {
-                if (xtermInstance) {
-                    setTimeout(() => xtermInstance.focus(), 0);
-                }
-                const terminalDisplayElement = document.getElementById('test4-display');
-                if (terminalDisplayElement && xtermInstance && fitAddon) {
-                    setTimeout(() => {
-                        makeTerminalResizable(terminalDisplayElement, xtermInstance, fitAddon);
-                        try {
-                            if (fitAddon) fitAddon.fit();
-                        } catch(e) { console.warn("FitAddon failed after resizer attach:", e); }
-                    }, 50); // 50ms delay
-                }
-            }).catch(error => {
-                console.error("Error during Xterm initialization or resize setup:", error);
-            });
-        }
-      }
-
-      // Handle active tile styling
-      if (activeNavTile) {
-        activeNavTile.classList.remove('active-tile');
-      }
-      if (associatedTile) {
-        associatedTile.classList.add('active-tile');
-        activeNavTile = associatedTile;
-      } else {
-        activeNavTile = null; // No tile associated (e.g. if grid/log view is shown directly)
-      }
-
-      // CPU Equalizer specific logic (from original script, ensure it still makes sense)
-      if (cpuEqualizerDisplayWrapper && emptyStateMessage && emptyStateParentDiv) {
-          if (sectionId === 'empty-state-content' && cpuEqualizerDisplayWrapper.classList.contains('hidden')) {
-            // This was the condition to show equalizer. We might need to adjust if 'empty-state-content' is never directly shown.
-            // For now, let's assume the original script had a way to show the equalizer.
-            // If 'realtime-monitors-display' is active, cpu equalizer should probably be hidden.
-          } else if (sectionId !== 'empty-state-content' || sectionId === 'realtime-monitors-display') {
-             if (cpuEqualizerDisplayWrapper) cpuEqualizerDisplayWrapper.classList.add('hidden');
-             // if (typeof stopCpuLoadUpdates === 'function') stopCpuLoadUpdates(); // Assuming original script has this
-        }
-      }
-    }
-
-    navTiles.forEach(tile => {
-      tile.addEventListener('click', function() {
-        const contentId = this.dataset.contentId;
-        showContentSection(contentId, this);
-      });
-    });
-
-    // Initial state: No tile pre-selected, show empty-state-content.
-    showContentSection('empty-state-content', null);
-
-    // Back button for log viewer
-    const backToLogsListBtn = document.getElementById('back-to-logs-list');
-    if (backToLogsListBtn) {
-        backToLogsListBtn.addEventListener('click', function() {
-            // Hide log viewer, show crash logs list (which will trigger fetch)
-            const logViewerDisplay = document.getElementById('log-viewer-display');
-            if (logViewerDisplay) logViewerDisplay.classList.add('hidden');
-
-            // Show the crash logs section and trigger a fetch
-            // Ensure the correct tile is passed if its selection is desired
-            const crashLogsTile = document.getElementById('crash-logs-tile');
-            showContentSection('crash-logs-display', crashLogsTile);
-        });
-    }
-
-    // ***** START NEW/RESTORED CRASH LOGS FUNCTIONS *****
-    async function fetchCrashLogs() {
-      const logListContainer = document.getElementById('log-list-container-tiles');
-      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
-
-      function appendDebugMessage(message, isError = false, source = "FE") {
-          if (debugOutputContainer) {
-              const ts = new Date().toLocaleTimeString();
-              const entry = document.createElement('div');
-              entry.textContent = `[${ts}] [${source}] ${message}`;
-              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
-              debugOutputContainer.appendChild(entry);
-              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
-          }
-      }
-
-      if (logListContainer) logListContainer.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
-      if (debugOutputContainer) debugOutputContainer.innerHTML = ''; // Clear previous debug messages
-
-      appendDebugMessage("Attempting to fetch crash logs from /api/crash-logs...");
-
-      try {
-          const response = await fetch('/api/crash-logs');
-          appendDebugMessage(`Received response status: ${response.status}`);
-
-          if (!response.ok) {
-              const errorText = await response.text();
-              appendDebugMessage(`Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
-              if (logListContainer) logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">Failed to load crash logs. Check debug output.</p>';
-              return;
-          }
-
-          const data = await response.json();
-          appendDebugMessage("Successfully parsed JSON response.");
-
-          if (data.debug_messages && Array.isArray(data.debug_messages)) {
-              data.debug_messages.forEach(msg => appendDebugMessage(msg, false, "BE"));
-          }
-
-          if (logListContainer) {
-              if (data.files && data.files.length > 0) {
-                  const groupedLogs = new Map();
-                  data.files.forEach(logFile => { // data.files is already sorted newest first
-                      const dateObj = new Date(logFile.date.replace(' ', 'T') + 'Z'); // Parse as UTC
-                      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-                      const day = String(dateObj.getUTCDate()).padStart(2, '0');
-                      const year = dateObj.getUTCFullYear();
-                      const groupKey = `${month}/${day}/${year}`;
-
-                      if (!groupedLogs.has(groupKey)) {
-                          groupedLogs.set(groupKey, []);
-                      }
-                      groupedLogs.get(groupKey).push(logFile);
-                  });
-
-                  logListContainer.innerHTML = ''; // Clear "Loading..."
-
-                  if (groupedLogs.size > 0) {
-                      groupedLogs.forEach((filesInGroup, dateGroupKey) => {
-                          const groupHeader = document.createElement('div');
-                          groupHeader.className = 'crash-log-group-header';
-                          groupHeader.textContent = dateGroupKey;
-                          logListContainer.appendChild(groupHeader);
-
-                          filesInGroup.forEach(logFile => {
-                              const tile = document.createElement('div');
-                              tile.className = 'log-file-tile';
-                              tile.dataset.filename = logFile.name; // Keep original filename for fetching content
-                              tile.innerHTML = `
-                                  <div class="log-name">Crash Log</div>
-                                  <div class="log-details">
-                                      <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
-                                  </div>
-                              `;
-                              tile.addEventListener('click', () => displayLogContent(logFile.name));
-                              logListContainer.appendChild(tile);
-                          });
-                      });
-                      appendDebugMessage(`Displayed ${data.files.length} log files, grouped by date.`);
-                  } else {
-                      logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
-                      appendDebugMessage("No crash log files to display after grouping.");
-                  }
-              } else {
-                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
-                  appendDebugMessage("No crash log files returned from API.");
-              }
-          }
-      } catch (error) {
-          console.error('Error in fetchCrashLogs:', error);
-          appendDebugMessage(`CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
-          if (logListContainer) {
-              logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">An error occurred while loading crash logs. See debug output and console.</p>';
-          }
-      }
-    }
-
-    async function displayLogContent(filename) {
-      const logViewerFilename = document.getElementById('log-viewer-filename');
-      const logViewerContent = document.getElementById('log-viewer-content');
-      const crashLogsDisplay = document.getElementById('crash-logs-display');
-      const logViewerDisplay = document.getElementById('log-viewer-display');
-      const debugOutputContainer = document.getElementById('crash-logs-debug-output'); // Continue using same debug for simplicity
-
-      function appendDebugMessage(message, isError = false, source = "FE") { // Local helper
-          if (debugOutputContainer) {
-              const ts = new Date().toLocaleTimeString();
-              const entry = document.createElement('div');
-              entry.textContent = `[${ts}] [${source}] ${message}`;
-              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
-              debugOutputContainer.appendChild(entry);
-              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
-          }
-      }
-
-      appendDebugMessage(`Fetching content for log: ${filename}`);
-      if (logViewerFilename) logViewerFilename.textContent = filename;
-      if (logViewerContent) logViewerContent.innerHTML = '<p class="text-secondary p-4">Loading log content...</p>';
-
-      // Hide log list, show viewer
-      if (crashLogsDisplay) crashLogsDisplay.classList.add('hidden');
-      if (logViewerDisplay) logViewerDisplay.classList.remove('hidden');
-      // Consider setting active tile if needed, or manage section visibility more centrally
-
-      try {
-          const response = await fetch(`/api/crash-logs/${filename}`);
-          appendDebugMessage(`Content fetch status for ${filename}: ${response.status}`);
-          if (!response.ok) {
-              const errorText = await response.text();
-              appendDebugMessage(`Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
-              if (logViewerContent) logViewerContent.textContent = `Error loading log: ${response.statusText}`;
-              return;
-          }
-          const content = await response.text();
-          if (logViewerContent) logViewerContent.textContent = content; // Display as preformatted text
-          appendDebugMessage(`Successfully loaded content for ${filename}.`);
-      } catch (error) {
-          console.error('Error in displayLogContent:', error);
-          appendDebugMessage(`CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
-          if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
+        try { fitAddon.fit(); } catch(e){ console.warn("Refit error: ", e); }
       }
     }
 
     function makeTerminalResizable(terminalDisplayElement, xtermInstanceRef, fitAddonRef) {
       const handle = document.getElementById('terminal-resize-handle');
-      if (!terminalDisplayElement || !handle) {
-        console.error("makeTerminalResizable: terminalDisplayElement is null");
-        return;
-      }
-      console.log("Attaching resizer to handle:", handle);
-
+      if (!terminalDisplayElement || !handle) return;
       let isResizing = false;
       let lastDownY = 0;
       let initialHeight = 0;
-
-      handle.addEventListener('mousemove', function(e) { handle.style.cursor='ns-resize'; });
-
       handle.addEventListener('mousedown', function(e) {
         isResizing = true;
         lastDownY = e.clientY;
         initialHeight = terminalDisplayElement.clientHeight;
         e.preventDefault();
-
         function move(eMove){
           if(!isResizing) return;
           const delta = eMove.clientY - lastDownY;
@@ -1001,7 +1487,113 @@
         document.addEventListener('mouseup',up);
       });
     }
-    // ***** END NEW/RESTORED CRASH LOGS FUNCTIONS *****
+
+    async function fetchCrashLogs() {
+      const logListContainer = document.getElementById('log-list-container-tiles');
+      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
+      function appendCrashDebug(message, isError = false, source = "FE") {
+          if (debugOutputContainer) {
+              const ts = new Date().toLocaleTimeString();
+              const entry = document.createElement('div');
+              entry.textContent = `[${ts}] [${source}] ${message}`;
+              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
+              debugOutputContainer.appendChild(entry);
+              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
+          }
+      }
+      if (logListContainer) logListContainer.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
+      if (debugOutputContainer) debugOutputContainer.innerHTML = '';
+      appendCrashDebug("Attempting to fetch crash logs from /api/crash-logs...");
+      try {
+          const response = await fetch('/api/crash-logs');
+          appendCrashDebug(`Received response status: ${response.status}`);
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendCrashDebug(`Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
+              if (logListContainer) logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">Failed to load crash logs. Check debug output.</p>';
+              return;
+          }
+          const data = await response.json();
+          appendCrashDebug("Successfully parsed JSON response.");
+          if (data.files && data.files.length > 0) {
+              const groupedLogs = new Map();
+              data.files.forEach(logFile => {
+                  const dateObj = new Date(logFile.date.replace(' ', 'T') + 'Z');
+                  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                  const year = dateObj.getUTCFullYear();
+                  const groupKey = `${month}/${day}/${year}`;
+                  if (!groupedLogs.has(groupKey)) {
+                      groupedLogs.set(groupKey, []);
+                  }
+                  groupedLogs.get(groupKey).push(logFile);
+              });
+              logListContainer.innerHTML = '';
+              if (groupedLogs.size > 0) {
+                  groupedLogs.forEach((filesInGroup, dateGroupKey) => {
+                      const groupHeader = document.createElement('div');
+                      groupHeader.className = 'crash-log-group-header';
+                      groupHeader.textContent = dateGroupKey;
+                      logListContainer.appendChild(groupHeader);
+                      filesInGroup.forEach(logFile => {
+                          const tile = document.createElement('div');
+                          tile.className = 'log-file-tile';
+                          tile.dataset.filename = logFile.name;
+                          tile.innerHTML = `
+                              <div class="log-name">Crash Log</div>
+                              <div class="log-details">
+                                  <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
+                              </div>
+                          `;
+                          tile.addEventListener('click', () => displayLogContent(logFile.name));
+                          logListContainer.appendChild(tile);
+                      });
+                  });
+                  appendCrashDebug(`Displayed ${data.files.length} log files, grouped by date.`);
+              } else {
+                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
+                  appendCrashDebug("No crash log files to display after grouping.");
+              }
+          } else {
+              logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
+              appendCrashDebug("No crash log files returned from API.");
+          }
+      } catch (error) {
+          console.error('Error in fetchCrashLogs:', error);
+          appendCrashDebug(`CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
+          if (logListContainer) {
+              logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">An error occurred while loading crash logs.</p>';
+          }
+      }
+    }
+
+    async function displayLogContent(filename) {
+      const logViewerFilename = document.getElementById('log-viewer-filename');
+      const logViewerContent = document.getElementById('log-viewer-content');
+      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
+      function appendCrashDebug(message, isError = false, source = "FE") { /* ... same as above ... */}
+      appendCrashDebug(`Fetching content for log: ${filename}`);
+      if (logViewerFilename) logViewerFilename.textContent = filename;
+      if (logViewerContent) logViewerContent.innerHTML = '<p class="text-secondary p-4">Loading log content...</p>';
+      showContentSection('log-viewer-display', document.getElementById('crash-logs-tile'));// Show this section
+      try {
+          const response = await fetch(`/api/crash-logs/${filename}`);
+          appendCrashDebug(`Content fetch status for ${filename}: ${response.status}`);
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendCrashDebug(`Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
+              if (logViewerContent) logViewerContent.textContent = `Error loading log: ${response.statusText}`;
+              return;
+          }
+          const content = await response.text();
+          if (logViewerContent) logViewerContent.textContent = content;
+          appendCrashDebug(`Successfully loaded content for ${filename}.`);
+      } catch (error) {
+          console.error('Error in displayLogContent:', error);
+          appendCrashDebug(`CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
+          if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
+      }
+    }
   });
 </script>
 {% endblock %}

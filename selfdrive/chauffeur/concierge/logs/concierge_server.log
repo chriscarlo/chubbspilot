@@ -805,3 +805,2175 @@ INFO:     127.0.0.1:51962 - "GET /api/crash-logs HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51962 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51962 - "GET /static/css/tailwind.min.css HTTP/1.1" 304 Not Modified
 INFO:     127.0.0.1:49044 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56008 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56008 - "GET /static/js/htmx.min.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56008 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56008 - "GET /static/js/app.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50332 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50336 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50336 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50336 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50336 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36274 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36274 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47200 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47200 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [92662]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:49:23 ---
+
+--- Server process started at 2025-05-15 16:49:52 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [105596]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57646 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57646 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57646 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57646 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57646 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57646 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.
+INFO:     127.0.0.1:57650 - "GET /mapd_logs_stream HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] log_event_source started.
+[MAPD_STREAM_SETUP] Got ZMQ context: <class 'zmq.asyncio.Context'>
+[MAPD_STREAM_SETUP] Created ZMQ SUB socket: <class 'zmq.asyncio.Socket'>
+[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...
+[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...
+[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.
+[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...
+[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.
+[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...
+[MAPD_STREAM_FINALLY] Attempting to unregister poller.
+[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.
+[MAPD_STREAM_FINALLY] Closing ZMQ socket.
+[MAPD_STREAM_FINALLY] ZMQ socket closed.
+[MAPD_STREAM_FINALLY] Cleanup finished.
+[SERVICE_PARSER] Could not find Event struct in log.capnp
+INFO:     127.0.0.1:57658 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57674 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57674 - "POST /api/execute-command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57674 - "POST /api/execute-command HTTP/1.1" 200 OK
+[SERVICE_PARSER] Could not find Event struct in log.capnp
+INFO:     127.0.0.1:39620 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+[SERVICE_PARSER] Could not find Event struct in log.capnp
+INFO:     127.0.0.1:43090 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [105596]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:52:48 ---
+
+--- Server process started at 2025-05-15 16:52:50 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [105884]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41928 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41928 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41928 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41928 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41928 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41928 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+INFO:     127.0.0.1:41928 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41944 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41944 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41952 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41946 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41944 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41944 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+INFO:     127.0.0.1:41944 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+INFO:     127.0.0.1:50640 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50640 - "GET /api/crash-logs HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [105884]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:55:21 ---
+
+--- Server process started at 2025-05-15 16:55:24 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [106161]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42358 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42358 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42358 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42358 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42358 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42358 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=0, custom_services=0
+INFO:     127.0.0.1:42358 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [106161]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:56:51 ---
+
+--- Server process started at 2025-05-15 16:56:53 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [106416]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:32912 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32912 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32912 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32912 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:32912 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32912 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=0, custom_services=0
+INFO:     127.0.0.1:32912 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=0, custom_services=0
+INFO:     127.0.0.1:32924 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [106416]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:58:55 ---
+
+--- Server process started at 2025-05-15 16:58:58 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [106640]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [106640]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 16:59:52 ---
+
+--- Server process started at 2025-05-15 16:59:54 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [106797]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42566 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42566 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42566 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42566 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42566 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42566 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Union match failed on the following Event content snippet:
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=0, custom_services=0
+INFO:     127.0.0.1:42566 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [106797]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:01:47 ---
+
+--- Server process started at 2025-05-15 17:01:49 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [107104]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:37990 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37990 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37990 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37990 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:37990 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37990 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Union match failed on the following Event content snippet:
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER] Could not find union within Event struct in log.capnp
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=0, custom_services=0
+INFO:     127.0.0.1:37990 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [107104]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:05:19 ---
+
+--- Server process started at 2025-05-15 17:05:21 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [107344]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52160 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52160 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:52160 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [107344]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:07:51 ---
+
+--- Server process started at 2025-05-15 17:07:53 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [107544]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51290 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51290 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:51290 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [107544]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:09:28 ---
+
+--- Server process started at 2025-05-15 17:09:31 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [107713]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42504 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42504 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42504 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42504 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42504 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42504 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:42504 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [107713]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:11:00 ---
+
+--- Server process started at 2025-05-15 17:11:02 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [107890]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58678 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58678 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58678 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58678 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58678 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58678 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:58678 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+[MONITOR_START] Attempting to run command: ./tools/debug/monitor_service.py liveMapData -r 0.25 -d 0 from CWD: /openpilot
+[MONITOR_START_FAIL] An unexpected error occurred while trying to start the monitoring script: [Errno 13] Permission denied: './tools/debug/monitor_service.py'
+INFO:     127.0.0.1:58692 - "POST /api/start-service-monitoring HTTP/1.1" 500 Internal Server Error
+[MONITOR_START] Attempting to run command: ./tools/debug/monitor_service.py liveMapData accelerometer chauffeurHKGTuning -r 0.25 -d 0 from CWD: /openpilot
+[MONITOR_START_FAIL] An unexpected error occurred while trying to start the monitoring script: [Errno 13] Permission denied: './tools/debug/monitor_service.py'
+INFO:     127.0.0.1:34176 - "POST /api/start-service-monitoring HTTP/1.1" 500 Internal Server Error
+[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.
+INFO:     127.0.0.1:56362 - "GET /mapd_logs_stream HTTP/1.1" 200 OK
+[MAPD_STREAM_SETUP] log_event_source started.
+[MAPD_STREAM_SETUP] Got ZMQ context: <class 'zmq.asyncio.Context'>
+[MAPD_STREAM_SETUP] Created ZMQ SUB socket: <class 'zmq.asyncio.Socket'>
+[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...
+[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.
+[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...
+[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.
+[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...
+[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.
+[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...
+[MAPD_STREAM_FINALLY] Attempting to unregister poller.
+[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.
+[MAPD_STREAM_FINALLY] Closing ZMQ socket.
+[MAPD_STREAM_FINALLY] ZMQ socket closed.
+[MAPD_STREAM_FINALLY] Cleanup finished.
+INFO:     127.0.0.1:56376 - "GET /api/crash-logs HTTP/1.1" 200 OK
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:56376 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Concierge shutting down...
+Status poller cancelled.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [107890]
+[UVICORN_END] Uvicorn process for selfdrive.chauffeur.concierge.main:app has exited.
+[CONCIERGE_SHUTDOWN_LOG_FILE] Server process ended or uvicorn.run exited. Restoring streams.
+--- Server process ended or streams restored at 2025-05-15 17:18:30 ---
+
+--- Server process started at 2025-05-15 17:18:32 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [108451]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50890 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /static/css/tailwind.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /static/js/htmx.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50890 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /static/favicon.ico HTTP/1.1" 404 Not Found
+[SERVICE_PARSER_DEBUG] Attempting to parse: /openpilot/cereal/log.capnp
+[SERVICE_PARSER_DEBUG] Read /openpilot/cereal/log.capnp, content length: 61081
+[SERVICE_PARSER_DEBUG] Found Event struct match.
+[SERVICE_PARSER_DEBUG] Event struct content snippet (first 1000 chars):
+
+  logMonoTime @0 :UInt64;  # nanoseconds
+  valid @67 :Bool = true;
+
+  union {
+    # *********** log metadata ***********
+    initData @1 :InitData;
+    sentinel @73 :Sentinel;
+
+    # *********** bootlog ***********
+    boot @60 :Boot;
+
+    # ********** openpilot daemon msgs **********
+    gpsNMEA @3 :GPSNMEAData;
+    can @5 :List(CanData);
+    controlsState @7 :ControlsState;
+    gyroscope @99 :SensorEventData;
+    gyroscope2 @100 :SensorEventData;
+    accelerometer @98 :SensorEventData;
+    accelerometer2 @101 :SensorEventData;
+    magnetometer @95 :SensorEventData;
+    lightSensor @96 :SensorEventData;
+    temperatureSensor @97 :SensorEventData;
+    temperatureSensor2 @123 :SensorEventData;
+    pandaStates @81 :List(PandaState);
+    peripheralState @80 :PeripheralState;
+    radarState @13 :RadarState;
+    liveTracks @16 :List(LiveTracks);
+    sendcan @17 :List(CanData);
+    liveCalibration @19 :LiveCalibrationData;
+    carState @22 :Car.CarState;
+    carControl @23 :Car.CarControl;
+
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMonoTime', Type='UInt64'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: logMonoTime
+[SERVICE_PARSER_DEBUG] Raw match: Name='initData', Type='InitData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: initData
+[SERVICE_PARSER_DEBUG] Raw match: Name='sentinel', Type='Sentinel'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: sentinel
+[SERVICE_PARSER_DEBUG] Raw match: Name='boot', Type='Boot'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: boot
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsNMEA', Type='GPSNMEAData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsNMEA
+[SERVICE_PARSER_DEBUG] Raw match: Name='controlsState', Type='ControlsState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: controlsState
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope
+[SERVICE_PARSER_DEBUG] Raw match: Name='gyroscope2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gyroscope2
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='accelerometer2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: accelerometer2
+[SERVICE_PARSER_DEBUG] Raw match: Name='magnetometer', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: magnetometer
+[SERVICE_PARSER_DEBUG] Raw match: Name='lightSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: lightSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor
+[SERVICE_PARSER_DEBUG] Raw match: Name='temperatureSensor2', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: temperatureSensor2
+[SERVICE_PARSER_DEBUG] Raw match: Name='peripheralState', Type='PeripheralState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: peripheralState
+[SERVICE_PARSER_DEBUG] Raw match: Name='radarState', Type='RadarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: radarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveCalibration', Type='LiveCalibrationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveCalibration
+[SERVICE_PARSER_DEBUG] Raw match: Name='carState', Type='Car.CarState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carState
+[SERVICE_PARSER_DEBUG] Raw match: Name='carControl', Type='Car.CarControl'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='carOutput', Type='Car.CarOutput'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carOutput
+[SERVICE_PARSER_DEBUG] Raw match: Name='longitudinalPlan', Type='LongitudinalPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: longitudinalPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiPlan', Type='UiPlan'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxGnss', Type='UbloxGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='ubloxRaw', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: ubloxRaw
+[SERVICE_PARSER_DEBUG] Raw match: Name='qcomGnss', Type='QcomGnss'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qcomGnss
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocationExternal', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocationExternal
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsLocation', Type='GpsLocationData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gpsLocation
+[SERVICE_PARSER_DEBUG] Raw match: Name='gnssMeasurements', Type='GnssMeasurements'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: gnssMeasurements
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveParameters', Type='LiveParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveTorqueParameters', Type='LiveTorqueParametersData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveTorqueParameters
+[SERVICE_PARSER_DEBUG] Raw match: Name='cameraOdometry', Type='CameraOdometry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: cameraOdometry
+[SERVICE_PARSER_DEBUG] Raw match: Name='thumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: thumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='carParams', Type='Car.CarParams'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: carParams
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverMonitoringState', Type='DriverMonitoringState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverMonitoringState
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalman', Type='LiveLocationKalman'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveLocationKalman
+[SERVICE_PARSER_DEBUG] Raw match: Name='modelV2', Type='ModelDataV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: modelV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='drivingModelData', Type='DrivingModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: drivingModelData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateV2', Type='DriverStateV2'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverStateV2
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadCameraState', Type='FrameData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadCameraState
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeIdx', Type='EncodeIndex'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeIdx
+[SERVICE_PARSER_DEBUG] Raw match: Name='microphone', Type='Microphone'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: microphone
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidLog', Type='AndroidLogEntry'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: androidLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='managerState', Type='ManagerState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: managerState
+[SERVICE_PARSER_DEBUG] Raw match: Name='uploaderState', Type='UploaderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uploaderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='procLog', Type='ProcLog'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: procLog
+[SERVICE_PARSER_DEBUG] Raw match: Name='clocks', Type='Clocks'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: clocks
+[SERVICE_PARSER_DEBUG] Raw match: Name='deviceState', Type='DeviceState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: deviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='logMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: logMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='errorLogMessage', Type='Text'
+[SERVICE_PARSER_DEBUG] Skipping internal/common: errorLogMessage
+[SERVICE_PARSER_DEBUG] Raw match: Name='navInstruction', Type='NavInstruction'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navInstruction
+[SERVICE_PARSER_DEBUG] Raw match: Name='navRoute', Type='NavRoute'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navRoute
+[SERVICE_PARSER_DEBUG] Raw match: Name='navThumbnail', Type='Thumbnail'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navThumbnail
+[SERVICE_PARSER_DEBUG] Raw match: Name='mapRenderState', Type='MapRenderState'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: mapRenderState
+[SERVICE_PARSER_DEBUG] Raw match: Name='userFlag', Type='UserFlag'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: userFlag
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiDebug', Type='UIDebug'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: uiDebug
+[SERVICE_PARSER_DEBUG] Raw match: Name='testJoystick', Type='Joystick'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: testJoystick
+[SERVICE_PARSER_DEBUG] Raw match: Name='roadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: roadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: driverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='wideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: wideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='qRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: qRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamWideRoadEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamWideRoadEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='livestreamDriverEncodeData', Type='EncodeData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: livestreamDriverEncodeData
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData0', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData0
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData1', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData1
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReservedRawData2', Type='Data'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: customReservedRawData2
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarControl', Type='Custom.FrogPilotCarControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotCarState', Type='Custom.FrogPilotCarState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotCarState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotDeviceState', Type='Custom.FrogPilotDeviceState'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotDeviceState
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotNavigation', Type='Custom.FrogPilotNavigation'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotNavigation
+[SERVICE_PARSER_DEBUG] Raw match: Name='frogpilotPlan', Type='Custom.FrogPilotPlan'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: frogpilotPlan
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurHKGTuning', Type='Custom.ChauffeurHKGTuning'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurHKGTuning
+[SERVICE_PARSER_DEBUG] Raw match: Name='chauffeurTurnSpeedControl', Type='Custom.ChauffeurTurnSpeedControl'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: chauffeurTurnSpeedControl
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved7', Type='Custom.CustomReserved7'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved7
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved8', Type='Custom.CustomReserved8'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved8
+[SERVICE_PARSER_DEBUG] Raw match: Name='customReserved9', Type='Custom.CustomReserved9'
+[SERVICE_PARSER_DEBUG] Adding to custom_services: customReserved9
+[SERVICE_PARSER_DEBUG] Raw match: Name='model', Type='Legacy.ModelData'
+[SERVICE_PARSER_DEBUG] Skipping legacy non-custom: model (Type: Legacy.ModelData)
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMpcDEPRECATED', Type='LiveMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLongitudinalMpcDEPRECATED', Type='LiveLongitudinalMpcData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLongitudinalMpcDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationKalmanDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationKalmanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbslamCorrectionDEPRECATED', Type='Legacy.OrbslamCorrection'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbslamCorrectionDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveUIDEPRECATED', Type='Legacy.LiveUI'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveUIDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='sensorEventDEPRECATED', Type='SensorEventData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: sensorEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiNavigationEventDEPRECATED', Type='Legacy.UiNavigationEvent'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiNavigationEventDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveMapData', Type='LiveMapData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: liveMapData
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPointsDEPRECATED', Type='Legacy.GPSPlannerPoints'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPointsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='gpsPlannerPlanDEPRECATED', Type='Legacy.GPSPlannerPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: gpsPlannerPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixRawDEPRECATED', Type='Data'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixRawDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='androidGnssDEPRECATED', Type='Legacy.AndroidGnss'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: androidGnssDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lidarPtsDEPRECATED', Type='Legacy.LidarPts'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lidarPtsDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navStatusDEPRECATED', Type='Legacy.NavStatus'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navStatusDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationTimingDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationTimingDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='liveLocationCorrectedDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: liveLocationCorrectedDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navUpdateDEPRECATED', Type='Legacy.NavUpdate'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: navUpdateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='locationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: locationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbOdometryDEPRECATED', Type='Legacy.OrbOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesDEPRECATED', Type='Legacy.OrbFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='applanixLocationDEPRECATED', Type='Legacy.LiveLocationData'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: applanixLocationDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbKeyFrameDEPRECATED', Type='Legacy.OrbKeyFrame'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbKeyFrameDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='orbFeaturesSummaryDEPRECATED', Type='Legacy.OrbFeaturesSummary'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: orbFeaturesSummaryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='featuresDEPRECATED', Type='Legacy.CalibrationFeatures'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: featuresDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='kalmanOdometryDEPRECATED', Type='Legacy.KalmanOdometry'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: kalmanOdometryDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='uiLayoutStateDEPRECATED', Type='Legacy.UiLayoutState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: uiLayoutStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='pandaStateDEPRECATED', Type='PandaState'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: pandaStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='driverStateDEPRECATED', Type='DriverStateDEPRECATED'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: driverStateDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='lateralPlanDEPRECATED', Type='LateralPlan'
+[SERVICE_PARSER_DEBUG] Skipping deprecated: lateralPlanDEPRECATED
+[SERVICE_PARSER_DEBUG] Raw match: Name='navModel', Type='NavModelData'
+[SERVICE_PARSER_DEBUG] Adding to capnp_services: navModel
+[SERVICE_PARSER_DEBUG] Total raw service matches found: 116
+[SERVICE_PARSER_DEBUG] Returning: capnp_services=74, custom_services=10
+INFO:     127.0.0.1:50890 - "GET /api/monitorable-services HTTP/1.1" 200 OK
+[MONITOR_START] Attempting to run command: /openpilot/.venv/bin/python3 -u /openpilot/tools/debug/monitor_service.py livestreamWideRoadEncodeData -r 0.25 -d 0 from CWD: /openpilot
+[MONITOR_START] Subprocess started with PID: 108492
+INFO:     127.0.0.1:50902 - "POST /api/start-service-monitoring HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50902 - "GET /stream/service-monitoring HTTP/1.1" 200 OK
+[MONITOR_STREAM] SSE Stream started.
+[MONITOR_STOP] Attempting to terminate PID: 108492
+[MONITOR_STREAM] SSE Stream cancelled by client.
+[MONITOR_STOP] Attempting to terminate PID: 108492
+[MONITOR_STREAM] SSE Stream generator finished.
+[MONITOR_STOP_ERROR] Error terminating process: 'NoneType' object has no attribute 'pid'
+INFO:     127.0.0.1:50920 - "POST /api/stop-service-monitoring HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50920 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50920 - "GET /diagnostics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50920 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
