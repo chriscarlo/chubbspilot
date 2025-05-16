@@ -692,6 +692,9 @@
     justify-content: center;
     white-space: nowrap;
     transition: all 0.2s ease-in-out;
+    /* Ensure no margin is accidentally carried over */
+    margin: 0;
+    box-sizing: border-box;
   }
 
   /* Button hover states */
@@ -704,9 +707,22 @@
 
   /* Active/selected state - UPDATED to match Terminal button active state */
   .terminal-actions button.active-tool,
-  #tmux-live-toggle-btn.active-tool {
+  #tmux-live-toggle-btn.active-tool,
+  #tmux-live-close-btn.active-tool {
     border: 2px solid var(--color-accent);
     box-shadow: 0 0 10px var(--color-accent);
+    /* Adjust padding to maintain size when border increases */
+    padding: calc(0.25rem - 1px) calc(0.75rem - 1px);
+  }
+
+  /* Special padding adjustment for the close button */
+  #tmux-live-close-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+  }
+
+  #tmux-live-close-btn.active-tool {
+    padding: calc(0.25rem - 1px) calc(0.5rem - 1px);
   }
 
   /* Preserve specific text colors for the button spans */
