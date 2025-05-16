@@ -119,7 +119,7 @@ class CarInterface(CarInterfaceBase):
 
     # Add HKG longitudinal support
     if Params().get_bool("HKGtuning"):
-      HKGLongitudinalController(ret).apply_tune(ret)
+      HKGLongitudinalController.apply_tune_static(ret)
 
     # *** feature detection ***
     if candidate in CANFD_CAR:

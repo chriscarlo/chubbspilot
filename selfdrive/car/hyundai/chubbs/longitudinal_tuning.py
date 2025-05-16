@@ -576,13 +576,11 @@ class HKGLongitudinalController:
 
     def apply_tune(self, CP: car.CarParams):
         if self.hkg_tuning_enabled and self.tuning is not None:
+            # Use the tuning logic which includes publisher (runtime path)
             self.tuning.apply_tune(CP)
         else:
-            CP.vEgoStopping = 0.5
-            CP.vEgoStarting = 0.1
-            CP.startingState = True
-            CP.startAccel = 1.0
-            CP.longitudinalActuatorDelay = 0.5
+            # Fallback/static tuning without creating a publisher (e.g., controlsd)
+            self.apply_tune_static(CP)
 
     def get_jerk(self) -> JerkOutput:
         if self.tuning is not None:
@@ -635,3 +633,35 @@ class HKGLongitudinalController:
             return float(
                 np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, max_accel_upper_limit)
             )
+
+    # --- NEW STATIC HELPER -------------------------------------------------
+    @staticmethod
+    def apply_tune_static(CP: car.CarParams):
+        """Apply longitudinal tuning to CarParams without instantiating the
+        HKGLongitudinalTuning class (and therefore without opening a
+        PubMaster). Intended for initialization paths such as CarInterface
+        where we only need to mutate CP."""
+
+        try:
+            from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_config import CarTuning
+            config = CarTuning.get_car_config(CP)
+
+            CP.vEgoStopping = config.vego_stopping
+            CP.vEgoStarting = config.vego_starting
+            CP.stoppingDecelRate = config.stopping_decel_rate
+            CP.startAccel = config.start_accel
+            CP.startingState = True
+            CP.longitudinalActuatorDelay = 0.5
+        except Exception as e:
+            # Fallback safe defaults
+            CP.vEgoStopping = 0.5
+            CP.vEgoStarting = 0.1
+            CP.startingState = True
+            CP.startAccel = 1.0
+            CP.longitudinalActuatorDelay = 0.5
+            # Log if possible, but swallow any secondary errors to avoid init crash
+            try:
+                from openpilot.common.swaglog import cloudlog
+                cloudlog.warning(f"HKGLongitudinalController.apply_tune_static fallback due to: {e}")
+            except Exception:
+                pass
