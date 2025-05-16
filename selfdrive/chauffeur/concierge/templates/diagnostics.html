@@ -750,26 +750,26 @@
       <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
         <div id="xterm-terminal-container" style="width: 100%; flex-grow: 1;"></div>
         <div id="terminal-resize-handle"></div>
-        <div class="terminal-actions bg-2 p-3 flex flex-wrap justify-center items-center gap-3 border-t border-border">
-          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
-            <label for="tmux-session-name" class="text-sm font-semibold text-primary mr-2">Session:</label>
-            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-accent-2 rounded px-2 py-1 text-sm w-24 focus:ring-2 focus:ring-accent focus:outline-none">
+        <div class="terminal-actions bg-2 p-3 flex flex-wrap justify-center items-center gap-6 border-t border-border">
+          <div class="flex items-center">
+            <label for="tmux-session-name" class="text-sm text-secondary mr-2">Session:</label>
+            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 py-1 text-sm w-24 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
-            <label for="tmux-lines" class="text-sm font-semibold text-primary mr-2">Lines:</label>
-            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-accent-2 rounded px-2 py-1 text-sm w-16 focus:ring-2 focus:ring-accent focus:outline-none">
+          <div class="flex items-center">
+            <label for="tmux-lines" class="text-sm text-secondary mr-2">Lines:</label>
+            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 py-1 text-sm w-16 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
+          <div class="flex items-center">
             <label class="flex items-center cursor-pointer">
-              <input type="checkbox" id="tmux-scrollback" checked class="mr-2 h-4 w-4 accent-accent rounded">
-              <span class="text-sm font-semibold text-primary">Scrollback</span>
+              <input type="checkbox" id="tmux-scrollback" checked class="mr-2 h-4 w-4">
+              <span class="text-sm text-secondary">Scrollback</span>
             </label>
           </div>
-          <button id="capture-tmux-btn" class="bg-accent hover:bg-accent-2 text-white py-2 px-4 rounded-md text-sm font-medium shadow-sm transition-colors duration-150">
-            Capture Tmux
+          <button id="capture-tmux-btn" class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg text-lg font-bold">
+            <span class="text-accent">Capture Tmux</span>
           </button>
-          <button id="show-live-tmux-btn" class="bg-3 hover:bg-accent hover:text-white text-accent py-2 px-4 rounded-md text-sm font-medium shadow-sm border border-accent transition-colors duration-150">
-            Show Live View
+          <button id="show-live-tmux-btn" class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg text-lg font-bold">
+            <span class="text-accent">Show Live View</span>
           </button>
         </div>
       </div>
@@ -779,15 +779,15 @@
     <div id="tmux-live-container" class="hidden mt-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
       <div class="flex justify-between items-center p-2 bg-1 border-b border-border">
         <div class="flex items-center">
-          <span class="text-accent font-bold">Live Tmux:</span>
-          <span id="tmux-live-session-name" class="ml-2 font-semibold text-primary">comma</span>
+          <span class="text-accent font-bold">Live Tmux: </span>
+          <span id="tmux-live-session-name" class="font-semibold text-primary">comma</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="tmux-live-toggle-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-sm font-medium transition-colors duration-150">
-            Start Live View
+        <div class="flex items-center gap-4">
+          <button id="tmux-live-toggle-btn" class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg px-2 py-1">
+            <span class="text-accent text-sm font-bold">Start Live View</span>
           </button>
-          <button id="tmux-live-close-btn" class="text-white bg-error hover:bg-opacity-80 py-1 px-2 rounded text-sm font-bold transition-colors duration-150">
-            <span>×</span>
+          <button id="tmux-live-close-btn" class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg px-2 py-1">
+            <span class="text-error text-sm font-bold">×</span>
           </button>
         </div>
       </div>
@@ -1376,14 +1376,24 @@
 
       const result = await response.json();
 
-      if (result.stdout) {
+            if (result.stdout) {
+        // Get the session name for line prefixes
+        const sessionNameEl = document.getElementById('tmux-live-session-name');
+        const sessionName = sessionNameEl ? sessionNameEl.textContent.trim() : 'tmux';
+        const shortSessionName = sessionName.length > 8 ? sessionName.substring(0, 8) : sessionName;
+
         // Ensure line breaks are preserved and convert ANSI color codes
-        const formattedOutput = ansi_up.ansi_to_html(result.stdout)
+        let formattedOutput = ansi_up.ansi_to_html(result.stdout)
           // Replace terminal control characters that might affect formatting
-          .replace(/\r/g, '')
-          // Ensure each line is properly wrapped in its own line
-          .split('\n')
-          .join('<br>');
+          .replace(/\r/g, '');
+
+        // Add line prefixes and wrap each line
+        const lines = formattedOutput.split('\n');
+        formattedOutput = lines.map((line, index) => {
+          // Add a line prefix (like a prompt) to each line
+          const prefix = `<span class="text-blue-500">${shortSessionName}$</span> `;
+          return prefix + line;
+        }).join('<br>');
 
         contentElement.innerHTML = formattedOutput;
         // Auto-scroll to bottom
