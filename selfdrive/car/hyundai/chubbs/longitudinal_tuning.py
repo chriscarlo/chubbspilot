@@ -46,11 +46,15 @@ class _HKGTuningPublisher:
     def chauffeurHKGTuning(self, msg):
         if self._pub_master is None:
             print("ERROR: _HKGTuningPublisher's pub_master is None. Cannot publish.")
-            # Optionally, try to re-initialize here if it makes sense for your error handling strategy
-            # For now, just preventing a crash.
             return
         # The message (msg) should already be prepared and validated by the caller
-        self._pub_master.send('chauffeurHKGTuning', msg)
+        try:
+            self._pub_master.send('chauffeurHKGTuning', msg)
+        except Exception as e:
+            # Gracefully degrade instead of crashing the whole process. Most
+            # common causes here are IPC bind issues (duplicate publisher) or
+            # ZMQ context termination during shutdown.
+            print(f"WARN: _HKGTuningPublisher failed to send message: {e}")
 # -----------------------------------------------------------------------------
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
