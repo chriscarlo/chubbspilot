@@ -6,6 +6,24 @@
 
 {% block extra_head %}
 <style>
+  /* Custom scrollbar styles */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #111;
+    border-radius: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 6px;
+    border: 2px solid #111;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
+
   /* Ensure .hidden class works reliably */
   .hidden {
     display: none !important;
@@ -677,26 +695,7 @@
   </div>
 
   <!-- Right "action area" (85%) -->
-  <div class="w-full md:w-[85%]" id="right-column-diagnostics">
-    <!-- Tmux live view container -->
-    <div id="tmux-live-container" class="hidden mb-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
-      <div class="flex justify-between items-center p-2 bg-1 border-b border-border">
-        <div class="flex items-center">
-          <span class="text-accent font-semibold">Live Tmux: </span>
-          <span id="tmux-live-session-name" class="ml-1 text-sm">comma</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="tmux-live-toggle-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-xs">
-            Start Live View
-          </button>
-          <button id="tmux-live-close-btn" class="text-white bg-error hover:bg-opacity-80 py-1 px-2 rounded text-xs">
-            <span>×</span>
-          </button>
-        </div>
-      </div>
-      <div id="tmux-live-content" class="font-mono text-sm p-2 whitespace-pre bg-black text-green-400 h-64 overflow-auto" style="font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;"></div>
-    </div>
-
+    <div class="w-full md:w-[85%]" id="right-column-diagnostics">
     <div class="action-area p-0 rounded-lg shadow-lg" id="action-area-content">
       <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
           <div id="cpu-equalizer-display-wrapper" class="hidden">
@@ -751,29 +750,48 @@
       <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
         <div id="xterm-terminal-container" style="width: 100%; flex-grow: 1;"></div>
         <div id="terminal-resize-handle"></div>
-        <div class="terminal-actions bg-2 p-2 flex flex-wrap justify-center items-center gap-2 border-t border-border">
-          <div class="flex items-center">
-            <label for="tmux-session-name" class="text-xs text-secondary mr-1">Session:</label>
-            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 py-1 text-sm w-24">
+        <div class="terminal-actions bg-2 p-3 flex flex-wrap justify-center items-center gap-3 border-t border-border">
+          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
+            <label for="tmux-session-name" class="text-sm font-semibold text-primary mr-2">Session:</label>
+            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-accent-2 rounded px-2 py-1 text-sm w-24 focus:ring-2 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center">
-            <label for="tmux-lines" class="text-xs text-secondary mr-1">Lines:</label>
-            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 py-1 text-sm w-16">
+          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
+            <label for="tmux-lines" class="text-sm font-semibold text-primary mr-2">Lines:</label>
+            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-accent-2 rounded px-2 py-1 text-sm w-16 focus:ring-2 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center">
-            <label class="flex items-center">
-              <input type="checkbox" id="tmux-scrollback" checked class="mr-1">
-              <span class="text-xs text-secondary">Scrollback</span>
+          <div class="flex items-center bg-1 px-3 py-2 rounded-md shadow-sm">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" id="tmux-scrollback" checked class="mr-2 h-4 w-4 accent-accent rounded">
+              <span class="text-sm font-semibold text-primary">Scrollback</span>
             </label>
           </div>
-          <button id="capture-tmux-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-sm">
-            Capture tmux
+          <button id="capture-tmux-btn" class="bg-accent hover:bg-accent-2 text-white py-2 px-4 rounded-md text-sm font-medium shadow-sm transition-colors duration-150">
+            Capture Tmux
           </button>
-          <button id="show-live-tmux-btn" class="bg-3 hover:bg-accent hover:text-white text-secondary py-1 px-3 rounded text-sm border border-border">
+          <button id="show-live-tmux-btn" class="bg-3 hover:bg-accent hover:text-white text-accent py-2 px-4 rounded-md text-sm font-medium shadow-sm border border-accent transition-colors duration-150">
             Show Live View
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Tmux live view container (placed below action area) -->
+    <div id="tmux-live-container" class="hidden mt-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
+      <div class="flex justify-between items-center p-2 bg-1 border-b border-border">
+        <div class="flex items-center">
+          <span class="text-accent font-bold">Live Tmux:</span>
+          <span id="tmux-live-session-name" class="ml-2 font-semibold text-primary">comma</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="tmux-live-toggle-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-sm font-medium transition-colors duration-150">
+            Start Live View
+          </button>
+          <button id="tmux-live-close-btn" class="text-white bg-error hover:bg-opacity-80 py-1 px-2 rounded text-sm font-bold transition-colors duration-150">
+            <span>×</span>
+          </button>
+        </div>
+      </div>
+      <div id="tmux-live-content" class="font-mono text-sm p-3 bg-black text-green-400 h-80 overflow-y-scroll overflow-x-auto custom-scrollbar" style="white-space: pre-wrap; line-height: 1.3; font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;"></div>
     </div>
   </div>
 </div>
@@ -1359,8 +1377,15 @@
       const result = await response.json();
 
       if (result.stdout) {
-        // Parse ANSI color codes with ansi_up
-        contentElement.innerHTML = ansi_up.ansi_to_html(result.stdout);
+        // Ensure line breaks are preserved and convert ANSI color codes
+        const formattedOutput = ansi_up.ansi_to_html(result.stdout)
+          // Replace terminal control characters that might affect formatting
+          .replace(/\r/g, '')
+          // Ensure each line is properly wrapped in its own line
+          .split('\n')
+          .join('<br>');
+
+        contentElement.innerHTML = formattedOutput;
         // Auto-scroll to bottom
         contentElement.scrollTop = contentElement.scrollHeight;
       } else if (result.stderr) {
