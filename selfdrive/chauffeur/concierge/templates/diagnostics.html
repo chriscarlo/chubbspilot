@@ -266,30 +266,27 @@
     transform: translateY(-2px);
   }
 
-  /* Styles for MapD Log Stream view */
-  #mapd-log-output-container { /* Created by JS, child of #realtime-monitors-display */
+  /* Styles for MapD Log Stream view (retained) */
+  #mapd-log-output-container {
     height: 100%;
     display: flex;
     flex-direction: column;
-    /* padding: 1rem; -- Removed, parent .diagnostic-content-section has it */
     box-sizing: border-box;
   }
-  #mapd-log-output { /* Actual log text area */
+  #mapd-log-output {
     flex-grow: 1;
     background-color: #000;
     color: #0f0;
     font-family: monospace;
     font-size: 0.85rem;
-    padding: 0.5rem; /* Inner padding for text */
+    padding: 0.5rem;
     border: 1px solid #333;
     border-radius: 0.25rem;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-all;
-    /* margin-top: 0.5rem; -- Now handled by margin-bottom on mapd-log-debug-output */
-    min-height: 0; /* For flex scroll */
+    min-height: 0;
   }
-  /* MapD debug output uses .debug-log-output, which has margin-bottom: 1rem */
 
   #right-column-diagnostics {
     flex-shrink: 0; /* Prevent this column from shrinking in height due to flex rules */
@@ -632,29 +629,9 @@
   }
 
 
-  /* Styles for MapD Log Stream view (retained) */
-  #mapd-log-output-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-  }
-  #mapd-log-output {
-    flex-grow: 1;
-    background-color: #000;
-    color: #0f0;
-    font-family: monospace;
-    font-size: 0.85rem;
-    padding: 0.5rem;
-    border: 1px solid #333;
-    border-radius: 0.25rem;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-    min-height: 0;
-  }
+  /* Note: MapD Log Stream view styles are already defined above */
 
-  /* Update terminal-actions styling to center-align items and reduce height */
+  /* CONSOLIDATED: Terminal actions toolbar and related components */
   .terminal-actions {
     display: flex;
     justify-content: center;
@@ -664,24 +641,23 @@
     background-color: var(--color-2);
     padding: 0.5rem 0.75rem;
     border-top: 1px solid var(--color-border);
-    height: 2.5rem; /* Fixed height to ensure proper alignment */
+    height: 2.5rem; /* Fixed height for consistent alignment */
   }
 
-  /* Ensure all elements in toolbar have consistent vertical centering */
+  /* Child elements in terminal actions */
   .terminal-actions > * {
     display: flex;
     align-items: center;
     height: 100%;
   }
 
-  /* Ensure consistent checkbox sizing */
+  /* Form controls in terminal toolbar */
   .terminal-actions input[type="checkbox"] {
     margin: 0 0.25rem 0 0;
     height: 14px;
     width: 14px;
   }
 
-  /* Consistent spacing between label and input */
   .terminal-actions label.text-xs.text-secondary {
     margin-right: 0.5rem;
   }
@@ -693,9 +669,12 @@
     padding: 0 0.5rem;
     border-radius: 4px;
     border: 1px solid var(--color-border);
+    background-color: var(--color-3);
+    color: var(--text-primary);
+    font-size: 0.75rem;
   }
 
-  /* CONSOLIDATED: All button styles in one place */
+  /* Terminal UI buttons - unified styling */
   .terminal-actions button,
   #tmux-live-toggle-btn,
   #tmux-live-close-btn {
@@ -715,7 +694,7 @@
     transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
   }
 
-  /* CONSOLIDATED: Hover effects */
+  /* Button hover states */
   .terminal-actions button:hover,
   #tmux-live-toggle-btn:hover,
   #tmux-live-close-btn:hover {
@@ -725,13 +704,12 @@
     box-shadow: 0 0 0 2px var(--color-accent), 0 0 6px 1px rgba(0, 149, 255, 0.25);
   }
 
-  /* CONSOLIDATED: Hover text color effect */
   .terminal-actions button:hover span,
   #tmux-live-toggle-btn:hover span {
     color: var(--color-accent-2);
   }
 
-  /* CONSOLIDATED: Active/selected state */
+  /* Active/selected state */
   .terminal-actions button.active,
   #tmux-live-toggle-btn.active,
   .terminal-actions button.active-tool,
@@ -742,9 +720,8 @@
     box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
   }
 
-  /* CONSOLIDATED: X button specific styles */
+  /* Close button specific styles */
   #tmux-live-close-btn {
-    /* Different padding than other buttons */
     padding: 0.25rem 0.5rem;
     font-size: 1rem;
   }
@@ -755,14 +732,15 @@
     color: var(--color-error-text);
   }
 
-  /* CONSOLIDATED: Tmux live container styles */
+  /* Live tmux container styles */
   #tmux-live-container {
     border-radius: 0.5rem;
     overflow: hidden;
     margin-top: 1rem;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
-  /* Tmux live container header styles */
   #tmux-live-container .flex.justify-between.items-center {
     padding: 0.25rem 0.5rem;
     height: 36px;
@@ -770,9 +748,8 @@
     display: flex;
     align-items: center;
     border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-2);
   }
-
-  /* EVERYTHING BELOW THIS LINE IS REMOVED AS IT DUPLICATES EARLIER STYLES */
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -934,10 +911,16 @@
   const RESIZE_HANDLE_HEIGHT = 10;
   const MIN_TERMINAL_HEIGHT = 150;
 
-  // --- Debug helpers ---
-  function getDebugOutput(id) { return document.getElementById(id); }
+  // --- Consolidated Debug helpers ---
+  /**
+   * Standardized debug output function for all diagnostic panels
+   * @param {string} areaId - ID of the debug output container element
+   * @param {string} message - Message to display
+   * @param {boolean} isError - Whether this is an error message (shown in red)
+   * @param {string} source - Source identifier shown in log
+   */
   function appendDebug(areaId, message, isError = false, source = "FE") {
-    const area = getDebugOutput(areaId);
+    const area = document.getElementById(areaId);
     if (area) {
       const ts = new Date().toLocaleTimeString();
       const entry = document.createElement('div');
@@ -959,20 +942,34 @@
          .replace(/'/g, "&#039;");
   }
 
+  /**
+   * Closes an EventSource connection and logs status
+   * @param {EventSource} eventSource - The event source to close
+   * @param {string} debugOutputId - ID of debug element to output to (optional)
+   * @param {string} sourceName - Name of the source being closed for logging
+   */
+  function closeEventSource(eventSource, debugOutputId, sourceName = "EventSource") {
+    if (eventSource) {
+      eventSource.close();
+      if (debugOutputId) {
+        appendDebug(debugOutputId, `${sourceName} connection closed.`);
+      } else {
+        console.log(`${sourceName} connection closed.`);
+      }
+      return null;
+    }
+    return eventSource; // return unchanged if already null
+  }
+
+  // Close specific event sources (using the consolidated function)
   function closeCurrentEventSource() {
-    if (currentEventSource) {
-      currentEventSource.close();
-      currentEventSource = null;
-      console.log("MapD EventSource closed.");
-    }
+    currentEventSource = closeEventSource(currentEventSource, null, "MapD EventSource");
   }
+
   function closeServiceMonitorEventSource() {
-    if (serviceMonitorEventSource) {
-      serviceMonitorEventSource.close();
-      serviceMonitorEventSource = null;
-      appendDebug('live-monitor-debug-output', "Service Monitor EventSource closed.");
-    }
+    serviceMonitorEventSource = closeEventSource(serviceMonitorEventSource, 'live-monitor-debug-output', "Service Monitor EventSource");
   }
+
   function closeTmuxLiveView() {
     if (tmuxRefreshInterval) {
       clearInterval(tmuxRefreshInterval);
@@ -2026,30 +2023,20 @@
     async function fetchCrashLogs() {
       const logListContainer = document.getElementById('log-list-container-tiles');
       const debugOutputContainer = document.getElementById('crash-logs-debug-output');
-      function appendCrashDebug(message, isError = false, source = "FE") {
-          if (debugOutputContainer) {
-              const ts = new Date().toLocaleTimeString();
-              const entry = document.createElement('div');
-              entry.textContent = `[${ts}] [${source}] ${message}`;
-              if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
-              debugOutputContainer.appendChild(entry);
-              debugOutputContainer.scrollTop = debugOutputContainer.scrollHeight;
-          }
-      }
       if (logListContainer) logListContainer.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
       if (debugOutputContainer) debugOutputContainer.innerHTML = '';
-      appendCrashDebug("Attempting to fetch crash logs from /api/crash-logs...");
+      appendDebug('crash-logs-debug-output', "Attempting to fetch crash logs from /api/crash-logs...");
       try {
           const response = await fetch('/api/crash-logs');
-          appendCrashDebug(`Received response status: ${response.status}`);
+          appendDebug('crash-logs-debug-output', `Received response status: ${response.status}`);
           if (!response.ok) {
               const errorText = await response.text();
-              appendCrashDebug(`Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
+              appendDebug('crash-logs-debug-output', `Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
               if (logListContainer) logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">Failed to load crash logs. Check debug output.</p>';
               return;
           }
           const data = await response.json();
-          appendCrashDebug("Successfully parsed JSON response.");
+          appendDebug('crash-logs-debug-output', "Successfully parsed JSON response.");
               if (data.files && data.files.length > 0) {
                   const groupedLogs = new Map();
               data.files.forEach(logFile => {
@@ -2084,18 +2071,18 @@
                               logListContainer.appendChild(tile);
                           });
                       });
-                  appendCrashDebug(`Displayed ${data.files.length} log files, grouped by date.`);
+                  appendDebug('crash-logs-debug-output', `Displayed ${data.files.length} log files, grouped by date.`);
                   } else {
                       logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
-                  appendCrashDebug("No crash log files to display after grouping.");
+                  appendDebug('crash-logs-debug-output', "No crash log files to display after grouping.");
                   }
               } else {
                   logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
-              appendCrashDebug("No crash log files returned from API.");
+              appendDebug('crash-logs-debug-output', "No crash log files returned from API.");
           }
       } catch (error) {
           console.error('Error in fetchCrashLogs:', error);
-          appendCrashDebug(`CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
+          appendDebug('crash-logs-debug-output', `CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
           if (logListContainer) {
               logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">An error occurred while loading crash logs.</p>';
           }
@@ -2105,27 +2092,25 @@
     async function displayLogContent(filename) {
       const logViewerFilename = document.getElementById('log-viewer-filename');
       const logViewerContent = document.getElementById('log-viewer-content');
-      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
-      function appendCrashDebug(message, isError = false, source = "FE") { /* ... same as above ... */}
-      appendCrashDebug(`Fetching content for log: ${filename}`);
+      appendDebug('crash-logs-debug-output', `Fetching content for log: ${filename}`);
       if (logViewerFilename) logViewerFilename.textContent = filename;
       if (logViewerContent) logViewerContent.innerHTML = '<p class="text-secondary p-4">Loading log content...</p>';
       showContentSection('log-viewer-display', document.getElementById('crash-logs-tile'));// Show this section
       try {
           const response = await fetch(`/api/crash-logs/${filename}`);
-          appendCrashDebug(`Content fetch status for ${filename}: ${response.status}`);
+          appendDebug('crash-logs-debug-output', `Content fetch status for ${filename}: ${response.status}`);
           if (!response.ok) {
               const errorText = await response.text();
-              appendCrashDebug(`Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
+              appendDebug('crash-logs-debug-output', `Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
               if (logViewerContent) logViewerContent.textContent = `Error loading log: ${response.statusText}`;
               return;
           }
           const content = await response.text();
           if (logViewerContent) logViewerContent.textContent = content;
-          appendCrashDebug(`Successfully loaded content for ${filename}.`);
+          appendDebug('crash-logs-debug-output', `Successfully loaded content for ${filename}.`);
       } catch (error) {
           console.error('Error in displayLogContent:', error);
-          appendCrashDebug(`CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
+          appendDebug('crash-logs-debug-output', `CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
           if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
       }
     }
