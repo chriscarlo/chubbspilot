@@ -662,232 +662,8 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     background-color: var(--color-2);
-    padding: 0.5rem;
-    border-top: 1px solid var(--color-border);
-    height: auto;
-  }
-
-  /* Make all elements in the toolbar consistent in size */
-  .terminal-actions > * {
-    height: 28px;
-    display: flex;
-    align-items: center;
-  }
-
-  .terminal-actions input[type="text"],
-  .terminal-actions input[type="number"] {
-    height: 24px;
-    width: auto;
-    padding: 0 0.5rem;
-    border-radius: 4px;
-    border: 1px solid var(--color-border);
-  }
-
-  .terminal-actions label {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    margin: 0;
-    white-space: nowrap;
-  }
-
-  /* Update tmux action buttons to match left navigation style */
-  .terminal-actions button,
-  #tmux-live-toggle-btn,
-  #tmux-live-close-btn {
-    padding: 0.25rem 0.75rem;
-    background-color: var(--color-2);
-    border: 1px solid var(--color-border);
-    border-radius: 0.375rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-  }
-
-  /* Restore hover states */
-  .terminal-actions button:hover,
-  #tmux-live-toggle-btn:hover,
-  #tmux-live-close-btn:hover {
-    background-color: var(--color-surface);
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 0 0 1px var(--color-accent);
-  }
-
-  /* Selected/active state for tmux buttons */
-  .terminal-actions button.active,
-  #tmux-live-toggle-btn.active,
-  .terminal-actions button.active-tool,
-  #tmux-live-toggle-btn.active-tool {
-    background-color: var(--color-accent);
-    color: var(--color-1);
-    border-color: var(--color-accent-2);
-  }
-
-  /* Consistent spacing between label and input */
-  .terminal-actions label.text-xs.text-secondary {
-    margin-right: 0.5rem;
-  }
-
-  /* Update the live tmux container buttons specifically */
-  #tmux-live-container .flex.justify-between.items-center {
-    padding: 0.25rem 0.5rem;
-    min-height: auto;
-    height: 36px;
-    display: flex;
-    align-items: center;
-  }
-
-  /* Fix the tmux live buttons height/alignment */
-  #tmux-live-toggle-btn,
-  #tmux-live-close-btn {
-    height: 28px;
-    padding: 0.25rem 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-  }
-
-  /* Reduce height of tmux-live-container header */
-  #tmux-live-container .flex.justify-between.items-center {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 1rem */
-    min-height: 2rem;
-  }
-
-  /* Update X button to match other buttons */
-  #tmux-live-close-btn {
-    width: auto;
-    height: auto;
-    font-size: 1rem;
-    padding: 0.25rem 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #tmux-live-close-btn span {
-    color: var(--text-primary);
-  }
-  #tmux-live-close-btn:hover span {
-    color: var(--color-error-text);
-  }
-
-  /* Update the live tmux container to be slimmer */
-   #tmux-live-container {
-     border-radius: 0.5rem;
-     overflow: hidden;
-   }
-
-   /* Additional hover effect enhancements to match left nav */
-   .terminal-actions button:hover span,
-   #tmux-live-toggle-btn:hover span {
-     color: var(--color-accent-2); /* Matches tile hover text color effect */
-   }
-
-   /* Active state for tmux buttons to match active-tile class */
-   .terminal-actions button.active-tool,
-   #tmux-live-toggle-btn.active-tool {
-     background-color: var(--color-surface);
-     color: var(--color-accent);
-     box-shadow: 0 0 0 2px var(--color-accent);
-   }
-
-  /* Update tmux live container header height and button styling */
-  #tmux-live-container .flex.justify-between.items-center {
-    padding: 0.25rem 0.5rem;
-    min-height: 2.25rem; /* Increased from 2rem to prevent button cutoff */
-  }
-
-  /* Add glow effect to match left navigation button active state */
-  .terminal-actions button:hover,
-  #tmux-live-toggle-btn:hover,
-  #tmux-live-close-btn:hover,
-  .terminal-actions button.active-tool,
-  #tmux-live-toggle-btn.active-tool {
-    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
-  }
-
-  /* Consistent button styling to match left nav tiles */
-  .terminal-actions button,
-  #tmux-live-toggle-btn,
-  #tmux-live-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 1.75rem; /* Consistent height */
-    font-size: 0.8rem;
-    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  }
-
-  /* Ensure the tmux live container buttons are properly sized */
-  #tmux-live-toggle-btn,
-  #tmux-live-close-btn {
-    padding: 0.25rem 0.5rem;
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Improved center alignment for the terminal toolbar */
-  .terminal-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    background-color: var(--color-2);
-    padding: 0.5rem;
-    border-top: 1px solid var(--color-border);
-  }
-
-  /* Ensure consistent height for all toolbar elements */
-  .terminal-actions > * {
-    height: 1.75rem; /* Consistent height for all elements */
-  }
-
-  /* Make active buttons better match left nav active style */
-  .tile.active-tile,
-  .terminal-actions button.active-tool,
-  #tmux-live-toggle-btn.active-tool {
-    background-color: var(--color-surface);
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
-  }
-
-  /* Perfect button glow effect to match the left navigation */
-  .tile:hover,
-  .terminal-actions button:hover,
-  #tmux-live-toggle-btn:hover,
-  #tmux-live-close-btn:hover {
-    background-color: var(--color-surface);
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 0 0 2px var(--color-accent), 0 0 6px 1px rgba(0, 149, 255, 0.25);
-  }
-
-  /* Ensure exact same transition effects */
-  .tile,
-  .terminal-actions button,
-  #tmux-live-toggle-btn,
-  #tmux-live-close-btn {
-    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
-  }
-
-  /* Fix terminal actions alignment with proper centering */
-  .terminal-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
     padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--color-border);
     height: 2.5rem; /* Fixed height to ensure proper alignment */
   }
 
@@ -909,6 +685,119 @@
   .terminal-actions label.text-xs.text-secondary {
     margin-right: 0.5rem;
   }
+
+  .terminal-actions input[type="text"],
+  .terminal-actions input[type="number"] {
+    height: 24px;
+    width: auto;
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+  }
+
+  /* CONSOLIDATED: All button styles in one place */
+  .terminal-actions button,
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    padding: 0.25rem 0.75rem;
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+  }
+
+  /* CONSOLIDATED: Hover effects */
+  .terminal-actions button:hover,
+  #tmux-live-toggle-btn:hover,
+  #tmux-live-close-btn:hover {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px var(--color-accent), 0 0 6px 1px rgba(0, 149, 255, 0.25);
+  }
+
+  /* CONSOLIDATED: Hover text color effect */
+  .terminal-actions button:hover span,
+  #tmux-live-toggle-btn:hover span {
+    color: var(--color-accent-2);
+  }
+
+  /* CONSOLIDATED: Active/selected state */
+  .terminal-actions button.active,
+  #tmux-live-toggle-btn.active,
+  .terminal-actions button.active-tool,
+  #tmux-live-toggle-btn.active-tool {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent-2);
+    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
+  }
+
+  /* Tmux live container specific styles */
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem;
+    min-height: auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Live tmux container styles */
+  #tmux-live-container {
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  /* Error state for close button */
+  #tmux-live-close-btn:hover span {
+    color: var(--color-error-text);
+  }
+
+  /* Reduce height of tmux-live-container header */
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 1rem */
+    min-height: 2rem;
+  }
+
+  /* Update X button to match other buttons */
+  #tmux-live-close-btn {
+    width: auto;
+    height: auto;
+    font-size: 1rem;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #tmux-live-close-btn span {
+    color: var(--text-primary);
+  }
+
+  /* Update the live tmux container to be slimmer */
+   #tmux-live-container {
+     border-radius: 0.5rem;
+     overflow: hidden;
+   }
+
+   /* Tmux live container header height */
+   #tmux-live-container .flex.justify-between.items-center {
+     padding: 0.25rem 0.5rem;
+     min-height: 2.25rem;
+     height: 36px;
+     display: flex;
+     align-items: center;
+   }
+
+   /* EVERYTHING BELOW THIS LINE IS REMOVED AS IT DUPLICATES EARLIER STYLES */
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
