@@ -678,6 +678,25 @@
 
   <!-- Right "action area" (85%) -->
   <div class="w-full md:w-[85%]" id="right-column-diagnostics">
+    <!-- Tmux live view container -->
+    <div id="tmux-live-container" class="hidden mb-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
+      <div class="flex justify-between items-center p-2 bg-1 border-b border-border">
+        <div class="flex items-center">
+          <span class="text-accent font-semibold">Live Tmux: </span>
+          <span id="tmux-live-session-name" class="ml-1 text-sm">comma</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="tmux-live-toggle-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-xs">
+            Start Live View
+          </button>
+          <button id="tmux-live-close-btn" class="text-white bg-error hover:bg-opacity-80 py-1 px-2 rounded text-xs">
+            <span>×</span>
+          </button>
+        </div>
+      </div>
+      <div id="tmux-live-content" class="font-mono text-sm p-2 whitespace-pre bg-black text-green-400 h-64 overflow-auto" style="font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;"></div>
+    </div>
+
     <div class="action-area p-0 rounded-lg shadow-lg" id="action-area-content">
       <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
           <div id="cpu-equalizer-display-wrapper" class="hidden">
@@ -750,6 +769,9 @@
           <button id="capture-tmux-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-sm">
             Capture tmux
           </button>
+          <button id="show-live-tmux-btn" class="bg-3 hover:bg-accent hover:text-white text-secondary py-1 px-3 rounded text-sm border border-border">
+            Show Live View
+          </button>
         </div>
       </div>
     </div>
@@ -759,6 +781,7 @@
 <script>
   let currentEventSource = null; // For MapD logs primarily
   let serviceMonitorEventSource = null; // For the new service monitor
+  let tmuxRefreshInterval = null; // For the live tmux view polling
   const ansi_up = new AnsiUp();
   let xtermInstance = null;
   let fitAddon = null;
@@ -807,6 +830,13 @@
       serviceMonitorEventSource.close();
       serviceMonitorEventSource = null;
       appendDebug('live-monitor-debug-output', "Service Monitor EventSource closed.");
+    }
+  }
+  function closeTmuxLiveView() {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+      tmuxRefreshInterval = null;
+      console.log("Tmux live view polling stopped.");
     }
   }
 
@@ -1266,10 +1296,122 @@
   }
 
   // --- Document Ready and Event Listeners ---
+  // Live Tmux View functionality
+  function startLiveTmuxView(sessionName) {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+    }
+
+    const tmuxContainer = document.getElementById('tmux-live-container');
+    const tmuxContent = document.getElementById('tmux-live-content');
+    const sessionNameEl = document.getElementById('tmux-live-session-name');
+    const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+
+    if (!tmuxContainer || !tmuxContent || !sessionNameEl || !toggleBtn) return;
+
+    // Show the container and update session name
+    tmuxContainer.classList.remove('hidden');
+    sessionNameEl.textContent = sessionName;
+    toggleBtn.textContent = 'Pause';
+    toggleBtn.classList.add('bg-error');
+    toggleBtn.classList.remove('bg-accent');
+
+    // Initial fetch
+    fetchTmuxContent(sessionName, tmuxContent);
+
+    // Set up polling interval (every 2 seconds)
+    tmuxRefreshInterval = setInterval(() => {
+      fetchTmuxContent(sessionName, tmuxContent);
+    }, 2000);
+  }
+
+  function stopLiveTmuxView() {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+      tmuxRefreshInterval = null;
+    }
+
+    const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Start Live View';
+      toggleBtn.classList.remove('bg-error');
+      toggleBtn.classList.add('bg-accent');
+    }
+  }
+
+  function hideLiveTmuxView() {
+    stopLiveTmuxView();
+
+    const tmuxContainer = document.getElementById('tmux-live-container');
+    if (tmuxContainer) {
+      tmuxContainer.classList.add('hidden');
+    }
+  }
+
+  async function fetchTmuxContent(sessionName, contentElement) {
+    try {
+      const response = await fetch('/api/execute-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: `tmux capture-pane -t ${sessionName} -p` })
+      });
+
+      const result = await response.json();
+
+      if (result.stdout) {
+        // Parse ANSI color codes with ansi_up
+        contentElement.innerHTML = ansi_up.ansi_to_html(result.stdout);
+        // Auto-scroll to bottom
+        contentElement.scrollTop = contentElement.scrollHeight;
+      } else if (result.stderr) {
+        contentElement.innerHTML = `<span style="color: red;">Error: ${result.stderr}</span>`;
+        stopLiveTmuxView();
+      }
+    } catch (error) {
+      contentElement.innerHTML = `<span style="color: red;">Failed to fetch tmux content: ${error.message}</span>`;
+      stopLiveTmuxView();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const navTiles = document.querySelectorAll('.tile');
     const contentSections = document.querySelectorAll('.diagnostic-content-section');
     let activeNavTile = null;
+
+    // Setup Live Tmux View controls
+    const showLiveTmuxBtn = document.getElementById('show-live-tmux-btn');
+    const tmuxLiveToggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const tmuxLiveCloseBtn = document.getElementById('tmux-live-close-btn');
+
+    if (showLiveTmuxBtn) {
+      showLiveTmuxBtn.addEventListener('click', () => {
+        const sessionNameInput = document.getElementById('tmux-session-name');
+        const sessionName = sessionNameInput ? sessionNameInput.value.trim() : 'comma';
+
+        if (!sessionName) {
+          alert('Session name cannot be empty');
+          return;
+        }
+
+        startLiveTmuxView(sessionName);
+      });
+    }
+
+    if (tmuxLiveToggleBtn) {
+      tmuxLiveToggleBtn.addEventListener('click', () => {
+        if (tmuxRefreshInterval) {
+          stopLiveTmuxView();
+        } else {
+          const sessionNameEl = document.getElementById('tmux-live-session-name');
+          const sessionName = sessionNameEl ? sessionNameEl.textContent.trim() : 'comma';
+          startLiveTmuxView(sessionName);
+        }
+      });
+    }
+
+    if (tmuxLiveCloseBtn) {
+      tmuxLiveCloseBtn.addEventListener('click', hideLiveTmuxView);
+    }
 
     initializeServiceMonitorElements(); // Get handles to service monitor buttons etc.
 
@@ -1328,6 +1470,8 @@
       if (sectionId !== 'realtime-monitors-display') {
           closeCurrentEventSource();
       }
+      // Don't stop tmux live view when switching content sections - it should remain visible
+      // unless explicitly closed by the user
 
       contentSections.forEach(section => {
         section.classList.add('hidden');
