@@ -654,6 +654,112 @@
     min-height: 0;
   }
 
+  /* Update terminal-actions styling to center-align items and reduce height */
+  .terminal-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: var(--color-2);
+    padding: 0.5rem; /* Reduced from 0.75rem */
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Ensure all inputs and labels are properly vertically aligned */
+  .terminal-actions .flex.items-center {
+    height: 2rem; /* Consistent height */
+  }
+
+  .terminal-actions input[type="text"],
+  .terminal-actions input[type="number"] {
+    height: 1.5rem;
+  }
+
+  .terminal-actions label {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  /* Update tmux action buttons to match left navigation style */
+  .terminal-actions button,
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .terminal-actions button:hover,
+  #tmux-live-toggle-btn:hover,
+  #tmux-live-close-btn:hover {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+
+  /* Selected/active state for tmux buttons */
+  .terminal-actions button.active,
+  #tmux-live-toggle-btn.active {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent-2);
+  }
+
+  /* Reduce height of tmux-live-container header */
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 1rem */
+    min-height: 2rem;
+  }
+
+  /* Update X button to match other buttons */
+  #tmux-live-close-btn {
+    width: auto;
+    height: auto;
+    font-size: 1rem;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #tmux-live-close-btn span {
+    color: var(--text-primary);
+  }
+  #tmux-live-close-btn:hover span {
+    color: var(--color-error-text);
+  }
+
+  /* Update the live tmux container to be slimmer */
+   #tmux-live-container {
+     border-radius: 0.5rem;
+     overflow: hidden;
+   }
+
+   /* Additional hover effect enhancements to match left nav */
+   .terminal-actions button:hover span,
+   #tmux-live-toggle-btn:hover span {
+     color: var(--color-accent-2); /* Matches tile hover text color effect */
+   }
+
+   /* Active state for tmux buttons to match active-tile class */
+   .terminal-actions button.active-tool,
+   #tmux-live-toggle-btn.active-tool {
+     background-color: var(--color-surface);
+     color: var(--color-accent);
+     box-shadow: 0 0 0 2px var(--color-accent);
+   }
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -754,30 +860,26 @@
       <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
         <div id="xterm-terminal-container" style="width: 100%; flex-grow: 1;"></div>
         <div id="terminal-resize-handle"></div>
-        <div class="terminal-actions bg-2 p-3 flex flex-wrap justify-center items-center gap-6 border-t border-border">
-          <div class="flex items-center">
-            <label for="tmux-session-name" class="text-sm text-secondary mr-2">Session:</label>
-            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 py-1 text-sm w-24 focus:ring-1 focus:ring-accent focus:outline-none">
+        <div class="terminal-actions flex items-center justify-center gap-4 py-1 px-3">
+          <div class="flex items-center h-7">
+            <label for="tmux-session-name" class="text-xs text-secondary mr-1">Session:</label>
+            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 h-5 text-xs w-20 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center">
-            <label for="tmux-lines" class="text-sm text-secondary mr-2">Lines:</label>
-            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 py-1 text-sm w-16 focus:ring-1 focus:ring-accent focus:outline-none">
+          <div class="flex items-center h-7">
+            <label for="tmux-lines" class="text-xs text-secondary mr-1">Lines:</label>
+            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 h-5 text-xs w-14 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
-          <div class="flex items-center">
+          <div class="flex items-center h-7">
             <label class="flex items-center cursor-pointer">
-              <input type="checkbox" id="tmux-scrollback" checked class="mr-2 h-4 w-4">
-              <span class="text-sm text-secondary">Scrollback</span>
+              <input type="checkbox" id="tmux-scrollback" checked class="mr-1 h-3.5 w-3.5">
+              <span class="text-xs text-secondary">Scrollback</span>
             </label>
           </div>
-          <button id="capture-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg h-8">
-            <div class="text-sm mb-0.5">
-              <span class="text-accent">Capture Tmux</span>
-            </div>
+          <button id="capture-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-sm text-xs px-2 py-1">
+            <span class="text-accent">Capture Tmux</span>
           </button>
-          <button id="show-live-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg h-8">
-            <div class="text-sm mb-0.5">
-              <span class="text-accent">Show Live View</span>
-            </div>
+          <button id="show-live-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-sm text-xs px-2 py-1">
+            <span class="text-accent">Show Live View</span>
           </button>
         </div>
       </div>
@@ -785,19 +887,17 @@
 
     <!-- Tmux live view container (placed below action area) -->
     <div id="tmux-live-container" class="hidden mt-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
-      <div class="flex justify-between items-center p-2 border-b border-border">
+      <div class="flex justify-between items-center p-2 border-b border-border" style="height: 2rem; padding: 0 0.5rem;">
         <div class="flex items-center gap-1">
-          <span class="text-accent font-bold text-sm">Live Tmux:</span>
-          <span id="tmux-live-session-name" class="text-sm text-primary">comma</span>
+          <span class="text-accent font-bold text-xs">Live Tmux:</span>
+          <span id="tmux-live-session-name" class="text-xs text-primary">comma</span>
         </div>
-        <div class="flex items-center gap-1 mr-1 -mb-1">
-          <button id="tmux-live-toggle-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg">
-            <div class="text-sm mb-0.5">
-              <span class="text-accent">Pause</span>
-            </div>
+        <div class="flex items-center gap-1">
+          <button id="tmux-live-toggle-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg text-xs py-0.5 px-2">
+            <span class="text-accent">Pause</span>
           </button>
-          <button id="tmux-live-close-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg h-6 w-6 flex items-center justify-center">
-            <span class="text-error">×</span>
+          <button id="tmux-live-close-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg h-5 w-5 flex items-center justify-center text-xs">
+            <span class="text-primary">×</span>
           </button>
         </div>
       </div>
@@ -823,12 +923,12 @@
 
   // --- Debug helpers ---
   function getDebugOutput(id) { return document.getElementById(id); }
-  function appendDebug(areaId, message, isError = false) {
+  function appendDebug(areaId, message, isError = false, source = "FE") {
     const area = getDebugOutput(areaId);
     if (area) {
       const ts = new Date().toLocaleTimeString();
       const entry = document.createElement('div');
-      entry.textContent = `[${ts}] ${message}`;
+      entry.textContent = `[${ts}] [${source}] ${message}`;
       if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
       area.appendChild(entry);
       area.scrollTop = area.scrollHeight;
@@ -1334,6 +1434,7 @@
     const tmuxContent = document.getElementById('tmux-live-content');
     const sessionNameEl = document.getElementById('tmux-live-session-name');
     const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
 
     if (!tmuxContainer || !tmuxContent || !sessionNameEl || !toggleBtn) return;
 
@@ -1341,8 +1442,12 @@
     tmuxContainer.classList.remove('hidden');
     sessionNameEl.textContent = sessionName;
     toggleBtn.textContent = 'Pause';
-    toggleBtn.classList.add('bg-error');
-    toggleBtn.classList.remove('bg-accent');
+    toggleBtn.classList.add('active-tool');
+
+    // Show the "Show Live View" button as active
+    if (showLiveBtn) {
+      showLiveBtn.classList.add('active-tool');
+    }
 
     // Initial fetch
     fetchTmuxContent(sessionName, tmuxContent);
@@ -1360,10 +1465,16 @@
     }
 
     const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
+
     if (toggleBtn) {
-      toggleBtn.textContent = 'Start Live View';
-      toggleBtn.classList.remove('bg-error');
-      toggleBtn.classList.add('bg-accent');
+      toggleBtn.textContent = 'Start';
+      toggleBtn.classList.remove('active-tool');
+    }
+
+    // Remove active state from "Show Live View" button
+    if (showLiveBtn) {
+      showLiveBtn.classList.remove('active-tool');
     }
   }
 
@@ -1373,6 +1484,11 @@
     const tmuxContainer = document.getElementById('tmux-live-container');
     if (tmuxContainer) {
       tmuxContainer.classList.add('hidden');
+    }
+
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
+    if (showLiveBtn) {
+      showLiveBtn.classList.remove('active-tool');
     }
   }
 
@@ -1386,7 +1502,7 @@
 
       const result = await response.json();
 
-            if (result.stdout) {
+      if (result.stdout) {
         // Get the session name for line prefixes
         const sessionNameEl = document.getElementById('tmux-live-session-name');
         const sessionName = sessionNameEl ? sessionNameEl.textContent.trim() : 'tmux';
@@ -1397,16 +1513,11 @@
           // Replace terminal control characters that might affect formatting
           .replace(/\r/g, '');
 
-        // Add line prefixes and wrap each line
-        const lines = formattedOutput.split('\n');
-        formattedOutput = lines.map((line, index) => {
-          // Add a line prefix (like a prompt) to each line
-          const prefix = `<span style="color: #4d8aef; display: inline-block; width: 4em;">${shortSessionName}$</span> `;
-          return prefix + line;
-        }).join('<br>');
+        // Process the raw tmux output to only add prefix at the beginning, not to each wrapped line
+        // We want to keep actual line breaks from tmux but not add a prefix to every line
+        contentElement.innerHTML = `<span style="color: #4d8aef; display: inline-block; width: 4em;">${shortSessionName}$</span> ${formattedOutput.replace(/\n/g, '<br>')}`;
 
-        contentElement.innerHTML = formattedOutput;
-        // Auto-scroll to bottom
+                // Auto-scroll to bottom
         contentElement.scrollTop = contentElement.scrollHeight;
       } else if (result.stderr) {
         contentElement.innerHTML = `<span style="color: red;">Error: ${result.stderr}</span>`;
@@ -1436,6 +1547,12 @@
         if (!sessionName) {
           alert('Session name cannot be empty');
           return;
+        }
+
+        // Make sure the tmux live container is visible WITHOUT hiding the terminal
+        const tmuxContainer = document.getElementById('tmux-live-container');
+        if (tmuxContainer) {
+          tmuxContainer.classList.remove('hidden');
         }
 
         startLiveTmuxView(sessionName);
