@@ -7,7 +7,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CarControllerParams
 import time # Added for sleep
-from msgq.ipc_pyx import MultiplePublishersError # Corrected import path
+from msgq.ipc_pyx import MultiplePublishersError, IpcError # Corrected import path
 
 # --- Singleton Publisher Class for HKG Tuning Data ---
 class _HKGTuningPublisher:
@@ -29,7 +29,7 @@ class _HKGTuningPublisher:
                     initialized = True
                     if attempts > 0:
                         print(f"WARN: _HKGTuningPublisher succeeded initializing PubMaster after {attempts + 1} attempts.")
-                except MultiplePublishersError as e:
+                except (MultiplePublishersError, IpcError) as e:
                     attempts += 1
                     print(f"WARN: _HKGTuningPublisher: MultiplePublishersError on attempt {attempts}/{max_attempts}. Retrying in {retry_delay}s... Error: {e}")
                     time.sleep(retry_delay)
@@ -46,15 +46,11 @@ class _HKGTuningPublisher:
     def chauffeurHKGTuning(self, msg):
         if self._pub_master is None:
             print("ERROR: _HKGTuningPublisher's pub_master is None. Cannot publish.")
+            # Optionally, try to re-initialize here if it makes sense for your error handling strategy
+            # For now, just preventing a crash.
             return
         # The message (msg) should already be prepared and validated by the caller
-        try:
-            self._pub_master.send('chauffeurHKGTuning', msg)
-        except Exception as e:
-            # Gracefully degrade instead of crashing the whole process. Most
-            # common causes here are IPC bind issues (duplicate publisher) or
-            # ZMQ context termination during shutdown.
-            print(f"WARN: _HKGTuningPublisher failed to send message: {e}")
+        self._pub_master.send('chauffeurHKGTuning', msg)
 # -----------------------------------------------------------------------------
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
