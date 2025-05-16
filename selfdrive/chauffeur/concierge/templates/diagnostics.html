@@ -729,9 +729,28 @@
         <h3 class="text-xl font-bold mb-4">Test Section 3</h3>
         <p class="text-secondary">Content for Test 3 will appear here.</p>
       </div>
-      <div id="test4-display" class="hidden diagnostic-content-section p-0">
-        <div id="xterm-terminal-container" style="width: 100%; height: 100%;"></div>
+      <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
+        <div id="xterm-terminal-container" style="width: 100%; flex-grow: 1;"></div>
         <div id="terminal-resize-handle"></div>
+        <div class="terminal-actions bg-2 p-2 flex flex-wrap justify-center items-center gap-2 border-t border-border">
+          <div class="flex items-center">
+            <label for="tmux-session-name" class="text-xs text-secondary mr-1">Session:</label>
+            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 py-1 text-sm w-24">
+          </div>
+          <div class="flex items-center">
+            <label for="tmux-lines" class="text-xs text-secondary mr-1">Lines:</label>
+            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 py-1 text-sm w-16">
+          </div>
+          <div class="flex items-center">
+            <label class="flex items-center">
+              <input type="checkbox" id="tmux-scrollback" checked class="mr-1">
+              <span class="text-xs text-secondary">Scrollback</span>
+            </label>
+          </div>
+          <button id="capture-tmux-btn" class="bg-accent hover:bg-accent-2 text-white py-1 px-3 rounded text-sm">
+            Capture tmux
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1525,6 +1544,64 @@
           }
         });
 
+        // Add handler for tmux capture button
+        const captureTmuxBtn = document.getElementById('capture-tmux-btn');
+        if (captureTmuxBtn) {
+          captureTmuxBtn.addEventListener('click', async () => {
+            try {
+                                          const sessionNameInput = document.getElementById('tmux-session-name');
+              const sessionName = sessionNameInput ? sessionNameInput.value.trim() : 'comma';
+
+              if (!sessionName) {
+                xtermInstance.write('\r\n\x1b[31mError: Session name cannot be empty\x1b[0m\r\n');
+                return;
+              }
+
+              // Get additional options
+              const linesInput = document.getElementById('tmux-lines');
+              const lines = linesInput ? parseInt(linesInput.value, 10) : 50;
+
+              const scrollbackInput = document.getElementById('tmux-scrollback');
+              const useScrollback = scrollbackInput ? scrollbackInput.checked : true;
+
+              // Build command with options
+              let captureCmd = `tmux capture-pane -t ${sessionName}`;
+              if (useScrollback) {
+                captureCmd += ' -S -';
+              }
+              if (!isNaN(lines) && lines > 0) {
+                captureCmd += ` -S -${lines}`;
+              }
+              captureCmd += ' -p';
+
+              xtermInstance.write(`\r\n\x1b[33mCapturing tmux session "${sessionName}"...\x1b[0m\r\n`);
+
+              const response = await fetch('/api/execute-command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: captureCmd })
+              });
+
+              const result = await response.json();
+
+              if (result.stdout) {
+                xtermInstance.write('\r\n\x1b[32m=== TMUX SESSION CONTENT ===\x1b[0m\r\n');
+                xtermInstance.write(result.stdout.replace(/\n/g, '\r\n'));
+                xtermInstance.write('\r\n\x1b[32m=== END OF TMUX CONTENT ===\x1b[0m\r\n');
+              } else if (result.stderr) {
+                xtermInstance.write(`\r\n\x1b[31mError capturing tmux session: ${result.stderr}\x1b[0m\r\n`);
+              } else {
+                xtermInstance.write('\r\n\x1b[33mNo output from tmux session (might be empty)\x1b[0m\r\n');
+              }
+
+            } catch (error) {
+              xtermInstance.write(`\r\n\x1b[31mFailed to capture tmux session: ${error.message}\x1b[0m\r\n`);
+            }
+
+            xtermInstance.write('\r\n' + currentPrompt);
+          });
+        }
+
         xtermInstance.onData(async (data) => {
           const code = data.charCodeAt(0);
           if (code === 13) { // Enter key
@@ -1538,6 +1615,20 @@
               xtermInstance.write('\r\n');
               const cmdToExecute = currentCommand.trim();
               try {
+                // Check if this is a command that needs special handling
+                const isInteractiveCommand =
+                  cmdToExecute.startsWith('tmux') ||
+                  cmdToExecute.startsWith('vi ') ||
+                  cmdToExecute.startsWith('vim ') ||
+                  cmdToExecute.startsWith('nano ');
+
+                if (isInteractiveCommand) {
+                  // For interactive commands, let the user know they should use the actual terminal
+                  xtermInstance.write('\r\n\x1b[33mInteractive commands like tmux, vim, and nano cannot run in this terminal.\r\n');
+                  xtermInstance.write('Please use an SSH session to the device instead.\x1b[0m\r\n');
+                  return; // Skip the API call
+                }
+
                 const response = await fetch('/api/execute-command', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
