@@ -742,62 +742,37 @@
     box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
   }
 
-  /* Tmux live container specific styles */
-  #tmux-live-container .flex.justify-between.items-center {
-    padding: 0.25rem 0.5rem;
-    min-height: auto;
-    height: 36px;
-    display: flex;
-    align-items: center;
-  }
-
-  /* Live tmux container styles */
-  #tmux-live-container {
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  /* Error state for close button */
-  #tmux-live-close-btn:hover span {
-    color: var(--color-error-text);
-  }
-
-  /* Reduce height of tmux-live-container header */
-  #tmux-live-container .flex.justify-between.items-center {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 1rem */
-    min-height: 2rem;
-  }
-
-  /* Update X button to match other buttons */
+  /* CONSOLIDATED: X button specific styles */
   #tmux-live-close-btn {
-    width: auto;
-    height: auto;
-    font-size: 1rem;
+    /* Different padding than other buttons */
     padding: 0.25rem 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 1rem;
   }
   #tmux-live-close-btn span {
     color: var(--text-primary);
   }
+  #tmux-live-close-btn:hover span {
+    color: var(--color-error-text);
+  }
 
-  /* Update the live tmux container to be slimmer */
-   #tmux-live-container {
-     border-radius: 0.5rem;
-     overflow: hidden;
-   }
+  /* CONSOLIDATED: Tmux live container styles */
+  #tmux-live-container {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
 
-   /* Tmux live container header height */
-   #tmux-live-container .flex.justify-between.items-center {
-     padding: 0.25rem 0.5rem;
-     min-height: 2.25rem;
-     height: 36px;
-     display: flex;
-     align-items: center;
-   }
+  /* Tmux live container header styles */
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem;
+    height: 36px;
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+  }
 
-   /* EVERYTHING BELOW THIS LINE IS REMOVED AS IT DUPLICATES EARLIER STYLES */
+  /* EVERYTHING BELOW THIS LINE IS REMOVED AS IT DUPLICATES EARLIER STYLES */
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -924,8 +899,8 @@
     </div>
 
     <!-- Tmux live view container (placed below action area) -->
-    <div id="tmux-live-container" class="hidden mt-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
-      <div class="flex justify-between items-center border-b border-border">
+    <div id="tmux-live-container" class="hidden bg-2 ring-1 ring-border shadow-lg">
+      <div class="flex justify-between items-center">
         <div class="flex items-center gap-1">
           <span class="text-accent font-bold text-xs">Live Tmux:</span>
           <span id="tmux-live-session-name" class="text-xs text-primary">comma</span>
