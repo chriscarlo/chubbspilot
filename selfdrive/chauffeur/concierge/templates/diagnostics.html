@@ -637,6 +637,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.12.0/lib/xterm-addon-search.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -651,7 +653,7 @@
 
     <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="service-monitor-tile" data-content-id="service-monitor-control-display">
       <div class="text-lg font-bold mb-1">
-        <span class="text-accent">Monitor Services</span>
+        <span class="text-accent">Monitors</span>
       </div>
     </div>
 
@@ -1240,7 +1242,7 @@
         appendDebug('live-monitor-debug-output', `Error stopping monitoring: ${error.message}`, true);
     } finally {
         showContentSection('service-monitor-control-display', document.getElementById('service-monitor-tile'));
-        appendDebug('service-monitor-debug-output', "Live monitoring UI closed. Select 'Monitor Services' again.");
+        appendDebug('service-monitor-debug-output', "Live monitoring UI closed. Select 'Monitors' again.");
     }
   }
 
@@ -1400,20 +1402,141 @@
         xtermInstance = new Terminal({
           cursorBlink: true,
           convertEol: true,
-          theme: { background: '#000000', foreground: '#00FF00', cursor: '#00FF00' }
+          theme: { background: '#000000', foreground: '#00FF00', cursor: '#00FF00' },
+          allowTransparency: true,
+          fontSize: 14,
+          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+          cursorStyle: 'block',
+          scrollback: 1000,
+          disableStdin: false
         });
+
+        // Load necessary addons
         fitAddon = new FitAddon.FitAddon();
         xtermInstance.loadAddon(fitAddon);
+
+        // Add Web Links addon for clickable links
+        const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+        xtermInstance.loadAddon(webLinksAddon);
+
+        // Add Search addon for Ctrl+F functionality
+        const searchAddon = new SearchAddon.SearchAddon();
+        xtermInstance.loadAddon(searchAddon);
+
+        // Open the terminal in the container
         xtermInstance.open(document.getElementById('xterm-terminal-container'));
         try { fitAddon.fit(); } catch {}
-        currentPrompt = `${currentUser}@${currentHost}:~$ `;
+
+        // Set initial directory to /data/openpilot
+        try {
+          const cdResponse = await fetch('/api/execute-command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'cd /data/openpilot && pwd' })
+          });
+          const cdResult = await cdResponse.json();
+
+          // Debug the response
+          console.log("Initial directory response:", cdResult);
+
+          if (cdResult.stdout && cdResult.cwd) {
+            currentPrompt = `${currentUser}@${currentHost}:${cdResult.cwd}$ `;
+          } else {
+            // If we didn't get a cwd from the response, use fixed path
+            currentPrompt = `${currentUser}@${currentHost}:/data/openpilot$ `;
+
+            // Since the backend API might not have set the working directory,
+            // we'll run another command to ensure future commands run in the right directory
+            try {
+              await fetch('/api/execute-command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'cd /data/openpilot' })
+              });
+            } catch (innerError) {
+              console.error("Error setting directory in second attempt:", innerError);
+            }
+          }
+        } catch (error) {
+          console.error("Error setting initial directory:", error);
+          currentPrompt = `${currentUser}@${currentHost}:~$ `;
+        }
+
         xtermInstance.write('Welcome to Concierge Device Terminal (Xterm.js)\r\n');
+        // Show current directory in welcome message
+        xtermInstance.write(`\x1b[32mCurrent directory: /data/openpilot\x1b[0m\r\n`);
         xtermInstance.write(currentPrompt);
+
+        // Add command history support
+        const commandHistory = [];
+        let historyIndex = -1;
+        let savedCommand = '';
+
+                // Debug the terminal key handling
+        console.log("Setting up onKey handler for command history");
+
+        // Improved key handler with better debugging
+        xtermInstance.onKey((e) => {
+          const ev = e.domEvent;
+          const key = e.key;
+
+          // Log key presses for debugging
+          console.log(`Key pressed: ${key} (${ev.key}), keyCode: ${ev.keyCode}`);
+
+          // Handle special keys like arrows for command history
+          // Note: Some browsers/environments may send different key codes for arrow keys
+          if (key === '\x1b[A' || ev.key === 'ArrowUp') {
+            if (commandHistory.length > 0) {
+              console.log("UP arrow pressed, command history length:", commandHistory.length);
+              if (historyIndex === -1) {
+                savedCommand = currentCommand; // Save current command when starting to navigate history
+                historyIndex = commandHistory.length - 1;
+              } else if (historyIndex > 0) {
+                historyIndex--;
+              }
+
+              // Clear current line and replace with history item
+              const historyCommand = commandHistory[historyIndex];
+              console.log(`Showing history item ${historyIndex}: ${historyCommand}`);
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
+              currentCommand = historyCommand;
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[B' || ev.key === 'ArrowDown') {
+            if (historyIndex !== -1) {
+              console.log("DOWN arrow pressed, current index:", historyIndex);
+              if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                const historyCommand = commandHistory[historyIndex];
+                console.log(`Showing next history item ${historyIndex}: ${historyCommand}`);
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
+                currentCommand = historyCommand;
+              } else {
+                // End of history, restore saved command
+                console.log("End of history, restoring saved command:", savedCommand);
+                historyIndex = -1;
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + savedCommand);
+                currentCommand = savedCommand;
+              }
+            }
+            ev.preventDefault();
+          } else if (ev.key === 'Tab') {
+            // Basic tab handling to prevent losing focus
+            ev.preventDefault();
+            // In the future, you could implement tab completion here
+          }
+        });
 
         xtermInstance.onData(async (data) => {
           const code = data.charCodeAt(0);
-          if (code === 13) {
+          if (code === 13) { // Enter key
             if (currentCommand.trim().length > 0) {
+              // Add command to history if not duplicate of the last one
+              if (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== currentCommand) {
+                commandHistory.push(currentCommand);
+              }
+              historyIndex = -1; // Reset history navigation
+
               xtermInstance.write('\r\n');
               const cmdToExecute = currentCommand.trim();
               try {
@@ -1444,13 +1567,17 @@
             }
             currentCommand = '';
             xtermInstance.write('\r\n' + currentPrompt);
-          } else if (code === 127 || code === 8) {
+          } else if (code === 127 || code === 8) { // Backspace
             if (currentCommand.length > 0) {
               xtermInstance.write('\b \b');
               currentCommand = currentCommand.slice(0, -1);
             }
-          } else if (code < 32) {
+          } else if (code < 32 && code !== 9) { // Control characters except Tab
             return;
+          } else if (code === 9) { // Tab - could add tab completion in the future
+            // For now, just write a tab character
+            currentCommand += '\t';
+            xtermInstance.write('\t');
           } else {
             currentCommand += data;
             xtermInstance.write(data);
