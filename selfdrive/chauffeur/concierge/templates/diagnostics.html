@@ -760,6 +760,105 @@
      color: var(--color-accent);
      box-shadow: 0 0 0 2px var(--color-accent);
    }
+
+  /* Update tmux live container header height and button styling */
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem;
+    min-height: 2.25rem; /* Increased from 2rem to prevent button cutoff */
+  }
+
+  /* Add glow effect to match left navigation button active state */
+  .terminal-actions button:hover,
+  #tmux-live-toggle-btn:hover,
+  #tmux-live-close-btn:hover,
+  .terminal-actions button.active-tool,
+  #tmux-live-toggle-btn.active-tool {
+    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
+  }
+
+  /* Consistent button styling to match left nav tiles */
+  .terminal-actions button,
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.75rem; /* Consistent height */
+    font-size: 0.8rem;
+    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  /* Ensure the tmux live container buttons are properly sized */
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    padding: 0.25rem 0.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Improved center alignment for the terminal toolbar */
+  .terminal-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background-color: var(--color-2);
+    padding: 0.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Ensure consistent height for all toolbar elements */
+  .terminal-actions > * {
+    height: 1.75rem; /* Consistent height for all elements */
+  }
+
+  /* Make active buttons better match left nav active style */
+  .tile.active-tile,
+  .terminal-actions button.active-tool,
+  #tmux-live-toggle-btn.active-tool {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
+  }
+
+  /* Perfect button glow effect to match the left navigation */
+  .tile:hover,
+  .terminal-actions button:hover,
+  #tmux-live-toggle-btn:hover,
+  #tmux-live-close-btn:hover {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px var(--color-accent), 0 0 6px 1px rgba(0, 149, 255, 0.25);
+  }
+
+  /* Ensure exact same transition effects */
+  .tile,
+  .terminal-actions button,
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+  }
+
+  /* Fix terminal actions alignment with proper centering */
+  .terminal-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    height: 2.5rem; /* Fixed height to ensure proper alignment */
+  }
+
+  /* Ensure all elements in toolbar have consistent vertical centering */
+  .terminal-actions > * {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
 </style>
 <script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -860,25 +959,25 @@
       <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
         <div id="xterm-terminal-container" style="width: 100%; flex-grow: 1;"></div>
         <div id="terminal-resize-handle"></div>
-        <div class="terminal-actions flex items-center justify-center gap-4 py-1 px-3">
+        <div class="terminal-actions">
           <div class="flex items-center h-7">
-            <label for="tmux-session-name" class="text-xs text-secondary mr-1">Session:</label>
+            <label for="tmux-session-name" class="text-xs text-secondary mr-1 flex items-center h-full">Session:</label>
             <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 h-5 text-xs w-20 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
           <div class="flex items-center h-7">
-            <label for="tmux-lines" class="text-xs text-secondary mr-1">Lines:</label>
+            <label for="tmux-lines" class="text-xs text-secondary mr-1 flex items-center h-full">Lines:</label>
             <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 h-5 text-xs w-14 focus:ring-1 focus:ring-accent focus:outline-none">
           </div>
           <div class="flex items-center h-7">
-            <label class="flex items-center cursor-pointer">
+            <label class="flex items-center cursor-pointer h-full">
               <input type="checkbox" id="tmux-scrollback" checked class="mr-1 h-3.5 w-3.5">
               <span class="text-xs text-secondary">Scrollback</span>
             </label>
           </div>
-          <button id="capture-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-sm text-xs px-2 py-1">
+          <button id="capture-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent rounded-lg shadow-sm text-xs px-3">
             <span class="text-accent">Capture Tmux</span>
           </button>
-          <button id="show-live-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-sm text-xs px-2 py-1">
+          <button id="show-live-tmux-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent rounded-lg shadow-sm text-xs px-3">
             <span class="text-accent">Show Live View</span>
           </button>
         </div>
@@ -887,16 +986,16 @@
 
     <!-- Tmux live view container (placed below action area) -->
     <div id="tmux-live-container" class="hidden mt-4 bg-2 ring-1 ring-border rounded-lg shadow-lg overflow-hidden">
-      <div class="flex justify-between items-center p-2 border-b border-border" style="height: 2rem; padding: 0 0.5rem;">
+      <div class="flex justify-between items-center border-b border-border" style="height: 2.25rem; padding: 0 0.5rem;">
         <div class="flex items-center gap-1">
           <span class="text-accent font-bold text-xs">Live Tmux:</span>
           <span id="tmux-live-session-name" class="text-xs text-primary">comma</span>
         </div>
-        <div class="flex items-center gap-1">
-          <button id="tmux-live-toggle-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg text-xs py-0.5 px-2">
+        <div class="flex items-center gap-2">
+          <button id="tmux-live-toggle-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent rounded-lg shadow-lg text-xs px-2">
             <span class="text-accent">Pause</span>
           </button>
-          <button id="tmux-live-close-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent active:ring-accent-2 rounded-lg shadow-lg h-5 w-5 flex items-center justify-center text-xs">
+          <button id="tmux-live-close-btn" class="tile bg-2 ring-1 ring-border hover:ring-accent rounded-lg shadow-lg flex items-center justify-center text-xs px-2">
             <span class="text-primary">×</span>
           </button>
         </div>
