@@ -715,22 +715,27 @@
     padding: calc(0.25rem - 1px) calc(0.75rem - 1px);
   }
 
-  /* Special padding adjustment for the close button */
-  #tmux-live-close-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 1rem;
-  }
-
+  /* Close button specific styles - Just adjust active state padding */
   #tmux-live-close-btn.active-tool {
+    /* Calculate padding based on original close button padding */
     padding: calc(0.25rem - 1px) calc(0.5rem - 1px);
   }
 
   /* Preserve specific text colors for the button spans */
   .terminal-actions button span,
-  #tmux-live-toggle-btn span,
-  #tmux-live-close-btn span {
+  #tmux-live-toggle-btn span {
     color: var(--color-accent);
     font-size: 0.75rem;
+  }
+
+  /* Override close button's span color */
+  #tmux-live-close-btn span {
+    color: var(--text-primary);
+    font-size: 0.75rem;
+  }
+
+  #tmux-live-close-btn:hover span {
+    color: var(--color-error-text);
   }
 
   /* Close button specific styles */
@@ -738,11 +743,10 @@
     padding: 0.25rem 0.5rem;
     font-size: 1rem;
   }
-  #tmux-live-close-btn span {
-    color: var(--text-primary);
-  }
-  #tmux-live-close-btn:hover span {
-    color: var(--color-error-text);
+
+  /* Make sure there's appropriate spacing between buttons in the container */
+  #tmux-live-container .flex.justify-between.items-center .gap-2 {
+    gap: 0.5rem !important; /* Force the gap to be applied */
   }
 
   /* Live tmux container styles */
