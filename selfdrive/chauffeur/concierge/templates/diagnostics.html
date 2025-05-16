@@ -631,7 +631,7 @@
 
   /* Note: MapD Log Stream view styles are already defined above */
 
-  /* CONSOLIDATED: Terminal actions toolbar and related components */
+  /* UPDATED: Terminal actions toolbar and related components */
   .terminal-actions {
     display: flex;
     justify-content: center;
@@ -691,33 +691,30 @@
     align-items: center;
     justify-content: center;
     white-space: nowrap;
-    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
   }
 
   /* Button hover states */
   .terminal-actions button:hover,
   #tmux-live-toggle-btn:hover,
   #tmux-live-close-btn:hover {
-    background-color: var(--color-surface);
-    border-color: var(--color-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 0 0 2px var(--color-accent), 0 0 6px 1px rgba(0, 149, 255, 0.25);
+    transform: scale(1.02);
+    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.25);
   }
 
-  .terminal-actions button:hover span,
-  #tmux-live-toggle-btn:hover span {
-    color: var(--color-accent-2);
-  }
-
-  /* Active/selected state */
-  .terminal-actions button.active,
-  #tmux-live-toggle-btn.active,
+  /* Active/selected state - UPDATED to match Terminal button active state */
   .terminal-actions button.active-tool,
   #tmux-live-toggle-btn.active-tool {
-    background-color: var(--color-accent);
-    color: var(--color-1);
-    border-color: var(--color-accent-2);
-    box-shadow: 0 0 0 2px var(--color-accent), 0 0 8px 2px rgba(0, 149, 255, 0.35);
+    border: 2px solid var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent);
+  }
+
+  /* Preserve specific text colors for the button spans */
+  .terminal-actions button span,
+  #tmux-live-toggle-btn span,
+  #tmux-live-close-btn span {
+    color: var(--color-accent);
+    font-size: 0.75rem;
   }
 
   /* Close button specific styles */
@@ -1445,6 +1442,7 @@
     const sessionNameEl = document.getElementById('tmux-live-session-name');
     const toggleBtn = document.getElementById('tmux-live-toggle-btn');
     const showLiveBtn = document.getElementById('show-live-tmux-btn');
+    const captureTmuxBtn = document.getElementById('capture-tmux-btn');
 
     if (!tmuxContainer || !tmuxContent || !sessionNameEl || !toggleBtn) return;
 
@@ -1452,6 +1450,8 @@
     tmuxContainer.classList.remove('hidden');
     sessionNameEl.textContent = sessionName;
     toggleBtn.textContent = 'Pause';
+
+    // Apply active state to toggle button
     toggleBtn.classList.add('active-tool');
 
     // Show the "Show Live View" button as active
@@ -1582,7 +1582,16 @@
     }
 
     if (tmuxLiveCloseBtn) {
-      tmuxLiveCloseBtn.addEventListener('click', hideLiveTmuxView);
+      tmuxLiveCloseBtn.addEventListener('click', function() {
+        // Add active state temporarily
+        tmuxLiveCloseBtn.classList.add('active-tool');
+
+        // Hide the tmux view with a slight delay
+        setTimeout(() => {
+          hideLiveTmuxView();
+          tmuxLiveCloseBtn.classList.remove('active-tool');
+        }, 300);
+      });
     }
 
     initializeServiceMonitorElements(); // Get handles to service monitor buttons etc.
@@ -1865,11 +1874,15 @@
         if (captureTmuxBtn) {
           captureTmuxBtn.addEventListener('click', async () => {
             try {
-                                          const sessionNameInput = document.getElementById('tmux-session-name');
+              // Add active state class temporarily
+              captureTmuxBtn.classList.add('active-tool');
+
+              const sessionNameInput = document.getElementById('tmux-session-name');
               const sessionName = sessionNameInput ? sessionNameInput.value.trim() : 'comma';
 
               if (!sessionName) {
                 xtermInstance.write('\r\n\x1b[31mError: Session name cannot be empty\x1b[0m\r\n');
+                captureTmuxBtn.classList.remove('active-tool');
                 return;
               }
 
@@ -1912,6 +1925,11 @@
 
             } catch (error) {
               xtermInstance.write(`\r\n\x1b[31mFailed to capture tmux session: ${error.message}\x1b[0m\r\n`);
+            } finally {
+              // Remove active state after command completes
+              setTimeout(() => {
+                captureTmuxBtn.classList.remove('active-tool');
+              }, 1000);
             }
 
             xtermInstance.write('\r\n' + currentPrompt);
