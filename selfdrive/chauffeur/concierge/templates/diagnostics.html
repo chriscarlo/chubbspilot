@@ -680,7 +680,7 @@
       <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
           <div id="cpu-equalizer-display-wrapper" class="hidden">
               <div id="cpu-equalizer-container"></div>
-          </div>
+              </div>
           <div id="empty-state-message">Select an option from the left.</div>
       </div>
 
@@ -1515,47 +1515,47 @@
           }
           const data = await response.json();
           appendCrashDebug("Successfully parsed JSON response.");
-          if (data.files && data.files.length > 0) {
-              const groupedLogs = new Map();
+              if (data.files && data.files.length > 0) {
+                  const groupedLogs = new Map();
               data.files.forEach(logFile => {
                   const dateObj = new Date(logFile.date.replace(' ', 'T') + 'Z');
-                  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-                  const day = String(dateObj.getUTCDate()).padStart(2, '0');
-                  const year = dateObj.getUTCFullYear();
-                  const groupKey = `${month}/${day}/${year}`;
-                  if (!groupedLogs.has(groupKey)) {
-                      groupedLogs.set(groupKey, []);
-                  }
-                  groupedLogs.get(groupKey).push(logFile);
-              });
-              logListContainer.innerHTML = '';
-              if (groupedLogs.size > 0) {
-                  groupedLogs.forEach((filesInGroup, dateGroupKey) => {
-                      const groupHeader = document.createElement('div');
-                      groupHeader.className = 'crash-log-group-header';
-                      groupHeader.textContent = dateGroupKey;
-                      logListContainer.appendChild(groupHeader);
-                      filesInGroup.forEach(logFile => {
-                          const tile = document.createElement('div');
-                          tile.className = 'log-file-tile';
-                          tile.dataset.filename = logFile.name;
-                          tile.innerHTML = `
-                              <div class="log-name">Crash Log</div>
-                              <div class="log-details">
-                                  <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
-                              </div>
-                          `;
-                          tile.addEventListener('click', () => displayLogContent(logFile.name));
-                          logListContainer.appendChild(tile);
-                      });
+                      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                      const year = dateObj.getUTCFullYear();
+                      const groupKey = `${month}/${day}/${year}`;
+                      if (!groupedLogs.has(groupKey)) {
+                          groupedLogs.set(groupKey, []);
+                      }
+                      groupedLogs.get(groupKey).push(logFile);
                   });
+              logListContainer.innerHTML = '';
+                  if (groupedLogs.size > 0) {
+                      groupedLogs.forEach((filesInGroup, dateGroupKey) => {
+                          const groupHeader = document.createElement('div');
+                          groupHeader.className = 'crash-log-group-header';
+                          groupHeader.textContent = dateGroupKey;
+                          logListContainer.appendChild(groupHeader);
+                          filesInGroup.forEach(logFile => {
+                              const tile = document.createElement('div');
+                              tile.className = 'log-file-tile';
+                          tile.dataset.filename = logFile.name;
+                              tile.innerHTML = `
+                                  <div class="log-name">Crash Log</div>
+                                  <div class="log-details">
+                                      <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
+                                  </div>
+                              `;
+                              tile.addEventListener('click', () => displayLogContent(logFile.name));
+                              logListContainer.appendChild(tile);
+                          });
+                      });
                   appendCrashDebug(`Displayed ${data.files.length} log files, grouped by date.`);
-              } else {
-                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
+                  } else {
+                      logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
                   appendCrashDebug("No crash log files to display after grouping.");
-              }
-          } else {
-              logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
+                  }
+              } else {
+                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
               appendCrashDebug("No crash log files returned from API.");
           }
       } catch (error) {

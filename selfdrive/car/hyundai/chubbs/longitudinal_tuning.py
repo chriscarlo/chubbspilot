@@ -530,7 +530,7 @@ class HKGLongitudinalTuning:
         if self.handle_cruise_cancel(CS):
             chauffeurHKGTuning.longFinalAccel = 0.0
             chauffeurHKGTuning.longAccelPreClip = 0.0
-            # self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
+            self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
             return 0.0
 
         accel = self.calculate_limited_accel(actuators, CS, lead_one, chauffeurHKGTuning)
@@ -543,7 +543,7 @@ class HKGLongitudinalTuning:
         msg.valid = True
 
         # Publish
-        # self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
+        self.publisher.chauffeurHKGTuning(msg) # Use the singleton publisher
         return final_accel
 
     def apply_tune(self, CP: car.CarParams) -> None:
