@@ -738,10 +738,11 @@
     color: var(--color-error-text);
   }
 
-  /* Close button specific styles */
-  #tmux-live-close-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 1rem;
+  /* Fix vertical alignment of text within toolbar elements */
+  .terminal-actions label,
+  .terminal-actions span,
+  .terminal-actions input {
+    vertical-align: middle;
   }
 
   /* Make sure there's appropriate spacing between buttons in the container */
