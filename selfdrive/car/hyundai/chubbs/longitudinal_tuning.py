@@ -45,7 +45,7 @@ class _HKGTuningPublisher:
 
     def chauffeurHKGTuning(self, msg):
         if self._pub_master is None:
-            print("ERROR: _HKGTuningPublisher's pub_master is None. Cannot publish.")
+            # print("ERROR: _HKGTuningPublisher's pub_master is None. Cannot publish.")
             # Optionally, try to re-initialize here if it makes sense for your error handling strategy
             # For now, just preventing a crash.
             return
