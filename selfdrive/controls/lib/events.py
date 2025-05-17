@@ -278,6 +278,12 @@ def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
 
 
 def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, frogpilot_toggles: SimpleNamespace) -> Alert:
+  print("*** COMM_ISSUE_ALERT FUNCTION CALLED ***", flush=True)
+  try:
+    from openpilot.common.swaglog import cloudlog
+    cloudlog.warning("*** COMM_ISSUE_ALERT FUNCTION CALLED ***")
+  except ImportError:
+    pass
   failing_services_details = []
   cur_time = time.monotonic() # Get current time for accurate checks
 
