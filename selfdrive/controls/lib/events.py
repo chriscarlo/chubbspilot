@@ -278,12 +278,15 @@ def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
 
 
 def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, frogpilot_toggles: SimpleNamespace) -> Alert:
-  print("*** COMM_ISSUE_ALERT FUNCTION CALLED ***", flush=True)
+  with open("/data/openpilot_debug_comms.log", "a") as f:
+    f.write(f"{time.time()}: *** COMM_ISSUE_ALERT FUNCTION CALLED ***\n")
+  # The try-except for cloudlog can remain if you want, or be removed if cloudlog isn't used/working
   try:
     from openpilot.common.swaglog import cloudlog
     cloudlog.warning("*** COMM_ISSUE_ALERT FUNCTION CALLED ***")
   except ImportError:
     pass
+
   failing_services_details = []
   cur_time = time.monotonic() # Get current time for accurate checks
 
@@ -302,26 +305,23 @@ def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaste
         service_is_ok = False
         reason.append(f"NOT_SEEN_IN_SIMULATION")
 
-
     # Check frequency
-    if sm._check_avg_freq(s): # This helper encapsulates the conditions for checking frequency
+    if sm._check_avg_freq(s):
       dts = sm.recv_dts[s]
       if len(dts) > 0:
         avg_freq = 1 / (sum(dts) / len(dts))
-        recent_dts_count = max(1, int(len(dts) / 10)) # ensure at least 1 for recent avg if dts has entries
+        recent_dts_count = max(1, int(len(dts) / 10))
         recent_dts = list(dts)[-recent_dts_count:]
         avg_freq_recent = 0
-        if sum(recent_dts) > 1e-9: # Avoid ZeroDivisionError
+        if sum(recent_dts) > 1e-9:
             avg_freq_recent = 1 / (sum(recent_dts) / len(recent_dts))
-
         avg_freq_ok = sm.min_freq[s] <= avg_freq <= sm.max_freq[s]
         recent_freq_ok = sm.min_freq[s] <= avg_freq_recent <= sm.max_freq[s]
         is_freq_ok = avg_freq_ok or recent_freq_ok
-      else: # No DTS data, cannot determine frequency
-        is_freq_ok = False # Or True, depending on desired strictness. Let's say False if check_avg_freq is True.
+      else:
+        is_freq_ok = False
         avg_freq = 0
         avg_freq_recent = 0
-
       if not is_freq_ok:
         service_is_ok = False
         reason.append(f"FREQ_BAD (avg: {avg_freq:.2f}Hz, recent: {avg_freq_recent:.2f}Hz, range: [{sm.min_freq[s]:.2f}-{sm.max_freq[s]:.2f}]Hz)")
@@ -335,26 +335,17 @@ def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaste
       details = f"Service: {s} (frame: {sm.recv_frame[s]}, last_update_ago: {sm.frame - sm.recv_frame[s]} frames)"
       details += " Reasons: " + ", ".join(reason)
       failing_services_details.append(details)
-      # Use cloudlog for more persistent logging if available, otherwise print
-      # Ensure cloudlog is imported or handled gracefully if not
-      try:
-        from openpilot.common.swaglog import cloudlog
-        cloudlog.error(f"CommIssueDebug: {details}")
-      except ImportError:
-        print(f"CommIssueDebug: {details}", flush=True)
+      with open("/data/openpilot_debug_comms.log", "a") as f:
+        f.write(f"{time.time()}: CommIssueDebug: {details}\n")
 
-  # Generate the alert message for the HUD (original logic)
-  # Filter out the detailed reasons for the msg on HUD for brevity
   display_msg_parts = []
   for detail_str in failing_services_details:
       service_name = detail_str.split(' (frame:')[0].split('Service: ')[1]
-      if service_name not in display_msg_parts: # Avoid duplicate service names in short alert
+      if service_name not in display_msg_parts:
           display_msg_parts.append(service_name)
-
   msg_for_hud = ', '.join(display_msg_parts[:4])
-  if not msg_for_hud and failing_services_details: # If all failing services had same name, or other edge cases
+  if not msg_for_hud and failing_services_details:
       msg_for_hud = "Details in logs"
-
 
   return NoEntryAlert(msg_for_hud, alert_text_1="Communication Issue Between Processes")
 
