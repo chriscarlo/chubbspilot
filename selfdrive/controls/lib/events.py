@@ -9,6 +9,7 @@ import time
 
 from cereal import log, car
 import cereal.messaging as messaging
+from cereal.services import SERVICE_LIST
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.git import get_short_branch
 from openpilot.common.realtime import DT_CTRL
