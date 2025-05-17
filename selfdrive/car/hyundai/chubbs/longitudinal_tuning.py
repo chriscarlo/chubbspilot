@@ -20,7 +20,7 @@ class _HKGTuningPublisher:
             cls._instance = cls()
             initialized = False
             attempts = 0
-            max_attempts = 5 # Try 5 times
+            max_attempts = 0 # Try 5 times
             retry_delay = 0.5 # Seconds to wait between retries
 
             while not initialized and attempts < max_attempts:
