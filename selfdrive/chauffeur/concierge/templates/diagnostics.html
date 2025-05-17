@@ -639,7 +639,7 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     background-color: var(--color-2);
-    padding: 0.625rem 0.75rem 0.375rem; /* Adjusted to favor top slightly to compensate for the border */
+    padding: 0.25rem 0.75rem 0.75rem; /* Strongly favoring bottom padding */
     border-top: 1px solid var(--color-border);
     height: 2.5rem; /* Fixed height for consistent alignment */
     box-sizing: border-box;
@@ -649,7 +649,8 @@
   .terminal-actions > * {
     display: flex;
     align-items: center;
-    height: calc(100% - 1px); /* Account for border */
+    height: calc(100% - 3px); /* Reduced height to pull elements up */
+    transform: translateY(-1px); /* Subtle upward shift */
   }
 
   /* Form controls in terminal toolbar */
