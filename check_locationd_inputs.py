@@ -19,9 +19,15 @@ def main():
     print(f"Is '{service_to_check}' correctly defined in cereal.services and being published by sensord?")
     # Attempt to print SERVICE_LIST for debugging
     try:
-      print("Available services in SERVICE_LIST:")
-      for name, service in messaging.SERVICE_LIST.items():
-          print(f"  - {name} (Port: {service.port})")
+      print("Available services in messaging.SERVICE_LIST:")
+      if messaging.SERVICE_LIST:
+        for name, service_obj in messaging.SERVICE_LIST.items():
+          # The 'port' attribute might not exist or be None if not a ZMQ service,
+          # so access it carefully or just print the name.
+          port_info = getattr(service_obj, 'port', 'N/A')
+          print(f"  - {name} (Port: {port_info})")
+      else:
+        print("  messaging.SERVICE_LIST is empty or None.")
     except Exception as e_sl:
       print(f"  Could not print SERVICE_LIST: {e_sl}")
     return
