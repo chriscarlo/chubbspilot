@@ -605,6 +605,7 @@ def main():
       RD.update(sm, rr)
       RD.publish(pm, -rk.remaining*1000.0)
       rk.monitor_time()
+      rk.keep_time()
   else:
     pub_sock = messaging.pub_sock('liveTracks')
     while True:
@@ -616,6 +617,7 @@ def main():
       msg = RD.publish_radardless()
       pub_sock.send(msg.to_bytes())
       rk.monitor_time()
+      rk.keep_time()
 
 if __name__ == "__main__":
   main()
