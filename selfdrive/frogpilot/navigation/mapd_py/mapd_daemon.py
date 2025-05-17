@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import math
 import json
+import time
 import numpy as np
 from shapely.geometry import Point
 # import datetime # No longer needed here directly if log_event handles it
 
 import cereal.messaging as messaging
 from cereal import log
-from openpilot.common.realtime import Ratekeeper
+from openpilot.common.realtime import Ratekeeper, config_realtime_process, Priority
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 
@@ -121,6 +122,9 @@ class MapdPyDaemon:
         """
         Main update loop: get location, find segment, calculate speed limits, publish liveMapData.
         """
+        # Add debug log event that will always be sent regardless of GPS status
+        log_event("DAEMON", "DEBUG", "UPDATE_LOOP_HEARTBEAT", timestamp=str(int(time.time())))
+
         location_valid = self.update_location()
         log_event("DAEMON", "DEBUG", "UPDATE_CYCLE_START", location_valid=location_valid, v_ego=self.last_v_ego)
 
@@ -648,7 +652,6 @@ def main():
     # can do heavy shapely/math work without contending with openpilot's
     # real-time control loops (controlsd/core-0, locationd/core-1 etc.).
     try:
-        from openpilot.common.realtime import config_realtime_process, Priority
         # Allow the process to run on cores 2 *and* 3 so that the dedicated tile
         # loader thread can be exclusively pinned to core 3 while the rest of the
         # daemon continues on core 2.  See reader.MapReader initialisation above.
@@ -659,12 +662,43 @@ def main():
         # print(f"mapd_daemon: unable to set realtime priority ({e})")
         log_event("DAEMON", "WARN", "REALTIME_PRIORITY_CONFIG_FAIL", error=str(e))
 
-    daemon = MapdPyDaemon()
-    rk = Ratekeeper(1.0) # Run at 1 Hz
-    log_event("DAEMON", "INFO", "MAIN_LOOP_STARTING", rate_hz=1.0)
-    while True:
-        daemon.update()
-        rk.keep_time()
+    try:
+        log_event("DAEMON", "INFO", "MAPD_PY_MAIN_STARTED", startup_time=str(int(time.time())))
+        cloudlog.info("Starting frogpilot mapd_py navigation daemon")
+
+        daemon = MapdPyDaemon()
+        # Target 5Hz update rate
+        rk = Ratekeeper(5.0, print_delay_threshold=None)
+        log_event("DAEMON", "INFO", "MAIN_LOOP_STARTING", rate_hz=5.0)
+
+        # Main loop
+        iteration_count = 0
+        while True:
+            iteration_count += 1
+
+            # Every 10 iterations (every 2 seconds), log a heartbeat
+            if iteration_count % 10 == 0:
+                log_event("DAEMON", "INFO", "MAPD_PY_MAIN_HEARTBEAT",
+                          iteration=iteration_count,
+                          uptime=round(iteration_count/5.0, 1),
+                          real_time=str(int(time.time())))
+
+            # Do the main update
+            daemon.update()
+
+            # Publish a daemon status message every 20 iterations
+            if iteration_count % 20 == 0:
+                log_event("DAEMON", "STATUS", "DAEMON_STATUS",
+                          has_gps=daemon.gps_ok,
+                          has_valid_pos=(daemon.last_valid_pos is not None),
+                          has_segment=(daemon.current_segment_id is not None),
+                          v_ego=daemon.last_v_ego,
+                          iteration=iteration_count)
+
+            rk.keep_time()
+    except Exception as e:
+        cloudlog.exception(f"mapd_py daemon exception: {e}")
+        log_event("DAEMON", "ERROR", "MAPD_PY_MAIN_EXCEPTION", error=str(e))
 
 if __name__ == "__main__":
     main()
