@@ -358,78 +358,51 @@ async def stop_service_monitoring_endpoint_route(): # Renamed to avoid conflict 
 
 @app.get("/mapd_logs_stream")
 async def mapd_logs_sse_stream() -> StreamingResponse:
-    print("[MAPD_STREAM_SETUP] Entered mapd_logs_sse_stream function.")
+    """
+    DEPRECATED: This SSE endpoint is being phased out in favor of the more robust /api/mapd-logs endpoint.
+    Keeping this for backward compatibility but will emit a deprecation warning.
+    """
+    print("[MAPD_STREAM_DEPRECATED] WARNING: The '/mapd_logs_stream' SSE endpoint is deprecated. Use '/api/mapd-logs' instead.")
+
     async def log_event_source() -> AsyncGenerator[str, None]:
-        socket = None # Initialize for finally block
-        poller = None # Initialize for finally block
+        # Send deprecation warning to client
+        yield f"data: [WARNING] This SSE endpoint is deprecated. Use the '/api/mapd-logs' endpoint with polling instead.\n\n"
+
+        socket = None
+        poller = None
         connection_active = True
         try:
-            print("[MAPD_STREAM_SETUP] log_event_source started.")
             context = get_mapd_log_zmq_context()
-            print(f"[MAPD_STREAM_SETUP] Got ZMQ context: {type(context)}")
-
             socket = context.socket(zmq.SUB)
-            print(f"[MAPD_STREAM_SETUP] Created ZMQ SUB socket: {type(socket)}")
-
-            # Set linger to 0 before connect for SUB sockets that should close fast on error/shutdown
             socket.setsockopt(zmq.LINGER, 0)
-            print("[MAPD_STREAM_SETUP] Set LINGER to 0 on ZMQ socket.")
-
-            print("[MAPD_STREAM_SETUP] Attempting to connect to tcp://localhost:8607...")
             socket.connect("tcp://localhost:8607")
-            print("[MAPD_STREAM_SETUP] Successfully called connect() on ZMQ socket.")
-
-            print("[MAPD_STREAM_SETUP] Attempting to subscribe to all messages...")
             socket.subscribe("")
-            print("[MAPD_STREAM_SETUP] Successfully subscribed to ZMQ socket.")
 
             poller = zmq.asyncio.Poller()
             poller.register(socket, zmq.POLLIN)
-            print("[MAPD_STREAM_SETUP] ZMQ poller registered. Entering main loop...")
 
             while connection_active:
-                events = await poller.poll(timeout=1000) # Poll with a timeout
+                events = await poller.poll(timeout=1000)
                 if socket in dict(events):
                     message = await socket.recv_string()
-                    # print(f"[MAPD_STREAM_DATA] Received ZMQ: {message[:100]}...") # Uncomment for verbose data logging
-                    yield f"data: {message}\\n\\n"
+                    yield f"data: {message}\n\n"
                 else:
-                    # print("[MAPD_STREAM_KEEPALIVE] Sending keep-alive.") # Uncomment for verbose keep-alive logging
-                    yield ": keepalive\\n\\n"
+                    yield ": keepalive\n\n"
         except asyncio.CancelledError:
             print("[MAPD_STREAM_CANCELLED] MapD log stream cancelled by client disconnect or server shutdown.")
             connection_active = False
         except Exception as e:
-            import traceback
-            tb_str = traceback.format_exc()
-            print(f"[MAPD_STREAM_ERROR] Error in MapD log stream: {type(e).__name__}: {e}\\nTraceback:\\n{tb_str}")
+            print(f"[MAPD_STREAM_ERROR] Error in MapD log stream: {type(e).__name__}: {e}")
             connection_active = False
-            # Consider yielding a specific error to client if stream is still partially up
-            # yield f"event: error\\ndata: {json.dumps({'type': type(e).__name__, 'message': str(e), 'detail': 'Check server logs.'})}\\n\\n"
         finally:
-            print("[MAPD_STREAM_FINALLY] Cleaning up MapD log stream resources...")
-            if poller and socket and not socket.closed: # Check if socket is valid and not closed before unregister
-                print("[MAPD_STREAM_FINALLY] Attempting to unregister poller.")
+            if poller and socket and not socket.closed:
                 try:
-                    if socket in poller.sockets: # Check if socket is actually registered
-                         poller.unregister(socket)
-                         print("[MAPD_STREAM_FINALLY] Poller unregistered.")
-                    else:
-                         print("[MAPD_STREAM_FINALLY] Socket not found in poller, no unregister needed.")
-                except KeyError:
-                    print("[MAPD_STREAM_FINALLY] Socket already unregistered (KeyError).")
-                except Exception as e_unreg:
-                     print(f"[MAPD_STREAM_FINALLY] Error unregistering poller: {type(e_unreg).__name__}: {e_unreg}")
-
+                    if socket in poller.sockets:
+                        poller.unregister(socket)
+                except Exception:
+                    pass
             if socket and not socket.closed:
-                print("[MAPD_STREAM_FINALLY] Closing ZMQ socket.")
                 socket.close()
-                print("[MAPD_STREAM_FINALLY] ZMQ socket closed.")
-            elif socket and socket.closed:
-                print("[MAPD_STREAM_FINALLY] ZMQ socket was already closed.")
-            else:
-                print("[MAPD_STREAM_FINALLY] No ZMQ socket instance to close or was None.")
-            print("[MAPD_STREAM_FINALLY] Cleanup finished.")
 
     return StreamingResponse(log_event_source(), media_type="text/event-stream")
 
@@ -758,6 +731,47 @@ def parse_capnp_services() -> Dict[str, List[str]]:
 
     print(f"[SERVICE_PARSER_DEBUG] Returning: capnp_services={len(capnp_services)}, custom_services={len(custom_services)}")
     return {"capnp_services": sorted(list(set(capnp_services))), "custom_services": sorted(list(set(custom_services)))}
+
+@app.get("/api/mapd-logs")
+async def get_mapd_logs() -> Dict[str, Any]:
+    """
+    Fetches the latest logs from MapD's ZeroMQ socket.
+    This replaces the SSE approach with a simpler REST API that can be polled.
+    """
+    try:
+        context = zmq.Context()
+        socket = context.socket(zmq.SUB)
+        socket.setsockopt(zmq.LINGER, 0)  # Ensure socket closes immediately on error
+        socket.setsockopt(zmq.RCVTIMEO, 1000)  # 1 second timeout
+        socket.connect("tcp://localhost:8607")
+        socket.setsockopt_string(zmq.SUBSCRIBE, "")  # Subscribe to all messages
+
+        logs = []
+        # Try to collect up to 10 messages or until timeout
+        start_time = datetime.datetime.now()
+        max_duration = datetime.timedelta(seconds=1)  # Maximum 1 second collection time
+
+        while (datetime.datetime.now() - start_time) < max_duration and len(logs) < 10:
+            try:
+                message = socket.recv_string()
+                logs.append(message)
+            except zmq.Again:
+                # Timeout occurred, stop collecting
+                break
+            except Exception as e:
+                logs.append(f"[ERROR] Error receiving message: {str(e)}")
+                break
+
+        return {"logs": logs, "count": len(logs)}
+
+    except Exception as e:
+        print(f"[MAPD_LOGS_ERROR] Error fetching MapD logs: {str(e)}")
+        return {"error": str(e), "logs": []}
+    finally:
+        try:
+            socket.close()
+        except:
+            pass  # Ignore errors on close
 
 def main():
     # This function is called by manager.py
