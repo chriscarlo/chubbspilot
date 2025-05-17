@@ -739,9 +739,8 @@
   }
 
   /* Fix vertical alignment of text within toolbar elements */
-  .terminal-actions label,
-  .terminal-actions span,
-  .terminal-actions input {
+  .terminal-actions .text-xs {
+    line-height: 1;
     vertical-align: middle;
   }
 
@@ -2040,22 +2039,46 @@
       let isResizing = false;
       let lastDownY = 0;
       let initialHeight = 0;
+
       handle.addEventListener('mousedown', function(e) {
         isResizing = true;
         lastDownY = e.clientY;
         initialHeight = terminalDisplayElement.clientHeight;
         e.preventDefault();
-        function move(eMove){
-          if(!isResizing) return;
+
+        // Get reference to the actual terminal container and toolbar
+        const xtermContainer = document.getElementById('xterm-terminal-container');
+        const toolbar = terminalDisplayElement.querySelector('.terminal-actions');
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+
+        function move(eMove) {
+          if (!isResizing) return;
           const delta = eMove.clientY - lastDownY;
           let newH = initialHeight + delta;
-          if(newH < MIN_TERMINAL_HEIGHT) newH = MIN_TERMINAL_HEIGHT;
+
+          // Ensure we respect minimum height
+          if (newH < MIN_TERMINAL_HEIGHT) newH = MIN_TERMINAL_HEIGHT;
+
+          // Apply new height to the terminal element
           terminalDisplayElement.style.height = newH + 'px';
-          if(fitAddonRef){ try{fitAddonRef.fit();}catch{} }
+
+          // Resize the xterm container to fill available space minus toolbar height
+          if (xtermContainer) {
+            xtermContainer.style.height = (newH - toolbarHeight) + 'px';
+          }
+
+          // Refit the terminal
+          if (fitAddonRef) { try { fitAddonRef.fit(); } catch {} }
         }
-        function up(){ isResizing=false; document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up);}
-        document.addEventListener('mousemove',move);
-        document.addEventListener('mouseup',up);
+
+        function up() {
+          isResizing = false;
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+        }
+
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
       });
     }
 
