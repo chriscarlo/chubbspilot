@@ -1920,13 +1920,14 @@
         xtermInstance.write('Welcome to Concierge Device Terminal\r\n');
         xtermInstance.write(currentPrompt);
 
-        // Add command history support
+        // Add command history support and cursor positioning
         const commandHistory = [];
         let historyIndex = -1;
         let savedCommand = '';
+        let cursorPosition = 0;
 
-                // Debug the terminal key handling
-        console.log("Setting up onKey handler for command history");
+        // Debug the terminal key handling
+        console.log("Setting up onKey handler for command history and cursor movement");
 
         // Improved key handler with better debugging
         xtermInstance.onKey((e) => {
@@ -1936,7 +1937,7 @@
           // Log key presses for debugging
           console.log(`Key pressed: ${key} (${ev.key}), keyCode: ${ev.keyCode}`);
 
-          // Handle special keys like arrows for command history
+          // Handle special keys like arrows for command history and cursor movement
           // Note: Some browsers/environments may send different key codes for arrow keys
           if (key === '\x1b[A' || ev.key === 'ArrowUp') {
             if (commandHistory.length > 0) {
@@ -1953,6 +1954,7 @@
               console.log(`Showing history item ${historyIndex}: ${historyCommand}`);
               xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
               currentCommand = historyCommand;
+              cursorPosition = currentCommand.length; // Place cursor at end of command
             }
             ev.preventDefault();
           } else if (key === '\x1b[B' || ev.key === 'ArrowDown') {
@@ -1964,13 +1966,29 @@
                 console.log(`Showing next history item ${historyIndex}: ${historyCommand}`);
                 xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
                 currentCommand = historyCommand;
+                cursorPosition = currentCommand.length; // Place cursor at end of command
               } else {
                 // End of history, restore saved command
                 console.log("End of history, restoring saved command:", savedCommand);
                 historyIndex = -1;
                 xtermInstance.write('\x1b[2K\r' + currentPrompt + savedCommand);
                 currentCommand = savedCommand;
+                cursorPosition = currentCommand.length; // Place cursor at end of command
               }
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[C' || ev.key === 'ArrowRight') {
+            // Move cursor right if not at end of command
+            if (cursorPosition < currentCommand.length) {
+              xtermInstance.write('\x1b[C'); // ANSI escape sequence for cursor forward
+              cursorPosition++;
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[D' || ev.key === 'ArrowLeft') {
+            // Move cursor left if not at beginning of command
+            if (cursorPosition > 0) {
+              xtermInstance.write('\x1b[D'); // ANSI escape sequence for cursor backward
+              cursorPosition--;
             }
             ev.preventDefault();
           } else if (ev.key === 'Tab') {
@@ -2100,21 +2118,74 @@
               }
             }
             currentCommand = '';
+            cursorPosition = 0; // Reset cursor position
             xtermInstance.write('\r\n' + currentPrompt);
           } else if (code === 127 || code === 8) { // Backspace
-            if (currentCommand.length > 0) {
-              xtermInstance.write('\b \b');
-              currentCommand = currentCommand.slice(0, -1);
+            if (currentCommand.length > 0 && cursorPosition > 0) {
+              if (cursorPosition === currentCommand.length) {
+                // If cursor is at the end, simply delete last character
+                xtermInstance.write('\b \b');
+                currentCommand = currentCommand.slice(0, -1);
+                cursorPosition--;
+              } else {
+                // If cursor is in the middle, delete character at cursor position - 1
+                const beforeDelete = currentCommand.substring(0, cursorPosition - 1);
+                const afterDelete = currentCommand.substring(cursorPosition);
+
+                // Rewrite the line: move to start, clear line, write prompt and new command
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + beforeDelete + afterDelete);
+
+                // Move cursor back to correct position
+                xtermInstance.write('\x1b[' + (cursorPosition - 1 + currentPrompt.length) + 'G');
+
+                currentCommand = beforeDelete + afterDelete;
+                cursorPosition--;
+              }
             }
           } else if (code < 32 && code !== 9) { // Control characters except Tab
             return;
           } else if (code === 9) { // Tab - could add tab completion in the future
             // For now, just write a tab character
-            currentCommand += '\t';
-            xtermInstance.write('\t');
+            if (cursorPosition === currentCommand.length) {
+              // If cursor is at the end, simply add tab
+              currentCommand += '\t';
+              xtermInstance.write('\t');
+              cursorPosition++;
+            } else {
+              // Insert tab at cursor position
+              const before = currentCommand.substring(0, cursorPosition);
+              const after = currentCommand.substring(cursorPosition);
+
+              // Rewrite the line
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + before + '\t' + after);
+
+              // Move cursor back to position after inserted tab
+              xtermInstance.write('\x1b[' + (cursorPosition + 1 + currentPrompt.length) + 'G');
+
+              currentCommand = before + '\t' + after;
+              cursorPosition++;
+            }
           } else {
-            currentCommand += data;
-            xtermInstance.write(data);
+            // Handle regular character input at cursor position
+            if (cursorPosition === currentCommand.length) {
+              // If cursor is at the end, simply append
+              currentCommand += data;
+              xtermInstance.write(data);
+              cursorPosition++;
+            } else {
+              // Insert at cursor position
+              const before = currentCommand.substring(0, cursorPosition);
+              const after = currentCommand.substring(cursorPosition);
+
+              // Rewrite the line
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + before + data + after);
+
+              // Move cursor back to position after inserted character
+              xtermInstance.write('\x1b[' + (cursorPosition + 1 + currentPrompt.length) + 'G');
+
+              currentCommand = before + data + after;
+              cursorPosition++;
+            }
           }
         });
       }
