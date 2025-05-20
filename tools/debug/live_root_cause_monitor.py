@@ -44,11 +44,22 @@ class LiveRootCauseMonitor:
         valid_topics = []
         invalid_topics = []
         for _svc in self.monitored_services:
+            is_valid = False
+            # First try without size arg (works for struct/union members that aren't lists)
             try:
-                # Pass size=0 for list fields so init succeeds when required
-                _msg_test.new_message(_svc, 0)
-                valid_topics.append(_svc)
+                _msg_test.new_message(_svc)
+                is_valid = True
             except Exception:
+                # Try again assuming it might be a List field; size=0 is the cheapest
+                try:
+                    _msg_test.new_message(_svc, 0)
+                    is_valid = True
+                except Exception:
+                    pass
+
+            if is_valid:
+                valid_topics.append(_svc)
+            else:
                 invalid_topics.append(_svc)
         self.monitored_services = valid_topics
 
