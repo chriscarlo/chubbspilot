@@ -40,9 +40,9 @@ SERVICES = [
 
 # Helper to readable enum
 _loc_status_names = {
-    int(log.LiveLocationKalman.Status.init): 'init',
+    int(log.LiveLocationKalman.Status.uninitialized): 'uninitialized',
+    int(log.LiveLocationKalman.Status.uncalibrated): 'uncalibrated',
     int(log.LiveLocationKalman.Status.valid): 'valid',
-    int(log.LiveLocationKalman.Status.invalid): 'invalid',
 }
 
 def main():
