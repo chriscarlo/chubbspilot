@@ -21,6 +21,11 @@ def main():
     # SubMaster will handle which ones it can actually subscribe to.
     all_service_names = list(services.SERVICE_LIST.keys())
 
+    # TEMPORARY DEBUG: Exclude sensorEvents to see if it's the sole Cap'n Proto issue
+    if 'sensorEvents' in all_service_names:
+        print("Temporarily excluding 'sensorEvents' from SubMaster subscription for debugging capnp error...", file=sys.stderr)
+        all_service_names.remove('sensorEvents')
+
     # We are interested in services that SubMaster can actually poll and get updates for.
     # SubMaster itself will only connect to services that are actually publishing.
     # So, we pass all known service names to SubMaster.
