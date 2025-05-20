@@ -39,8 +39,24 @@ class LiveRootCauseMonitor:
         # services whose publisher we might not know yet.
         # ------------------------------------------------------------------
         self.monitored_services = list(services.SERVICE_LIST.keys())
+        # Filter out services that don't have a matching union member in log.Event
+        from cereal import messaging as _msg_test
+        valid_topics = []
+        invalid_topics = []
+        for _svc in self.monitored_services:
+            try:
+                # Pass size=0 for list fields so init succeeds when required
+                _msg_test.new_message(_svc, 0)
+                valid_topics.append(_svc)
+            except Exception:
+                invalid_topics.append(_svc)
+        self.monitored_services = valid_topics
+
         if 'managerState' not in self.monitored_services:
             self.monitored_services.append('managerState')
+
+        if invalid_topics:
+            print(f"(Info) Skipped {len(invalid_topics)} services not present in log.Event schema: {', '.join(invalid_topics)}")
 
         unknown_pubs = []
         for svc in self.monitored_services:
