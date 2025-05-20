@@ -112,6 +112,9 @@ procs = [
   PythonProcess("map_downloader", "selfdrive.frogpilot.navigation.mapd_py.downloader.downloader", always_run),
   PythonProcess("mapd_py", "selfdrive.frogpilot.navigation.mapd_py.mapd_daemon", always_run),
   NativeProcess("tinygrad_modeld", "selfdrive/tinygrad_modeld", ["./tinygrad_modeld"], run_tinygrad_modeld),
+  PythonProcess("live_root_cause_monitor", "tools.debug.live_root_cause_monitor", always_run),
+
+  # Chauffeur processes
   PythonProcess("concierge", "selfdrive.chauffeur.concierge.main", always_run),
 ]
 

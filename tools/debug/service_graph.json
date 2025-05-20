@@ -1,0 +1,299 @@
+{
+  "micd": {
+    "publishes": [
+      "microphone"
+    ],
+    "subscribes": []
+  },
+  "timed": {
+    "publishes": [
+      "clocks"
+    ],
+    "subscribes": [
+      "liveLocationKalman"
+    ]
+  },
+  "dmonitoringmodeld": {
+    "publishes": [
+      "driverStateV2"
+    ],
+    "subscribes": [
+      "liveCalibration"
+    ]
+  },
+  "navmodeld": {
+    "publishes": [
+      "navModel"
+    ],
+    "subscribes": [
+      "navInstruction"
+    ]
+  },
+  "soundd": {
+    "publishes": [],
+    "subscribes": [
+      "controlsState",
+      "frogpilotPlan",
+      "microphone"
+    ]
+  },
+  "calibrationd": {
+    "publishes": [
+      "liveCalibration"
+    ],
+    "subscribes": [
+      "cameraOdometry",
+      "carParams",
+      "carState"
+    ]
+  },
+  "torqued": {
+    "publishes": [
+      "liveTorqueParameters"
+    ],
+    "subscribes": [
+      "carControl",
+      "carOutput",
+      "carState",
+      "frogpilotPlan",
+      "liveLocationKalman"
+    ]
+  },
+  "controlsd": {
+    "publishes": [
+      "carControl",
+      "controlsState",
+      "frogpilotCarControl",
+      "onroadEvents"
+    ],
+    "subscribes": []
+  },
+  "card": {
+    "publishes": [
+      "carOutput",
+      "carParams",
+      "carState",
+      "frogpilotCarState",
+      "sendcan"
+    ],
+    "subscribes": [
+      "carControl",
+      "frogpilotPlan",
+      "onroadEvents",
+      "pandaStates",
+      "radarState"
+    ]
+  },
+  "dmonitoringd": {
+    "publishes": [
+      "driverMonitoringState"
+    ],
+    "subscribes": [
+      "carState",
+      "controlsState",
+      "driverStateV2",
+      "liveCalibration",
+      "modelV2"
+    ]
+  },
+  "qcomgpsd": {
+    "publishes": [
+      "gpsLocation",
+      "qcomGnss"
+    ],
+    "subscribes": []
+  },
+  "navd": {
+    "publishes": [
+      "frogpilotNavigation",
+      "navInstruction",
+      "navRoute"
+    ],
+    "subscribes": [
+      "carState",
+      "frogpilotPlan",
+      "liveLocationKalman",
+      "managerState"
+    ]
+  },
+  "paramsd": {
+    "publishes": [
+      "liveParameters"
+    ],
+    "subscribes": [
+      "carState",
+      "frogpilotPlan",
+      "liveLocationKalman"
+    ]
+  },
+  "pigeond": {
+    "publishes": [
+      "ubloxRaw"
+    ],
+    "subscribes": []
+  },
+  "plannerd": {
+    "publishes": [
+      "longitudinalPlan",
+      "uiPlan"
+    ],
+    "subscribes": [
+      "carControl",
+      "carState",
+      "controlsState",
+      "frogpilotCarState",
+      "frogpilotPlan",
+      "liveParameters",
+      "modelV2",
+      "radarState"
+    ]
+  },
+  "radard": {
+    "publishes": [
+      "liveTracks",
+      "radarState"
+    ],
+    "subscribes": [
+      "carState",
+      "frogpilotCarState",
+      "frogpilotPlan",
+      "modelV2"
+    ]
+  },
+  "hardwared": {
+    "publishes": [
+      "deviceState",
+      "frogpilotDeviceState"
+    ],
+    "subscribes": [
+      "controlsState",
+      "frogpilotPlan",
+      "gpsLocationExternal",
+      "pandaStates",
+      "peripheralState"
+    ]
+  },
+  "uploader": {
+    "publishes": [],
+    "subscribes": [
+      "deviceState",
+      "frogpilotPlan"
+    ]
+  },
+  "statsd": {
+    "publishes": [],
+    "subscribes": [
+      "deviceState"
+    ]
+  },
+  "frogpilot_process": {
+    "publishes": [
+      "frogpilotPlan"
+    ],
+    "subscribes": [
+      "carControl",
+      "carState",
+      "controlsState",
+      "deviceState",
+      "driverMonitoringState",
+      "frogpilotCarControl",
+      "frogpilotCarState",
+      "frogpilotNavigation",
+      "managerState",
+      "modelV2",
+      "pandaStates",
+      "radarState"
+    ]
+  },
+  "mapd_py": {
+    "publishes": [
+      "liveMapData"
+    ],
+    "subscribes": [
+      "carState",
+      "liveLocationKalman"
+    ]
+  },
+  "camerad": {
+    "publishes": [
+      "driverCameraState",
+      "driverEncodeData",
+      "driverEncodeIdx",
+      "roadCameraState",
+      "roadEncodeData",
+      "roadEncodeIdx",
+      "thumbnail",
+      "wideRoadCameraState",
+      "wideRoadEncodeData",
+      "wideRoadEncodeIdx"
+    ],
+    "subscribes": []
+  },
+  "encoderd": {
+    "publishes": [
+      "driverEncodeData",
+      "driverEncodeIdx",
+      "qRoadEncodeData",
+      "qRoadEncodeIdx",
+      "roadEncodeData",
+      "roadEncodeIdx",
+      "wideRoadEncodeData",
+      "wideRoadEncodeIdx"
+    ],
+    "subscribes": []
+  },
+  "stream_encoderd": {
+    "publishes": [
+      "livestreamDriverEncodeData",
+      "livestreamDriverEncodeIdx",
+      "livestreamRoadEncodeData",
+      "livestreamRoadEncodeIdx",
+      "livestreamWideRoadEncodeData",
+      "livestreamWideRoadEncodeIdx"
+    ],
+    "subscribes": []
+  },
+  "modeld": {
+    "publishes": [
+      "drivingModelData",
+      "modelV2"
+    ],
+    "subscribes": []
+  },
+  "mapsd": {
+    "publishes": [
+      "thumbnail"
+    ],
+    "subscribes": []
+  },
+  "sensord": {
+    "publishes": [
+      "accelerometer",
+      "accelerometer2",
+      "gyroscope",
+      "gyroscope2",
+      "lightSensor",
+      "magnetometer",
+      "sensorEvents",
+      "temperatureSensor",
+      "temperatureSensor2"
+    ],
+    "subscribes": []
+  },
+  "locationd": {
+    "publishes": [
+      "gpsLocation",
+      "gpsLocationExternal",
+      "liveLocationKalman",
+      "ubloxGnss"
+    ],
+    "subscribes": []
+  },
+  "ubloxd": {
+    "publishes": [
+      "ubloxGnss",
+      "ubloxRaw"
+    ],
+    "subscribes": []
+  }
+}

@@ -15,7 +15,7 @@ from openpilot.common.conversions import Conversions as CV
 from openpilot.common.git import get_short_branch
 from openpilot.common.numpy_fast import clip
 from openpilot.common.params import Params
-from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
+from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL, DT_MDL
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
@@ -95,24 +95,6 @@ class Controls:
     # Base ignore list: sensors that don't gate engagement plus the test joystick stream
     ignore = self.sensor_packets + ['testJoystick']
 
-    # Streams that are defined in services.py but never published on a typical road device
-    # (e.g., secondary IMU, GPS raw, video encode indices, etc.).  These should be
-    # excluded from "alive" and average-frequency health checks so they can't trip
-    # the generic Communication-Issue alert.
-    optional_services = [
-      'accelerometer2', 'gyroscope2', 'magnetometer',
-      'lightSensor', 'temperatureSensor', 'temperatureSensor2',
-      'gpsNMEA', 'gpsLocationExternal', 'ubloxGnss', 'ubloxRaw', 'gnssMeasurements',
-      'liveMapData', 'navInstruction', 'navRoute', 'navThumbnail', 'navModel', 'mapRenderState',
-      'qRoadEncodeIdx', 'roadEncodeIdx',
-      'driverEncodeIdx', 'wideRoadEncodeIdx',
-      'livestreamWideRoadEncodeIdx', 'livestreamRoadEncodeIdx', 'livestreamDriverEncodeIdx',
-      'livestreamWideRoadEncodeData', 'livestreamRoadEncodeData', 'livestreamDriverEncodeData',
-      'customReservedRawData0', 'customReservedRawData1', 'customReservedRawData2',
-      'uploaderState', 'errorLogMessage', 'carParams', 'userFlag',
-    ]
-
-    ignore += optional_services
     if SIMULATION:
       ignore += ['driverCameraState', 'managerState']
     if REPLAY:
@@ -125,9 +107,7 @@ class Controls:
                                    'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters',
                                    'testJoystick', 'frogpilotCarState', 'frogpilotPlan'] + self.camera_packets + self.sensor_packets,
                                   ignore_alive=ignore,
-                                  # Average-frequency: ignore everything in `ignore` plus radarState (when present) and frogpilotPlan
-                                  ignore_avg_freq=ignore + ['radarState', 'frogpilotPlan'],
-                                  ignore_valid=['testJoystick', ],
+                                  ignore_avg_freq=ignore+['radarState', 'testJoystick'], ignore_valid=['testJoystick', ],
                                   frequency=int(1/DT_CTRL))
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode")
