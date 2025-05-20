@@ -148,14 +148,19 @@ class Track:
     vRel_K = float(self.kf.x[1, 0])
 
     # --- Conditional vRel Calculation ---
-    if self.is_hyundai_interface:
-        current_dRel_K = dRel_K
-        dt = self.kf.dt
-        if self.cnt > 0 and dt > 1e-5:
-            self.calculated_vRel = (current_dRel_K - self.prev_dRel_K) / dt
-        self.prev_dRel_K = current_dRel_K
-    else:
-        self.calculated_vRel = vRel_K
+    # # Original logic for Hyundai interface (dRel derivative):
+    # # if self.is_hyundai_interface:
+    # #     current_dRel_K = dRel_K
+    # #     dt = self.kf.dt
+    # #     if self.cnt > 0 and dt > 1e-5:
+    # #         self.calculated_vRel = (current_dRel_K - self.prev_dRel_K) / dt
+    # #     self.prev_dRel_K = current_dRel_K # This update was part of the dRel derivative logic
+    # # else: # Original logic for non-Hyundai (uses KF output)
+    # #     self.calculated_vRel = vRel_K
+
+    # Always use the Kalman filtered vRel (vRel_K), which is based on direct radar measurement.
+    # This effectively disables the dRel derivative calculation previously done for Hyundai interface.
+    self.calculated_vRel = vRel_K
     # --- End Conditional Calculation ---
 
     # approximate lead acceleration (always using KF's vRel_K for stability/consistency for now)

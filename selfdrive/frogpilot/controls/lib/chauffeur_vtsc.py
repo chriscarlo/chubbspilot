@@ -751,7 +751,8 @@ class _VTSCPublisher:
             cls._instance = cls()
             # Initialize PubMaster only once when the singleton instance is created
             try:
-                cls._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
+                # cls._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
+                pass  # Do nothing here
             except Exception as e:
                 print(f"Error initializing PubMaster in _VTSCPublisher: {e}")
                 cls._pub_master = None # Ensure it's None if init fails
@@ -759,14 +760,17 @@ class _VTSCPublisher:
 
     def chauffeurTurnSpeedControl(self, msg): # Renamed method from publish
         if self._pub_master is None:
-            print("ERROR: _VTSCPublisher's pub_master is None. Attempting re-init or skipping publish.")
-            try:
-                _VTSCPublisher._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
-                if _VTSCPublisher._pub_master is None:
-                     print("ERROR: Failed to re-initialize PubMaster in _VTSCPublisher. Cannot publish.")
-                     return
-            except Exception as e:
-                print(f"Error re-initializing PubMaster in _VTSCPublisher: {e}")
-                return
+            print("INFO: _VTSCPublisher's pub_master is None (intended). Skipping publish.") # Changed to INFO
+            # try:
+            #     _VTSCPublisher._pub_master = messaging.PubMaster(['chauffeurTurnSpeedControl'])
+            #     if _VTSCPublisher._pub_master is None:
+            #          print("ERROR: Failed to re-initialize PubMaster in _VTSCPublisher. Cannot publish.")
+            #          return
+            # except Exception as e:
+            #     print(f"Error re-initializing PubMaster in _VTSCPublisher: {e}")
+            #     return
+            return # Explicitly return to prevent attempting to send
+
         # The message (msg) is now expected to be fully populated by the caller
-        self._pub_master.send('chauffeurTurnSpeedControl', msg)
+        # self._pub_master.send('chauffeurTurnSpeedControl', msg)
+        pass # Do nothing here

@@ -25,10 +25,11 @@ class _HKGTuningPublisher:
 
             while not initialized and attempts < max_attempts:
                 try:
-                    cls._pub_master = messaging.PubMaster(['chauffeurHKGTuning'])
-                    initialized = True
-                    if attempts > 0:
-                        print(f"WARN: _HKGTuningPublisher succeeded initializing PubMaster after {attempts + 1} attempts.")
+                    # cls._pub_master = messaging.PubMaster(['chauffeurHKGTuning'])
+                    # initialized = True
+                    # if attempts > 0:
+                    #     print(f"WARN: _HKGTuningPublisher succeeded initializing PubMaster after {attempts + 1} attempts.")
+                    pass # Prevent initialization
                 except (MultiplePublishersError, IpcError) as e:
                     attempts += 1
                     print(f"WARN: _HKGTuningPublisher: MultiplePublishersError on attempt {attempts}/{max_attempts}. Retrying in {retry_delay}s... Error: {e}")
@@ -39,7 +40,7 @@ class _HKGTuningPublisher:
                     break # Break on other exceptions
 
             if not initialized:
-                print(f"ERROR: _HKGTuningPublisher failed to initialize PubMaster after {max_attempts} attempts. Publisher will be disabled.")
+                print(f"INFO: _HKGTuningPublisher PubMaster initialization disabled (intended). Publisher will be disabled.") # Changed to INFO
                 cls._pub_master = None
         return cls._instance
 
@@ -50,7 +51,8 @@ class _HKGTuningPublisher:
             # For now, just preventing a crash.
             return
         # The message (msg) should already be prepared and validated by the caller
-        self._pub_master.send('chauffeurHKGTuning', msg)
+        # self._pub_master.send('chauffeurHKGTuning', msg)
+        pass # Do nothing here
 # -----------------------------------------------------------------------------
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
