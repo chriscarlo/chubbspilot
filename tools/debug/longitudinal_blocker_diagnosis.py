@@ -62,8 +62,8 @@ class Tracker:
     # ------------------------------------------------------------------
     # Update helpers called per message or per-cycle
     # ------------------------------------------------------------------
-    def handle_controlsState(self, msg, sm_time, sm):
-        if not msg.valid:
+    def handle_controlsState(self, is_valid, sm_time):
+        if not is_valid:
             self.invalid_controlsState += 1
             self.controlsState_invalid_timestamps.append(sm_time)
         else:
@@ -75,8 +75,8 @@ class Tracker:
         else:
             self.liveLoc_not_valid_counter += 1
 
-    def handle_longitudinalPlan(self, msg):
-        if msg.valid:
+    def handle_longitudinalPlan(self, is_valid):
+        if is_valid:
             self.longPlan_valid_counter += 1
         else:
             self.longPlan_invalid_counter += 1
@@ -153,7 +153,7 @@ def main():
             # Process each service if updated
             if sm.updated['controlsState']:
                 tracker.count_msgs['controlsState'] += 1
-                tracker.handle_controlsState(sm['controlsState'], cur_time, sm)
+                tracker.handle_controlsState(sm.valid['controlsState'], cur_time)
 
             if sm.updated['liveLocationKalman']:
                 tracker.count_msgs['liveLocationKalman'] += 1
@@ -161,7 +161,7 @@ def main():
 
             if sm.updated['longitudinalPlan']:
                 tracker.count_msgs['longitudinalPlan'] += 1
-                tracker.handle_longitudinalPlan(sm['longitudinalPlan'])
+                tracker.handle_longitudinalPlan(sm.valid['longitudinalPlan'])
 
             if sm.updated['carState']:
                 tracker.count_msgs['carState'] += 1
