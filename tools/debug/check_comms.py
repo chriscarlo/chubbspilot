@@ -26,7 +26,7 @@ def main():
     # So, we pass all known service names to SubMaster.
     # Our subsequent checks (sm.valid[s], sm.alive[s], sm.freq_ok[s])
     # will rely on SubMaster's state for these services.
-    sm = messaging.SubMaster(all_service_names, poll='*', ignore_alive=[]) # monitor all services
+    sm = messaging.SubMaster(all_service_names, ignore_alive=[]) # monitor all services, poll default (all)
 
     print("Starting openpilot communication health monitor...")
     print("This script monitors services for the first signs of trouble:")
