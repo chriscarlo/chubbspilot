@@ -29,7 +29,7 @@ import cereal.messaging as messaging
 from cereal import log, services
 
 # ---------------------------- CONFIG -----------------------------------
-DEFAULT_RUN_SEC = 120  # default observation window
+DEFAULT_RUN_SEC = 60  # default observation window
 SERVICES = [
     'carState',
     'controlsState',
