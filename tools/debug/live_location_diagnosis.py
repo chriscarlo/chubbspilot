@@ -92,22 +92,15 @@ def main():
                 if sm.updated[s]:
                     svc_counts[s] += 1
 
-            # record GNSS/IMU granular counts
-            if sm.updated['ubloxGnss']:
-                gnss_counts['ubloxGnss'] += 1
-            if sm.updated['qcomGnss']:
-                gnss_counts['qcomGnss'] += 1
-            if sm.updated['gpsNMEA']:
-                gnss_counts['gpsNMEA'] += 1
-            if sm.updated['gpsLocationExternal']:
-                gnss_counts['gpsLocationExternal'] += 1
+            # record GNSS counts
+            for gnss_topic in ['ubloxGnss', 'qcomGnss', 'gpsNMEA', 'gpsLocationExternal']:
+                if gnss_topic in SERVICES and sm.updated[gnss_topic]:
+                    gnss_counts[gnss_topic] += 1
 
-            if sm.updated['sensorEvents']:
-                imu_counts['sensorEvents'] += 1
-            if sm.updated['accelerometer']:
-                imu_counts['accelerometer'] += 1
-            if sm.updated['gyroscope']:
-                imu_counts['gyroscope'] += 1
+            # record IMU counts
+            for imu_topic in ['sensorEvents', 'accelerometer', 'gyroscope']:
+                if imu_topic in SERVICES and sm.updated.get(imu_topic, False):
+                    imu_counts[imu_topic] += 1
 
             # log every 1s the location status
             if sm.updated['liveLocationKalman']:
