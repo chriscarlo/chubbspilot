@@ -12,7 +12,7 @@ def main():
 
   try:
     print(f"Attempting to subscribe to: {service_to_check}")
-    sm = messaging.SubMaster([service_to_check], ignore_avg_freq=True)
+    sm = messaging.SubMaster([service_to_check], ignore_alive=[service_to_check])
     print(f"Successfully subscribed to: {service_to_check}")
   except Exception as e:
     print(f"Could not subscribe to {service_to_check}: {e}")
