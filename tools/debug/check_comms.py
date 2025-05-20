@@ -24,7 +24,7 @@ def main():
 
     # Filter out services that don't publish, as we can't check their health directly
     # We will check the health of the *processes* that are supposed to publish them via managerState
-    services_that_publish = [s for s in SERVICE_LIST.keys() if SERVICE_LIST[s].publishes]
+    services_that_publish = [s for s in SERVICE_LIST.keys() if SERVICE_LIST[s].port is not None and SERVICE_LIST[s].port > 0]
 
     sm = messaging.SubMaster(services_that_publish, poll='*', ignore_alive=[]) # monitor all publishing services
 
