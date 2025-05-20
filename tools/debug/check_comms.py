@@ -17,12 +17,24 @@ def pretty_print_cereal(msg):
     return str(msg)
 
 def main():
+    print("[DEBUG] Entered main()", file=sys.stderr)
+    sys.stderr.flush()
+
+    print("[DEBUG] About to get all_service_names...", file=sys.stderr)
+    sys.stderr.flush()
     all_service_names = list(services.SERVICE_LIST.keys())
+    print(f"[DEBUG] Got {len(all_service_names)} service names.", file=sys.stderr)
+    sys.stderr.flush()
 
     # TEMPORARY DEBUG: Exclude sensorEvents to see if it's the sole Cap'n Proto issue
+    print("[DEBUG] Checking for sensorEvents exclusion...", file=sys.stderr)
+    sys.stderr.flush()
     if 'sensorEvents' in all_service_names:
         print("Temporarily excluding 'sensorEvents' from SubMaster subscription for debugging capnp error...", file=sys.stderr)
+        sys.stderr.flush()
         all_service_names.remove('sensorEvents')
+        print(f"[DEBUG] Service names count after sensorEvents exclusion: {len(all_service_names)}", file=sys.stderr)
+        sys.stderr.flush()
 
     # Create a reverse map from process name to a list of services it *might* be associated with.
     # This is an approximation if service_spec.process doesn't exist or is unreliable.
@@ -30,7 +42,11 @@ def main():
     # or by parsing process_config.py (which is too complex for this script).
     # For now, we'll focus on direct process health and direct service health.
 
+    print("[DEBUG] About to initialize SubMaster...", file=sys.stderr)
+    sys.stderr.flush()
     sm = messaging.SubMaster(all_service_names, ignore_alive=[])
+    print("[DEBUG] SubMaster initialized.", file=sys.stderr)
+    sys.stderr.flush()
 
     print("Starting openpilot communication health monitor...")
     print("This script monitors services for the first signs of trouble:")
@@ -53,9 +69,15 @@ def main():
         'no_messages_reported': False
     })
 
+    print("[DEBUG] About to initialize manager_state_sock...", file=sys.stderr)
+    sys.stderr.flush()
     manager_state_sock = messaging.sub_sock('managerState', timeout=0.005)
+    print("[DEBUG] manager_state_sock initialized.", file=sys.stderr)
+    sys.stderr.flush()
     running_processes_info = {}
 
+    print("[DEBUG] Entering main monitoring loop...", file=sys.stderr)
+    sys.stderr.flush()
     try:
         while True:
             manager_msg = messaging.recv_one_or_none(manager_state_sock)
