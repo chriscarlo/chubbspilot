@@ -31,12 +31,34 @@ from cereal import log
 
 # Observation parameters
 RUN_SEC_DEFAULT = 45
-SERVICES = [
+
+# Candidate services we care about
+CANDIDATE_SERVICES = [
     'liveLocationKalman',
     'ubloxGnss', 'qcomGnss', 'gpsNMEA', 'gpsLocationExternal',
     'sensorEvents', 'accelerometer', 'gyroscope',
     'managerState',
 ]
+
+# Filter out services missing from log.Event schema to prevent KjException
+valid_services = []
+invalid_services = []
+for _svc in CANDIDATE_SERVICES:
+    try:
+        messaging.new_message(_svc)
+        valid_services.append(_svc)
+    except Exception:
+        try:
+            # try list variant
+            messaging.new_message(_svc, 0)
+            valid_services.append(_svc)
+        except Exception:
+            invalid_services.append(_svc)
+
+if invalid_services:
+    print(f"(Info) Skipped {len(invalid_services)} services not present in log.Event schema: {', '.join(invalid_services)}")
+
+SERVICES = valid_services
 
 # Helper to readable enum
 _loc_status_names = {
