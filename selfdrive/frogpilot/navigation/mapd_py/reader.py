@@ -108,7 +108,7 @@ INDEX_RECORD_FORMAT = '<qddddQQ'
 INDEX_RECORD_SIZE = struct.calcsize(INDEX_RECORD_FORMAT)
 
 # Cache configuration
-DEFAULT_CACHE_SIZE = 5000 # Max number of segments to keep in memory
+DEFAULT_CACHE_SIZE = 2500 # Max number of segments to keep in memory
 
 # --- Logging Utility (simplified, to be centralized later) ---
 # def format_value_reader(value):
