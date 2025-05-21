@@ -100,6 +100,14 @@ if INVALID_TOPICS:
 # -----------------------------------------------------------------------------
 ACC_HORZ_MAX = 1500.0  # metres, same as locationd for good GNSS fix
 
+# Helper: translate liveLocationKalman.Status enum to readable string even if
+# the cereal binding lacks `to_string()` (older builds).
+_LLK_STATUS_NAME = {
+    int(log.LiveLocationKalman.Status.uninitialized): "UNINITIALIZED",
+    int(log.LiveLocationKalman.Status.uncalibrated): "UNCALIBRATED",
+    int(log.LiveLocationKalman.Status.valid): "VALID",
+}
+
 # -----------------------------------------------------------------------------
 # Main diagnostic collector
 # -----------------------------------------------------------------------------
@@ -161,7 +169,9 @@ def main() -> None:
             # ---------- liveLocationKalman ----------
             if "liveLocationKalman" in VALID_TOPICS and sm.updated.get("liveLocationKalman", False):
                 llk = sm["liveLocationKalman"]
-                status_name = log.LiveLocationKalman.Status.to_string(llk.status)
+                # Use .raw if available (capnp DynamicEnum);
+                _code = int(llk.status.raw) if hasattr(llk.status, "raw") else int(llk.status)
+                status_name = _LLK_STATUS_NAME.get(_code, str(llk.status))
                 loc_kf_timeline.append((t_off, status_name, llk.gpsOK, llk.sensorsOK, llk.posenetOK))
 
             # ---------- managerState → locationd process ----------
