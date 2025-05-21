@@ -105,7 +105,8 @@ def main():
             # log every 1s the location status
             if sm.updated['liveLocationKalman']:
                 msg = sm['liveLocationKalman']
-                status = _loc_status_names.get(int(msg.status), str(msg.status))
+                # msg.status is a capnp DynamicEnum; use .raw to get its numeric value
+                status = _loc_status_names.get(msg.status.raw, str(msg.status))
                 loc_timeline.append((t_off, status, msg.gpsOK, msg.sensorsOK, msg.posenetOK))
 
             time.sleep(0.05)
