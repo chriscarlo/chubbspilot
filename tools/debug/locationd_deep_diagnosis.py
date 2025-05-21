@@ -184,7 +184,9 @@ def main() -> None:
 
             # ---------- liveCalibration status ----------
             if "liveCalibration" in VALID_TOPICS and sm.updated.get("liveCalibration", False):
-                calib_status_counts[int(sm["liveCalibration"].calStatus)] += 1
+                _cs = sm["liveCalibration"].calStatus
+                _cs_code = int(_cs.raw) if hasattr(_cs, "raw") else int(_cs)
+                calib_status_counts[_cs_code] += 1
 
             time.sleep(0.05)
     except KeyboardInterrupt:
@@ -250,7 +252,17 @@ def main() -> None:
         if total_calib and len(calib_status_counts) > 1:
             print("  CalStatus breakdown:")
             for code, cnt in calib_status_counts.items():
-                name = log.LiveCalibrationData.Status.to_string(code) if hasattr(log.LiveCalibrationData.Status, "to_string") else str(code)
+                if hasattr(log.LiveCalibrationData.Status, "to_string"):
+                    name = log.LiveCalibrationData.Status.to_string(code)
+                else:
+                    # fallback mapping
+                    _CAL_STATUS_NAMES = {
+                        int(log.LiveCalibrationData.Status.uncalibrated): "UNCALIBRATED",
+                        int(log.LiveCalibrationData.Status.calibrated): "CALIBRATED",
+                        int(log.LiveCalibrationData.Status.recalibrating): "RECALIBRATING",
+                        int(log.LiveCalibrationData.Status.invalid): "INVALID",
+                    }
+                    name = _CAL_STATUS_NAMES.get(code, str(code))
                 print(f"    {name:<12}: {cnt}")
 
     # 5. Camera odometry ----------------------------------------------------------------
