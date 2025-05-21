@@ -140,12 +140,17 @@ else:
     lenv["DYLD_LIBRARY_PATH"] = lenv["LD_LIBRARY_PATH"]
   # Linux
   else:
-    libpath = [
-      f"#third_party/acados/{arch}/lib",
-      f"#third_party/libyuv/{arch}/lib",
-      "/usr/lib",
-      "/usr/local/lib",
-    ]
+    if arch == "aarch64":
+      libpath = [
+        "#third_party/libyuv/aarch64/lib",
+      ]
+    else:
+      libpath = [
+        f"#third_party/acados/{arch}/lib",
+        f"#third_party/libyuv/{arch}/lib",
+        "/usr/lib",
+        "/usr/local/lib",
+      ]
 
     if arch == "x86_64":
       libpath += [
