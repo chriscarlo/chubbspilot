@@ -20,6 +20,9 @@ fi
 cd libyuv
 git checkout 4a14cb2e81235ecd656e799aecaaf139db8ce4a2
 
+# Remove any existing built library to force a clean build
+rm -f $DIR/$ARCHNAME/lib/libyuv.a
+
 # Ensure static library is built with -fPIC for use in shared objects (required for AArch64 and most modern Linux systems)
 export CFLAGS="-fPIC $CFLAGS"
 export CXXFLAGS="-fPIC $CXXFLAGS"
@@ -36,6 +39,19 @@ rm -rf $DIR/include
 mkdir -p $INSTALL_DIR/lib
 cp $DIR/libyuv/libyuv.a $INSTALL_DIR/lib
 cp -r $DIR/libyuv/include $DIR
+
+# Validate that libyuv.a contains PIC object files
+cd $INSTALL_DIR/lib
+mkdir -p tmp_check && cd tmp_check
+ar x ../libyuv.a > /dev/null 2>&1
+# Check the first object file for 'Flags' containing 'PIC'
+OBJFILE=$(ls | head -n1)
+if ! readelf -A "$OBJFILE" 2>/dev/null | grep -q 'Flags:.*: PIC'; then
+  echo "\nERROR: libyuv.a was not built with -fPIC. This will cause linker errors on AArch64.\n"
+  exit 1
+fi
+cd ../..
+rm -rf lib/tmp_check
 
 ## To create universal binary on Darwin:
 ## ```
