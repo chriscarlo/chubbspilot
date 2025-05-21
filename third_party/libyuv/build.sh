@@ -20,8 +20,12 @@ fi
 cd libyuv
 git checkout 4a14cb2e81235ecd656e799aecaaf139db8ce4a2
 
+# Ensure static library is built with -fPIC for use in shared objects (required for AArch64 and most modern Linux systems)
+export CFLAGS="-fPIC $CFLAGS"
+export CXXFLAGS="-fPIC $CXXFLAGS"
+
 # build
-cmake .
+cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
 make -j$(nproc)
 
 INSTALL_DIR="$DIR/$ARCHNAME"
