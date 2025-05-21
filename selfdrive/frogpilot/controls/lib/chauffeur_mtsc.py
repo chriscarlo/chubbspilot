@@ -125,8 +125,8 @@ def _worker_main(out_q: mp.Queue, cruise_clamp: mp.Value):
                         out_q.get_nowait()
                         out_q.put_nowait((dist, spd))
 
-        except Exception as e:
-            print(f"ChauffeurMtsc worker exception: {e}")
+        except Exception:
+            pass
 
         # maintain ≈2 Hz cadence
         sleep = 1.0 / PROFILE_RATE_HZ - (time.monotonic() - start)
