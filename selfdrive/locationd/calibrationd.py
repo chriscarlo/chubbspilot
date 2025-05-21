@@ -183,7 +183,10 @@ class Calibrator:
                             road_transform_trans_std: list[float]) -> np.ndarray | None:
     self.old_rpy_weight = max(0.0, self.old_rpy_weight - 1/SMOOTH_CYCLES)
 
-    straight_and_fast = ((self.v_ego > MIN_SPEED_FILTER) and (trans[0] > MIN_SPEED_FILTER) and (abs(rot[2]) < MAX_YAW_RATE_FILTER))
+    # Allow calibration even when carState (v_ego) is unavailable (e.g., bench/no-CAN setups).
+    # Fall back to camera odometry forward speed if self.v_ego is 0.
+    v_ego_effective = self.v_ego if self.v_ego > 0.01 else trans[0]
+    straight_and_fast = ((v_ego_effective > MIN_SPEED_FILTER) and (trans[0] > MIN_SPEED_FILTER) and (abs(rot[2]) < MAX_YAW_RATE_FILTER))
     angle_std_threshold = MAX_VEL_ANGLE_STD
     height_std_threshold = MAX_HEIGHT_STD
     rpy_certain = np.arctan2(trans_std[1], trans[0]) < angle_std_threshold
