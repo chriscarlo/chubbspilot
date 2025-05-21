@@ -325,9 +325,17 @@ def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaste
       if not is_freq_ok:
         service_is_ok = False
         reason.append(f"FREQ_BAD (avg: {avg_freq:.2f}Hz, recent: {avg_freq_recent:.2f}Hz, range: [{sm.min_freq[s]:.2f}-{sm.max_freq[s]:.2f}]Hz)")
-
+    """
     # Check valid field
     if not sm.valid[s] and s not in sm.ignore_valid:
+      service_is_ok = False
+      reason.append(f"MSG_INVALID (last_msg.valid=False, logMonoTime: {sm.logMonoTime[s]})")
+    """
+
+      # Check valid field
+    if (not sm.valid[s]
+        and sm.recv_frame[s] > 50      # ignore the first ~2 s of startup
+        and s not in sm.ignore_valid):
       service_is_ok = False
       reason.append(f"MSG_INVALID (last_msg.valid=False, logMonoTime: {sm.logMonoTime[s]})")
 
