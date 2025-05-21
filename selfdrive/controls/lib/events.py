@@ -294,7 +294,7 @@ def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaste
     service_is_ok = True
     reason = []
 
-    # Check alive
+    # Check alive x
     expected_freq = SERVICE_LIST[s].frequency
     if expected_freq > 1e-5 and not sm.simulation:
       is_alive = (cur_time - sm.recv_time[s]) < (10. / expected_freq)
