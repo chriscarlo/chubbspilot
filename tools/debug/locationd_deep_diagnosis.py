@@ -131,6 +131,7 @@ def main() -> None:
     gnss_good_fix_counts: Counter[str] = Counter()     # gpsLocation* with hasFix & sane acc
     imu_counts: Counter[str] = Counter()               # accelerometer / gyroscope msgs
     loc_kf_timeline: list[tuple[float, str, bool, bool, bool]] = []  # (t_off, status, gpsOK, sensorsOK, posenetOK)
+    calib_status_counts: Counter[int] = Counter()
 
     # locationd process state over time
     loc_proc_history: list[tuple[float, bool, int]] = []  # (t_off, running, exitCode)
@@ -180,6 +181,10 @@ def main() -> None:
                 p = procs.get("locationd")
                 if p is not None:
                     loc_proc_history.append((t_off, p.running, p.exitCode))
+
+            # ---------- liveCalibration status ----------
+            if "liveCalibration" in VALID_TOPICS and sm.updated.get("liveCalibration", False):
+                calib_status_counts[int(sm["liveCalibration"].calStatus)] += 1
 
             time.sleep(0.05)
     except KeyboardInterrupt:
@@ -237,9 +242,16 @@ def main() -> None:
     if "liveCalibration" not in VALID_TOPICS:
         print("liveCalibration     :  topic missing → cannot check calibration ❓")
     else:
-        calib_ok = sum(1 for _ in range(msg_counts["liveCalibration"]) if sm.valid.get("liveCalibration", True))  # coarse
+        calib_ok = calib_status_counts.get(int(log.LiveCalibrationData.Status.calibrated), 0)
+        total_calib = msg_counts["liveCalibration"]
         status = "PASS ✅" if calib_ok else "FAIL ❌"
-        print(f"liveCalibration msgs: {msg_counts['liveCalibration']:5d}   valid_flag≈{calib_ok}  {status}")
+        print(f"liveCalibration msgs: {total_calib:5d}   CALIBRATED {calib_ok:5d}  {status}")
+        # Show distribution if non-trivial
+        if total_calib and len(calib_status_counts) > 1:
+            print("  CalStatus breakdown:")
+            for code, cnt in calib_status_counts.items():
+                name = log.LiveCalibrationData.Status.to_string(code) if hasattr(log.LiveCalibrationData.Status, "to_string") else str(code)
+                print(f"    {name:<12}: {cnt}")
 
     # 5. Camera odometry ----------------------------------------------------------------
     if "cameraOdometry" in VALID_TOPICS:
