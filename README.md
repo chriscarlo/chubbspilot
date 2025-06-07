@@ -1,5 +1,7 @@
 # ⚠️ DANGER: EXPERIMENTAL BRANCH - DO NOT USE ⚠️
 
+![image](https://user-images.githubusercontent.com/25117703/225456507-d2a90fa8-5043-4c58-95e0-cb5c1e5e4e59.png)
+
 ## Seriously, This Will Probably Kill You
 
 Welcome to the `build-experimental` branch of Chauffeur, where "experimental" is developer-speak for "I have no idea what I'm doing but I'm doing it with confidence."
