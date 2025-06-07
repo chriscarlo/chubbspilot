@@ -189,6 +189,14 @@ TICI = os.path.isfile('/TICI')
 PC = not TICI
 ```
 
+## SSH Configuration
+
+For git operations, SSH keys are stored in `~/.ssh/`:
+- Private key: `~/.ssh/claude_github_key`
+- Public key: `~/.ssh/claude_github_key.pub`
+
+The public key needs to be added to GitHub SSH keys in user settings for git push operations.
+
 ## Additional Guidance
 
 - Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
