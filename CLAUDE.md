@@ -146,7 +146,7 @@ Inter-process communication uses:
 ## Documentation Maintenance
 
 ### agentDocumentation Directory
-Maintain comprehensive documentation in `/agentDocumentation/` for:
+Maintain comprehensive documentation in `/data/openpilot/agentDocumentation/` for:
 - Development environment analysis
 - Cross-platform testing strategies
 - Infrastructure improvements
