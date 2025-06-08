@@ -2,7 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**IMPORTANT**: This WSL instance is exclusively intended for developing on this specific openpilot fork. The runtime environment should be emulated as closely as possible to the target AGNOS/TICI environment.
+## 🚨 CRITICAL DOCUMENTATION REQUIREMENTS 🚨
+
+**READ THIS FIRST - MANDATORY FOR ALL AGENTS:**
+
+1. **ALWAYS maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md**
+2. **When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push**
+3. **NEVER log status updates, implementation details, or commit tracking in CLAUDE.md files**
+4. **For development history and status updates, use `agentDocumentation/CHANGELOG.md`**
+5. **Whenever you perform a `git commit` or `git push`, update CHANGELOG.md with changes, NOT CLAUDE.md**
+6. **CLAUDE.md files are for AGENT INSTRUCTIONS ONLY - keep them clean and focused**
+
+## 📋 Current Development Status
+
+For current build status, recent changes, and implementation details, see:
+**`agentDocumentation/CHANGELOG.md`**
 
 ## ⚠️ CRITICAL DEVELOPMENT ENVIRONMENT NOTICE ⚠️
 
@@ -94,31 +108,6 @@ See *system/CLAUDE.md* for hardware abstraction details.
 
 See *tools/CLAUDE.md* for detailed development commands and testing procedures.
 
-## Documentation Maintenance
-
-Comprehensive documentation is maintained in `/data/openpilot/agentDocumentation/` for development environment analysis, cross-platform testing strategies, infrastructure improvements, and implementation roadmaps.
-
-### Documentation Workflow
-1. **Update documentation** as part of normal development workflow
-2. **Mark completed objectives** in roadmap documents
-3. **Add new ideas** and discoveries to relevant docs
-4. **Track infrastructure changes** in cleanup plan
-5. **Document platform-specific issues** and solutions
-
-### Documentation Directory Overview
-
-The `agentDocumentation/` directory contains:
-- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Analysis of essential runtime dependencies required by openpilot.
-- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - Detailed breakdown of external library imports and their usage.
-- **`IMMEDIATE_ACTION_PLAN.md`** - Prioritized quick-start action items to address immediate development tasks.
-- **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Roadmap for cleaning and refactoring infrastructure components.
-- **`README.md`** - Overview and navigation guide for this documentation directory.
-- **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing across supported architectures.
-- **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
-- **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
-- **`CONCIERGE_REFACTOR_PLAN.md`** - Comprehensive architectural refactor plan for the Concierge web server to address separation of concerns and code maintainability.
-- **`CONCIERGE_REFACTOR_CHECKLIST.md`** - Progress tracking checklist for the Concierge refactor implementation.
-
 ## Platform Detection
 
 ```python
@@ -144,60 +133,29 @@ For system operations requiring elevated privileges:
 
 See *release/CLAUDE.md* for prebuilt workflow details and fast device installation procedures.
 
-## Current Status
+## Documentation Structure
 
-**Last Updated:** January 8, 2025 20:45 PST
-**Current Commit:** `cae214e3` - Refactor Concierge UI: Move diagnostics into toggle description
+Comprehensive documentation is maintained in `/data/openpilot/agentDocumentation/`:
 
-### Build Ready Status
-- **TICI Native Builds**: All required libraries present, build should complete successfully
-- **x86_64 Development**: Fully functional with all dependencies resolved
-- **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports
-- **GUI Integration**: Concierge web server management now available in FrogPilot Utilities
-  - Enhanced diagnostics with real-time health monitoring
-  - Automatic dependency installation with Fix button (TICI-aware)
-  - Platform-specific behavior:
-    - TICI: Verifies pre-installed Python deps, skips Node.js deps
-    - Development: Uses Poetry/npm with timeouts to prevent hanging
-  - Real-time progress display with [CONCIERGE] prefixed messages
-  - Timeout protection: 30s for Poetry, 60s for npm
-  - Toggle disabled when dependencies missing
-  - Relaunch button for easy service restart
-- **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability
-- **Boot UI Overhaul**: Replaced FrogPilot graphics with terminal-based boot interface
-  - ASCII art Chauffeur logo with venetian blind effect
-  - Real-time service status display
-  - Actionable error reporting with stack traces
-  - Backward compatible with existing spinner
-  - Fixed TICI display rendering (centered for 2160x1080 screen)
-  - Added simple fallback UI for debugging display issues
+### Key Documentation Files
+- **`CHANGELOG.md`** - Development history, status updates, and implementation tracking
+- **`BUILD_TAILWIND.md`** - Instructions for building Tailwind CSS for Concierge
+- **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment
+- **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Roadmap for cleaning and refactoring infrastructure components
+- **`CONCIERGE_REFACTOR_PLAN.md`** - Comprehensive architectural refactor plan for the Concierge web server
+- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Analysis of essential runtime dependencies
+- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - Detailed breakdown of external library imports
+- **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing
 
-### Concierge UI Updates
-- **Refactored UI**: All diagnostics now integrated into the toggle control's expandable description area
-- **Fixed Text Wrapping**: Long diagnostic messages are now properly wrapped at 60 characters to prevent screen overflow
-- **TICI CSS Handling**: 
-  - Pre-built CSS detection on TICI devices
-  - Clear error messaging when Tailwind CSS needs to be built offline
-  - Created `BUILD_TAILWIND.md` with detailed instructions for building CSS on development machines
-- **Improved Fix Button**: 
-  - Now appears inline within the description when dependencies are missing
-  - Real-time progress display during installation
-  - Proper error handling and feedback
-- **Simplified Architecture**: Removed separate status widget, all functionality now in single toggle control
-
-See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
-
-## Additional Guidance
-
-- Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
-- When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
-- After every push, update all relevant documentation (CLAUDE.md, AGENTS.md, and any other affected docs) with current status, timestamp, and commit hash
-
-- Whenever you perform a `git commit` or `git push`, update all `CLAUDE.md` and `AGENTS.md` files (root and in `agentDocumentation/`) to include any new or updated documentation and refresh the **Last Updated** and **Current Commit** fields in each file.
-
-See *tools/CLAUDE.md* for detailed dependency management system
+### Documentation Workflow
+1. **Update CHANGELOG.md** with development changes and status updates
+2. **Mark completed objectives** in roadmap documents
+3. **Add new discoveries** to relevant technical docs
+4. **Keep CLAUDE.md clean** - no status tracking or implementation details
+5. **Document platform-specific issues** and solutions in appropriate files
 
 ## Memories
 
-- Always include a current time and which commit we are on when updating documentation
-- Never include "co-authored by claude" or anything of that sort in commit notes or messages
+- Always include current time and commit info in CHANGELOG.md, NOT CLAUDE.md
+- Never include "co-authored by claude" in commit messages
+- Focus on agent instructions in CLAUDE.md, development tracking in CHANGELOG.md

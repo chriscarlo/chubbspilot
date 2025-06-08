@@ -100,24 +100,7 @@ USE_SIMULATOR=1 python selfdrive/test/process_replay/replay.py
 
 The system uses a multi-layered approach to ensure maximum reliability on TICI devices where manual intervention is difficult.
 
-### Runtime Dependency Analysis
-
-1. **Comprehensive Analysis**: Scanned entire codebase (1260 files) and identified 661 unique external imports
-   - Created `tools/analyze_imports.py` for ongoing dependency analysis
-   - Generated `EXTERNAL_IMPORTS_ANALYSIS.md` with complete import breakdown
-   - Created `CRITICAL_RUNTIME_DEPENDENCIES.md` with prioritized installation guide
-
-2. **Multi-layered Installation System**: Ensures critical packages available before any imports:
-   - `ensure_boot_dependencies.sh` - Early boot-time shell script (tier 1 packages)
-   - `ensure_dependencies.py` - Comprehensive Python installer with special package handling
-   - `mapd_daemon_wrapper.py` - Process-specific wrapper ensuring shapely before import
-   - `main_wrapper.py` - Concierge wrapper ensuring web framework dependencies
-   - Modified `process_config.py` to use wrappers instead of direct module imports
-
-3. **Package Coverage**: Now handles critical packages with fallback installation methods:
-   - **Tier 1 Critical**: numpy (290 usages), shapely, pydantic, uvicorn, jinja2, requests
-   - **Tier 2 Important**: zmq, psutil, PIL, cv2 (opencv-python)
-   - **Special Handling**: Package name mapping (cv2→opencv-python, PIL→Pillow, zmq→pyzmq)
+For detailed dependency analysis history and implementation details, see `agentDocumentation/CHANGELOG.md`.
 
 ## Key Tools
 
