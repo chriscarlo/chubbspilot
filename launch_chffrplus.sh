@@ -81,6 +81,10 @@ function launch {
   # write tmux scrollback to a file
   tmux capture-pane -pq -S-1000 > /tmp/launch_log
 
+  # ensure python dependencies are available
+  cd $DIR
+  python system/ensure_dependencies.py
+
   # start manager
   cd system/manager
   if [ ! -f $DIR/prebuilt ]; then
