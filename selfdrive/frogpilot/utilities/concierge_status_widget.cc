@@ -64,22 +64,17 @@ void ConciergeStatusWidget::setupUI() {
   portLabel->setStyleSheet("font-size: 35px; color: #E4E4E4; margin-bottom: 15px; padding-left: 40px;");
   mainLayout->addWidget(portLabel);
   
-  // Dependencies status with fix button
-  depsLayout = new QHBoxLayout();
-  depsLayout->setSpacing(20);
-  
+  // Dependencies status
   depsLabel = new QLabel("Dependencies: Checking...", this);
   depsLabel->setStyleSheet("font-size: 35px; color: #E4E4E4; margin-bottom: 15px; padding-left: 40px;");
-  depsLayout->addWidget(depsLabel);
+  mainLayout->addWidget(depsLabel);
   
+  // Fix button - left aligned under dependencies
   fixButton = new QPushButton("Fix", this);
-  fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+  fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; margin-left: 40px; } QPushButton:pressed { background-color: #F57C00; }");
   fixButton->hide();
   connect(fixButton, &QPushButton::clicked, this, &ConciergeStatusWidget::onFixDependencies);
-  depsLayout->addWidget(fixButton);
-  depsLayout->addStretch();
-  
-  mainLayout->addLayout(depsLayout);
+  mainLayout->addWidget(fixButton);
   
   // Recent errors - more prominent
   errorsLabel = new QLabel("", this);
@@ -224,8 +219,28 @@ void ConciergeStatusWidget::updateDisplay(const QJsonObject &diagnostics) {
         }
       }
       
-      QStringList allMissing = missingPythonDeps + missingNodeDeps;
-      depsLabel->setText(QString("Dependencies: ❌ Missing: %1").arg(allMissing.join(", ")));
+      // Format missing dependencies more clearly
+      QStringList formattedMissing;
+      
+      if (!missingPythonDeps.isEmpty()) {
+        formattedMissing.append("Python: " + missingPythonDeps.join(", "));
+      }
+      
+      if (!missingNodeDeps.isEmpty()) {
+        // Format Node deps properly (especially @tailwindcss/cli)
+        QStringList formattedNodeDeps;
+        for (const QString &dep : missingNodeDeps) {
+          if (dep.startsWith("@")) {
+            // Scoped package - format properly
+            formattedNodeDeps.append(dep);
+          } else {
+            formattedNodeDeps.append(dep);
+          }
+        }
+        formattedMissing.append("Node: " + formattedNodeDeps.join(", "));
+      }
+      
+      depsLabel->setText(QString("Dependencies: ❌ Missing:\n    %1").arg(formattedMissing.join("\n    ")));
       fixButton->show();
     }
     
@@ -403,30 +418,39 @@ void ConciergeStatusWidget::onRelaunchConcierge() {
 void ConciergeStatusWidget::onFixProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
   fixButton->setEnabled(true);
   
+  // Capture both stdout and stderr
+  QByteArray standardOutput = fixProcess->readAllStandardOutput();
+  QByteArray errorOutput = fixProcess->readAllStandardError();
+  
   if (exitStatus == QProcess::NormalExit && exitCode == 0) {
     fixButton->setText("Fixed!");
-    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 5px; }");
+    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 5px; margin-left: 40px; }");
     
     // Update status after a short delay
     QTimer::singleShot(2000, this, [this]() {
       updateStatus();
       fixButton->setText("Fix");
-      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; margin-left: 40px; } QPushButton:pressed { background-color: #F57C00; }");
     });
   } else {
     fixButton->setText("Fix Failed");
-    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF6B6B; color: white; border-radius: 5px; }");
+    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF6B6B; color: white; border-radius: 5px; margin-left: 40px; }");
     
     // Show error output if available
-    QByteArray errorOutput = fixProcess->readAllStandardError();
+    QString errorMsg = "❌ Installation failed";
     if (!errorOutput.isEmpty()) {
-      errorsLabel->setText(QString("❌ Installation error: %1").arg(QString(errorOutput).simplified()));
+      errorMsg += QString(": %1").arg(QString(errorOutput).simplified().left(200));
+    } else if (!standardOutput.isEmpty()) {
+      errorMsg += QString(": %1").arg(QString(standardOutput).simplified().left(200));
+    } else {
+      errorMsg += QString(" (exit code: %1)").arg(exitCode);
     }
+    errorsLabel->setText(errorMsg);
     
     // Reset button after delay
     QTimer::singleShot(3000, this, [this]() {
       fixButton->setText("Fix");
-      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; margin-left: 40px; } QPushButton:pressed { background-color: #F57C00; }");
     });
   }
 }

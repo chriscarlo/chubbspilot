@@ -65,35 +65,46 @@ def install_python_dependencies(missing: List[str]) -> bool:
     
     print(f"Installing Python dependencies: {', '.join(missing)}")
     
-    # Use poetry if available (preferred)
+    # For openpilot, dependencies should already be in pyproject.toml
+    # Just need to run poetry install
     poetry_path = Path("/data/openpilot/pyproject.toml")
     if poetry_path.exists():
         try:
-            # Add dependencies to pyproject.toml
-            for dep in missing:
-                dep_name = dep.split("[")[0]
-                cmd = ["poetry", "add", dep]
-                if PYTHON_DEPENDENCIES.get(dep):
-                    cmd.append(f"@{PYTHON_DEPENDENCIES[dep]}")
-                
-                result = subprocess.run(cmd, cwd="/data/openpilot", capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"Failed to add {dep}: {result.stderr}")
-                    return False
-            
-            # Install everything
+            # Run poetry install to ensure all dependencies are installed
+            print("Running poetry install...")
             result = subprocess.run(
                 ["poetry", "install"],
                 cwd="/data/openpilot",
                 capture_output=True,
                 text=True
             )
-            return result.returncode == 0
+            if result.returncode != 0:
+                print(f"Poetry install failed: {result.stderr}")
+                # Try with --no-cache flag
+                print("Retrying with --no-cache...")
+                result = subprocess.run(
+                    ["poetry", "install", "--no-cache"],
+                    cwd="/data/openpilot",
+                    capture_output=True,
+                    text=True
+                )
+            
+            if result.returncode == 0:
+                print("Poetry install succeeded")
+                return True
+            else:
+                print(f"Poetry install failed with exit code {result.returncode}")
+                print(f"stdout: {result.stdout}")
+                print(f"stderr: {result.stderr}")
+                return False
+        except FileNotFoundError:
+            print("Poetry command not found, trying pip...")
         except Exception as e:
-            print(f"Poetry installation failed: {e}")
+            print(f"Poetry installation error: {e}")
     
     # Fallback to pip
     try:
+        print("Falling back to pip install...")
         cmd = [sys.executable, "-m", "pip", "install"]
         for dep in missing:
             if PYTHON_DEPENDENCIES.get(dep):
@@ -102,6 +113,10 @@ def install_python_dependencies(missing: List[str]) -> bool:
                 cmd.append(dep)
         
         result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print("Pip install succeeded")
+        else:
+            print(f"Pip install failed: {result.stderr}")
         return result.returncode == 0
     except Exception as e:
         print(f"Pip installation failed: {e}")
@@ -117,25 +132,42 @@ def install_node_dependencies(missing: List[str]) -> bool:
     
     # Check if npm is available
     try:
-        subprocess.run(["npm", "--version"], check=True, capture_output=True)
+        result = subprocess.run(["npm", "--version"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("npm not found. Skipping Node.js dependencies.")
+            print("Note: Node.js dependencies are optional for Concierge basic functionality.")
+            return True  # Don't fail on missing npm
     except Exception:
-        print("npm not found. Please install Node.js first.")
-        return False
+        print("npm not found. Skipping Node.js dependencies.")
+        return True  # Don't fail on missing npm
     
     # Install in project directory
     try:
         os.chdir("/data/openpilot")
+        print("Installing Node.js packages...")
+        
+        # Install all at once for better dependency resolution
+        cmd = ["npm", "install", "--save-dev"]
         for dep in missing:
             version = NODE_DEPENDENCIES.get(dep, "latest")
-            cmd = ["npm", "install", f"{dep}@{version}"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"Failed to install {dep}: {result.stderr}")
-                return False
-        return True
+            cmd.append(f"{dep}@{version}")
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"npm install failed: {result.stderr}")
+            # Try to install without version constraints
+            cmd_retry = ["npm", "install", "--save-dev"] + missing
+            result_retry = subprocess.run(cmd_retry, capture_output=True, text=True)
+            if result_retry.returncode == 0:
+                print("npm install succeeded without version constraints")
+                return True
+            return False
+        else:
+            print("npm install succeeded")
+            return True
     except Exception as e:
-        print(f"Node installation failed: {e}")
-        return False
+        print(f"Node installation error: {e}")
+        return True  # Don't fail the whole process
 
 
 def get_missing_dependencies() -> Tuple[List[str], List[str]]:

@@ -53,7 +53,6 @@ private:
   QLabel *errorsLabel;
   QLabel *lastUpdatedLabel;
   
-  QHBoxLayout *depsLayout;
   QPushButton *fixButton;
   
   QHBoxLayout *actionsLayout;
