@@ -2,6 +2,10 @@
 
 #include <QDateTime>
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 
 ConciergeStatusWidget::ConciergeStatusWidget(QWidget *parent) : QFrame(parent), isUpdating(false) {
   setupUI();
@@ -266,4 +270,3 @@ ConciergeManagementControl::ConciergeManagementControl(QWidget *parent) : QFrame
   mainLayout->addWidget(statusWidget);
 }
 
-#include "concierge_status_widget.moc"

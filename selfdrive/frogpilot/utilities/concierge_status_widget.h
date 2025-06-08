@@ -9,6 +9,7 @@
 #include <QProcess>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 
 #include "selfdrive/ui/qt/widgets/controls.h"
 #include "selfdrive/frogpilot/ui/qt/widgets/frogpilot_controls.h"

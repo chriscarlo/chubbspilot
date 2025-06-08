@@ -54,12 +54,11 @@ def is_concierge_running():
 def start_concierge_service():
   """Start the Concierge web server."""
   try:
-    concierge_dir = Path("/data/openpilot/selfdrive/chauffeur/concierge")
-    if concierge_dir.exists():
-      subprocess.Popen(['python3', 'main.py'], 
-                       cwd=str(concierge_dir),
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+    # Use the main wrapper through the process manager instead of direct python3 call
+    subprocess.Popen(['python3', '-m', 'selfdrive.chauffeur.concierge.main_wrapper'], 
+                     cwd="/data/openpilot",
+                     stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL)
   except Exception:
     pass
 

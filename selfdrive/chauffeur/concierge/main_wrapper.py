@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # Ensure dependencies are available
     if ensure_dependencies():
         # Run the module directly to preserve its __main__ logic
-        runpy.run_module("openpilot.selfdrive.chauffeur.concierge.main", run_name="__main__")
+        runpy.run_module("selfdrive.chauffeur.concierge.main", run_name="__main__")
     else:
         print("ERROR: Could not ensure dependencies. Concierge will not start.")
         sys.exit(1)
