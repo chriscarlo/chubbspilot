@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 8, 2025 20:22 PST
-**Current Commit:** `1497151d` - Fix TICI display rendering issues for terminal boot UI
+**Last Updated:** January 8, 2025 19:15 PST
+**Current Commit:** `3d3460b2` - Fix Concierge dependency installation on TICI
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -171,6 +171,15 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
   - Backward compatible with existing spinner
   - Fixed TICI display rendering (centered for 2160x1080 screen)
   - Added simple fallback UI for debugging display issues
+
+### Concierge Dependency Status
+- **Issue Identified**: The fastapi, uvicorn, and pydantic dependencies are properly defined in pyproject.toml but are not installed in the TICI runtime environment
+- **Root Cause**: The TICI build process is not running `poetry install` to include these dependencies in the system image
+- **Diagnostic Tools Added**: 
+  - `fix_concierge_deps.sh` - Shell script to check Python environment on TICI
+  - `selfdrive/chauffeur/concierge/check_python_env.py` - Python script for detailed environment diagnostics
+- **Required Fix**: The TICI build process needs to be updated to ensure all pyproject.toml dependencies are installed
+- **Workaround**: SSH into TICI and run `cd /data/openpilot && poetry install` (requires network access)
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 
