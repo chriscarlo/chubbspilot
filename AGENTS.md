@@ -217,8 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 6, 2025 20:15 PST  
-**Current Commit:** `238d60e1` - Fix libgcc_s.so.1 path for TICI native builds
+**Last Updated:** January 6, 2025 20:28 PST  
+**Current Commit:** `2ae2baec` - Add TICI build fix for missing libyuv library
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -229,6 +229,7 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 - ✅ Added --force-arch option to SConstruct for cross-compilation builds
 - ✅ Fixed ICU library dependency for MapLibre (requires libicu66 on Ubuntu 24.04)
 - ✅ Fixed "searching for libgcc_s.so.1" error on TICI by adding AGNOS library paths
+- ✅ Created build_tici.sh script to build missing libyuv library on TICI device
 
 ### Build System Fixes
 1. **Cross-compilation support**: Added gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu, and libc6-dev-arm64-cross to dependencies
@@ -236,12 +237,16 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 3. **ICU compatibility**: MapLibre requires ICU 66 - installed from Ubuntu 20.04 archives for compatibility
 4. **TICI library paths**: Added /lib/aarch64-linux-gnu and /usr/lib/gcc/aarch64-linux-gnu/9 for AGNOS
 5. **Conditional cross-compilation**: Cross-compilation flags only apply when building from x86_64 for larch64
+6. **Missing libyuv library**: Created build_tici.sh script to build libyuv directly on TICI device
 
 ### Active Development Focus
 The build system now supports:
 - **x86_64 WSL Development Environment** - Native builds working with ICU 66 fix
-- **TICI Native Builds** - Library paths fixed for AGNOS, should resolve libgcc_s.so.1 error
+- **TICI Native Builds** - Library paths fixed for AGNOS, libyuv build script provided
 - **Cross-compilation** - Partial support (complex Qt cross-compilation not worth pursuing)
+
+### Known Issues Requiring Manual Intervention
+- **libyuv missing on TICI**: Run `cd /data/openpilot/third_party/libyuv && ./build_tici.sh` on device
 
 ## Additional Guidance
 
