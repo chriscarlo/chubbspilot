@@ -55,21 +55,21 @@ void TerminalBootUI::drawHeader() {
   std::string pad(padding > 0 ? padding : 0, ' ');
   
   std::cout << COLOR_SALMON << STYLE_BOLD;
-  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓\n";
-  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓  ▓\n";
-  std::cout << pad << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
-  std::cout << pad << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
-  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
-  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
-  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
-  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
+  std::cout << pad << "████  #  #  ####  #  #  ####  ####  ####  #  #  ####\n";
+  std::cout << pad << "#     #  #  #  #  #  #  #     #     #     #  #  #  #\n";
+  std::cout << pad << "#     ####  ####  #  #  ###   ###   ###   #  #  ####\n";
+  std::cout << pad << "#     ####  ####  #  #  ###   ###   ###   #  #  ####\n";
+  std::cout << pad << "#     #  #  #  #  #  #  #     #     #     #  #  # # \n";
+  std::cout << pad << "#     #  #  #  #  #  #  #     #     #     #  #  # # \n";
+  std::cout << pad << "####  #  #  #  #  ####  #     #     ####  ####  #  #\n";
+  std::cout << pad << "####  #  #  #  #  ####  #     #     ####  ####  #  #\n";
   
   std::cout << COLOR_WHITE;
-  std::string separator(logo_width, '═');
+  std::string separator(logo_width, '=');
   std::cout << pad << separator << "\n";
   
   std::cout << COLOR_SALMON;
-  std::string tagline = "★ AUTONOMOUS DRIVING SYSTEM v2.0 ★";
+  std::string tagline = "* AUTONOMOUS DRIVING SYSTEM v2.0 *";
   int tagline_padding = padding + (logo_width - tagline.length()) / 2;
   std::cout << std::string(tagline_padding > 0 ? tagline_padding : 0, ' ') << tagline << "\n";
   
@@ -98,8 +98,8 @@ std::string TerminalBootUI::getStatusSymbol(ServiceStatus status) {
   switch (status) {
     case ServiceStatus::PENDING:  return "[ ]";
     case ServiceStatus::STARTING: return "[~]";
-    case ServiceStatus::RUNNING:  return "[✓]";
-    case ServiceStatus::FAILED:   return "[✗]";
+    case ServiceStatus::RUNNING:  return "[+]";
+    case ServiceStatus::FAILED:   return "[X]";
   }
   return "[?]";
 }
@@ -139,9 +139,9 @@ void TerminalBootUI::drawProgress() {
   // Draw progress bar
   for (int i = 0; i < bar_width; ++i) {
     if (i < filled) {
-      std::cout << "█";
+      std::cout << "#";
     } else {
-      std::cout << "░";
+      std::cout << ".";
     }
   }
   
@@ -155,7 +155,7 @@ void TerminalBootUI::drawFooter() {
   
   std::cout << COLOR_DIM << "Boot time: " << duration.count() << "s";
   std::cout << " | CPU: 45% | Memory: 1.2GB/4GB | Temp: 42°C" << COLOR_RESET << "\n";
-  std::cout << COLOR_WHITE << "═══════════════════════════════════════════════════════" << COLOR_RESET;
+  std::cout << COLOR_WHITE << "=======================================================" << COLOR_RESET;
 }
 
 void TerminalBootUI::render() {
@@ -193,7 +193,7 @@ void TerminalBootUI::drawErrors() {
   for (const auto& [name, info] : services) {
     if (info.status == ServiceStatus::FAILED) {
       // Error header
-      std::cout << COLOR_RED << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << COLOR_RESET << "\n";
+      std::cout << COLOR_RED << "=================================================" << COLOR_RESET << "\n";
       std::cout << COLOR_RED << STYLE_BOLD << "FAILED: " << info.display_name << COLOR_RESET << "\n";
       
       // Basic error message
@@ -240,7 +240,7 @@ void TerminalBootUI::drawErrors() {
   }
   
   // General debugging tips
-  std::cout << COLOR_YELLOW << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << COLOR_RESET << "\n";
+  std::cout << COLOR_YELLOW << "=================================================" << COLOR_RESET << "\n";
   std::cout << COLOR_YELLOW << STYLE_BOLD << "DEBUGGING TIPS:" << COLOR_RESET << "\n";
   std::cout << "• Check " << COLOR_CYAN << "/data/log/" << COLOR_RESET << " for detailed logs\n";
   std::cout << "• Try: " << COLOR_CYAN << "cd /data/openpilot && ./launch_openpilot.sh" << COLOR_RESET << "\n";
