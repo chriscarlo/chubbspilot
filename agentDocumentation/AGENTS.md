@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 8, 2025 19:15 PST
-**Current Commit:** `3d3460b2` - Fix Concierge dependency installation on TICI
+**Last Updated:** January 8, 2025 20:45 PST
+**Current Commit:** `cae214e3` - Refactor Concierge UI: Move diagnostics into toggle description
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -172,14 +172,18 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
   - Fixed TICI display rendering (centered for 2160x1080 screen)
   - Added simple fallback UI for debugging display issues
 
-### Concierge Dependency Status
-- **Issue Identified**: The fastapi, uvicorn, and pydantic dependencies are properly defined in pyproject.toml but are not installed in the TICI runtime environment
-- **Root Cause**: The TICI build process is not running `poetry install` to include these dependencies in the system image
-- **Diagnostic Tools Added**: 
-  - `fix_concierge_deps.sh` - Shell script to check Python environment on TICI
-  - `selfdrive/chauffeur/concierge/check_python_env.py` - Python script for detailed environment diagnostics
-- **Required Fix**: The TICI build process needs to be updated to ensure all pyproject.toml dependencies are installed
-- **Workaround**: SSH into TICI and run `cd /data/openpilot && poetry install` (requires network access)
+### Concierge UI Updates
+- **Refactored UI**: All diagnostics now integrated into the toggle control's expandable description area
+- **Fixed Text Wrapping**: Long diagnostic messages are now properly wrapped at 60 characters to prevent screen overflow
+- **TICI CSS Handling**: 
+  - Pre-built CSS detection on TICI devices
+  - Clear error messaging when Tailwind CSS needs to be built offline
+  - Created `BUILD_TAILWIND.md` with detailed instructions for building CSS on development machines
+- **Improved Fix Button**: 
+  - Now appears inline within the description when dependencies are missing
+  - Real-time progress display during installation
+  - Proper error handling and feedback
+- **Simplified Architecture**: Removed separate status widget, all functionality now in single toggle control
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 
