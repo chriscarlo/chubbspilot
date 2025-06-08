@@ -11,7 +11,7 @@
 #include "common/params.h"
 
 ConciergeToggleControl::ConciergeToggleControl(QWidget *parent) 
-  : ToggleControl("Concierge Web Server", "", "", params.getBool("ConciergeEnabled"), parent),
+  : ToggleControl("Concierge Web Server", "", "", Params().getBool("ConciergeEnabled"), parent),
     isHealthy(true), hasDependencies(true) {
   
   // Initialize diagnostics process
