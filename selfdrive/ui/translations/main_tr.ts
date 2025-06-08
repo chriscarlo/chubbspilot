@@ -2917,7 +2917,7 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Smoother Braking</source>
+        <source>Enhanced Braking</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

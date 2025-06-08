@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT**: This WSL instance is exclusively intended for developing on this specific openpilot fork. The runtime environment should be emulated as closely as possible to the target AGNOS/TICI environment.
+
 ## Project Overview
 
 This is a fork of openpilot called "chauffeur" with FrogPilot customizations. It's an advanced driver assistance system (ADAS) that provides autonomous driving capabilities including lane keeping, adaptive cruise control, and driver monitoring.
@@ -196,6 +198,22 @@ For git operations, SSH keys are stored in `~/.ssh/`:
 - Public key: `~/.ssh/claude_github_key.pub`
 
 The public key needs to be added to GitHub SSH keys in user settings for git push operations.
+
+## System Configuration
+
+For system operations requiring elevated privileges:
+- Sudo password: stored in `~/.sudo_pass` (permissions 600)
+- Use with: `sudo -S command < ~/.sudo_pass`
+
+## Prebuilt Release Workflow
+
+FrogPilot and openpilot use a special workflow for fast device installation:
+- Build directly on TICI device using `release/build_release.sh`
+- Commit compiled binaries to special release branches
+- Mark with `prebuilt` file to indicate pre-compiled release
+- Users get immediate functionality without 20+ minute compilation
+
+**Near-term objective**: Implement similar prebuilt workflow for this fork to enable fast device installation.
 
 ## Additional Guidance
 

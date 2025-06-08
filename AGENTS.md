@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT**: This WSL instance is exclusively intended for developing on this specific openpilot fork. The runtime environment should be emulated as closely as possible to the target AGNOS/TICI environment.
+
 ## Project Overview
 
 This is a fork of openpilot called "chauffeur" with FrogPilot customizations. It's an advanced driver assistance system (ADAS) that provides autonomous driving capabilities including lane keeping, adaptive cruise control, and driver monitoring.
@@ -197,6 +199,27 @@ For git operations, SSH keys are stored in `~/.ssh/`:
 
 The public key needs to be added to GitHub SSH keys in user settings for git push operations.
 
+## System Configuration
+
+For system operations requiring elevated privileges:
+- Sudo password: stored in `~/.sudo_pass` (permissions 600)
+- Use with: `sudo -S command < ~/.sudo_pass`
+
+## Prebuilt Release Workflow
+
+FrogPilot and openpilot use a special workflow for fast device installation:
+- Build directly on TICI device using `release/build_release.sh`
+- Commit compiled binaries to special release branches
+- Mark with `prebuilt` file to indicate pre-compiled release
+- Users get immediate functionality without 20+ minute compilation
+
+**Near-term objective**: Implement similar prebuilt workflow for this fork to enable fast device installation.
+
 ## Additional Guidance
 
 - Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

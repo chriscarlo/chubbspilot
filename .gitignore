@@ -2738,7 +2738,7 @@ selfdrive/frogpilot/navigation/mapd_py/__pycache__/
 
 # Downloaded Binaries / Build Tools
 tools/bin/
-!tools/bin/protoc # Keep the protoc binary we add
+# Removed protoc binary - using system protoc for cross-platform compatibility
 
 # Custom FrogPilot/User Data
 selfdrive/frogpilot/tunes/

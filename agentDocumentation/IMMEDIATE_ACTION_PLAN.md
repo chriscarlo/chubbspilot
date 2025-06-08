@@ -147,3 +147,128 @@ docker run -it openpilot-base bash
 - [ ] Can test with simulation
 - [ ] Can deploy to device (if available)
 - [ ] Can verify functionality before commit
+
+## CRITICAL DISCOVERY: FrogPilot Prebuilt Release Workflow
+
+### How FrogPilot/openpilot Handle Fast Installs
+
+**Discovery**: FrogPilot (and upstream openpilot) use a special workflow to avoid 20+ minute compilation times on device:
+
+1. **Build ON Device**: They run the build process directly on a TICI device
+2. **Commit Binaries**: They commit compiled binaries to special release branches
+3. **Mark as Prebuilt**: A `prebuilt` file indicates pre-compiled release
+4. **Fast Install**: Users get working binaries immediately, no compilation needed
+
+### The Release Process (from `release/build_release.sh`):
+```bash
+# Runs ON the TICI device at /data/openpilot
+BUILD_DIR=/data/openpilot
+
+# Build with minimal components
+scons -j$(nproc) --minimal
+
+# Clean build artifacts but KEEP binaries
+find . -name '*.a' -delete
+find . -name '*.o' -delete
+find . -name '*.os' -delete
+
+# Mark as prebuilt
+touch prebuilt
+
+# Commit binaries to git
+git add -f .
+git commit --amend -m "openpilot v$VERSION"
+
+# Push to release branch
+git push -f origin $RELEASE_BRANCH
+```
+
+### Near-Term Objectives for This Fork
+
+1. **Implement Prebuilt Workflow** [HIGH PRIORITY]
+   - Set up Jenkins/CI to build on actual TICI hardware
+   - Create release branches with prebuilt binaries
+   - Automate the release process
+
+2. **Device Build Compatibility** [IMMEDIATE]
+   - Ensure current fork can build on TICI
+   - Fix any device-specific build issues
+   - Test installation process
+
+3. **Create Build Documentation**
+   - Document exact build steps on device
+   - Create troubleshooting guide
+   - Set up automated testing
+
+### Information Needed from TICI Device
+
+To ensure this fork builds on device, we need:
+
+1. **System Information**:
+   ```bash
+   # OS and kernel version
+   cat /etc/os-release
+   uname -a
+   
+   # Python version
+   python3 --version
+   python3 -m pip --version
+   
+   # Compiler versions
+   gcc --version
+   clang --version
+   
+   # Build tools
+   scons --version
+   poetry --version || echo "poetry not found"
+   ```
+
+2. **Library Versions**:
+   ```bash
+   # Check critical libraries
+   ldconfig -p | grep -E "(libicu|libQt5|libOpenCL)"
+   pkg-config --modversion capnp
+   
+   # Python packages
+   python3 -m pip list | grep -E "(numpy|cython|pyqt5)"
+   ```
+
+3. **Build Environment**:
+   ```bash
+   # Check environment variables
+   env | grep -E "(PATH|PYTHONPATH|LD_LIBRARY_PATH)"
+   
+   # Check build directories
+   ls -la /data/
+   df -h /data
+   
+   # Check for AGNOS-specific paths
+   ls -la /system/comma/usr/
+   ```
+
+4. **Test Current Build**:
+   ```bash
+   # Try building a simple component
+   cd /data/openpilot
+   scons -j1 cereal/
+   
+   # Check for errors
+   echo $?
+   ```
+
+5. **Device-Specific Files**:
+   ```bash
+   # Check for device markers
+   ls -la /TICI /AGNOS
+   
+   # Check hardware config
+   cat /proc/cpuinfo | head -20
+   cat /proc/meminfo | head -10
+   ```
+
+### Immediate Actions to Take
+
+1. **Fix Build Issues**: Based on device info, update build scripts to match device environment
+2. **Create Device Profile**: Document exact versions and paths from device
+3. **Set Up Remote Build**: Configure ability to trigger builds on device
+4. **Test Installation**: Verify fork can be installed and run

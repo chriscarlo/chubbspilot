@@ -29,7 +29,7 @@ To ensure consistent and compatible builds without requiring manual installation
     proto_src_dir = 'tools/map_processing'
     proto_src = proto_src_dir + '/osm_speed_data.proto'
     proto_target = proto_out_dir + '/osm_speed_data_pb2.py'
-    protoc_binary = '#tools/bin/protoc' # Use the checked-in binary
+    protoc_binary = 'protoc' # Use system protoc for cross-platform compatibility
     env.Command(proto_target, [proto_src, proto_out_dir + '/__init__.py', protoc_binary], f'{protoc_binary} --proto_path={proto_src_dir} --python_out={proto_out_dir} {proto_src}')
     ```
 
