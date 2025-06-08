@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import datetime
 import json
+import subprocess
 import time
 
 import openpilot.system.sentry as sentry
@@ -19,6 +20,61 @@ from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPi
 from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_url_pingable, lock_doors, run_thread_with_lock, update_maps, update_openpilot
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
+
+def manage_concierge_service():
+  """Handle Concierge web server start/stop/restart commands."""
+  try:
+    # Check for restart command
+    if params_memory.get_bool("RestartConcierge"):
+      params_memory.remove("RestartConcierge")
+      run_thread_with_lock("restart_concierge", restart_concierge_service)
+    
+    # Check for stop command
+    elif params_memory.get_bool("StopConcierge"):
+      params_memory.remove("StopConcierge")
+      run_thread_with_lock("stop_concierge", stop_concierge_service)
+    
+    # Check if service should be running based on toggle
+    elif params.get_bool("ConciergeEnabled"):
+      # Check if service is actually running
+      if not is_concierge_running():
+        run_thread_with_lock("start_concierge", start_concierge_service)
+  except Exception:
+    pass  # Silently handle errors to not disrupt main process
+
+def is_concierge_running():
+  """Check if Concierge service is currently running."""
+  try:
+    result = subprocess.run(['pgrep', '-f', 'concierge.*main'], 
+                           capture_output=True, text=True, timeout=5)
+    return result.returncode == 0
+  except Exception:
+    return False
+
+def start_concierge_service():
+  """Start the Concierge web server."""
+  try:
+    concierge_dir = Path("/data/openpilot/selfdrive/chauffeur/concierge")
+    if concierge_dir.exists():
+      subprocess.Popen(['python3', 'main.py'], 
+                       cwd=str(concierge_dir),
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+  except Exception:
+    pass
+
+def stop_concierge_service():
+  """Stop the Concierge web server."""
+  try:
+    subprocess.run(['pkill', '-f', 'concierge.*main'], timeout=10)
+  except Exception:
+    pass
+
+def restart_concierge_service():
+  """Restart the Concierge web server."""
+  stop_concierge_service()
+  time.sleep(2)  # Give it time to stop
+  start_concierge_service()
 
 def assets_checks(model_manager, theme_manager):
   if params_memory.get_bool("DownloadAllModels"):
@@ -150,6 +206,10 @@ def frogpilot_thread():
         assets_checked = True
     else:
       assets_checked = False
+
+    # Check Concierge service management every 5 seconds
+    if now.second % 5 == 0:
+      manage_concierge_service()
 
     manually_updated = params_memory.get_bool("ManualUpdateInitiated")
 
