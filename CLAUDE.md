@@ -116,6 +116,7 @@ The `agentDocumentation/` directory contains:
 - **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing across supported architectures.
 - **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
 - **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
+- **`CONCIERGE_REFACTOR_PLAN.md`** - Comprehensive architectural refactor plan for the Concierge web server to address separation of concerns and code maintainability.
 
 ## Platform Detection
 
@@ -144,14 +145,19 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 8, 2025 19:10 PST
-**Current Commit:** `fa4abacc` - Add Concierge web server dependencies to pyproject.toml
+**Last Updated:** January 8, 2025 23:15 PST
+**Current Commit:** `943cb91b` - Enhance Concierge diagnostics with dependency management and improved UI
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
 - **x86_64 Development**: Fully functional with all dependencies resolved
 - **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports
 - **GUI Integration**: Concierge web server management now available in FrogPilot Utilities
+  - Enhanced diagnostics with real-time health monitoring
+  - Automatic dependency installation with Fix button
+  - Toggle disabled when dependencies missing
+  - Relaunch button for easy service restart
+- **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 
