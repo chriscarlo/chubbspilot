@@ -34,7 +34,7 @@ if enable_recorder:
   frogpilot_recorder_src = ["../frogpilot/screenrecorder/omx_encoder.cc", "../frogpilot/screenrecorder/screenrecorder.cc"]
 
 frogpilot_widgets_src = ["../frogpilot/ui/qt/widgets/drive_stats.cc", "../frogpilot/ui/qt/widgets/frogpilot_controls.cc",
-                         "../frogpilot/ui/qt/widgets/model_reviewer.cc", "../frogpilot/utilities/concierge_status_widget.cc"] + frogpilot_recorder_src
+                         "../frogpilot/ui/qt/widgets/model_reviewer.cc", "../frogpilot/utilities/concierge_toggle_control.cc"] + frogpilot_recorder_src
 
 widgets_src += frogpilot_widgets_src
 

@@ -112,14 +112,30 @@ def check_dependencies() -> Dict[str, Any]:
     node_available = []
     
     # Check if tailwind CSS is built
-    css_path = '/data/openpilot/selfdrive/chauffeur/concierge/static/css/tailwind.css'
+    css_path = '/data/openpilot/selfdrive/chauffeur/concierge/static/css/tailwind.min.css'
     try:
         import os
-        if os.path.exists(css_path):
-            node_available.append('tailwindcss')
+        # On TICI, if CSS is pre-built and large enough, we don't need Node deps
+        if os.path.isfile('/TICI') and os.path.exists(css_path) and os.path.getsize(css_path) > 1000:
+            node_available.extend(['tailwindcss', '@tailwindcss/cli'])
+        elif os.path.exists(css_path):
+            # On dev machines, still check for actual npm packages
+            try:
+                result = subprocess.run(['npm', 'list', 'tailwindcss', '@tailwindcss/cli', '--depth=0'], 
+                                      capture_output=True, text=True, timeout=5)
+                if 'tailwindcss@' in result.stdout:
+                    node_available.append('tailwindcss')
+                else:
+                    node_missing.append('tailwindcss')
+                if '@tailwindcss/cli@' in result.stdout:
+                    node_available.append('@tailwindcss/cli')
+                else:
+                    node_missing.append('@tailwindcss/cli')
+            except Exception:
+                # If npm check fails, assume missing
+                node_missing.extend(['tailwindcss', '@tailwindcss/cli'])
         else:
-            node_missing.append('tailwindcss')
-            node_missing.append('@tailwindcss/cli')
+            node_missing.extend(['tailwindcss', '@tailwindcss/cli'])
     except Exception:
         node_missing.extend(['tailwindcss', '@tailwindcss/cli'])
     

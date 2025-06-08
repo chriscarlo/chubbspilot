@@ -207,9 +207,20 @@ def install_node_dependencies(missing: List[str]) -> bool:
     
     print(f"[CONCIERGE] Node.js dependencies requested: {', '.join(missing)}")
     
-    # On TICI, try to install if npm is available
+    # On TICI, check if pre-built CSS exists first
     if os.path.isfile('/TICI'):
-        print("[CONCIERGE] Running on TICI - checking for npm...")
+        print("[CONCIERGE] Running on TICI - checking for pre-built CSS...")
+        css_path = Path("/data/openpilot/selfdrive/chauffeur/concierge/static/css/tailwind.min.css")
+        if css_path.exists() and css_path.stat().st_size > 1000:  # Should be at least 1KB
+            print("[CONCIERGE] Pre-built CSS found, Node.js dependencies not required on TICI")
+            return True
+        else:
+            print("[CONCIERGE] ERROR: Pre-built CSS not found or too small")
+            print(f"[CONCIERGE] CSS file exists: {css_path.exists()}")
+            if css_path.exists():
+                print(f"[CONCIERGE] CSS file size: {css_path.stat().st_size} bytes")
+            print("[CONCIERGE] Tailwind CSS must be built offline and included in deployment")
+            print("[CONCIERGE] See: /data/openpilot/selfdrive/chauffeur/concierge/BUILD_TAILWIND.md")
     
     # Check if npm is available with timeout
     try:
@@ -223,24 +234,24 @@ def install_node_dependencies(missing: List[str]) -> bool:
         if result.returncode != 0:
             print("[CONCIERGE] npm not found")
             if os.path.isfile('/TICI'):
-                print("[CONCIERGE] WARNING: Cannot install Node.js dependencies without npm")
-                print("[CONCIERGE] The Tailwind CSS dependencies are:")
+                print("[CONCIERGE] ERROR: Cannot build CSS without npm on TICI")
+                print("[CONCIERGE] The missing dependencies are:")
                 for dep in missing:
                     print(f"[CONCIERGE]   - {dep}")
-                # Don't fail the whole process, but warn
-                return True
+                print("[CONCIERGE] Please ensure CSS is pre-built before deployment")
+                return False  # Actually fail so the UI shows the error
             return False
     except subprocess.TimeoutExpired:
         print("[CONCIERGE] npm check timed out")
         if os.path.isfile('/TICI'):
-            print("[CONCIERGE] WARNING: Cannot verify npm availability")
-            return True
+            print("[CONCIERGE] ERROR: Cannot verify npm availability")
+            return False
         return False
     except Exception:
         print("[CONCIERGE] npm not available")
         if os.path.isfile('/TICI'):
-            print("[CONCIERGE] WARNING: Cannot install Node.js dependencies without npm")
-            return True
+            print("[CONCIERGE] ERROR: Cannot install Node.js dependencies without npm")
+            return False
         return False
     
     # Install in project directory or globally

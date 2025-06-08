@@ -1,7 +1,7 @@
 #include <filesystem>
 
 #include "selfdrive/frogpilot/ui/qt/offroad/utilities.h"
-#include "selfdrive/frogpilot/utilities/concierge_status_widget.h"
+#include "selfdrive/frogpilot/utilities/concierge_toggle_control.h"
 
 FrogPilotUtilitiesPanel::FrogPilotUtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   ButtonControl *flashPandaBtn = new ButtonControl(tr("Flash Panda"), tr("FLASH"), tr("Flashes the Panda device's firmware if you're running into issues."));
@@ -98,7 +98,7 @@ FrogPilotUtilitiesPanel::FrogPilotUtilitiesPanel(FrogPilotSettingsWindow *parent
   });
   addItem(resetTogglesBtn);
 
-  // Add Concierge Web Server controls
-  ConciergeManagementControl *conciergeControl = new ConciergeManagementControl(this);
+  // Add Concierge Web Server control
+  ConciergeToggleControl *conciergeControl = new ConciergeToggleControl(this);
   addItem(conciergeControl);
 }

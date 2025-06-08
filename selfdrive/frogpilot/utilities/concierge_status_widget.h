@@ -75,15 +75,28 @@ public:
   ConciergeToggleControl();
   void setHealthy(bool healthy);
   void setDependenciesOk(bool ok);
+  void updateDiagnostics(const QJsonObject &diagnostics);
 
 private slots:
   void onToggleChanged(bool enabled);
   void updateToggleState();
+  void updateStatus();
+  void onDiagnosticsFinished(int exitCode, QProcess::ExitStatus exitStatus);
+  void onFixDependencies();
+  void onFixProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
+  QString formatDiagnostics(const QJsonObject &diagnostics);
+  
   Params params;
   bool isHealthy;
   bool hasDependencies;
+  QTimer *updateTimer;
+  QProcess *diagnosticsProcess;
+  QProcess *fixProcess;
+  QPushButton *fixButton;
+  QStringList missingPythonDeps;
+  QStringList missingNodeDeps;
 };
 
 class ConciergeManagementControl : public QFrame {
