@@ -28,13 +28,24 @@ NODE_DEPENDENCIES = {
 def check_python_dependency(package: str) -> bool:
     """Check if a Python package is installed."""
     try:
+        # First try direct import
         import importlib
         # Handle uvicorn[standard] format
         pkg_name = package.split("[")[0]
         importlib.import_module(pkg_name)
         return True
     except ImportError:
-        return False
+        # Check if it's in the poetry environment
+        try:
+            result = subprocess.run(
+                ["poetry", "show", pkg_name],
+                cwd="/data/openpilot",
+                capture_output=True,
+                text=True
+            )
+            return result.returncode == 0
+        except:
+            return False
 
 
 def check_node_dependency(package: str) -> bool:
@@ -66,53 +77,71 @@ def install_python_dependencies(missing: List[str]) -> bool:
     print(f"Installing Python dependencies: {', '.join(missing)}")
     
     # For openpilot, dependencies should already be in pyproject.toml
-    # Just need to run poetry install
+    # Try to install just the dependencies without the project
     poetry_path = Path("/data/openpilot/pyproject.toml")
     if poetry_path.exists():
         try:
-            # Run poetry install to ensure all dependencies are installed
-            print("Running poetry install...")
-            result = subprocess.run(
-                ["poetry", "install"],
-                cwd="/data/openpilot",
-                capture_output=True,
-                text=True
-            )
-            if result.returncode != 0:
-                print(f"Poetry install failed: {result.stderr}")
-                # Try with --no-cache flag
-                print("Retrying with --no-cache...")
+            # First check if dependencies are already in poetry environment
+            all_installed = True
+            for dep in missing:
+                pkg_name = dep.split("[")[0]
                 result = subprocess.run(
-                    ["poetry", "install", "--no-cache"],
+                    ["poetry", "show", pkg_name],
                     cwd="/data/openpilot",
                     capture_output=True,
                     text=True
                 )
+                if result.returncode != 0:
+                    all_installed = False
+                    break
+            
+            if all_installed:
+                print("All dependencies already installed in Poetry environment")
+                return True
+            
+            # Run poetry install with --no-root to skip installing the project itself
+            print("Running poetry install --no-root...")
+            result = subprocess.run(
+                ["poetry", "install", "--no-root"],
+                cwd="/data/openpilot",
+                capture_output=True,
+                text=True
+            )
             
             if result.returncode == 0:
                 print("Poetry install succeeded")
                 return True
             else:
-                print(f"Poetry install failed with exit code {result.returncode}")
-                print(f"stdout: {result.stdout}")
-                print(f"stderr: {result.stderr}")
-                return False
+                print(f"Poetry install failed: {result.stderr}")
+                # If that fails, the dependencies might already be there
+                # Check again
+                all_there = True
+                for dep in missing:
+                    if not check_python_dependency(dep):
+                        all_there = False
+                        break
+                
+                if all_there:
+                    print("Dependencies are actually installed")
+                    return True
+                    
         except FileNotFoundError:
             print("Poetry command not found, trying pip...")
         except Exception as e:
             print(f"Poetry installation error: {e}")
     
-    # Fallback to pip
+    # Fallback to pip within poetry environment
     try:
-        print("Falling back to pip install...")
-        cmd = [sys.executable, "-m", "pip", "install"]
+        print("Falling back to pip install within poetry environment...")
+        # Use poetry run to ensure we're in the right environment
+        cmd = ["poetry", "run", "pip", "install"]
         for dep in missing:
             if PYTHON_DEPENDENCIES.get(dep):
                 cmd.append(f"{dep}{PYTHON_DEPENDENCIES[dep]}")
             else:
                 cmd.append(dep)
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, cwd="/data/openpilot", capture_output=True, text=True)
         if result.returncode == 0:
             print("Pip install succeeded")
         else:
