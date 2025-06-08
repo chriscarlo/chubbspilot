@@ -3,6 +3,14 @@
 # Get the directory where this script lives
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Auto-fix TICI display issues on device boot
+if [ -f /TICI ] && [ -f "/data/openpilot/fix_tici_display.sh" ]; then
+  echo "Running TICI display fixes..." >&2
+  cd /data/openpilot
+  /bin/bash fix_tici_display.sh > /tmp/tici_display_fix.log 2>&1
+  echo "Display fixes applied (log: /tmp/tici_display_fix.log)" >&2
+fi
+
 # Clean up any old Qt spinner to ensure terminal UI is used
 if [ -f "$DIR/_spinner" ] && [ -f "$DIR/terminal_boot/terminal_boot" ]; then
   rm -f "$DIR/_spinner"

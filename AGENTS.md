@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 9, 2025 02:00 PST
-**Current Commit:** `e0e387b2` - Make Concierge installer TICI-aware with better timeout handling
+**Last Updated:** January 8, 2025 20:22 PST
+**Current Commit:** `1497151d` - Fix TICI display rendering issues for terminal boot UI
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -169,6 +169,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
   - Real-time service status display
   - Actionable error reporting with stack traces
   - Backward compatible with existing spinner
+  - Fixed TICI display rendering (centered for 2160x1080 screen)
+  - Added simple fallback UI for debugging display issues
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 

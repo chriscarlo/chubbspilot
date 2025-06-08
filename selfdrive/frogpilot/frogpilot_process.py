@@ -42,6 +42,23 @@ def manage_concierge_service():
   except Exception:
     pass  # Silently handle errors to not disrupt main process
 
+def manage_display_fixes():
+  """Handle TICI display fix requests."""
+  try:
+    if params_memory.get_bool("FixTICIDisplay"):
+      params_memory.remove("FixTICIDisplay")
+      run_thread_with_lock("fix_tici_display", run_display_fix)
+  except Exception:
+    pass
+
+def run_display_fix():
+  """Run the TICI display fix script."""
+  try:
+    subprocess.run(['/bin/bash', '/data/openpilot/fix_tici_display.sh'], 
+                   cwd="/data/openpilot", timeout=300)
+  except Exception:
+    pass
+
 def is_concierge_running():
   """Check if Concierge service is currently running."""
   try:
@@ -209,6 +226,7 @@ def frogpilot_thread():
     # Check Concierge service management every 5 seconds
     if now.second % 5 == 0:
       manage_concierge_service()
+      manage_display_fixes()
 
     manually_updated = params_memory.get_bool("ManualUpdateInitiated")
 

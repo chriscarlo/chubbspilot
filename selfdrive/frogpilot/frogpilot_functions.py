@@ -135,6 +135,17 @@ def frogpilot_boot_functions(build_metadata, params_cache):
   ModelManager().copy_default_model()
   ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
+  # Apply TICI display fixes if needed
+  if os.path.isfile('/TICI') and os.path.isfile('/data/openpilot/fix_tici_display.sh'):
+    def display_fix_thread():
+      try:
+        subprocess.run(['/bin/bash', '/data/openpilot/fix_tici_display.sh'], 
+                       cwd="/data/openpilot", timeout=300, 
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+      except Exception:
+        pass
+    threading.Thread(target=display_fix_thread, daemon=True).start()
+
   def backup_thread():
     while not system_time_valid():
       print("Waiting for system time to become valid...")
