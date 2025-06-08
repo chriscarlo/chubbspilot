@@ -217,8 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 6, 2025 19:53 PST  
-**Current Commit:** Working on build system improvements
+**Last Updated:** January 6, 2025 20:15 PST  
+**Current Commit:** `238d60e1` - Fix libgcc_s.so.1 path for TICI native builds
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -228,24 +228,26 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 - ✅ Added aarch64 cross-compilation toolchain packages to install_ubuntu_dependencies.sh
 - ✅ Added --force-arch option to SConstruct for cross-compilation builds
 - ✅ Fixed ICU library dependency for MapLibre (requires libicu66 on Ubuntu 24.04)
-- ✅ Resolved "searching for libgcc_s.so.1" error by installing gcc-aarch64-linux-gnu
+- ✅ Fixed "searching for libgcc_s.so.1" error on TICI by adding AGNOS library paths
 
 ### Build System Fixes
 1. **Cross-compilation support**: Added gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu, and libc6-dev-arm64-cross to dependencies
 2. **Architecture forcing**: Added --force-arch option to allow building for larch64 from x86_64 host
 3. **ICU compatibility**: MapLibre requires ICU 66 - installed from Ubuntu 20.04 archives for compatibility
-4. **Library paths**: Added /usr/aarch64-linux-gnu/lib to library search paths for cross-compilation
+4. **TICI library paths**: Added /lib/aarch64-linux-gnu and /usr/lib/gcc/aarch64-linux-gnu/9 for AGNOS
+5. **Conditional cross-compilation**: Cross-compilation flags only apply when building from x86_64 for larch64
 
 ### Active Development Focus
 The build system now supports:
-- **x86_64 WSL Development Environment** - Native builds and map tile generation
-- **aarch64 TICI Device** - Cross-compilation from x86_64 host (partial - Qt cross-compilation still needs work)
-- **Native x86_64 builds** - Working with ICU 66 dependency resolved
+- **x86_64 WSL Development Environment** - Native builds working with ICU 66 fix
+- **TICI Native Builds** - Library paths fixed for AGNOS, should resolve libgcc_s.so.1 error
+- **Cross-compilation** - Partial support (complex Qt cross-compilation not worth pursuing)
 
 ## Additional Guidance
 
 - Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
 - When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
+- After every push, update all relevant documentation (CLAUDE.md, AGENTS.md, and any other affected docs) with current status, timestamp, and commit hash
 
 ## Memories
 
