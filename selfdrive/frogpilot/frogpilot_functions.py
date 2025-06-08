@@ -194,21 +194,39 @@ def setup_frogpilot(build_metadata):
         delete_file(item)
 
   boot_logo_location = Path("/usr/comma/bg.jpg")
-  # Use our new Chauffeur ASCII boot logo instead of the frog
+  
+  # EMERGENCY FROG KILLER - Run the kill script first
+  kill_script = Path(__file__).parent / "assets/boot/kill_frog_boot.py"
+  if kill_script.exists():
+    print("Running emergency frog elimination...")
+    try:
+      subprocess.run(["python3", str(kill_script)], check=True, timeout=30)
+    except Exception as e:
+      print(f"Frog elimination failed: {e}")
+  
+  # Check for black boot image first
+  black_boot = Path(__file__).parent / "assets/boot/black_boot.jpg"
   chauffeur_boot_logo = Path(__file__).parent / "assets/boot/chauffeur_boot_logo.png"
   
-  # Generate logo if it doesn't exist
-  if not chauffeur_boot_logo.exists():
+  # Priority: black image > chauffeur logo > frog
+  if black_boot.exists():
+    boot_logo = black_boot
+    print("Using black boot image (no frog!)")
+  elif chauffeur_boot_logo.exists():
+    boot_logo = chauffeur_boot_logo
+    print("Using Chauffeur boot logo")
+  else:
+    # Generate logo if it doesn't exist
     print("Generating Chauffeur boot logo...")
     generate_script = Path(__file__).parent / "assets/boot/generate_logo.py"
     if generate_script.exists():
       subprocess.run(["python3", str(generate_script)], check=True)
-  
-  # Use generated logo, fallback to frog if generation failed
-  if chauffeur_boot_logo.exists():
-    boot_logo = chauffeur_boot_logo
-  else:
-    boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
+    
+    # Use generated logo, fallback to frog if generation failed
+    if chauffeur_boot_logo.exists():
+      boot_logo = chauffeur_boot_logo
+    else:
+      boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
   
   if not filecmp.cmp(boot_logo, boot_logo_location, shallow=False):
     stock_mount_options = subprocess.run(["findmnt", "-no", "OPTIONS", "/"], capture_output=True, text=True).stdout.strip()

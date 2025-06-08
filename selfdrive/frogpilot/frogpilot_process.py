@@ -48,6 +48,11 @@ def manage_display_fixes():
     if params_memory.get_bool("FixTICIDisplay"):
       params_memory.remove("FixTICIDisplay")
       run_thread_with_lock("fix_tici_display", run_display_fix)
+    
+    # Check for frog kill command
+    if params.get_bool("KillBootFrog"):
+      print("🐸💀 FROG KILL COMMAND DETECTED!")
+      run_thread_with_lock("kill_boot_frog", kill_boot_frog)
   except Exception:
     pass
 
@@ -58,6 +63,22 @@ def run_display_fix():
                    cwd="/data/openpilot", timeout=300)
   except Exception:
     pass
+
+def kill_boot_frog():
+  """Execute emergency frog elimination."""
+  try:
+    # Run the kill script
+    kill_script = "/data/openpilot/selfdrive/frogpilot/assets/boot/kill_frog_boot.py"
+    subprocess.run(['python3', kill_script], timeout=30)
+    
+    # Clear the command and set confirmation
+    params.remove("KillBootFrog")
+    params.put_bool("BootFrogKilled", True)
+    
+    # Trigger a manager restart to apply changes
+    subprocess.run(["pkill", "-SIGHUP", "manager"], timeout=10)
+  except Exception as e:
+    print(f"Frog elimination failed: {e}")
 
 def is_concierge_running():
   """Check if Concierge service is currently running."""
