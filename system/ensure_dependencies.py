@@ -28,6 +28,8 @@ REQUIRED_PACKAGES = [
     
     # Tier 3 - Optional but commonly used
     "fastapi",  # May be conditionally imported
+    "Crypto",   # Build system cryptography (pycryptodome)
+    "Cython",   # Build system compilation
 ]
 
 def check_and_install_packages():
@@ -130,6 +132,15 @@ def check_and_install_packages():
                                 print("Successfully installed libusb1")
                             except subprocess.CalledProcessError as e:
                                 print(f"Failed to install libusb1: {e}")
+                        elif package == "Crypto":
+                            try:
+                                print("Trying to install pycryptodome (Crypto)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "pycryptodome"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed pycryptodome")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install pycryptodome: {e}")
         else:
             # Non-TICI environment, use --user flag
             for package in missing_packages:
