@@ -30,34 +30,68 @@ void TerminalBootUI::init() {
   // Clear screen and hide cursor
   std::cout << CLEAR_SCREEN << CURSOR_HOME << HIDE_CURSOR;
   
+  // Force flush to ensure terminal commands are processed
+  std::cout.flush();
+  
   // Get system info (would come from hardware module in real implementation)
   platform = "COMMA TICI (larch64)";
   serial = "CCF123456789";
   imei = "359876543210987";
+  
+  // Set terminal to UTF-8 mode
+  std::cout << "\033%G";
+  std::cout.flush();
 }
 
 void TerminalBootUI::drawHeader() {
   std::cout << CURSOR_HOME;
+  
+  // Center the logo for wide screens
+  // TICI screen is 2160x1080, assume ~270 chars wide at standard font
+  int screen_width = 270;  // Approximate character width
+  std::string logo_line1 = "▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓";
+  int logo_width = 56;  // Width of logo in characters
+  int padding = (screen_width - logo_width) / 2;
+  std::string pad(padding > 0 ? padding : 0, ' ');
+  
   std::cout << COLOR_SALMON << STYLE_BOLD;
-  std::cout << "▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓\n";
-  std::cout << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓  ▓\n";
-  std::cout << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
-  std::cout << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
-  std::cout << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
-  std::cout << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
-  std::cout << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
-  std::cout << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
-  std::cout << COLOR_WHITE << "═══════════════════════════════════════════════════════\n";
-  std::cout << COLOR_SALMON << "      ★ AUTONOMOUS DRIVING SYSTEM v2.0 ★\n";
-  std::cout << COLOR_WHITE << "         ----------------------------\n";
+  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓\n";
+  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓  ▓\n";
+  std::cout << pad << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
+  std::cout << pad << "▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓\n";
+  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
+  std::cout << pad << "▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓ \n";
+  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
+  std::cout << pad << "▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓\n";
+  
+  std::cout << COLOR_WHITE;
+  std::string separator(logo_width, '═');
+  std::cout << pad << separator << "\n";
+  
+  std::cout << COLOR_SALMON;
+  std::string tagline = "★ AUTONOMOUS DRIVING SYSTEM v2.0 ★";
+  int tagline_padding = padding + (logo_width - tagline.length()) / 2;
+  std::cout << std::string(tagline_padding > 0 ? tagline_padding : 0, ' ') << tagline << "\n";
+  
+  std::cout << COLOR_WHITE;
+  std::string underline = "----------------------------";
+  int underline_padding = padding + (logo_width - underline.length()) / 2;
+  std::cout << std::string(underline_padding > 0 ? underline_padding : 0, ' ') << underline << "\n";
+  
   std::cout << COLOR_RESET << "\n";
 }
 
 void TerminalBootUI::drawSystemInfo() {
-  std::cout << COLOR_CYAN << "[SYSTEM]" << COLOR_RESET << " Hardware Detection\n";
-  std::cout << "  └─ Platform: " << COLOR_GREEN << platform << COLOR_RESET << "\n";
-  std::cout << "  └─ Serial: " << COLOR_GREEN << serial << COLOR_RESET << "\n";
-  std::cout << "  └─ IMEI: " << COLOR_GREEN << imei << COLOR_RESET << "\n\n";
+  // Center content for wide screen
+  int content_width = 60;
+  int screen_width = 270;
+  int padding = (screen_width - content_width) / 2;
+  std::string pad(padding > 0 ? padding : 0, ' ');
+  
+  std::cout << pad << COLOR_CYAN << "[SYSTEM]" << COLOR_RESET << " Hardware Detection\n";
+  std::cout << pad << "  └─ Platform: " << COLOR_GREEN << platform << COLOR_RESET << "\n";
+  std::cout << pad << "  └─ Serial: " << COLOR_GREEN << serial << COLOR_RESET << "\n";
+  std::cout << pad << "  └─ IMEI: " << COLOR_GREEN << imei << COLOR_RESET << "\n\n";
 }
 
 std::string TerminalBootUI::getStatusSymbol(ServiceStatus status) {
