@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 9, 2025 01:15 PST
-**Current Commit:** `4dc9a1db` - Replace FrogPilot boot graphics with badass 1985-style terminal UI
+**Last Updated:** January 9, 2025 02:00 PST
+**Current Commit:** `e0e387b2` - Make Concierge installer TICI-aware with better timeout handling
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -155,7 +155,12 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 - **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports
 - **GUI Integration**: Concierge web server management now available in FrogPilot Utilities
   - Enhanced diagnostics with real-time health monitoring
-  - Automatic dependency installation with Fix button
+  - Automatic dependency installation with Fix button (TICI-aware)
+  - Platform-specific behavior:
+    - TICI: Verifies pre-installed Python deps, skips Node.js deps
+    - Development: Uses Poetry/npm with timeouts to prevent hanging
+  - Real-time progress display with [CONCIERGE] prefixed messages
+  - Timeout protection: 30s for Poetry, 60s for npm
   - Toggle disabled when dependencies missing
   - Relaunch button for easy service restart
 - **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability

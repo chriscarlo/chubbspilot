@@ -1,33 +1,183 @@
-# CLAUDE.md - Agent Documentation
+# CLAUDE.md
 
-This file provides guidance to Claude Code regarding the `agentDocumentation/` directory. It explains the purpose of each document and how to maintain them.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Documentation Directory Overview
+**IMPORTANT**: This WSL instance is exclusively intended for developing on this specific openpilot fork. The runtime environment should be emulated as closely as possible to the target AGNOS/TICI environment.
 
-The **`agentDocumentation/`** directory contains:
-- **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis of current build infrastructure, architecture differences, and setup challenges.
-- **`CROSS_PLATFORM_TESTING_PLAN.md`** - Comprehensive testing strategy for validating cross-platform compatibility across supported architectures.
-- **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Technical debt assessment and roadmap for cleaning and refactoring infrastructure components (implement only with explicit approval).
-- **`IMMEDIATE_ACTION_PLAN.md`** - Prioritized quick-start action items for immediate development tasks.
-- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Detailed list and analysis of essential runtime dependencies required for openpilot functionality.
-- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - In-depth analysis and categorization of external library imports, including usage patterns and risk assessments.
-- **`README.md`** - High-level overview of this directory's purpose, structure, and usage guidelines.
+## ⚠️ CRITICAL DEVELOPMENT ENVIRONMENT NOTICE ⚠️
+
+**This is a SOURCE CODE DEVELOPMENT environment, NOT a running openpilot system!**
+
+**DO NOT attempt to:**
+- Run system commands like `systemctl`, `journalctl`, or service management commands
+- Check for running processes with `pgrep`, `ps`, or similar
+- Access `/TICI` file or expect TICI-specific behavior
+- Look for system logs, crash logs, or runtime output
+- Execute openpilot processes or services
+- Check network services or ports
+
+**This environment is for:**
+- Reading and editing source code
+- Building with `scons`
+- Running tests with `pytest`
+- Analyzing code structure and dependencies
+- Git operations and documentation
+
+**For runtime debugging:** Use an actual TICI device or proper simulation environment.
+
+## Project Overview
+
+This is a fork of openpilot called "chauffeur" with FrogPilot customizations. It's an advanced driver assistance system (ADAS) that provides autonomous driving capabilities including lane keeping, adaptive cruise control, and driver monitoring.
+
+**Note**: The README indicates this fork is deprecated with development continuing in official sunnypilot branches.
+
+## Architecture
+
+The codebase follows a process-based architecture with message passing via Cap'n Proto:
+
+- **`selfdrive/`** - Core driving logic and vehicle interfaces (*see selfdrive/CLAUDE.md*)
+- **`system/`** - System services and hardware abstraction (*see system/CLAUDE.md*)
+- **`cereal/`** - IPC message definitions and messaging (*see cereal/CLAUDE.md*)
+- **`tools/`** - Development and analysis utilities (*see tools/CLAUDE.md*)
+- **`release/`** - Release management and prebuilt workflows (*see release/CLAUDE.md*)
+- **`opendbc/`** - CAN bus database for vehicle communication
+
+## Quick Start
+
+```bash
+# Build entire project
+scons -j$(nproc)
+
+# Run all tests
+pytest
+
+# See tools/CLAUDE.md for detailed development commands
+```
+
+## Build System
+
+- **SCons** - Primary build system (see SConstruct)
+- **Poetry** - Python dependency management (pyproject.toml)
+- **Architecture Support**: larch64 (TICI), aarch64, x86_64, Darwin
+- **Compilers**: clang/clang++ (required)
+- **Python**: 3.11+ required
+
+See *tools/CLAUDE.md* for detailed build commands and cross-platform development.
+
+## Key Dependencies
+
+- **Core**: pycapnp, Cython, numpy, sympy
+- **ML**: onnx, onnxruntime-gpu, tinygrad
+- **Hardware**: libusb1, spidev (Linux only)
+- **UI**: Qt5 (PyQt5 on x86_64)
+- **Communication**: pyzmq for messaging
+
+See *tools/CLAUDE.md* for dependency management system details.
+
+## Hardware Platforms
+
+Code supports multiple architectures with platform-specific implementations in *system/hardware/*:
+- **larch64**: Linux TICI (aarch64 with AGNOS)
+- **aarch64**: Linux PC aarch64
+- **x86_64**: Linux PC x64
+- **Darwin**: macOS (x64/arm64)
+
+See *system/CLAUDE.md* for hardware abstraction details.
+
+## Development Notes
+
+- All Python imports must use absolute paths (e.g., `openpilot.selfdrive`)
+- Code style enforced via ruff with 160 character line limit
+- 2-space indentation for Python
+- Type hints required (mypy enforcement)
+- No unittest - use pytest only
+
+See *tools/CLAUDE.md* for detailed development commands and testing procedures.
+
+## Documentation Maintenance
+
+Comprehensive documentation is maintained in `/data/openpilot/agentDocumentation/` for development environment analysis, cross-platform testing strategies, infrastructure improvements, and implementation roadmaps.
+
+### Documentation Workflow
+1. **Update documentation** as part of normal development workflow
+2. **Mark completed objectives** in roadmap documents
+3. **Add new ideas** and discoveries to relevant docs
+4. **Track infrastructure changes** in cleanup plan
+5. **Document platform-specific issues** and solutions
+
+### Documentation Directory Overview
+
+The `agentDocumentation/` directory contains:
+- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Analysis of essential runtime dependencies required by openpilot.
+- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - Detailed breakdown of external library imports and their usage.
+- **`IMMEDIATE_ACTION_PLAN.md`** - Prioritized quick-start action items to address immediate development tasks.
+- **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Roadmap for cleaning and refactoring infrastructure components.
+- **`README.md`** - Overview and navigation guide for this documentation directory.
+- **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing across supported architectures.
+- **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
 - **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
-- **`CONCIERGE_REFACTOR_PLAN.md`** - Complete architectural refactor plan for the Concierge web server, addressing monolithic structure, separation of concerns, and operational readiness with enhanced coverage of security, monitoring, performance, and testing.
-- **`CONCIERGE_REFACTOR_CHECKLIST.md`** - Concise progress tracking checklist for the Concierge refactor. **Agents should track progress here** and refer to the full plan for implementation details.
+- **`CONCIERGE_REFACTOR_PLAN.md`** - Comprehensive architectural refactor plan for the Concierge web server to address separation of concerns and code maintainability.
+- **`CONCIERGE_REFACTOR_CHECKLIST.md`** - Progress tracking checklist for the Concierge refactor implementation.
 
-## Documentation Update Instructions
+## Platform Detection
 
-- When updating any of these files, update the **Last Updated** timestamp (format: `Month Day, Year HH:MM TZ`) and the **Current Commit** field in the **Current Status** section at the top of this file.
-- After every commit or push, ensure this file (and its corresponding AGENTS.md) is updated with any new or changed documentation items, and that the **Last Updated** and **Current Commit** fields are refreshed accordingly.
-- **For Concierge Refactor**: Track progress in `CONCIERGE_REFACTOR_CHECKLIST.md` by marking completed items with ✓ and adding completion dates. Refer to `CONCIERGE_REFACTOR_PLAN.md` for detailed implementation guidance.
+```python
+TICI = os.path.isfile('/TICI')
+PC = not TICI
+```
+
+See *system/CLAUDE.md* for hardware platform details and *tools/CLAUDE.md* for cross-platform development.
+
+## SSH Configuration
+
+For git operations, SSH keys are stored in `~/.ssh/`:
+- Private key: `~/.ssh/claude_github_key`
+- Public key: `~/.ssh/claude_github_key.pub`
+
+## System Configuration
+
+For system operations requiring elevated privileges:
+- Sudo password: stored in `~/.sudo_pass` (permissions 600)
+- Use with: `sudo -S command < ~/.sudo_pass`
+
+## Release Management
+
+See *release/CLAUDE.md* for prebuilt workflow details and fast device installation procedures.
 
 ## Current Status
 
-**Last Updated:** January 9, 2025 01:15 PST
-**Current Commit:** `4dc9a1db` - Replace FrogPilot boot graphics with badass 1985-style terminal UI
+**Last Updated:** January 9, 2025 02:00 PST
+**Current Commit:** `e0e387b2` - Make Concierge installer TICI-aware with better timeout handling
 
-## Additional Notes
+### Build Ready Status
+- **TICI Native Builds**: All required libraries present, build should complete successfully
+- **x86_64 Development**: Fully functional with all dependencies resolved
+- **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports
+- **GUI Integration**: Concierge web server management now available in FrogPilot Utilities
+  - Enhanced diagnostics with real-time health monitoring
+  - Automatic dependency installation with Fix button
+  - Toggle disabled when dependencies missing
+  - Relaunch button for easy service restart
+- **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability
+- **Boot UI Overhaul**: Replaced FrogPilot graphics with terminal-based boot interface
+  - ASCII art Chauffeur logo with venetian blind effect
+  - Real-time service status display
+  - Actionable error reporting with stack traces
+  - Backward compatible with existing spinner
 
-- Use absolute paths from the repository root when referencing files.
-- Follow the documentation update protocol for consistency across all documents.
+See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
+
+## Additional Guidance
+
+- Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
+- When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
+- After every push, update all relevant documentation (CLAUDE.md, AGENTS.md, and any other affected docs) with current status, timestamp, and commit hash
+
+- Whenever you perform a `git commit` or `git push`, update all `CLAUDE.md` and `AGENTS.md` files (root and in `agentDocumentation/`) to include any new or updated documentation and refresh the **Last Updated** and **Current Commit** fields in each file.
+
+See *tools/CLAUDE.md* for detailed dependency management system
+
+## Memories
+
+- Always include a current time and which commit we are on when updating documentation
+- Never include "co-authored by claude" or anything of that sort in commit notes or messages
