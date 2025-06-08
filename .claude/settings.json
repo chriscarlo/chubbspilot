@@ -1,16 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "**",
       "Write()",
       "Edit()",
-      "*",
-      "Bash(*)"
+      "Bash(*)",
+      "Bash(bash:*)",
+      "Bash(*:*)"
     ],
-    "deny": [
-      "Delete(**)",
-      "Bash(rm -rf:*)",
-      "Bash(rm:*)"
-    ]
+    "deny": []
   }
 }

@@ -215,11 +215,27 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 **Near-term objective**: Implement similar prebuilt workflow for this fork to enable fast device installation.
 
+## Current Status
+
+**Last Updated:** June 7, 2025 19:12 PDT  
+**Current Commit:** `0bd4a5eb` - Add dual-architecture protoc v27.1 binaries for cross-platform development
+
+### Recent Accomplishments
+- ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
+- ✅ Fixed "protoc failed: [Errno 8] Exec format error" on TICI device
+- ✅ Enabled CPU-intensive map tile generation in x86_64 dev environment
+- ✅ Platform detection in SConscript automatically selects correct binary
+
+### Active Development Focus
+The protoc implementation is complete and tested. The fork now supports seamless builds on both:
+- **x86_64 WSL Development Environment** - For map tile generation and development
+- **aarch64 TICI Device** - For on-device compilation and testing
+
 ## Additional Guidance
 
 - Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+- When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
+
+## Memories
+
+- Always include a current time and which commit we are on when updating documentation

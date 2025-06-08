@@ -14,37 +14,59 @@ To ensure consistent and compatible builds without requiring manual installation
 
 *   **Binary:** `protoc` (Protocol Buffer Compiler)
 *   **Version:** `v27.1`
-*   **Architecture:** `aarch64` (for the comma device)
-*   **Location:** `tools/bin/protoc`
+*   **Architectures:** Both `x86_64` (for dev environment) and `aarch64` (for comma device)
+*   **Locations:**
+    - `tools/bin/protoc-x86_64` - For development/map tile generation
+    - `tools/bin/protoc-aarch64` - For TICI device builds
 
 ### Implementation Details:
 
-1.  **Binary Added:** The `protoc` v27.1 executable for `linux-aarch64` has been placed in the `tools/bin/` directory.
-2.  **`.gitignore` Exception:** An exception rule (`!tools/bin/protoc`) was added to the root `.gitignore` file to ensure this specific binary is tracked by Git, overriding the general ignore rule for `tools/bin/`.
-3.  **`SConstruct` Modification:** The main `SConstruct` file was modified to add a build rule for the custom Protobuf file (`tools/map_processing/osm_speed_data.proto`). This rule explicitly calls the bundled binary (`#tools/bin/protoc`) instead of relying on the system's PATH:
+1.  **Binaries Added:** Both `protoc` v27.1 executables (for `linux-x86_64` and `linux-aarch64`) have been placed in the `tools/bin/` directory.
+2.  **`.gitignore` Exception:** An exception rule (`!tools/bin/protoc-*`) was added to the root `.gitignore` file to ensure these specific binaries are tracked by Git, overriding the general ignore rule for `tools/bin/`.
+3.  **`SConscript` Modification:** The `selfdrive/frogpilot/navigation/mapd_py/SConscript` file includes platform detection logic to automatically select the correct protoc binary based on the system architecture:
 
     ```python
-    # Excerpt from SConstruct
-    proto_out_dir = 'selfdrive/frogpilot/navigation/mapd_py'
-    proto_src_dir = 'tools/map_processing'
-    proto_src = proto_src_dir + '/osm_speed_data.proto'
-    proto_target = proto_out_dir + '/osm_speed_data_pb2.py'
-    protoc_binary = 'protoc' # Use system protoc for cross-platform compatibility
-    env.Command(proto_target, [proto_src, proto_out_dir + '/__init__.py', protoc_binary], f'{protoc_binary} --proto_path={proto_src_dir} --python_out={proto_out_dir} {proto_src}')
+    # Platform detection and protoc binary selection
+    import platform
+    arch = platform.machine()
+    if arch == 'x86_64':
+        protoc_binary = '#tools/bin/protoc-x86_64'
+    elif arch == 'aarch64':
+        protoc_binary = '#tools/bin/protoc-aarch64'
+    else:
+        # Fallback to system protoc if architecture not recognized
+        protoc_binary = 'protoc'
+        print(f"WARNING: Unknown architecture {arch}, falling back to system protoc")
     ```
 
 ### Usage / Build Steps:
 
 After cloning or pulling this repository:
 
-1.  The `tools/bin/protoc` binary should be present.
-2.  Ensure it has execute permissions. Git *should* preserve this, but if issues occur, run `chmod +x tools/bin/protoc`.
-3.  Run the standard build command (`scons` or `scons -j$(nproc)`). `scons` will now automatically use the bundled `tools/bin/protoc` to generate the required Python file (`selfdrive/frogpilot/navigation/mapd_py/osm_speed_data_pb2.py`).
+1.  The architecture-specific `tools/bin/protoc-*` binaries should be present.
+2.  Ensure they have execute permissions. Git *should* preserve this, but if issues occur, run:
+    ```bash
+    chmod +x tools/bin/protoc-x86_64
+    chmod +x tools/bin/protoc-aarch64
+    ```
+3.  Run the standard build command (`scons` or `scons -j$(nproc)`). `scons` will now automatically detect the system architecture and use the appropriate bundled protoc binary to generate the required Python file (`selfdrive/frogpilot/navigation/mapd_py/osm_speed_data_pb2.py`).
 
 This eliminates the need to manually install or update `protoc` on the target device.
 
 **Note:** The corresponding runtime Python `protobuf` library still needs to be installed (e.g., via `pip`). The bundled `protoc` v27.1 is known to generate code compatible with Python `protobuf` library v4.25.2 (and likely other v4.x versions, as well as v3.20.x).
 
 ---
+
+---
+
+## Documentation Status
+
+**Last Updated:** June 7, 2025 19:12 PDT  
+**Current Commit:** `0bd4a5eb` - Add dual-architecture protoc v27.1 binaries for cross-platform development
+
+This document reflects the current state of the protoc implementation, which successfully enables:
+- Cross-platform development between x86_64 WSL and aarch64 TICI device
+- CPU-intensive map tile generation in the development environment  
+- Device builds using the correct architecture-specific protoc binary
 
 *(Future custom setup steps can be added below)*

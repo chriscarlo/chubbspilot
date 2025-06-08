@@ -39,7 +39,17 @@ proto_src_dir_abs = '#tools/map_processing' # Absolute path from repo root
 proto_src = proto_src_dir_abs + '/osm_speed_data.proto'
 proto_target_name = 'osm_speed_data_pb2.py'
 proto_target = os.path.join(proto_out_dir_rel, proto_target_name)
-protoc_binary = 'protoc' # Use system protoc instead of checked-in binary
+# Detect architecture and use appropriate protoc binary
+import platform
+arch = platform.machine()
+if arch == 'x86_64':
+    protoc_binary = '#tools/bin/protoc-x86_64'
+elif arch == 'aarch64':
+    protoc_binary = '#tools/bin/protoc-aarch64'
+else:
+    # Fallback to system protoc if architecture not recognized
+    protoc_binary = 'protoc'
+    print(f"WARNING: Unknown architecture {arch}, falling back to system protoc")
 init_file_target = os.path.join(proto_out_dir_rel, '__init__.py')
 
 # Ensure the __init__.py exists (needed for relative imports)
