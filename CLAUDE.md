@@ -217,8 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 7, 2025 04:48 PST  
-**Current Commit:** `228fcf8c` - Fix shapely module dependency at boot time
+**Last Updated:** January 7, 2025 04:59 PST  
+**Current Commit:** `8bb42fee` - Fix pydantic and other concierge dependencies at boot time
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -231,6 +231,7 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 - ✅ Fixed "searching for libgcc_s.so.1" error on TICI by adding AGNOS library paths
 - ✅ Added prebuilt libyuv.a library for larch64 from working exp05 branch
 - ✅ Fixed shapely module runtime dependency with multi-layered boot-time installation
+- ✅ Fixed pydantic, fastapi, uvicorn, and jinja2 dependencies for concierge service
 
 ### Build System Fixes
 1. **Cross-compilation support**: Added gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu, and libc6-dev-arm64-cross to dependencies
@@ -241,11 +242,13 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 6. **Missing libyuv library**: Added prebuilt libyuv.a from exp05 branch (build script approach was insufficient)
 
 ### Runtime Dependency Fixes
-1. **Shapely module**: Created multi-layered approach to ensure installation before any imports:
+1. **Python modules**: Created multi-layered approach to ensure installation before any imports:
    - `ensure_boot_dependencies.sh` - Early boot-time shell script for dependency installation
    - `ensure_dependencies.py` - Python script with pip and apt-get fallbacks
    - `mapd_daemon_wrapper.py` - Process-specific wrapper ensuring shapely before import
-   - Modified `process_config.py` to use wrapper instead of direct module import
+   - `main_wrapper.py` - Concierge wrapper ensuring pydantic/fastapi/uvicorn/jinja2
+   - Modified `process_config.py` to use wrappers instead of direct module imports
+   - Handles: shapely, pydantic, fastapi, uvicorn, jinja2
 
 ### Active Development Focus
 The build system now supports:
