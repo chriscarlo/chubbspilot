@@ -117,6 +117,7 @@ The `agentDocumentation/` directory contains:
 - **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
 - **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
 - **`CONCIERGE_REFACTOR_PLAN.md`** - Comprehensive architectural refactor plan for the Concierge web server to address separation of concerns and code maintainability.
+- **`CONCIERGE_REFACTOR_CHECKLIST.md`** - Progress tracking checklist for the Concierge refactor implementation.
 
 ## Platform Detection
 

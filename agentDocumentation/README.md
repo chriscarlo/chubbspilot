@@ -19,6 +19,11 @@ This documentation ensures consistency and continuity across different agents an
 - **`CROSS_PLATFORM_TESTING_PLAN.md`** - Comprehensive testing strategy for x86_64 development targeting aarch64 runtime
 - **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Technical debt assessment and cleanup strategy (DO NOT IMPLEMENT without explicit approval)
 - **`IMMEDIATE_ACTION_PLAN.md`** - Quick start guide for cross-platform development using existing tools
+- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Analysis of essential runtime dependencies required by openpilot
+- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - Detailed breakdown of external library imports and their usage
+- **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface
+- **`CONCIERGE_REFACTOR_PLAN.md`** - Architectural refactor plan for the Concierge web server with full implementation roadmap
+- **`CONCIERGE_REFACTOR_CHECKLIST.md`** - Progress tracking checklist for the Concierge refactor (track progress here)
 
 ### Maintenance Guidelines
 
