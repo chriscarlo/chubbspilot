@@ -86,18 +86,45 @@ def install_python_dependencies(missing: List[str]) -> bool:
     
     print(f"[CONCIERGE] Python dependencies requested: {', '.join(missing)}")
     
-    # These dependencies are in pyproject.toml and should be installed
-    # If they're missing, it's a build/environment issue
+    # On TICI, we can just install with pip like you did
     if os.path.isfile('/TICI'):
-        print("[CONCIERGE] ERROR: Dependencies missing on TICI")
-        print("[CONCIERGE] fastapi, uvicorn, and pydantic are required dependencies")
-        print("[CONCIERGE] They should be installed as part of the openpilot build")
-        print("[CONCIERGE] ")
-        print("[CONCIERGE] To fix this issue:")
-        print("[CONCIERGE] 1. Ensure your openpilot build includes all dependencies")
-        print("[CONCIERGE] 2. Run 'cd /data/openpilot && poetry install' on device")
-        print("[CONCIERGE] 3. Or rebuild openpilot with proper dependency installation")
-        return False  # Don't pretend it's OK
+        print("[CONCIERGE] Running on TICI - installing with pip")
+        
+        try:
+            # Install each missing dependency
+            for dep in missing:
+                pkg_name = dep.split("[")[0]  # Handle uvicorn[standard] format
+                print(f"[CONCIERGE] Installing {dep}...")
+                
+                # Build pip install command
+                version_spec = PYTHON_DEPENDENCIES.get(dep, "")
+                package_spec = f"{dep}{version_spec}" if version_spec else dep
+                
+                # Try with --break-system-packages first (needed on newer Python)
+                cmd = [sys.executable, "-m", "pip", "install", "--break-system-packages", package_spec]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                
+                # If that fails, try without the flag
+                if result.returncode != 0 and "no such option" in result.stderr.lower():
+                    print("[CONCIERGE] Retrying without --break-system-packages")
+                    cmd = [sys.executable, "-m", "pip", "install", package_spec]
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                
+                if result.returncode == 0:
+                    print(f"[CONCIERGE] Successfully installed {dep}")
+                else:
+                    print(f"[CONCIERGE] Failed to install {dep}: {result.stderr}")
+                    return False
+            
+            print("[CONCIERGE] All Python dependencies installed successfully")
+            return True
+            
+        except subprocess.TimeoutExpired:
+            print("[CONCIERGE] Installation timed out")
+            return False
+        except Exception as e:
+            print(f"[CONCIERGE] Installation error: {e}")
+            return False
     
     # For development environment, use poetry
     poetry_path = Path("/data/openpilot/pyproject.toml")
