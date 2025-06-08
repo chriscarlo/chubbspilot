@@ -68,13 +68,28 @@ def check_node_dependency(package: str) -> bool:
             if pkg_path.exists():
                 return True
         
-        # Check global install
+        # Check global install with timeout
         result = subprocess.run(
             ["npm", "list", "-g", package, "--depth=0"],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=5
         )
-        return result.returncode == 0
+        # npm list returns 0 if found, non-zero if not found
+        if result.returncode == 0:
+            return True
+            
+        # Also check if the command is directly available (for global installs)
+        if package == "tailwindcss" or package == "@tailwindcss/cli":
+            # Try to run the command
+            check_cmd = ["tailwindcss", "--version"] if package == "tailwindcss" else ["tailwindcss", "--help"]
+            try:
+                result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=2)
+                return result.returncode == 0
+            except:
+                pass
+                
+        return False
     except Exception:
         return False
 
@@ -192,11 +207,9 @@ def install_node_dependencies(missing: List[str]) -> bool:
     
     print(f"[CONCIERGE] Node.js dependencies requested: {', '.join(missing)}")
     
-    # On TICI, npm is typically not available and not needed
+    # On TICI, try to install if npm is available
     if os.path.isfile('/TICI'):
-        print("[CONCIERGE] Running on TICI - Node.js dependencies are optional")
-        print("[CONCIERGE] Tailwind CSS is only needed for development")
-        return True  # Don't fail on TICI
+        print("[CONCIERGE] Running on TICI - checking for npm...")
     
     # Check if npm is available with timeout
     try:
@@ -208,42 +221,66 @@ def install_node_dependencies(missing: List[str]) -> bool:
             timeout=5
         )
         if result.returncode != 0:
-            print("[CONCIERGE] npm not found. Node.js dependencies are optional.")
-            return True
+            print("[CONCIERGE] npm not found")
+            if os.path.isfile('/TICI'):
+                print("[CONCIERGE] WARNING: Cannot install Node.js dependencies without npm")
+                print("[CONCIERGE] The Tailwind CSS dependencies are:")
+                for dep in missing:
+                    print(f"[CONCIERGE]   - {dep}")
+                # Don't fail the whole process, but warn
+                return True
+            return False
     except subprocess.TimeoutExpired:
         print("[CONCIERGE] npm check timed out")
-        return True
+        if os.path.isfile('/TICI'):
+            print("[CONCIERGE] WARNING: Cannot verify npm availability")
+            return True
+        return False
     except Exception:
-        print("[CONCIERGE] npm not available. Node.js dependencies are optional.")
-        return True
+        print("[CONCIERGE] npm not available")
+        if os.path.isfile('/TICI'):
+            print("[CONCIERGE] WARNING: Cannot install Node.js dependencies without npm")
+            return True
+        return False
     
-    # Install in project directory
+    # Install in project directory or globally
     try:
         os.chdir("/data/openpilot")
-        print("[CONCIERGE] Installing Node.js packages (may take up to 60 seconds)...")
+        print("[CONCIERGE] Installing Node.js packages...")
         
-        # Install with timeout
-        cmd = ["npm", "install", "--save-dev"]
+        # Try local install first
         for dep in missing:
             version = NODE_DEPENDENCIES.get(dep, "latest")
-            cmd.append(f"{dep}@{version}")
-        
-        try:
-            result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True,
-                timeout=60  # 60 second timeout
-            )
+            pkg_spec = f"{dep}@{version}"
+            
+            print(f"[CONCIERGE] Installing {pkg_spec}...")
+            
+            # Try local install
+            cmd = ["npm", "install", "--save-dev", pkg_spec]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            
             if result.returncode != 0:
-                print(f"[CONCIERGE] npm install failed: {result.stderr[:200]}")
-                return False
+                # If local fails, try global install (especially on TICI)
+                print(f"[CONCIERGE] Local install failed, trying global...")
+                cmd = ["npm", "install", "-g", pkg_spec]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                
+                if result.returncode != 0:
+                    print(f"[CONCIERGE] Failed to install {dep}: {result.stderr[:200]}")
+                    # On TICI, continue trying other packages
+                    if not os.path.isfile('/TICI'):
+                        return False
+                else:
+                    print(f"[CONCIERGE] Successfully installed {dep} globally")
             else:
-                print("[CONCIERGE] npm install succeeded")
-                return True
-        except subprocess.TimeoutExpired:
-            print("[CONCIERGE] npm install timed out after 60 seconds")
-            return False
+                print(f"[CONCIERGE] Successfully installed {dep} locally")
+        
+        print("[CONCIERGE] Node.js package installation completed")
+        return True
+        
+    except subprocess.TimeoutExpired:
+        print("[CONCIERGE] npm install timed out")
+        return False
             
     except Exception as e:
         print(f"[CONCIERGE] Node installation error: {e}")
