@@ -217,8 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 6, 2025 21:33 PST  
-**Current Commit:** `927266ae` - Add prebuilt libyuv.a for larch64 from exp05
+**Last Updated:** January 7, 2025 00:08 PST  
+**Current Commit:** `a17fceec` - Add runtime dependency checker for missing Python packages
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -248,6 +248,7 @@ The build system now supports:
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
 - **x86_64 Development**: Fully functional with all dependencies resolved
+- **Runtime Dependencies**: Added automatic checker for missing Python packages (e.g., shapely)
 
 ## Additional Guidance
 
