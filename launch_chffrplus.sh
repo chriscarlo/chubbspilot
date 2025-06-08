@@ -32,6 +32,11 @@ function agnos_init {
 }
 
 function launch {
+  # Ensure boot dependencies first
+  if [ -x "$DIR/system/ensure_boot_dependencies.sh" ]; then
+    $DIR/system/ensure_boot_dependencies.sh
+  fi
+
   # Remove orphaned git lock if it exists on boot
   [ -f "$DIR/.git/index.lock" ] && rm -f $DIR/.git/index.lock
 
@@ -83,7 +88,11 @@ function launch {
 
   # ensure python dependencies are available
   cd $DIR
+  echo "Ensuring Python dependencies are installed..."
   python system/ensure_dependencies.py
+  if [ $? -ne 0 ]; then
+    echo "WARNING: Failed to ensure dependencies, but continuing anyway"
+  fi
 
   # start manager
   cd system/manager
