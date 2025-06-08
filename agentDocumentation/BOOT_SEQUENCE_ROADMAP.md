@@ -113,13 +113,20 @@ This roadmap outlines the complete transformation of the openpilot boot sequence
    - Resource monitoring (CPU, memory, temperature)
    - Error reporting (with actionable messages)
 
-2. **Visual Design**
+2. **Advanced Error Reporting** ✨ NEW
+   - Full stack trace display
+   - File location and line numbers
+   - Suggested fixes based on error patterns
+   - Common issues database
+   - Actionable debugging commands
+
+3. **Visual Design**
    - Color coding: Green=[OK], Yellow=[WAIT], Red=[FAIL]
    - Progress indicators for long operations
    - Scrolling log for detailed output
    - Status summary dashboard
 
-3. **Content Management**
+4. **Content Management**
    - Define status message formats
    - Create error message catalog
    - Design progress calculation logic
@@ -222,7 +229,7 @@ This roadmap outlines the complete transformation of the openpilot boot sequence
 - Error: #FF0000 (Red)
 - Accent: #FF6B6B (Light Red)
 
-### Example Boot Display
+### Example Boot Display - Normal Operation
 ```
 ================================================================================
                          CHAUFFEUR BOOT SEQUENCE v2.0                           
@@ -251,6 +258,56 @@ This roadmap outlines the complete transformation of the openpilot boot sequence
 
 [INFO] Boot time: 23.4s | CPU: 45% | Memory: 1.2GB/4GB | Temp: 42°C
 ================================================================================
+```
+
+### Example Boot Display - Error Condition
+```
+▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓▓ 
+▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓  ▓ 
+▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓ 
+▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓  ▓▓▓   ▓▓▓   ▓▓▓   ▓  ▓  ▓▓▓▓ 
+▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓  
+▓     ▓  ▓  ▓  ▓  ▓  ▓  ▓     ▓     ▓     ▓  ▓  ▓ ▓  
+▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓ 
+▓▓▓▓  ▓  ▓  ▓  ▓  ▓▓▓▓  ▓     ▓     ▓▓▓▓  ▓▓▓▓  ▓  ▓ 
+═══════════════════════════════════════════════════════
+      ★ AUTONOMOUS DRIVING SYSTEM v2.0 ★
+         ----------------------------
+
+[SERVICES] Starting core processes:
+  ├─ Thermal Manager      [✓]
+  ├─ CAN Interface        [✓]
+  ├─ Camera System        [✓]
+  ├─ Vision Model         [✓]
+  ├─ Vehicle Control      [✗] CAN Error: No messages received from panda
+  ├─ Path Planning        [✗] Dependency controlsd failed
+  └─ User Interface       [ ]
+
+[ERRORS DETECTED] Boot halted due to failures:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FAILED: Vehicle Control
+Error: RuntimeError: CAN Error: No messages received from panda
+Location: /data/openpilot/selfdrive/car/car_helpers.py:142
+
+Stack Trace:
+  #0 File "/data/openpilot/selfdrive/controls/controlsd.py", line 742
+     in main: controls = Controls(sm, pm, CP)
+  #1 File "/data/openpilot/selfdrive/controls/controlsd.py", line 168
+     in __init__: self.CI = get_car_interface(self.CP)
+  #2 File "/data/openpilot/selfdrive/car/car_helpers.py", line 142
+     in get_car_interface: raise RuntimeError("CAN Error: No messages received from panda")
+
+SUGGESTED FIX:
+CAN communication issue. Check panda connection and power.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEBUGGING TIPS:
+• Check /data/log/ for detailed logs
+• Try: cd /data/openpilot && ./launch_openpilot.sh
+• Common issues: permissions, missing deps, CAN errors
+• SSH will be available after thermald starts
+═══════════════════════════════════════════════════════════════════════════════
 ```
 
 ## Success Metrics

@@ -1,0 +1,17 @@
+Import('env', 'arch', 'common', 'messaging')
+
+# Terminal boot UI doesn't need Qt, just standard C++
+terminal_env = env.Clone()
+
+# Basic libs for terminal UI
+terminal_libs = ['pthread']
+if arch != "Darwin":
+  terminal_libs += ['rt']
+
+# Build terminal boot UI executable
+terminal_boot = terminal_env.Program('terminal_boot', 
+  ['main.cc', 'terminal_ui.cc'], 
+  LIBS=terminal_libs
+)
+
+terminal_env.Alias('terminal_boot', terminal_boot)

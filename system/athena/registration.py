@@ -9,7 +9,10 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from openpilot.common.api import api_get
 from openpilot.common.params import Params
-from openpilot.common.spinner import Spinner
+try:
+  from openpilot.common.terminal_spinner import TerminalSpinner as Spinner
+except ImportError:
+  from openpilot.common.spinner import Spinner
 from openpilot.selfdrive.controls.lib.alertmanager import set_offroad_alert
 from openpilot.system.hardware import HARDWARE, PC
 from openpilot.system.hardware.hw import Paths
@@ -43,7 +46,12 @@ def register(show_spinner=False) -> str | None:
   elif needs_registration:
     if show_spinner:
       spinner = Spinner()
-      spinner.update("registering device")
+      # Use new terminal spinner methods if available
+      if hasattr(spinner, 'set_phase'):
+        spinner.set_phase("DEVICE REGISTRATION")
+        spinner.update_service("registration", "starting", "Preparing device identity...")
+      else:
+        spinner.update("registering device")
 
     # Create registration token, in the future, this key will make JWTs directly
     with open(Paths.persist_root()+"/comma/id_rsa.pub") as f1, open(Paths.persist_root()+"/comma/id_rsa") as f2:
