@@ -217,9 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 7, 2025 05:46 PST  
-**Current Commit:** `75512a00` - Add comprehensive external dependency analysis and expand boot dependency management
-**Critical Fix Pending:** Added missing capnp/pycapnp, serial/pyserial, usb1/libusb1 to dependency management
+**Last Updated:** January 8, 2025 18:45 PST  
+**Current Commit:** `389dcdde` - Add Concierge web server management to FrogPilot Utilities GUI
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -235,6 +234,7 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 - ✅ Fixed pydantic, fastapi, uvicorn, and jinja2 dependencies for concierge service
 - ✅ Created comprehensive external dependency analysis of entire codebase (1260 files scanned)
 - ✅ Expanded dependency management to handle 661 unique external imports including critical packages
+- ✅ Implemented Concierge web server management in FrogPilot Utilities GUI with comprehensive diagnostics
 
 ### Build System Fixes
 1. **Cross-compilation support**: Added gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu, and libc6-dev-arm64-cross to dependencies
@@ -272,6 +272,7 @@ The build system now supports:
 - **TICI Native Builds**: All required libraries present, build should complete successfully
 - **x86_64 Development**: Fully functional with all dependencies resolved
 - **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports with intelligent fallbacks
+- **GUI Integration**: Concierge web server management now available in FrogPilot Utilities with real-time diagnostics
 
 ## Additional Guidance
 
