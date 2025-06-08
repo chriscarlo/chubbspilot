@@ -217,8 +217,8 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 7, 2025 00:08 PST  
-**Current Commit:** `a17fceec` - Add runtime dependency checker for missing Python packages
+**Last Updated:** January 7, 2025 00:13 PST  
+**Current Commit:** `ceccaaa4` - Update dependency installer to use sudo on TICI devices
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
