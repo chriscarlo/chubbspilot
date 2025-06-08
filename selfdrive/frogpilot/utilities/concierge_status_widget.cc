@@ -381,6 +381,7 @@ void ConciergeStatusWidget::onFixDependencies() {
   
   fixButton->setEnabled(false);
   fixButton->setText("Installing...");
+  errorsLabel->setText("⏳ Installing dependencies... Please wait up to 60 seconds");
   
   // Build command arguments
   QStringList args;
@@ -393,6 +394,22 @@ void ConciergeStatusWidget::onFixDependencies() {
   if (!missingNodeDeps.isEmpty()) {
     args << "--node" << missingNodeDeps;
   }
+  
+  // Set up to capture real-time output
+  fixProcess->setProcessChannelMode(QProcess::MergedChannels);
+  connect(fixProcess, &QProcess::readyReadStandardOutput, this, [this]() {
+    QByteArray output = fixProcess->readAllStandardOutput();
+    QString text = QString(output);
+    if (text.contains("[CONCIERGE]")) {
+      // Show last CONCIERGE message
+      QStringList lines = text.split('\n');
+      for (const QString &line : lines) {
+        if (line.contains("[CONCIERGE]") && !line.isEmpty()) {
+          errorsLabel->setText("⏳ " + line);
+        }
+      }
+    }
+  });
   
   fixProcess->start("python3", args);
 }

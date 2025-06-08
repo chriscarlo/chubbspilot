@@ -74,82 +74,87 @@ def install_python_dependencies(missing: List[str]) -> bool:
     if not missing:
         return True
     
-    print(f"Installing Python dependencies: {', '.join(missing)}")
+    print(f"[CONCIERGE] Installing Python dependencies: {', '.join(missing)}")
+    print(f"[CONCIERGE] Running on platform: {sys.platform}")
     
-    # For openpilot, dependencies should already be in pyproject.toml
-    # Try to install just the dependencies without the project
+    # For TICI, the dependencies should already be there
+    # Just verify they're available
+    if os.path.isfile('/TICI'):
+        print("[CONCIERGE] Running on TICI - checking if dependencies are pre-installed...")
+        all_available = True
+        for dep in missing:
+            pkg_name = dep.split("[")[0]
+            try:
+                __import__(pkg_name)
+                print(f"[CONCIERGE] ✓ {pkg_name} is available")
+            except ImportError:
+                print(f"[CONCIERGE] ✗ {pkg_name} is NOT available")
+                all_available = False
+        
+        if all_available:
+            print("[CONCIERGE] All dependencies are available on TICI")
+            return True
+        else:
+            print("[CONCIERGE] ERROR: Dependencies missing on TICI. Please update your TICI image.")
+            return False
+    
+    # For development environment, use poetry
     poetry_path = Path("/data/openpilot/pyproject.toml")
     if poetry_path.exists():
         try:
-            # First check if dependencies are already in poetry environment
+            print("[CONCIERGE] Checking Poetry environment...")
+            # Quick timeout for poetry commands
             all_installed = True
             for dep in missing:
                 pkg_name = dep.split("[")[0]
-                result = subprocess.run(
-                    ["poetry", "show", pkg_name],
-                    cwd="/data/openpilot",
-                    capture_output=True,
-                    text=True
-                )
-                if result.returncode != 0:
+                try:
+                    result = subprocess.run(
+                        ["poetry", "show", pkg_name],
+                        cwd="/data/openpilot",
+                        capture_output=True,
+                        text=True,
+                        timeout=5  # 5 second timeout
+                    )
+                    if result.returncode != 0:
+                        all_installed = False
+                        break
+                except subprocess.TimeoutExpired:
+                    print(f"[CONCIERGE] Timeout checking {pkg_name}")
                     all_installed = False
                     break
             
             if all_installed:
-                print("All dependencies already installed in Poetry environment")
+                print("[CONCIERGE] All dependencies already installed in Poetry environment")
                 return True
             
-            # Run poetry install with --no-root to skip installing the project itself
-            print("Running poetry install --no-root...")
-            result = subprocess.run(
-                ["poetry", "install", "--no-root"],
-                cwd="/data/openpilot",
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                print("Poetry install succeeded")
-                return True
-            else:
-                print(f"Poetry install failed: {result.stderr}")
-                # If that fails, the dependencies might already be there
-                # Check again
-                all_there = True
-                for dep in missing:
-                    if not check_python_dependency(dep):
-                        all_there = False
-                        break
+            # Run poetry install with timeout
+            print("[CONCIERGE] Running poetry install --no-root (may take up to 30 seconds)...")
+            try:
+                result = subprocess.run(
+                    ["poetry", "install", "--no-root"],
+                    cwd="/data/openpilot",
+                    capture_output=True,
+                    text=True,
+                    timeout=30  # 30 second timeout
+                )
                 
-                if all_there:
-                    print("Dependencies are actually installed")
+                if result.returncode == 0:
+                    print("[CONCIERGE] Poetry install succeeded")
                     return True
+                else:
+                    print(f"[CONCIERGE] Poetry install failed: {result.stderr}")
+            except subprocess.TimeoutExpired:
+                print("[CONCIERGE] Poetry install timed out after 30 seconds")
+                return False
                     
         except FileNotFoundError:
-            print("Poetry command not found, trying pip...")
+            print("[CONCIERGE] Poetry command not found")
         except Exception as e:
-            print(f"Poetry installation error: {e}")
+            print(f"[CONCIERGE] Poetry error: {e}")
     
-    # Fallback to pip within poetry environment
-    try:
-        print("Falling back to pip install within poetry environment...")
-        # Use poetry run to ensure we're in the right environment
-        cmd = ["poetry", "run", "pip", "install"]
-        for dep in missing:
-            if PYTHON_DEPENDENCIES.get(dep):
-                cmd.append(f"{dep}{PYTHON_DEPENDENCIES[dep]}")
-            else:
-                cmd.append(dep)
-        
-        result = subprocess.run(cmd, cwd="/data/openpilot", capture_output=True, text=True)
-        if result.returncode == 0:
-            print("Pip install succeeded")
-        else:
-            print(f"Pip install failed: {result.stderr}")
-        return result.returncode == 0
-    except Exception as e:
-        print(f"Pip installation failed: {e}")
-        return False
+    # Last resort - direct pip
+    print("[CONCIERGE] WARNING: Dependencies may need to be installed manually")
+    return False
 
 
 def install_node_dependencies(missing: List[str]) -> bool:
@@ -157,45 +162,63 @@ def install_node_dependencies(missing: List[str]) -> bool:
     if not missing:
         return True
     
-    print(f"Installing Node.js dependencies: {', '.join(missing)}")
+    print(f"[CONCIERGE] Node.js dependencies requested: {', '.join(missing)}")
     
-    # Check if npm is available
+    # On TICI, npm is typically not available and not needed
+    if os.path.isfile('/TICI'):
+        print("[CONCIERGE] Running on TICI - Node.js dependencies are optional")
+        print("[CONCIERGE] Tailwind CSS is only needed for development")
+        return True  # Don't fail on TICI
+    
+    # Check if npm is available with timeout
     try:
-        result = subprocess.run(["npm", "--version"], capture_output=True, text=True)
+        print("[CONCIERGE] Checking for npm...")
+        result = subprocess.run(
+            ["npm", "--version"], 
+            capture_output=True, 
+            text=True,
+            timeout=5
+        )
         if result.returncode != 0:
-            print("npm not found. Skipping Node.js dependencies.")
-            print("Note: Node.js dependencies are optional for Concierge basic functionality.")
-            return True  # Don't fail on missing npm
+            print("[CONCIERGE] npm not found. Node.js dependencies are optional.")
+            return True
+    except subprocess.TimeoutExpired:
+        print("[CONCIERGE] npm check timed out")
+        return True
     except Exception:
-        print("npm not found. Skipping Node.js dependencies.")
-        return True  # Don't fail on missing npm
+        print("[CONCIERGE] npm not available. Node.js dependencies are optional.")
+        return True
     
     # Install in project directory
     try:
         os.chdir("/data/openpilot")
-        print("Installing Node.js packages...")
+        print("[CONCIERGE] Installing Node.js packages (may take up to 60 seconds)...")
         
-        # Install all at once for better dependency resolution
+        # Install with timeout
         cmd = ["npm", "install", "--save-dev"]
         for dep in missing:
             version = NODE_DEPENDENCIES.get(dep, "latest")
             cmd.append(f"{dep}@{version}")
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            print(f"npm install failed: {result.stderr}")
-            # Try to install without version constraints
-            cmd_retry = ["npm", "install", "--save-dev"] + missing
-            result_retry = subprocess.run(cmd_retry, capture_output=True, text=True)
-            if result_retry.returncode == 0:
-                print("npm install succeeded without version constraints")
+        try:
+            result = subprocess.run(
+                cmd, 
+                capture_output=True, 
+                text=True,
+                timeout=60  # 60 second timeout
+            )
+            if result.returncode != 0:
+                print(f"[CONCIERGE] npm install failed: {result.stderr[:200]}")
+                return False
+            else:
+                print("[CONCIERGE] npm install succeeded")
                 return True
+        except subprocess.TimeoutExpired:
+            print("[CONCIERGE] npm install timed out after 60 seconds")
             return False
-        else:
-            print("npm install succeeded")
-            return True
+            
     except Exception as e:
-        print(f"Node installation error: {e}")
+        print(f"[CONCIERGE] Node installation error: {e}")
         return True  # Don't fail the whole process
 
 
@@ -243,6 +266,11 @@ def main():
     """Main entry point for dependency installation."""
     import argparse
     
+    print("[CONCIERGE] Dependency installer started")
+    print(f"[CONCIERGE] Python: {sys.version}")
+    print(f"[CONCIERGE] Platform: {sys.platform}")
+    print(f"[CONCIERGE] TICI: {'YES' if os.path.isfile('/TICI') else 'NO'}")
+    
     parser = argparse.ArgumentParser(description="Install Concierge dependencies")
     parser.add_argument("--python", nargs="+", help="Specific Python packages to install")
     parser.add_argument("--node", nargs="+", help="Specific Node packages to install")
@@ -251,16 +279,25 @@ def main():
     args = parser.parse_args()
     
     if args.check_only:
+        print("[CONCIERGE] Running in check-only mode")
         missing_py, missing_node = get_missing_dependencies()
         if missing_py:
-            print(f"Missing Python: {', '.join(missing_py)}")
+            print(f"[CONCIERGE] Missing Python: {', '.join(missing_py)}")
         if missing_node:
-            print(f"Missing Node: {', '.join(missing_node)}")
+            print(f"[CONCIERGE] Missing Node: {', '.join(missing_node)}")
         sys.exit(0 if not (missing_py or missing_node) else 1)
     
     # Install specified or all missing
-    success = install_missing_dependencies(args.python, args.node)
-    sys.exit(0 if success else 1)
+    print("[CONCIERGE] Starting installation process...")
+    try:
+        success = install_missing_dependencies(args.python, args.node)
+        print(f"[CONCIERGE] Installation {'SUCCEEDED' if success else 'FAILED'}")
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"[CONCIERGE] FATAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
