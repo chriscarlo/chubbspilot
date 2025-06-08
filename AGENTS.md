@@ -115,6 +115,7 @@ The `agentDocumentation/` directory contains:
 - **`README.md`** - Overview and navigation guide for this documentation directory.
 - **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing across supported architectures.
 - **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
+- **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
 
 ## Platform Detection
 

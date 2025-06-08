@@ -134,6 +134,11 @@ PyJWT = "*"
 json-rpc = "*"
 websocket_client = "*"
 
+# concierge web server
+fastapi = ">=0.111"
+uvicorn = { version = ">=0.30", extras = ["standard"] }
+pydantic = "*"
+
 # acados deps
 casadi = "*"
 future-fstrings = "*"

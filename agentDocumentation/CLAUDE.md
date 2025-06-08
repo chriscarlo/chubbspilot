@@ -12,6 +12,7 @@ The **`agentDocumentation/`** directory contains:
 - **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Detailed list and analysis of essential runtime dependencies required for openpilot functionality.
 - **`EXTERNAL_IMPORTS_ANALYSIS.md`** - In-depth analysis and categorization of external library imports, including usage patterns and risk assessments.
 - **`README.md`** - High-level overview of this directory's purpose, structure, and usage guidelines.
+- **`BOOT_SEQUENCE_ROADMAP.md`** - Comprehensive plan to replace FrogPilot boot graphics with professional terminal interface.
 
 ## Documentation Update Instructions
 
