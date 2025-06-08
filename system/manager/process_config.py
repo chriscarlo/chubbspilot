@@ -115,7 +115,7 @@ procs = [
   PythonProcess("live_root_cause_monitor", "tools.debug.live_root_cause_monitor", always_run),
 
   # Chauffeur processes
-  PythonProcess("concierge", "selfdrive.chauffeur.concierge.main", always_run),
+  PythonProcess("concierge", "selfdrive.chauffeur.concierge.main_wrapper", always_run),
 ]
 
 managed_processes = {p.name: p for p in procs}

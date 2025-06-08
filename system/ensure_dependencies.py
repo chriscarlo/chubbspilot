@@ -10,6 +10,10 @@ import time
 
 REQUIRED_PACKAGES = [
     "shapely",
+    "pydantic",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
 ]
 
 def check_and_install_packages():
