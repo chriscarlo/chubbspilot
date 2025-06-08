@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 9, 2025 02:00 PST
-**Current Commit:** `e0e387b2` - Make Concierge installer TICI-aware with better timeout handling
+**Last Updated:** January 8, 2025 19:15 PST
+**Current Commit:** `3d3460b2` - Fix Concierge dependency installation on TICI
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -155,7 +155,12 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 - **Runtime Dependencies**: Comprehensive multi-layered system handles 661 external imports
 - **GUI Integration**: Concierge web server management now available in FrogPilot Utilities
   - Enhanced diagnostics with real-time health monitoring
-  - Automatic dependency installation with Fix button
+  - Automatic dependency installation with Fix button (TICI-aware)
+  - Platform-specific behavior:
+    - TICI: Verifies pre-installed Python deps, skips Node.js deps
+    - Development: Uses Poetry/npm with timeouts to prevent hanging
+  - Real-time progress display with [CONCIERGE] prefixed messages
+  - Timeout protection: 30s for Poetry, 60s for npm
   - Toggle disabled when dependencies missing
   - Relaunch button for easy service restart
 - **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability
@@ -164,6 +169,17 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
   - Real-time service status display
   - Actionable error reporting with stack traces
   - Backward compatible with existing spinner
+  - Fixed TICI display rendering (centered for 2160x1080 screen)
+  - Added simple fallback UI for debugging display issues
+
+### Concierge Dependency Status
+- **Issue Identified**: The fastapi, uvicorn, and pydantic dependencies are properly defined in pyproject.toml but are not installed in the TICI runtime environment
+- **Root Cause**: The TICI build process is not running `poetry install` to include these dependencies in the system image
+- **Diagnostic Tools Added**: 
+  - `fix_concierge_deps.sh` - Shell script to check Python environment on TICI
+  - `selfdrive/chauffeur/concierge/check_python_env.py` - Python script for detailed environment diagnostics
+- **Required Fix**: The TICI build process needs to be updated to ensure all pyproject.toml dependencies are installed
+- **Workaround**: SSH into TICI and run `cd /data/openpilot && poetry install` (requires network access)
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 
