@@ -1,3 +1,98 @@
+# Concierge Web Server
+
+Concierge is a web-based management interface for openpilot that runs on port 5055.
+
+## Features
+
+- Real-time system status monitoring
+- Crash log viewer
+- Service monitoring
+- Map data log viewer
+- Terminal interface for debugging
+
+## Access
+
+When enabled, access the interface at:
+- http://device-ip:5055 (from any device on the same network)
+- http://localhost:5055 (from the device itself)
+
+## Understanding the Status Display
+
+### Health Score
+The health score (e.g., 2/6) indicates how many of the following checks are passing:
+1. **Process Running** - The web server process is active
+2. **Port Open** - Port 5055 is accessible
+3. **HTTP Responding** - The web server is responding to requests
+4. **Dependencies OK** - All required Python packages are installed
+5. **No Recent Errors** - No errors in the last few minutes
+6. **Manager Running** - The process manager is active
+
+### Common Issues and Solutions
+
+#### "Process not running"
+- Toggle the Concierge switch OFF then ON again
+- Wait 10-15 seconds for the process to start
+
+#### "HTTP Connection refused"
+- The process is not running or still starting up
+- Check if port 5055 is blocked by firewall
+- Ensure no other service is using port 5055
+
+#### "Dependencies Missing"
+- The system will try to auto-install missing packages
+- If on a development system, manually install:
+  ```
+  pip install fastapi uvicorn jinja2 pydantic
+  ```
+
+#### "Port 5055 already in use"
+- Another process is using the port
+- Find and stop the conflicting process:
+  ```
+  sudo netstat -tlnp | grep 5055
+  ```
+
+## Security Notice
+
+The web interface is accessible to all devices on your network. Only enable it on trusted networks.
+
+## Troubleshooting
+
+### View Logs
+```bash
+# Main wrapper logs
+cat /data/openpilot/selfdrive/chauffeur/concierge/logs/main_wrapper.log
+
+# Server logs
+cat /data/openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+```
+
+### Manual Start/Stop
+```bash
+# Stop
+pkill -f "concierge.main"
+
+# Start manually
+cd /data/openpilot
+python -m selfdrive.chauffeur.concierge.main
+```
+
+### Check Dependencies
+```bash
+python3 /data/openpilot/selfdrive/frogpilot/utilities/concierge_diagnostics.py --json
+```
+
+## Development
+
+The web interface is built with:
+- FastAPI (Python web framework)
+- Jinja2 (HTML templating)
+- Uvicorn (ASGI server)
+
+Source code is in `/data/openpilot/selfdrive/chauffeur/concierge/`
+
+---
+
 # Concierge Frontend Styling with Tailwind CSS v4
 
 This document outlines how to manage and build the frontend CSS for The Concierge application using Tailwind CSS v4.x.

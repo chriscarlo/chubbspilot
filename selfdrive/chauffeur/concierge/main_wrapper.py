@@ -104,6 +104,31 @@ def install_package(package):
 if __name__ == "__main__":
     logger.info("Concierge main wrapper starting...")
     
+    # Check if Concierge is enabled
+    try:
+        from openpilot.common.params import Params
+        params = Params()
+        enabled = params.get_bool("ConciergeEnabled")
+        
+        # Check for restart/stop commands
+        if params.get_bool("RestartConcierge"):
+            logger.info("Restart requested - clearing flag and proceeding")
+            params.put_bool("RestartConcierge", False)
+            enabled = True
+            
+        if params.get_bool("StopConcierge"):
+            logger.info("Stop requested - exiting")
+            params.put_bool("StopConcierge", False)
+            params.put_bool("ConciergeEnabled", False)
+            sys.exit(0)
+            
+        if not enabled:
+            logger.info("Concierge is disabled via ConciergeEnabled param - exiting")
+            sys.exit(0)
+            
+    except Exception as e:
+        logger.warning(f"Could not check ConciergeEnabled param: {e} - proceeding anyway")
+    
     try:
         # Ensure dependencies are available
         if ensure_dependencies():

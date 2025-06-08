@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **DO NOT attempt to:**
 - Run system commands like `systemctl`, `journalctl`, or service management commands
 - Check for running processes with `pgrep`, `ps`, or similar
-- Access `/TICI` file or expect TICI-specific behavior  
+- Access `/TICI` file or expect TICI-specific behavior
 - Look for system logs, crash logs, or runtime output
 - Execute openpilot processes or services
 - Check network services or ports
@@ -67,7 +67,7 @@ See *tools/CLAUDE.md* for detailed build commands and cross-platform development
 ## Key Dependencies
 
 - **Core**: pycapnp, Cython, numpy, sympy
-- **ML**: onnx, onnxruntime-gpu, tinygrad  
+- **ML**: onnx, onnxruntime-gpu, tinygrad
 - **Hardware**: libusb1, spidev (Linux only)
 - **UI**: Qt5 (PyQt5 on x86_64)
 - **Communication**: pyzmq for messaging
@@ -79,7 +79,7 @@ See *tools/CLAUDE.md* for dependency management system details.
 Code supports multiple architectures with platform-specific implementations in *system/hardware/*:
 - **larch64**: Linux TICI (aarch64 with AGNOS)
 - **aarch64**: Linux PC aarch64
-- **x86_64**: Linux PC x64  
+- **x86_64**: Linux PC x64
 - **Darwin**: macOS (x64/arm64)
 
 See *system/CLAUDE.md* for hardware abstraction details.
@@ -104,6 +104,17 @@ Comprehensive documentation is maintained in `/data/openpilot/agentDocumentation
 3. **Add new ideas** and discoveries to relevant docs
 4. **Track infrastructure changes** in cleanup plan
 5. **Document platform-specific issues** and solutions
+
+### Documentation Directory Overview
+
+The `agentDocumentation/` directory contains:
+- **`CRITICAL_RUNTIME_DEPENDENCIES.md`** - Analysis of essential runtime dependencies required by openpilot.
+- **`EXTERNAL_IMPORTS_ANALYSIS.md`** - Detailed breakdown of external library imports and their usage.
+- **`IMMEDIATE_ACTION_PLAN.md`** - Prioritized quick-start action items to address immediate development tasks.
+- **`INFRASTRUCTURE_CLEANUP_PLAN.md`** - Roadmap for cleaning and refactoring infrastructure components.
+- **`README.md`** - Overview and navigation guide for this documentation directory.
+- **`CROSS_PLATFORM_TESTING_PLAN.md`** - Strategies for cross-platform testing across supported architectures.
+- **`DEVELOPMENT_ENVIRONMENT.md`** - Analysis and setup instructions for the development environment.
 
 ## Platform Detection
 
@@ -132,7 +143,7 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 8, 2025 18:45 PST  
+**Last Updated:** January 8, 2025 18:45 PST
 **Current Commit:** `389dcdde` - Add Concierge web server management to FrogPilot Utilities GUI
 
 ### Build Ready Status
@@ -149,7 +160,9 @@ See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation
 - When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
 - After every push, update all relevant documentation (CLAUDE.md, AGENTS.md, and any other affected docs) with current status, timestamp, and commit hash
 
-See *tools/CLAUDE.md* for detailed dependency management system.
+- Whenever you perform a `git commit` or `git push`, update all `CLAUDE.md` and `AGENTS.md` files (root and in `agentDocumentation/`) to include any new or updated documentation and refresh the **Last Updated** and **Current Commit** fields in each file.
+
+See *tools/CLAUDE.md* for detailed dependency management system
 
 ## Memories
 

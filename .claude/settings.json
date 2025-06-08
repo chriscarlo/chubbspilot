@@ -2,36 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(*)",
-      "Bash(*|*)",
-      "Bash(*|*|*)",
-      "Bash(*&&*)",
-      "Bash(*||*)",
-      "Bash(*;*)",
-      "Bash(*>*)",
-      "Bash(*<*)",
-      "Bash(*2>&1*)",
       "WebFetch(*)",
-      "WebSearch(*)",
-      "ReadFile(*)",
-      "WriteFile(*)",
-      "CreateFile(*)",
-      "ListFiles(*)",
-      "*",
-      "Bash(cp:*)",
-      "Bash(find:*)"
+      "Read(*)",
+      "Write(*)",
+      "Create(*)",
+      "List(*)"
     ],
     "deny": [
       "Bash(*rm -rf*)",
-      "Bash(*rm -r *)",
-      "Bash(*sudo rm*)",
-      "Bash(*rmdir*)",
-      "Bash(*shred*)",
-      "Bash(*dd if=/dev/zero*)",
-      "Bash(*> /dev/sd*)",
-      "Bash(*mkfs*)",
-      "Bash(*:(){:|:&};:*)",
-      "DeleteFile(*)"
+      "Delete(*)"
     ]
-  },
-  "confirmationBehavior": "never"
+  }
 }

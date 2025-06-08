@@ -10,6 +10,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QStringList>
 
 #include "selfdrive/ui/qt/widgets/controls.h"
 #include "selfdrive/frogpilot/ui/qt/widgets/frogpilot_controls.h"
@@ -35,10 +36,12 @@ private:
 
   QVBoxLayout *mainLayout;
   QLabel *titleLabel;
+  QLabel *docLabel;
   QLabel *healthLabel;
   QLabel *processLabel;
   QLabel *httpLabel;
-  QLabel *systemLabel;
+  QLabel *portLabel;
+  QLabel *depsLabel;
   QLabel *errorsLabel;
   QLabel *lastUpdatedLabel;
   
