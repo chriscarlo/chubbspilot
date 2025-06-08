@@ -217,19 +217,30 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** June 7, 2025 19:12 PDT  
-**Current Commit:** `0bd4a5eb` - Add dual-architecture protoc v27.1 binaries for cross-platform development
+**Last Updated:** January 6, 2025 19:53 PST  
+**Current Commit:** Working on build system improvements
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
 - ✅ Fixed "protoc failed: [Errno 8] Exec format error" on TICI device
 - ✅ Enabled CPU-intensive map tile generation in x86_64 dev environment
 - ✅ Platform detection in SConscript automatically selects correct binary
+- ✅ Added aarch64 cross-compilation toolchain packages to install_ubuntu_dependencies.sh
+- ✅ Added --force-arch option to SConstruct for cross-compilation builds
+- ✅ Fixed ICU library dependency for MapLibre (requires libicu66 on Ubuntu 24.04)
+- ✅ Resolved "searching for libgcc_s.so.1" error by installing gcc-aarch64-linux-gnu
+
+### Build System Fixes
+1. **Cross-compilation support**: Added gcc-aarch64-linux-gnu, g++-aarch64-linux-gnu, and libc6-dev-arm64-cross to dependencies
+2. **Architecture forcing**: Added --force-arch option to allow building for larch64 from x86_64 host
+3. **ICU compatibility**: MapLibre requires ICU 66 - installed from Ubuntu 20.04 archives for compatibility
+4. **Library paths**: Added /usr/aarch64-linux-gnu/lib to library search paths for cross-compilation
 
 ### Active Development Focus
-The protoc implementation is complete and tested. The fork now supports seamless builds on both:
-- **x86_64 WSL Development Environment** - For map tile generation and development
-- **aarch64 TICI Device** - For on-device compilation and testing
+The build system now supports:
+- **x86_64 WSL Development Environment** - Native builds and map tile generation
+- **aarch64 TICI Device** - Cross-compilation from x86_64 host (partial - Qt cross-compilation still needs work)
+- **Native x86_64 builds** - Working with ICU 66 dependency resolved
 
 ## Additional Guidance
 
@@ -239,3 +250,4 @@ The protoc implementation is complete and tested. The fork now supports seamless
 ## Memories
 
 - Always include a current time and which commit we are on when updating documentation
+- never include "co-authored by claude" or anything of that sort in commit notes or messages.

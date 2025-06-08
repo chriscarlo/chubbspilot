@@ -21,6 +21,9 @@ function install_ubuntu_common_requirements() {
     cppcheck \
     build-essential \
     gcc-arm-none-eabi \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
     liblzma-dev \
     capnproto \
     libcapnp-dev \

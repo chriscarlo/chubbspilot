@@ -4,9 +4,25 @@
       "Write()",
       "Edit()",
       "Bash(*)",
-      "Bash(bash:*)",
-      "Bash(*:*)"
+      "Glob(*)",
+      "Grep(*)",
+      "LS(*)",
+      "Read(*)",
+      "MultiEdit(*)",
+      "NotebookRead(*)",
+      "NotebookEdit(*)",
+      "WebFetch(*)",
+      "TodoRead()",
+      "TodoWrite(*)",
+      "WebSearch(*)",
+      "Task(*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rmdir:*)",
+      "Bash(del:*)",
+      "Bash(unlink:*)"
+    ]
   }
 }

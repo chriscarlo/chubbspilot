@@ -70,17 +70,33 @@ AddOption('--minimal',
           default=os.path.exists(File('#.lfsconfig').abspath), # minimal by default on release branch (where there's no LFS)
           help='the minimum build to run openpilot. no tests, tools, etc.')
 
+AddOption('--force-arch',
+          action='store',
+          type='string',
+          dest='force_arch',
+          help='force build architecture (larch64, aarch64, x86_64)')
+
 ## Architecture name breakdown (arch)
 ## - larch64: linux tici aarch64
 ## - aarch64: linux pc aarch64
 ## - x86_64:  linux pc x64
 ## - Darwin:  mac x64 or arm64
 real_arch = arch = subprocess.check_output(["uname", "-m"], encoding='utf8').rstrip()
-if platform.system() == "Darwin":
-  arch = "Darwin"
-  brew_prefix = subprocess.check_output(['brew', '--prefix'], encoding='utf8').strip()
-elif arch == "aarch64" and AGNOS:
-  arch = "larch64"
+
+# Allow overriding architecture from command line
+force_arch = GetOption('force_arch')
+if force_arch:
+  arch = force_arch
+  # Set AGNOS if forcing larch64
+  if arch == "larch64":
+    AGNOS = True
+else:
+  if platform.system() == "Darwin":
+    arch = "Darwin"
+    brew_prefix = subprocess.check_output(['brew', '--prefix'], encoding='utf8').strip()
+  elif arch == "aarch64" and AGNOS:
+    arch = "larch64"
+
 assert arch in ["larch64", "aarch64", "x86_64", "Darwin"]
 
 lenv = {
@@ -110,11 +126,12 @@ if arch == "larch64":
   libpath += [
     "#third_party/snpe/larch64",
     "#third_party/libyuv/larch64/lib",
-    "/usr/lib/aarch64-linux-gnu"
+    "/usr/lib/aarch64-linux-gnu",
+    "/usr/aarch64-linux-gnu/lib"
   ]
   cflags = ["-DQCOM2", "-mcpu=cortex-a57"]
   cxxflags = ["-DQCOM2", "-mcpu=cortex-a57"]
-  rpath += ["/usr/local/lib"]
+  rpath += ["/usr/local/lib", "/usr/aarch64-linux-gnu/lib"]
 else:
   cflags = []
   cxxflags = []
@@ -164,6 +181,11 @@ elif GetOption('ubsan'):
 else:
   ccflags = []
   ldflags = []
+
+# Cross-compilation flags for larch64
+if arch == "larch64":
+  ccflags += ["--target=aarch64-linux-gnu", "--sysroot=/usr/aarch64-linux-gnu"]
+  ldflags += ["--target=aarch64-linux-gnu", "--sysroot=/usr/aarch64-linux-gnu"]
 
 # no --as-needed on mac linker
 if arch != "Darwin":
