@@ -1,11 +1,25 @@
 #!/bin/sh
 
+# Get the directory where this script lives
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Clean up any old Qt spinner to ensure terminal UI is used
+if [ -f "$DIR/_spinner" ] && [ -f "$DIR/terminal_boot/terminal_boot" ]; then
+  rm -f "$DIR/_spinner"
+fi
+
 # Use terminal boot UI instead of Qt spinner
-if [ -f terminal_boot/terminal_boot ]; then
-  exec terminal_boot/terminal_boot "$@"
-elif [ -f /TICI ] && [ ! -f _spinner ]; then
-  cp qt/spinner_larch64 _spinner
-  exec ./_spinner "$1"
+if [ -f "$DIR/terminal_boot/terminal_boot" ]; then
+  echo "Using terminal boot UI" >&2
+  exec "$DIR/terminal_boot/terminal_boot" "$@"
+elif [ -f "$DIR/_spinner" ]; then
+  echo "Using existing spinner" >&2
+  exec "$DIR/_spinner" "$@"
+elif [ -f /TICI ] && [ -f "$DIR/qt/spinner_larch64" ]; then
+  echo "Copying larch64 spinner" >&2
+  cp "$DIR/qt/spinner_larch64" "$DIR/_spinner"
+  exec "$DIR/_spinner" "$@"
 else
-  exec ./_spinner "$1"
+  echo "ERROR: No spinner found!" >&2
+  exit 1
 fi
