@@ -4,6 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPORTANT**: This WSL instance is exclusively intended for developing on this specific openpilot fork. The runtime environment should be emulated as closely as possible to the target AGNOS/TICI environment.
 
+## ⚠️ CRITICAL DEVELOPMENT ENVIRONMENT NOTICE ⚠️
+
+**This is a SOURCE CODE DEVELOPMENT environment, NOT a running openpilot system!**
+
+**DO NOT attempt to:**
+- Run system commands like `systemctl`, `journalctl`, or service management commands
+- Check for running processes with `pgrep`, `ps`, or similar
+- Access `/TICI` file or expect TICI-specific behavior  
+- Look for system logs, crash logs, or runtime output
+- Execute openpilot processes or services
+- Check network services or ports
+
+**This environment is for:**
+- Reading and editing source code
+- Building with `scons`
+- Running tests with `pytest`
+- Analyzing code structure and dependencies
+- Git operations and documentation
+
+**For runtime debugging:** Use an actual TICI device or proper simulation environment.
+
 ## Project Overview
 
 This is a fork of openpilot called "chauffeur" with FrogPilot customizations. It's an advanced driver assistance system (ADAS) that provides autonomous driving capabilities including lane keeping, adaptive cruise control, and driver monitoring.
