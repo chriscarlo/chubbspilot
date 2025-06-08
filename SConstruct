@@ -127,11 +127,12 @@ if arch == "larch64":
     "#third_party/snpe/larch64",
     "#third_party/libyuv/larch64/lib",
     "/usr/lib/aarch64-linux-gnu",
-    "/usr/aarch64-linux-gnu/lib"
+    "/lib/aarch64-linux-gnu",  # Standard AGNOS library path
+    "/usr/lib/gcc/aarch64-linux-gnu/9",  # GCC 9 libraries on AGNOS
   ]
   cflags = ["-DQCOM2", "-mcpu=cortex-a57"]
   cxxflags = ["-DQCOM2", "-mcpu=cortex-a57"]
-  rpath += ["/usr/local/lib", "/usr/aarch64-linux-gnu/lib"]
+  rpath += ["/usr/local/lib", "/lib/aarch64-linux-gnu"]
 else:
   cflags = []
   cxxflags = []
@@ -182,8 +183,8 @@ else:
   ccflags = []
   ldflags = []
 
-# Cross-compilation flags for larch64
-if arch == "larch64":
+# Cross-compilation flags for larch64 when building from x86_64
+if arch == "larch64" and real_arch == "x86_64":
   ccflags += ["--target=aarch64-linux-gnu", "--sysroot=/usr/aarch64-linux-gnu"]
   ldflags += ["--target=aarch64-linux-gnu", "--sysroot=/usr/aarch64-linux-gnu"]
 
