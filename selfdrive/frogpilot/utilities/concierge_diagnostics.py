@@ -96,13 +96,15 @@ def check_dependencies() -> Dict[str, Any]:
     python_deps = ['fastapi', 'uvicorn', 'jinja2', 'pydantic']
     python_missing = []
     python_available = []
+    python_errors = {}
     
     for dep in python_deps:
         try:
             __import__(dep)
             python_available.append(dep)
-        except ImportError:
+        except ImportError as e:
             python_missing.append(dep)
+            python_errors[dep] = str(e)
     
     # Node dependencies (check if CSS file exists as proxy)
     node_deps = []
@@ -126,6 +128,7 @@ def check_dependencies() -> Dict[str, Any]:
         'python': {
             'available': python_available,
             'missing': python_missing,
+            'errors': python_errors,
             'all_ok': len(python_missing) == 0
         },
         'node': {

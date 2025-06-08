@@ -86,14 +86,18 @@ def install_python_dependencies(missing: List[str]) -> bool:
     
     print(f"[CONCIERGE] Python dependencies requested: {', '.join(missing)}")
     
-    # For TICI, the dependencies should already be there
-    # Just verify they're available
+    # These dependencies are in pyproject.toml and should be installed
+    # If they're missing, it's a build/environment issue
     if os.path.isfile('/TICI'):
-        print("[CONCIERGE] Running on TICI - dependencies should be pre-installed")
-        # On TICI, these deps are part of the system image
-        # Just report success - the diagnostics will catch if they're really missing
-        print("[CONCIERGE] Assuming dependencies are available on TICI")
-        return True
+        print("[CONCIERGE] ERROR: Dependencies missing on TICI")
+        print("[CONCIERGE] fastapi, uvicorn, and pydantic are required dependencies")
+        print("[CONCIERGE] They should be installed as part of the openpilot build")
+        print("[CONCIERGE] ")
+        print("[CONCIERGE] To fix this issue:")
+        print("[CONCIERGE] 1. Ensure your openpilot build includes all dependencies")
+        print("[CONCIERGE] 2. Run 'cd /data/openpilot && poetry install' on device")
+        print("[CONCIERGE] 3. Or rebuild openpilot with proper dependency installation")
+        return False  # Don't pretend it's OK
     
     # For development environment, use poetry
     poetry_path = Path("/data/openpilot/pyproject.toml")
