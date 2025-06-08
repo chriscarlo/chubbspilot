@@ -146,8 +146,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 9, 2025 00:10 PST
-**Current Commit:** `eaa5d9cb` - Add comprehensive Concierge refactor plan and tracking checklist
+**Last Updated:** January 9, 2025 01:15 PST
+**Current Commit:** `4dc9a1db` - Replace FrogPilot boot graphics with badass 1985-style terminal UI
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
@@ -159,6 +159,11 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
   - Toggle disabled when dependencies missing
   - Relaunch button for easy service restart
 - **Concierge Refactor Plan**: Comprehensive architectural refactor plan created to address monolithic code structure and improve maintainability
+- **Boot UI Overhaul**: Replaced FrogPilot graphics with terminal-based boot interface
+  - ASCII art Chauffeur logo with venetian blind effect
+  - Real-time service status display
+  - Actionable error reporting with stack traces
+  - Backward compatible with existing spinner
 
 See *tools/CLAUDE.md* for detailed dependency management and *agentDocumentation/* for complete development history.
 
