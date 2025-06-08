@@ -5,7 +5,10 @@ from pathlib import Path
 
 # NOTE: Do NOT import anything here that needs be built (e.g. params)
 from openpilot.common.basedir import BASEDIR
-from openpilot.common.spinner import Spinner
+try:
+  from openpilot.common.terminal_spinner import TerminalSpinner as Spinner
+except ImportError:
+  from openpilot.common.spinner import Spinner
 from openpilot.common.text_window import TextWindow
 from openpilot.system.hardware import AGNOS
 from openpilot.common.swaglog import cloudlog, add_file_handler
@@ -25,6 +28,11 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
     nproc = 2
 
   extra_args = ["--minimal"] if minimal else []
+  
+  # Use new terminal spinner methods if available
+  if hasattr(spinner, 'set_phase'):
+    spinner.set_phase("BUILD PROCESS")
+    spinner.update_service("scons", "starting", "Preparing build environment...")
 
   # building with all cores can result in using too
   # much memory, so retry with less parallelism
@@ -45,7 +53,11 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
         prefix = b'progress: '
         if line.startswith(prefix):
           i = int(line[len(prefix):])
-          spinner.update_progress(MAX_BUILD_PROGRESS * min(1., i / TOTAL_SCONS_NODES), 100.)
+          progress = MAX_BUILD_PROGRESS * min(1., i / TOTAL_SCONS_NODES)
+          if hasattr(spinner, 'update_service'):
+            spinner.update_service("scons", "running", f"Building... {int(progress)}%", progress)
+          else:
+            spinner.update_progress(progress, 100.)
         elif len(line):
           compile_output.append(line)
           print(line.decode('utf8', 'replace'))
@@ -85,6 +97,11 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
 
 if __name__ == "__main__":
   spinner = Spinner()
-  spinner.update_progress(0, 100)
+  if hasattr(spinner, 'set_phase'):
+    spinner.set_phase("BUILD PROCESS")
+    spinner.update_service("scons", "starting", "Initializing build...")
+  else:
+    spinner.update_progress(0, 100)
   build_metadata = get_build_metadata()
   build(spinner, build_metadata.openpilot.is_dirty, minimal = AGNOS)
+  spinner.close()

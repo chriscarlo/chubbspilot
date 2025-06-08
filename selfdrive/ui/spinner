@@ -1,7 +1,11 @@
 #!/bin/sh
 
-if [ -f /TICI ] && [ ! -f _spinner ]; then
+# Use terminal boot UI instead of Qt spinner
+if [ -f terminal_boot/terminal_boot ]; then
+  exec terminal_boot/terminal_boot "$@"
+elif [ -f /TICI ] && [ ! -f _spinner ]; then
   cp qt/spinner_larch64 _spinner
+  exec ./_spinner "$1"
+else
+  exec ./_spinner "$1"
 fi
-
-exec ./_spinner "$1"
