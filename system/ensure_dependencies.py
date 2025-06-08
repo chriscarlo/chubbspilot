@@ -9,11 +9,22 @@ import os
 import time
 
 REQUIRED_PACKAGES = [
-    "shapely",
+    # Tier 1 - Critical (boot failures if missing)
+    "numpy",
+    "shapely", 
     "pydantic",
-    "fastapi",
     "uvicorn",
     "jinja2",
+    "requests",
+    
+    # Tier 2 - Important (service failures if missing)
+    "zmq",
+    "psutil",
+    "PIL",
+    "cv2",
+    
+    # Tier 3 - Optional but commonly used
+    "fastapi",  # May be conditionally imported
 ]
 
 def check_and_install_packages():
@@ -49,7 +60,7 @@ def check_and_install_packages():
                         print(f"Successfully installed {package}")
                     except subprocess.CalledProcessError as e:
                         print(f"Failed to install {package}: {e}")
-                        # Try apt-get as last resort for shapely
+                        # Try alternative package names or apt-get as fallbacks
                         if package == "shapely":
                             try:
                                 print("Trying apt-get install python3-shapely...")
@@ -62,6 +73,33 @@ def check_and_install_packages():
                                 print("Successfully installed python3-shapely via apt")
                             except subprocess.CalledProcessError as e:
                                 print(f"Failed to install via apt: {e}")
+                        elif package == "cv2":
+                            try:
+                                print("Trying to install opencv-python (cv2)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "opencv-python"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed opencv-python")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install opencv-python: {e}")
+                        elif package == "PIL":
+                            try:
+                                print("Trying to install Pillow (PIL)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "Pillow"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed Pillow")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install Pillow: {e}")
+                        elif package == "zmq":
+                            try:
+                                print("Trying to install pyzmq (zmq)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "pyzmq"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed pyzmq")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install pyzmq: {e}")
         else:
             # Non-TICI environment, use --user flag
             for package in missing_packages:

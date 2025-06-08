@@ -9,7 +9,10 @@ if [ -f /TICI ]; then
     echo "Running on TICI device"
     
     # Check and install required Python packages
-    PACKAGES=("shapely" "pydantic" "fastapi" "uvicorn" "jinja2")
+    # Tier 1 - Critical packages that cause boot failures
+    PACKAGES=("numpy" "shapely" "pydantic" "uvicorn" "jinja2" "requests")
+    
+    # Note: Additional packages (zmq, psutil, PIL, cv2, fastapi) are handled by ensure_dependencies.py
     
     for package in "${PACKAGES[@]}"; do
         python3 -c "import $package" 2>/dev/null
