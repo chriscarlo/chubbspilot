@@ -12,7 +12,8 @@ if [ -f /TICI ]; then
     # Tier 1 - Critical packages that cause boot failures
     PACKAGES=("numpy" "shapely" "pydantic" "uvicorn" "jinja2" "requests")
     
-    # Note: Additional packages (zmq, psutil, PIL, cv2, fastapi) are handled by ensure_dependencies.py
+    # Note: Additional packages (capnp, zmq, psutil, PIL, cv2, serial, usb1, fastapi) are handled by ensure_dependencies.py
+    # capnp is especially critical (27 usages) but requires special handling as pycapnp
     
     for package in "${PACKAGES[@]}"; do
         python3 -c "import $package" 2>/dev/null

@@ -217,8 +217,9 @@ FrogPilot and openpilot use a special workflow for fast device installation:
 
 ## Current Status
 
-**Last Updated:** January 7, 2025 05:20 PST  
+**Last Updated:** January 7, 2025 05:46 PST  
 **Current Commit:** `75512a00` - Add comprehensive external dependency analysis and expand boot dependency management
+**Critical Fix Pending:** Added missing capnp/pycapnp, serial/pyserial, usb1/libusb1 to dependency management
 
 ### Recent Accomplishments
 - ✅ Implemented dual-architecture protoc v27.1 support for cross-platform development
@@ -277,6 +278,24 @@ The build system now supports:
 - Always maintain a file called AGENTS.md for each CLAUDE.md and make AGENTS.md an exact copy of CLAUDE.md
 - When user says "commit xyz", assume they mean commit AND push unless they specifically say not to push
 - After every push, update all relevant documentation (CLAUDE.md, AGENTS.md, and any other affected docs) with current status, timestamp, and commit hash
+
+## Dependency Management System
+
+**IMPORTANT**: Any future custom library or module additions MUST be configured in the dependency management system:
+
+1. **Add to ensure_dependencies.py**: Add the import name to REQUIRED_PACKAGES list with appropriate tier
+2. **Handle Package Name Mapping**: If the import name differs from the PyPI package name, add special handling:
+   - `cv2` → `opencv-python`
+   - `PIL` → `Pillow`
+   - `zmq` → `pyzmq`
+   - `capnp` → `pycapnp`
+   - `serial` → `pyserial`
+   - `usb1` → `libusb1`
+3. **Critical Packages**: Add to ensure_boot_dependencies.sh if boot-critical
+4. **Process-Specific**: Create a wrapper if the package is only used by one process
+5. **Run Analysis**: Use `python3 tools/analyze_imports.py` to verify coverage
+
+The system uses a multi-layered approach to ensure maximum reliability on TICI devices where manual intervention is difficult.
 
 ## Memories
 

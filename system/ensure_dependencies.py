@@ -11,6 +11,7 @@ import time
 REQUIRED_PACKAGES = [
     # Tier 1 - Critical (boot failures if missing)
     "numpy",
+    "capnp",  # Cap'n Proto - CRITICAL for messaging (27 usages)
     "shapely", 
     "pydantic",
     "uvicorn",
@@ -22,6 +23,8 @@ REQUIRED_PACKAGES = [
     "psutil",
     "PIL",
     "cv2",
+    "serial",  # Serial communication (3 usages)
+    "usb1",    # USB device access (6 usages)
     
     # Tier 3 - Optional but commonly used
     "fastapi",  # May be conditionally imported
@@ -100,6 +103,33 @@ def check_and_install_packages():
                                 print("Successfully installed pyzmq")
                             except subprocess.CalledProcessError as e:
                                 print(f"Failed to install pyzmq: {e}")
+                        elif package == "capnp":
+                            try:
+                                print("Trying to install pycapnp (capnp)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "pycapnp"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed pycapnp")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install pycapnp: {e}")
+                        elif package == "serial":
+                            try:
+                                print("Trying to install pyserial (serial)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "pyserial"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed pyserial")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install pyserial: {e}")
+                        elif package == "usb1":
+                            try:
+                                print("Trying to install libusb1 (usb1)...")
+                                subprocess.check_call([
+                                    "sudo", sys.executable, "-m", "pip", "install", "libusb1"
+                                ], stderr=subprocess.STDOUT)
+                                print("Successfully installed libusb1")
+                            except subprocess.CalledProcessError as e:
+                                print(f"Failed to install libusb1: {e}")
         else:
             # Non-TICI environment, use --user flag
             for package in missing_packages:
