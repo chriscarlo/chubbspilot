@@ -7,7 +7,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
-ConciergeStatusWidget::ConciergeStatusWidget(QWidget *parent) : QFrame(parent), isUpdating(false) {
+ConciergeStatusWidget::ConciergeStatusWidget(QWidget *parent) : QFrame(parent), isUpdating(false), isHealthy(true) {
   setupUI();
   
   // Set up update timer (every 10 seconds)
@@ -19,6 +19,11 @@ ConciergeStatusWidget::ConciergeStatusWidget(QWidget *parent) : QFrame(parent), 
   diagnosticsProcess = new QProcess(this);
   connect(diagnosticsProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
           this, &ConciergeStatusWidget::onDiagnosticsFinished);
+  
+  // Set up fix process
+  fixProcess = new QProcess(this);
+  connect(fixProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+          this, &ConciergeStatusWidget::onFixProcessFinished);
   
   // Initial update
   updateStatus();
@@ -59,16 +64,41 @@ void ConciergeStatusWidget::setupUI() {
   portLabel->setStyleSheet("font-size: 35px; color: #E4E4E4; margin-bottom: 15px; padding-left: 40px;");
   mainLayout->addWidget(portLabel);
   
-  // Dependencies status
+  // Dependencies status with fix button
+  depsLayout = new QHBoxLayout();
+  depsLayout->setSpacing(20);
+  
   depsLabel = new QLabel("Dependencies: Checking...", this);
   depsLabel->setStyleSheet("font-size: 35px; color: #E4E4E4; margin-bottom: 15px; padding-left: 40px;");
-  mainLayout->addWidget(depsLabel);
+  depsLayout->addWidget(depsLabel);
+  
+  fixButton = new QPushButton("Fix", this);
+  fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+  fixButton->hide();
+  connect(fixButton, &QPushButton::clicked, this, &ConciergeStatusWidget::onFixDependencies);
+  depsLayout->addWidget(fixButton);
+  depsLayout->addStretch();
+  
+  mainLayout->addLayout(depsLayout);
   
   // Recent errors - more prominent
   errorsLabel = new QLabel("", this);
   errorsLabel->setStyleSheet("font-size: 35px; color: #FF6B6B; margin-top: 20px; margin-bottom: 20px; padding-left: 40px;");
   errorsLabel->setWordWrap(true);
   mainLayout->addWidget(errorsLabel);
+  
+  // Action buttons
+  actionsLayout = new QHBoxLayout();
+  actionsLayout->setSpacing(20);
+  actionsLayout->setMargin(0);
+  
+  relaunchButton = new QPushButton("Relaunch Concierge", this);
+  relaunchButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #2196F3; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #1976D2; }");
+  connect(relaunchButton, &QPushButton::clicked, this, &ConciergeStatusWidget::onRelaunchConcierge);
+  actionsLayout->addWidget(relaunchButton);
+  actionsLayout->addStretch();
+  
+  mainLayout->addLayout(actionsLayout);
   
   // Last updated
   lastUpdatedLabel = new QLabel("Last updated: Never", this);
@@ -117,8 +147,16 @@ void ConciergeStatusWidget::onDiagnosticsFinished(int exitCode, QProcess::ExitSt
 void ConciergeStatusWidget::updateDisplay(const QJsonObject &diagnostics) {
   // Health status
   if (diagnostics.contains("health")) {
-    QString healthText = formatHealth(diagnostics["health"].toObject());
+    QJsonObject health = diagnostics["health"].toObject();
+    QString healthText = formatHealth(health);
     healthLabel->setText(healthText);
+    
+    // Update health status and emit signal
+    bool wasHealthy = isHealthy;
+    isHealthy = health["status"].toString() == "healthy";
+    if (wasHealthy != isHealthy) {
+      emit healthStatusChanged(isHealthy);
+    }
   }
   
   // Process status
@@ -153,16 +191,45 @@ void ConciergeStatusWidget::updateDisplay(const QJsonObject &diagnostics) {
     QJsonObject deps = diagnostics["dependencies"].toObject();
     bool depsOk = deps["dependencies_ok"].toBool();
     
+    // Clear previous lists
+    missingPythonDeps.clear();
+    missingNodeDeps.clear();
+    
     if (depsOk) {
       depsLabel->setText("Dependencies: ✅ All packages installed");
+      fixButton->hide();
     } else {
-      QJsonArray missing = deps["missing"].toArray();
-      QStringList missingList;
-      for (const QJsonValue &dep : missing) {
-        missingList.append(dep.toString());
+      // Get detailed missing dependencies
+      if (deps.contains("python")) {
+        QJsonObject pythonDeps = deps["python"].toObject();
+        QJsonArray pythonMissing = pythonDeps["missing"].toArray();
+        for (const QJsonValue &dep : pythonMissing) {
+          missingPythonDeps.append(dep.toString());
+        }
       }
-      depsLabel->setText(QString("Dependencies: ❌ Missing: %1").arg(missingList.join(", ")));
+      
+      if (deps.contains("node")) {
+        QJsonObject nodeDeps = deps["node"].toObject();
+        QJsonArray nodeMissing = nodeDeps["missing"].toArray();
+        for (const QJsonValue &dep : nodeMissing) {
+          missingNodeDeps.append(dep.toString());
+        }
+      }
+      
+      // Fall back to legacy format if new format not available
+      if (missingPythonDeps.isEmpty() && missingNodeDeps.isEmpty()) {
+        QJsonArray missing = deps["missing"].toArray();
+        for (const QJsonValue &dep : missing) {
+          missingPythonDeps.append(dep.toString());
+        }
+      }
+      
+      QStringList allMissing = missingPythonDeps + missingNodeDeps;
+      depsLabel->setText(QString("Dependencies: ❌ Missing: %1").arg(allMissing.join(", ")));
+      fixButton->show();
     }
+    
+    emit dependenciesStatusChanged(!depsOk, missingPythonDeps, missingNodeDeps);
   }
   
   // Recent errors
@@ -292,8 +359,81 @@ QString ConciergeStatusWidget::formatErrors(const QJsonObject &logs) {
   return messages.join("\n");
 }
 
+void ConciergeStatusWidget::onFixDependencies() {
+  if (fixProcess->state() != QProcess::NotRunning) {
+    return; // Already running
+  }
+  
+  fixButton->setEnabled(false);
+  fixButton->setText("Installing...");
+  
+  // Build command arguments
+  QStringList args;
+  args << "/data/openpilot/selfdrive/chauffeur/concierge/install_dependencies.py";
+  
+  if (!missingPythonDeps.isEmpty()) {
+    args << "--python" << missingPythonDeps;
+  }
+  
+  if (!missingNodeDeps.isEmpty()) {
+    args << "--node" << missingNodeDeps;
+  }
+  
+  fixProcess->start("python3", args);
+}
+
+void ConciergeStatusWidget::onRelaunchConcierge() {
+  relaunchButton->setEnabled(false);
+  relaunchButton->setText("Restarting...");
+  
+  // Set restart flag
+  Params().putBool("RestartConcierge", true);
+  
+  // Trigger manager restart to pick up the flag
+  QProcess::execute("pkill", QStringList() << "-SIGHUP" << "manager");
+  
+  // Re-enable button after a delay
+  QTimer::singleShot(3000, this, [this]() {
+    relaunchButton->setEnabled(true);
+    relaunchButton->setText("Relaunch Concierge");
+    updateStatus(); // Force an update to check new status
+  });
+}
+
+void ConciergeStatusWidget::onFixProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+  fixButton->setEnabled(true);
+  
+  if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+    fixButton->setText("Fixed!");
+    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 5px; }");
+    
+    // Update status after a short delay
+    QTimer::singleShot(2000, this, [this]() {
+      updateStatus();
+      fixButton->setText("Fix");
+      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+    });
+  } else {
+    fixButton->setText("Fix Failed");
+    fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF6B6B; color: white; border-radius: 5px; }");
+    
+    // Show error output if available
+    QByteArray errorOutput = fixProcess->readAllStandardError();
+    if (!errorOutput.isEmpty()) {
+      errorsLabel->setText(QString("❌ Installation error: %1").arg(QString(errorOutput).simplified()));
+    }
+    
+    // Reset button after delay
+    QTimer::singleShot(3000, this, [this]() {
+      fixButton->setText("Fix");
+      fixButton->setStyleSheet("QPushButton { font-size: 35px; padding: 10px 20px; background-color: #FF9800; color: white; border-radius: 5px; } QPushButton:pressed { background-color: #F57C00; }");
+    });
+  }
+}
+
 // Toggle Control Implementation
-ConciergeToggleControl::ConciergeToggleControl() : ToggleControl("Concierge Web Server", "Enable the web-based management interface on port 5055", "") {
+ConciergeToggleControl::ConciergeToggleControl() : ToggleControl("Concierge Web Server", "Enable the web-based management interface on port 5055", ""), 
+                                                     isHealthy(true), hasDependencies(true) {
   // Initialize toggle state from params
   bool enabled = params.getBool("ConciergeEnabled");
   if (enabled != toggle.on) {
@@ -302,6 +442,29 @@ ConciergeToggleControl::ConciergeToggleControl() : ToggleControl("Concierge Web 
   
   // Connect toggle changes
   QObject::connect(this, &ToggleControl::toggleFlipped, this, &ConciergeToggleControl::onToggleChanged);
+}
+
+void ConciergeToggleControl::setHealthy(bool healthy) {
+  isHealthy = healthy;
+  updateToggleState();
+}
+
+void ConciergeToggleControl::setDependenciesOk(bool ok) {
+  hasDependencies = ok;
+  updateToggleState();
+}
+
+void ConciergeToggleControl::updateToggleState() {
+  // Disable toggle if unhealthy or missing dependencies
+  bool shouldEnable = hasDependencies;
+  toggle.setEnabled(shouldEnable);
+  
+  // Update toggle visual state
+  if (!shouldEnable) {
+    toggle.setStyleSheet("QPushButton { opacity: 0.5; }");
+  } else {
+    toggle.setStyleSheet("");
+  }
 }
 
 void ConciergeToggleControl::onToggleChanged(bool enabled) {
@@ -335,5 +498,14 @@ ConciergeManagementControl::ConciergeManagementControl(QWidget *parent) : QFrame
   // Add status widget
   statusWidget = new ConciergeStatusWidget();
   mainLayout->addWidget(statusWidget);
+  
+  // Connect status updates to toggle control
+  connect(statusWidget, &ConciergeStatusWidget::healthStatusChanged, 
+          toggleControl, &ConciergeToggleControl::setHealthy);
+  
+  connect(statusWidget, &ConciergeStatusWidget::dependenciesStatusChanged,
+          this, [this](bool hasMissing, const QStringList &missingPython, const QStringList &missingNode) {
+            toggleControl->setDependenciesOk(!hasMissing);
+          });
 }
 

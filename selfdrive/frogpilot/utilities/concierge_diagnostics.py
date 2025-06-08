@@ -92,21 +92,50 @@ def check_http_response() -> Dict[str, Any]:
 
 def check_dependencies() -> Dict[str, Any]:
     """Check if required dependencies are available."""
-    deps = ['fastapi', 'uvicorn', 'jinja2', 'pydantic']
-    missing = []
-    available = []
+    # Python dependencies
+    python_deps = ['fastapi', 'uvicorn', 'jinja2', 'pydantic']
+    python_missing = []
+    python_available = []
     
-    for dep in deps:
+    for dep in python_deps:
         try:
             __import__(dep)
-            available.append(dep)
+            python_available.append(dep)
         except ImportError:
-            missing.append(dep)
+            python_missing.append(dep)
+    
+    # Node dependencies (check if CSS file exists as proxy)
+    node_deps = []
+    node_missing = []
+    node_available = []
+    
+    # Check if tailwind CSS is built
+    css_path = '/data/openpilot/selfdrive/chauffeur/concierge/static/css/tailwind.css'
+    try:
+        import os
+        if os.path.exists(css_path):
+            node_available.append('tailwindcss')
+        else:
+            node_missing.append('tailwindcss')
+            node_missing.append('@tailwindcss/cli')
+    except Exception:
+        node_missing.extend(['tailwindcss', '@tailwindcss/cli'])
     
     return {
-        'dependencies_ok': len(missing) == 0,
-        'available': available,
-        'missing': missing
+        'dependencies_ok': len(python_missing) == 0 and len(node_missing) == 0,
+        'python': {
+            'available': python_available,
+            'missing': python_missing,
+            'all_ok': len(python_missing) == 0
+        },
+        'node': {
+            'available': node_available,
+            'missing': node_missing,
+            'all_ok': len(node_missing) == 0
+        },
+        # Legacy fields for compatibility
+        'available': python_available + node_available,
+        'missing': python_missing + node_missing
     }
 
 def check_log_errors() -> Dict[str, Any]:

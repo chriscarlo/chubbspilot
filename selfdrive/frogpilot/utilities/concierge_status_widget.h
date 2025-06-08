@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QStringList>
+#include <QPushButton>
 
 #include "selfdrive/ui/qt/widgets/controls.h"
 #include "selfdrive/frogpilot/ui/qt/widgets/frogpilot_controls.h"
@@ -21,9 +22,16 @@ class ConciergeStatusWidget : public QFrame {
 public:
   explicit ConciergeStatusWidget(QWidget *parent = nullptr);
 
+signals:
+  void healthStatusChanged(bool isHealthy);
+  void dependenciesStatusChanged(bool hasMissing, const QStringList &missingPython, const QStringList &missingNode);
+
 private slots:
   void updateStatus();
   void onDiagnosticsFinished(int exitCode, QProcess::ExitStatus exitStatus);
+  void onFixDependencies();
+  void onRelaunchConcierge();
+  void onFixProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
   void setupUI();
@@ -45,10 +53,20 @@ private:
   QLabel *errorsLabel;
   QLabel *lastUpdatedLabel;
   
+  QHBoxLayout *depsLayout;
+  QPushButton *fixButton;
+  
+  QHBoxLayout *actionsLayout;
+  QPushButton *relaunchButton;
+  
   QTimer *updateTimer;
   QProcess *diagnosticsProcess;
+  QProcess *fixProcess;
   
   bool isUpdating;
+  bool isHealthy;
+  QStringList missingPythonDeps;
+  QStringList missingNodeDeps;
 };
 
 class ConciergeToggleControl : public ToggleControl {
@@ -56,12 +74,17 @@ class ConciergeToggleControl : public ToggleControl {
 
 public:
   ConciergeToggleControl();
+  void setHealthy(bool healthy);
+  void setDependenciesOk(bool ok);
 
 private slots:
   void onToggleChanged(bool enabled);
+  void updateToggleState();
 
 private:
   Params params;
+  bool isHealthy;
+  bool hasDependencies;
 };
 
 class ConciergeManagementControl : public QFrame {

@@ -144,8 +144,8 @@ See *release/CLAUDE.md* for prebuilt workflow details and fast device installati
 
 ## Current Status
 
-**Last Updated:** January 8, 2025 18:45 PST
-**Current Commit:** `389dcdde` - Add Concierge web server management to FrogPilot Utilities GUI
+**Last Updated:** January 8, 2025 19:10 PST
+**Current Commit:** `fa4abacc` - Add Concierge web server dependencies to pyproject.toml
 
 ### Build Ready Status
 - **TICI Native Builds**: All required libraries present, build should complete successfully
