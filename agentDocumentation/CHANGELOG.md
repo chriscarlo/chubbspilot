@@ -2,6 +2,26 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## January 8, 2025 - 23:03 UTC
+
+### Environment Detection and Runtime Capabilities Enhancement
+- **Enhanced CLAUDE.md**: Added comprehensive environment detection section distinguishing TICI runtime vs development environments
+- **Expanded Build Documentation**: Added detailed build commands, test commands, linting, and TICI-specific commands
+- **Runtime vs Development Clarity**: Clear distinction between development capabilities (code editing, building) and runtime capabilities (system services, hardware access)
+- **Platform Detection**: Added Python code examples for detecting TICI vs development environments
+- **TICI Authentication**: Documented that no sudo password is required on TICI runtime (running as comma user)
+
+### Asset and Theme Updates
+- **New Boot Assets**: Added chauffeur_boot_logo.png for custom boot theming
+- **Active Theme Directory**: Created selfdrive/frogpilot/assets/active_theme/ with theme assets (colors, icons, steering wheel graphics)
+- **Updated Boot Images**: Modified black_boot.jpg and frogpilot_boot_logo.png
+- **Terminal Boot Binary**: Updated terminal_boot executable
+- **Generated Files**: Added moc_concierge_toggle_control.cc and simple_boot executable
+
+### Concierge Service Updates
+- **Service Logs**: Updated concierge_server.log and main_wrapper.log with recent activity
+- **Build Integration**: Added simple_boot alongside existing terminal_boot for enhanced UI fallback
+
 ## January 8, 2025
 
 ### Documentation Structure Cleanup and CSS Build (Commit: `b880da6b`)
