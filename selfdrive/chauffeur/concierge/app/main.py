@@ -1,7 +1,8 @@
 """Application factory for Concierge web server"""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from openpilot.selfdrive.chauffeur.concierge.config.settings_simple import ConciergeSettings
 from openpilot.selfdrive.chauffeur.concierge.app.lifespan import lifespan
@@ -36,6 +37,9 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
         name="static"
     )
     
+    # Configure templates
+    templates = Jinja2Templates(directory=str(settings.templates_dir))
+    
     # Health check endpoint
     @app.get("/")
     async def root():
@@ -56,6 +60,12 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
     async def health_check():
         """Legacy health check endpoint"""
         return {"status": "healthy", "version": "2.0.0"}
+    
+    # Terminal page endpoint
+    @app.get("/terminal")
+    async def terminal_page(request: Request):
+        """Terminal emulator page"""
+        return templates.TemplateResponse("terminal.html", {"request": request})
     
     return app
 

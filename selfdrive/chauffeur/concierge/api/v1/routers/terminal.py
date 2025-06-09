@@ -1,7 +1,7 @@
 """Terminal API endpoints"""
 
 from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 
 from openpilot.selfdrive.chauffeur.concierge.app.dependencies import get_terminal_service
 from openpilot.selfdrive.chauffeur.concierge.core.services.terminal_service import TerminalService
@@ -120,3 +120,13 @@ async def terminal_health(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Terminal service unhealthy: {str(e)}")
+
+
+# WebSocket route
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for terminal connections"""
+    from openpilot.selfdrive.chauffeur.concierge.api.v1.websocket.terminal import (
+        terminal_websocket_endpoint
+    )
+    await terminal_websocket_endpoint(websocket)

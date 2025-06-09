@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concierge Terminal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1e1e1e;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        #terminal-container {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 10px;
+        }
+        
+        #terminal-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #2d2d2d;
+            border-bottom: 1px solid #3e3e3e;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        
+        .header-title {
+            color: #cccccc;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header-button {
+            background: none;
+            border: 1px solid #3e3e3e;
+            color: #cccccc;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .header-button:hover {
+            background: #3e3e3e;
+        }
+        
+        #connection-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e06c75;
+            margin-right: 5px;
+        }
+        
+        #connection-status.connected {
+            background: #98c379;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal-header">
+        <div class="header-title">
+            <span id="connection-status"></span>
+            Concierge Terminal
+        </div>
+        <div class="header-actions">
+            <button class="header-button" onclick="terminal.clear()">Clear</button>
+            <button class="header-button" onclick="terminal.reset()">Reset</button>
+            <button class="header-button" onclick="terminal.fit()">Fit</button>
+        </div>
+    </div>
+    <div id="terminal-container"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
+    
+    <script type="module">
+        // Import terminal class
+        import { ConciergeTerminal } from '/static/js/terminal/Terminal.js';
+        
+        // Create terminal instance
+        const terminal = new ConciergeTerminal(
+            document.getElementById('terminal-container'),
+            {
+                sessionId: 'main',
+                terminalOptions: {
+                    // Custom options can be added here
+                }
+            }
+        );
+        
+        // Update connection status
+        setInterval(() => {
+            const status = document.getElementById('connection-status');
+            if (terminal.connected) {
+                status.classList.add('connected');
+            } else {
+                status.classList.remove('connected');
+            }
+        }, 1000);
+        
+        // Make terminal available globally for header buttons
+        window.terminal = terminal;
+        
+        // Focus terminal on load
+        terminal.focus();
+    </script>
+</body>
+</html>

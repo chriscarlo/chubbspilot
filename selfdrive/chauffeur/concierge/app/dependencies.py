@@ -48,3 +48,10 @@ async def get_monitoring_service():
     """Get monitoring service - placeholder for Phase 2"""
     from openpilot.selfdrive.chauffeur.concierge.core.services.monitoring_service import MonitoringService
     return MonitoringService(get_settings())
+
+
+@lru_cache()
+def get_pty_manager():
+    """Get PTY manager instance"""
+    from openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager import PTYManager
+    return PTYManager()
