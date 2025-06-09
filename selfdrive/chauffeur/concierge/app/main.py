@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from openpilot.selfdrive.chauffeur.concierge.config.settings_simple import ConciergeSettings
 from openpilot.selfdrive.chauffeur.concierge.app.lifespan import lifespan
+from openpilot.selfdrive.chauffeur.concierge.api.v1 import v1_router
 
 
 def create_app(settings: ConciergeSettings = None) -> FastAPI:
@@ -17,17 +18,16 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
         title="Concierge",
         description="openpilot Concierge Web Server",
         version="2.0.0",
-        docs_url=None,  # Disable automatic docs
-        redoc_url=None,  # Disable automatic redoc
+        docs_url="/api/docs",  # Enable docs at /api/docs
+        redoc_url="/api/redoc",  # Enable redoc at /api/redoc
         lifespan=lifespan
     )
     
     # Store settings in app state for access in endpoints
     app.state.settings = settings
     
-    # TODO: Include routers in Phase 3
-    # app.include_router(api_v1_router, prefix="/api/v1")
-    # app.include_router(frontend_router)
+    # Include v1 API router
+    app.include_router(v1_router, prefix="/api")
     
     # Mount static files
     app.mount(
@@ -36,11 +36,26 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
         name="static"
     )
     
-    # Temporary legacy compatibility endpoint - will be removed in Phase 5
+    # Health check endpoint
     @app.get("/")
-    async def legacy_redirect():
-        """Temporary redirect to maintain compatibility during refactor"""
-        return {"message": "Concierge refactor in progress", "status": "Phase 1 complete"}
+    async def root():
+        """Root endpoint - health check"""
+        return {
+            "message": "Concierge Web Server",
+            "version": "2.0.0",
+            "status": "online",
+            "api": {
+                "v1": "/api/v1",
+                "docs": "/api/docs",
+                "redoc": "/api/redoc"
+            }
+        }
+    
+    # Legacy compatibility endpoint - will be removed in Phase 5
+    @app.get("/health")
+    async def health_check():
+        """Legacy health check endpoint"""
+        return {"status": "healthy", "version": "2.0.0"}
     
     return app
 
