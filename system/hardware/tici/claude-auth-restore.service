@@ -1,0 +1,14 @@
+[Unit]
+Description=Restore Claude Code Authentication from Persistent Storage
+After=local-fs.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/data/openpilot/scripts/restore_claude_auth.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

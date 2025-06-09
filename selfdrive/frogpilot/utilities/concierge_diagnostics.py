@@ -92,6 +92,12 @@ def check_http_response() -> Dict[str, Any]:
 
 def check_dependencies() -> Dict[str, Any]:
     """Check if required dependencies are available."""
+    # Add persistent packages to path if not already there
+    import sys
+    persistent_path = "/data/openpilot/.local/lib/python3.11/site-packages"
+    if persistent_path not in sys.path:
+        sys.path.insert(0, persistent_path)
+    
     # Python dependencies
     python_deps = ['fastapi', 'uvicorn', 'jinja2', 'pydantic']
     python_missing = []
