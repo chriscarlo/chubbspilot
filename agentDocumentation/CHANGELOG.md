@@ -2,6 +2,29 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## June 8, 2025 - 23:55 UTC
+
+### Concierge Refactor - Phase 1 & 2 Complete (concierge-refactor branch)
+- **Phase 1: Configuration and Foundation**:
+  - Created comprehensive new directory structure for layered architecture
+  - Implemented `ConciergeSettings` class with environment variable support
+  - Built dependency injection framework in `app/dependencies.py`
+  - Created application factory pattern in `app/main.py`
+  - Added graceful shutdown handling in `app/lifespan.py`
+  - Added configuration constants and environment management
+- **Phase 2: Business Logic Extraction**:
+  - **ZMQManager**: Extracted ZMQ connection handling with proper context management
+  - **ProcessManager**: Created subprocess management with resource limits and monitoring
+  - **SessionManager**: Built terminal session state management with working directory tracking
+  - **StatusService**: Extracted cereal messaging and status polling logic
+  - **TerminalService**: Created command execution service with session support
+  - **MonitoringService**: Built service monitoring with capnp parsing
+- **Testing and Validation**:
+  - Created comprehensive test suites for both phases
+  - All tests passing for structure, imports, and method signatures
+  - Backward compatibility maintained through legacy function wrappers
+- **Next**: Phase 3 - API Layer Restructure with new endpoint structure
+
 ## June 8, 2025 - 23:20 UTC
 
 ### TICI Infrastructure Improvements and Consolidation
