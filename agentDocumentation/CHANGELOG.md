@@ -2,6 +2,26 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## January 9, 2025 - 05:45 UTC
+
+### Complete TICI Persistence Solution and Documentation
+- **SSH Key Management Fixed**:
+  - Located existing keys in `/persist/ssh_keys/`
+  - Moved to standard location `/persist/comma/.ssh/`
+  - Configured git: `git config core.sshCommand "ssh -i /persist/comma/.ssh/claude_github_key -o StrictHostKeyChecking=no"`
+  - Successfully pushed all changes to GitHub
+- **Repository Update**:
+  - Discovered repo moved from `chriscarlo/openpilot` to `chriscarlo/chauffeur`
+  - Updated git remote URL
+- **Comprehensive Documentation Created**:
+  - `TICI_PERSISTENCE_POSTMORTEM.md` - Full incident analysis
+  - `TICI_SETUP_GUIDE.md` - Developer setup instructions
+  - Updated CLAUDE.md/AGENTS.md with git config examples
+- **Key Learnings**:
+  - TICI uses read-only root filesystem
+  - `/home/comma/` is completely ephemeral
+  - Must use `/persist/` for configs and `/data/openpilot/` for packages
+
 ## January 9, 2025 - 05:28 UTC
 
 ### TICI Persistence Fix and Storage Strategy

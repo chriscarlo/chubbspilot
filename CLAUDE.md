@@ -31,6 +31,21 @@ pip3 install --target=/data/openpilot/.local/lib/python3.11/site-packages <packa
 pip3 install --user <package>
 ```
 
+### Git/SSH Setup on TICI:
+```bash
+# Configure git to use persistent SSH key
+git config --global core.sshCommand "ssh -i /persist/comma/.ssh/claude_github_key -o StrictHostKeyChecking=no"
+
+# Repository has moved to:
+git remote set-url origin git@github.com:chriscarlo/chauffeur.git
+```
+
+### Adding Python Path in Scripts:
+```python
+import sys
+sys.path.insert(0, "/data/openpilot/.local/lib/python3.11/site-packages")
+```
+
 ## Environment Detection
 
 **CRITICAL: Detect your environment first to understand capabilities:**
