@@ -80,6 +80,7 @@ selfdrive/modeld/models/*.pkl
 *.bz2
 
 build/
+.local/
 
 !**/.gitkeep
 

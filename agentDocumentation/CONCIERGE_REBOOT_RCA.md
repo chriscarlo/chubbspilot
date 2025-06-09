@@ -72,9 +72,10 @@ pip3 install --user pydantic fastapi uvicorn[standard] jinja2
 ## Long-term Recommendations
 
 ### 1. Persistent Storage Strategy (Priority: CRITICAL)
-- Store critical files in `/data` which persists across reboots
-- Create `/data/.ssh/` for SSH keys
-- Create `/data/.local/` for Python packages
+- Store secrets/keys in `/persist/` (only 27MB available - use wisely!)
+- Store dependencies in `/data/openpilot/` (part of git repo)
+- Create `/persist/comma/.ssh/` for SSH keys
+- Use `/data/openpilot/.local/` for Python packages
 - Symlink from home directory to persistent locations
 
 ### 2. Persistent Dependencies (Priority: HIGH)
@@ -109,7 +110,7 @@ pip3 install --user pydantic fastapi uvicorn[standard] jinja2
 
 ## Action Items
 
-- [ ] **CRITICAL**: Move SSH keys to `/data/.ssh/` with symlinks
+- [ ] **CRITICAL**: Move SSH keys to `/persist/comma/.ssh/` with symlinks
 - [ ] **CRITICAL**: Create persistent storage strategy for TICI
 - [ ] Implement persistent dependency solution
 - [ ] Add dependency installation to boot sequence

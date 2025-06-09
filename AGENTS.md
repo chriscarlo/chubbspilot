@@ -10,6 +10,27 @@ Agent instructions for Claude Code working with the chauffeur openpilot fork.
 4. **ALWAYS update CHANGELOG.md and relevant docs with EVERY commit/push**
 5. **Environment-specific capabilities - see Environment Detection section**
 
+## 🚨 TICI PERSISTENCE RULES 🚨
+
+**CRITICAL: On TICI devices, `/home/comma` is EPHEMERAL and wiped on every reboot!**
+
+### Persistent Storage Locations:
+- **`/persist/`** - For secrets, SSH keys, configs (NOT in git) - Only 27MB!
+- **`/data/openpilot/`** - For dependencies, project files (in git)
+- **NEVER use:**
+  - `/home/comma/` - WIPED ON REBOOT
+  - `pip install --user` - Goes to ephemeral home
+  - `~/.ssh/` - Use `/persist/comma/.ssh/` instead
+
+### Python Dependencies on TICI:
+```bash
+# CORRECT - Persistent installation
+pip3 install --target=/data/openpilot/.local/lib/python3.11/site-packages <package>
+
+# WRONG - Will be lost on reboot
+pip3 install --user <package>
+```
+
 ## Environment Detection
 
 **CRITICAL: Detect your environment first to understand capabilities:**

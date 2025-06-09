@@ -2,6 +2,22 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## January 9, 2025 - 05:28 UTC
+
+### TICI Persistence Fix and Storage Strategy
+- **Critical Discovery**: `/home/comma` is ephemeral on TICI - wiped on every reboot
+- **Persistent Locations Identified**:
+  - `/persist/` (27MB) - For secrets, SSH keys, configs
+  - `/data/openpilot/` - For dependencies and project files
+- **Concierge Dependencies Fixed**:
+  - Moved from ephemeral `~/.local` to `/data/openpilot/.local/lib/python3.11/site-packages`
+  - Updated `main_wrapper.py` to use persistent path
+  - All packages reinstalled to persistent location
+- **Documentation Updated**:
+  - Added TICI PERSISTENCE RULES section to CLAUDE.md/AGENTS.md
+  - Created comprehensive RCA document
+  - SSH key location identified as `/persist/comma/.ssh/`
+
 ## January 9, 2025 - 05:16 UTC
 
 ### Concierge Service Recovery After TICI Reboot

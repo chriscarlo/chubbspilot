@@ -9,6 +9,11 @@ import runpy
 import logging
 from pathlib import Path
 
+# Add persistent package location to Python path
+PERSISTENT_SITE_PACKAGES = "/data/openpilot/.local/lib/python3.11/site-packages"
+if PERSISTENT_SITE_PACKAGES not in sys.path:
+    sys.path.insert(0, PERSISTENT_SITE_PACKAGES)
+
 # Set up logging
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
@@ -79,11 +84,12 @@ def ensure_dependencies():
 
 def install_package(package):
     """Install a single package with multiple fallback methods."""
+    target_dir = "/data/openpilot/.local/lib/python3.11/site-packages"
     install_methods = [
-        ["sudo", "pip3", "install", package],
-        ["sudo", sys.executable, "-m", "pip", "install", package],
-        ["pip3", "install", "--user", package],
-        [sys.executable, "-m", "pip", "install", "--user", package]
+        ["pip3", "install", f"--target={target_dir}", package],
+        [sys.executable, "-m", "pip", "install", f"--target={target_dir}", package],
+        ["sudo", "pip3", "install", f"--target={target_dir}", package],
+        ["sudo", sys.executable, "-m", "pip", "install", f"--target={target_dir}", package]
     ]
     
     for method in install_methods:
