@@ -1,0 +1,21 @@
+[Unit]
+Description=TICI Auto Setup - Restore configurations after reboot
+Documentation=file:///data/openpilot/agentDocumentation/TICI_SETUP_GUIDE.md
+After=multi-user.target
+ConditionPathExists=/TICI
+
+[Service]
+Type=oneshot
+User=comma
+Group=comma
+WorkingDirectory=/data/openpilot
+ExecStart=/bin/bash /data/openpilot/scripts/tici_auto_setup.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONPATH=/data/openpilot/.local/lib/python3.11/site-packages
+
+[Install]
+WantedBy=multi-user.target
