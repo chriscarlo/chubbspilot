@@ -6,3 +6,11 @@
 2025-06-09 01:24:47,554 - INFO - ✓ jinja2 is available
 2025-06-09 01:24:47,555 - INFO - All dependencies are satisfied
 2025-06-09 01:24:47,555 - INFO - Dependencies satisfied, starting Concierge main module...
+2025-06-09 05:14:01,704 - INFO - Concierge main wrapper starting...
+2025-06-09 05:14:01,752 - WARNING - Could not check ConciergeEnabled param: b'ConciergeEnabled' - proceeding anyway
+2025-06-09 05:14:02,064 - INFO - ✓ pydantic is available
+2025-06-09 05:14:03,680 - INFO - ✓ fastapi is available
+2025-06-09 05:14:03,835 - INFO - ✓ uvicorn is available
+2025-06-09 05:14:03,947 - INFO - ✓ jinja2 is available
+2025-06-09 05:14:03,948 - INFO - All dependencies are satisfied
+2025-06-09 05:14:03,948 - INFO - Dependencies satisfied, starting Concierge main module...

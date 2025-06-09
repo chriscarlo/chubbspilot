@@ -2,6 +2,18 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## January 9, 2025 - 05:16 UTC
+
+### Concierge Service Recovery After TICI Reboot
+- **Issue**: Concierge failed to start after TICI device reboot due to missing Python dependencies
+- **Root Cause**: Python packages (pydantic, fastapi, uvicorn) were not persistent across reboots on TICI
+- **Fix Applied**: 
+  - Installed missing dependencies using `pip3 install --user` for persistence
+  - Successfully installed: pydantic-2.11.5, fastapi-0.115.12, uvicorn-0.34.3, and related dependencies
+  - Verified Concierge service is now running and responding on port 8091
+- **Tested**: Manual startup confirmed working with external connections from 192.168.1.217
+- **Note**: Dependencies need to be made persistent in TICI environment for production use
+
 ## January 8, 2025 - 23:03 UTC
 
 ### Environment Detection and Runtime Capabilities Enhancement
