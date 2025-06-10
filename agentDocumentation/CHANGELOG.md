@@ -2,6 +2,20 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## January 9, 2025 - 17:15 UTC
+
+### Terminal Emulator Dependencies Documentation and Installation
+- **Dependencies Verified**: Documented all terminal emulator dependencies
+  - Python backend: fastapi>=0.111, uvicorn[standard]>=0.30, jinja2>=3.1, pydantic-settings>=2.0
+  - JavaScript frontend: xterm.js v5.3.0 and addons (loaded from CDN)
+  - No additional system packages required (uses Python's built-in pty module)
+- **Dev Environment Setup**: Installed missing dependencies in development environment
+  - fastapi 0.115.12, pydantic-settings 2.9.1 (jinja2 already available)
+  - Used pip with --break-system-packages flag due to Python 3.12 environment
+- **Documentation**: Dependencies already properly documented in implementation guides
+  - Python deps in selfdrive/chauffeur/concierge/requirements.txt
+  - JS deps loaded from CDN in terminal.html template
+
 ## June 9, 2025 - 08:45 UTC
 
 ### Concierge Terminal Emulator - Phase 1 Implementation Complete (concierge-refactor branch)
