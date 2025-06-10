@@ -4142,3 +4142,23 @@ Concierge shutting down...
 Status poller cancelled.
 INFO:     Application shutdown complete.
 INFO:     Finished server process [227040]
+
+--- Server process started at 2025-06-09 07:26:25 ---
+[CONCIERGE_SETUP_SUCCESS] stdout and stderr redirected to /data/openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
+[UVICORN_START] Starting Uvicorn for selfdrive.chauffeur.concierge.main:app...
+INFO:     Started server process [64116]
+INFO:     Waiting for application startup.
+Concierge starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:32806 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32810 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32814 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32818 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32822 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32826 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32830 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32834 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32838 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32842 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32846 - "GET / HTTP/1.1" 200 OK

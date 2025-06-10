@@ -15,21 +15,49 @@ Agent instructions for Claude Code working with the chauffeur openpilot fork.
 **CRITICAL: On TICI devices, `/home/comma` is EPHEMERAL and wiped on every reboot!**
 
 ### Persistent Storage Locations:
-- **`/persist/`** - For secrets, SSH keys, configs (NOT in git) - Only 27MB!
-- **`/data/openpilot/`** - For dependencies, project files (in git)
-- **NEVER use:**
-  - `/home/comma/` - WIPED ON REBOOT
-  - `pip install --user` - Goes to ephemeral home
-  - `~/.ssh/` - Use `/persist/comma/.ssh/` instead
 
-### Python Dependencies on TICI:
+#### **`/persist/`** - SECRETS ONLY (NOT in git) - Only 27MB!
+**USE ONLY FOR:**
+- SSH keys (`/persist/comma/.ssh/`)
+- API keys, tokens, credentials
+- Authentication data (like Claude OAuth tokens)
+- Small config files with sensitive data
+- **NOTHING ELSE** - This is extremely limited space!
+
+#### **`/data/openpilot/`** - EVERYTHING ELSE (in git)
+**USE FOR:**
+- Python packages/dependencies
+- Application code and scripts
+- Non-sensitive configurations
+- Logs and cache files
+- Build artifacts
+
+### 🚨 CRITICAL: Python Dependencies on TICI 🚨
+
+**THE ONLY CORRECT PERSISTENT PYTHON PATH:**
 ```bash
-# CORRECT - Persistent installation
-pip3 install --target=/data/openpilot/.local/lib/python3.11/site-packages <package>
-
-# WRONG - Will be lost on reboot
-pip3 install --user <package>
+/data/openpilot/.local/lib/python3.11/site-packages
 ```
+
+**CORRECT Installation:**
+```bash
+# ONLY ACCEPTABLE METHOD - Install to persistent location
+pip3 install --target=/data/openpilot/.local/lib/python3.11/site-packages <package>
+```
+
+**WRONG - WILL BE LOST ON REBOOT:**
+```bash
+pip3 install --user <package>              # Goes to /home/comma/.local - EPHEMERAL!
+pip3 install <package>                     # System location is read-only
+sudo pip3 install <package>                # Still wrong, system is read-only
+pip3 install --prefix=/home/comma <package> # EPHEMERAL!
+```
+
+**NEVER use these ephemeral locations:**
+- `/home/comma/` - ENTIRE DIRECTORY WIPED ON REBOOT
+- `~/.local/` - This is /home/comma/.local - WIPED!
+- `~/.ssh/` - Use `/persist/comma/.ssh/` instead
+- Any path under `/home/` - ALL EPHEMERAL!
 
 ### Git/SSH Setup on TICI:
 ```bash
@@ -40,11 +68,26 @@ git config --global core.sshCommand "ssh -i /persist/comma/.ssh/claude_github_ke
 git remote set-url origin git@github.com:chriscarlo/chauffeur.git
 ```
 
-### Adding Python Path in Scripts:
+### 🚨 CRITICAL: Python Path Configuration 🚨
+
+**ENVIRONMENT VARIABLE:**
+```bash
+# The PYTHONPATH MUST include the persistent site-packages
+export PYTHONPATH="/data/openpilot:/data/openpilot/.local/lib/python3.11/site-packages"
+```
+
+**IN PYTHON SCRIPTS:**
 ```python
 import sys
+# ALWAYS add this at the TOP of scripts that need persistent packages
 sys.path.insert(0, "/data/openpilot/.local/lib/python3.11/site-packages")
 ```
+
+**WHY THIS MATTERS:**
+- System Python packages are in `/usr/local/pyenv/versions/3.11.4/lib/python3.11/site-packages` (READ-ONLY)
+- User packages MUST go to `/data/openpilot/.local/lib/python3.11/site-packages` (PERSISTENT)
+- Default `pip install --user` goes to `/home/comma/.local` which is WIPED ON REBOOT
+- Without proper PYTHONPATH, your packages will "disappear" after reboot
 
 ## Environment Detection
 
