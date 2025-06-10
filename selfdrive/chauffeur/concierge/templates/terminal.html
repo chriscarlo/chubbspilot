@@ -92,36 +92,117 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
     
-    <script type="module">
-        // Import terminal class
-        import { ConciergeTerminal } from '/static/js/terminal/Terminal.js';
+    <script>
+        // Create terminal using globals from CDN
+        const term = new Terminal({
+            fontFamily: '"Fira Code", "Consolas", "Monaco", monospace',
+            fontSize: 14,
+            theme: {
+                background: '#1e1e1e',
+                foreground: '#cccccc',
+                cursor: '#ffffff',
+                selection: '#3e4451'
+            },
+            cursorBlink: true,
+            cursorStyle: 'block',
+            scrollback: 10000
+        });
         
-        // Create terminal instance
-        const terminal = new ConciergeTerminal(
-            document.getElementById('terminal-container'),
-            {
-                sessionId: 'main',
-                terminalOptions: {
-                    // Custom options can be added here
+        // Add fit addon
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        
+        // Open terminal in container
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        
+        // Create WebSocket connection
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/v1/terminal/ws?session_id=terminal-main-session`;
+        let ws = null;
+        let connected = false;
+        
+        function connect() {
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                connected = true;
+                document.getElementById('connection-status').classList.add('connected');
+                term.write('\r\n\x1b[32mConnected to Concierge Terminal\x1b[0m\r\n');
+                
+                // Send init message to create PTY session
+                ws.send(JSON.stringify({
+                    type: 'init',
+                    session_id: 'terminal-main-session',
+                    rows: term.rows,
+                    cols: term.cols
+                }));
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'output') {
+                        term.write(data.data);
+                    } else if (data.type === 'error' && (data.message || data.error)) {
+                        term.write(`\r\n\x1b[31mError: ${data.message || data.error}\x1b[0m\r\n`);
+                    }
+                    // Log other message types for debugging
+                    console.log('Received:', data);
+                } catch (e) {
+                    // If not JSON, treat as raw data
+                    term.write(event.data);
                 }
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                connected = false;
+                document.getElementById('connection-status').classList.remove('connected');
+                term.write('\r\n\x1b[31mDisconnected from server\x1b[0m\r\n');
+                // Attempt to reconnect after 3 seconds
+                setTimeout(connect, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        // Send data from terminal to server
+        term.onData((data) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'input',
+                    data: data
+                }));
             }
-        );
+        });
         
-        // Update connection status
-        setInterval(() => {
-            const status = document.getElementById('connection-status');
-            if (terminal.connected) {
-                status.classList.add('connected');
-            } else {
-                status.classList.remove('connected');
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+            // Send resize message if connected
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'resize',
+                    rows: term.rows,
+                    cols: term.cols
+                }));
             }
-        }, 1000);
+        });
         
-        // Make terminal available globally for header buttons
-        window.terminal = terminal;
+        // Expose terminal functions for buttons
+        window.terminal = {
+            clear: () => term.clear(),
+            reset: () => term.reset(),
+            fit: () => fitAddon.fit()
+        };
         
-        // Focus terminal on load
-        terminal.focus();
+        // Start connection
+        connect();
+        term.focus();
     </script>
 </body>
 </html>

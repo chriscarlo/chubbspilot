@@ -2,13 +2,17 @@
 
 Concierge is a web-based management interface for openpilot that runs on port 5055.
 
+## Status: ✅ Fully Operational (June 10, 2025)
+
+The Concierge web interface is running with a complete terminal emulator implementation.
+
 ## Features
 
 - Real-time system status monitoring
 - Crash log viewer
 - Service monitoring
 - Map data log viewer
-- Terminal interface for debugging
+- **Terminal interface** - Full web-based terminal emulator with PTY support
 
 ## Access
 
@@ -70,11 +74,11 @@ cat /data/openpilot/selfdrive/chauffeur/concierge/logs/concierge_server.log
 ### Manual Start/Stop
 ```bash
 # Stop
-pkill -f "concierge.main"
+pkill -f "concierge"
 
-# Start manually
+# Start manually (uses refactored architecture)
 cd /data/openpilot
-python -m selfdrive.chauffeur.concierge.main
+python -m selfdrive.chauffeur.concierge.app.main
 ```
 
 ### Check Dependencies

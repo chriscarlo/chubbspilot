@@ -2,9 +2,18 @@
 """
 Wrapper for concierge main that ensures dependencies are installed before importing.
 """
-import subprocess
 import sys
 import os
+
+# PYTHON TRUTH VALIDATION - SEE /data/openpilot/PYTHON_TRUTH.md
+EXPECTED_PYTHON = "3.11"
+current_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+if current_version != EXPECTED_PYTHON:
+    print(f"ERROR: Wrong Python version {current_version}, expected {EXPECTED_PYTHON}")
+    print("See /data/openpilot/PYTHON_TRUTH.md for correct setup")
+    sys.exit(1)
+
+import subprocess
 import runpy
 import logging
 from pathlib import Path
@@ -83,13 +92,14 @@ def ensure_dependencies():
         return True  # Continue anyway on dev systems
 
 def install_package(package):
-    """Install a single package with multiple fallback methods."""
+    """Install a single package using ONLY the correct Python per PYTHON_TRUTH.md."""
     target_dir = "/data/openpilot/.local/lib/python3.11/site-packages"
+    python_path = "/home/chris/.pyenv/versions/3.11.4/bin/python3"
+    
+    # ONLY use the correct Python 3.11.4
     install_methods = [
-        ["pip3", "install", f"--target={target_dir}", package],
-        [sys.executable, "-m", "pip", "install", f"--target={target_dir}", package],
-        ["sudo", "pip3", "install", f"--target={target_dir}", package],
-        ["sudo", sys.executable, "-m", "pip", "install", f"--target={target_dir}", package]
+        [python_path, "-m", "pip", "install", f"--target={target_dir}", package],
+        [sys.executable, "-m", "pip", "install", f"--target={target_dir}", package]
     ]
     
     for method in install_methods:
@@ -140,7 +150,7 @@ if __name__ == "__main__":
         if ensure_dependencies():
             logger.info("Dependencies satisfied, starting Concierge main module...")
             # Run the module directly to preserve its __main__ logic
-            runpy.run_module("selfdrive.chauffeur.concierge.main", run_name="__main__")
+            runpy.run_module("selfdrive.chauffeur.concierge.app.main", run_name="__main__")
         else:
             logger.error("ERROR: Could not ensure critical dependencies. Concierge will not start.")
             sys.exit(1)

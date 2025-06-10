@@ -9,6 +9,7 @@ Agent instructions for Claude Code working with the chauffeur openpilot fork.
 3. **NEVER log status/changes in CLAUDE.md - use `agentDocumentation/CHANGELOG.md`**
 4. **ALWAYS update CHANGELOG.md and relevant docs with EVERY commit/push**
 5. **This is SOURCE CODE ONLY - no runtime system access (no systemctl, journalctl, ps, etc)**
+6. **PYTHON TRUTH: See `/data/openpilot/PYTHON_TRUTH.md` - USE ONLY Python 3.11.4**
 
 ## Environment
 

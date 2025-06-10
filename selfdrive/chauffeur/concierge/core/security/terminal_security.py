@@ -5,7 +5,9 @@ import logging
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from openpilot.selfdrive.chauffeur.concierge.core.logging_config import setup_logging
+
+logger = setup_logging("core.security.terminal_security")
 
 class TerminalSecurityManager:
     """Manages security for terminal operations"""
@@ -161,14 +163,19 @@ class TerminalSecurityManager:
     
     def validate_session_id(self, session_id: str) -> bool:
         """Validate session ID format"""
+        logger.debug(f"Validating session ID: {session_id}")
+        
         # Check length
         if len(session_id) < 8 or len(session_id) > 64:
+            logger.error(f"Session ID length invalid: {len(session_id)} (must be 8-64)")
             return False
         
         # Check for valid characters (alphanumeric only)
         if not re.match(r'^[a-zA-Z0-9_-]+$', session_id):
+            logger.error(f"Session ID contains invalid characters: {session_id}")
             return False
         
+        logger.debug(f"Session ID valid: {session_id}")
         return True
     
     def get_resource_limits(self) -> Dict[str, Any]:
@@ -180,17 +187,17 @@ class TerminalSecurityManager:
         # CPU time limit (5 minutes)
         limits[resource.RLIMIT_CPU] = (300, 300)
         
-        # Memory limit (100MB)
-        limits[resource.RLIMIT_AS] = (100 * 1024 * 1024, 100 * 1024 * 1024)
+        # Memory limit (1GB) - increased for normal bash operation
+        limits[resource.RLIMIT_AS] = (1024 * 1024 * 1024, 1024 * 1024 * 1024)
         
-        # File size limit (10MB)
-        limits[resource.RLIMIT_FSIZE] = (10 * 1024 * 1024, 10 * 1024 * 1024)
+        # File size limit (100MB) - increased for logs/outputs
+        limits[resource.RLIMIT_FSIZE] = (100 * 1024 * 1024, 100 * 1024 * 1024)
         
-        # Number of open files (100)
-        limits[resource.RLIMIT_NOFILE] = (100, 100)
+        # Number of open files (1024) - standard limit
+        limits[resource.RLIMIT_NOFILE] = (1024, 1024)
         
-        # Number of processes (10)
-        limits[resource.RLIMIT_NPROC] = (10, 10)
+        # Number of processes (200) - bash needs to fork for commands
+        limits[resource.RLIMIT_NPROC] = (200, 200)
         
         return limits
     

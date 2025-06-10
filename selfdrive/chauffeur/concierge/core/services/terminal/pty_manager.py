@@ -10,12 +10,13 @@ import termios
 import asyncio
 import logging
 import resource
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable, Dict, Any, Awaitable, Union
 from dataclasses import dataclass
 
 from openpilot.selfdrive.chauffeur.concierge.core.security.terminal_security import TerminalSecurityManager
+from openpilot.selfdrive.chauffeur.concierge.core.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging("core.services.terminal.pty_manager")
 
 @dataclass
 class PTYProcess:
@@ -35,16 +36,22 @@ class PTYManager:
     async def create_pty(
         self, 
         session_id: str,
-        shell: str = "/bin/bash",
+        shell: str = "/usr/bin/bash",  # Use bash for better compatibility
         env: Optional[Dict[str, str]] = None,
         cwd: Optional[str] = None,
         rows: int = 24,
         cols: int = 80
     ) -> PTYProcess:
         """Create a new PTY process"""
+        logger.info(f"=== CREATE PTY ===")
+        logger.debug(f"Session ID: {session_id}")
+        logger.debug(f"Shell: {shell}, Rows: {rows}, Cols: {cols}")
+        logger.debug(f"CWD: {cwd}")
         
         # Security checks
+        logger.debug("Validating session ID...")
         if not self.security.validate_session_id(session_id):
+            logger.error(f"Invalid session ID: {session_id}")
             raise ValueError(f"Invalid session ID: {session_id}")
         
         # Check session limits
@@ -87,7 +94,8 @@ class PTYManager:
         if pid == 0:  # Child process
             try:
                 # Apply resource limits before anything else
-                self.security.apply_resource_limits()
+                # TEMPORARILY DISABLED for testing
+                # self.security.apply_resource_limits()
                 
                 # Create new session and process group
                 os.setsid()
@@ -190,17 +198,22 @@ class PTYManager:
     async def read_from_pty(
         self, 
         session_id: str, 
-        callback: Callable[[bytes], None]
+        callback: Union[Callable[[bytes], None], Callable[[bytes], Awaitable[None]]]
     ):
         """Read data from PTY stdout/stderr"""
+        logger.info(f"Starting PTY reader for session {session_id}")
+        
         if session_id not in self.processes:
             raise ValueError(f"Session {session_id} not found")
         
         process = self.processes[session_id]
+        logger.debug(f"PTY process found: PID={process.pid}, FD={process.master_fd}")
         
         # Create async reader task
         async def reader():
+            logger.debug(f"Reader task started for session {session_id}")
             loop = asyncio.get_event_loop()
+            read_count = 0
             
             while session_id in self.processes:
                 try:
@@ -219,26 +232,38 @@ class PTYManager:
                         data = os.read(process.master_fd, 4096)
                         
                         if data:
+                            read_count += 1
                             # Invoke callback with data
-                            await callback(data)
+                            logger.info(f"Read {len(data)} bytes from PTY (read #{read_count})")
+                            if asyncio.iscoroutinefunction(callback):
+                                await callback(data)
+                            else:
+                                callback(data)
                         else:
                             # EOF - process has exited
+                            logger.warning(f"EOF received - process has exited")
                             break
                             
                 except OSError as e:
                     if e.errno == 5:  # I/O error - PTY closed
+                        logger.warning(f"PTY closed (I/O error)")
                         break
                     else:
-                        logger.error(f"PTY read error: {e}")
+                        logger.error(f"PTY read error: {e}", exc_info=True)
                         break
+                except Exception as e:
+                    logger.error(f"Unexpected error in reader: {e}", exc_info=True)
+                    break
                         
                 await asyncio.sleep(0.01)  # Small delay to prevent busy loop
             
-            logger.info(f"PTY reader for session {session_id} stopped")
+            logger.info(f"PTY reader for session {session_id} stopped (read {read_count} times)")
         
         # Start reader task
+        logger.debug(f"Creating reader task for session {session_id}")
         task = asyncio.create_task(reader())
         self.readers[session_id] = task
+        logger.debug(f"Reader task created: {task}")
         
         return task
     

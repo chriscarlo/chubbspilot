@@ -7,13 +7,23 @@ from fastapi.templating import Jinja2Templates
 from openpilot.selfdrive.chauffeur.concierge.config.settings_simple import ConciergeSettings
 from openpilot.selfdrive.chauffeur.concierge.app.lifespan import lifespan
 from openpilot.selfdrive.chauffeur.concierge.api.v1 import v1_router
+from openpilot.selfdrive.chauffeur.concierge.core.logging_config import setup_logging, log_function_call
+
+# Set up logger for this module
+logger = setup_logging("app.main")
 
 
 def create_app(settings: ConciergeSettings = None) -> FastAPI:
     """Create and configure FastAPI application"""
+    logger.info("=== CREATING CONCIERGE APP ===")
     
     if settings is None:
+        logger.debug("No settings provided, creating default ConciergeSettings")
         settings = ConciergeSettings()
+    
+    logger.debug(f"Settings: host={settings.host}, port={settings.port}, debug={settings.debug}")
+    logger.debug(f"Static dir: {settings.static_dir}")
+    logger.debug(f"Templates dir: {settings.templates_dir}")
     
     app = FastAPI(
         title="Concierge",
@@ -23,14 +33,17 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
         redoc_url="/api/redoc",  # Enable redoc at /api/redoc
         lifespan=lifespan
     )
+    logger.info("FastAPI app instance created")
     
     # Store settings in app state for access in endpoints
     app.state.settings = settings
     
     # Include v1 API router
+    logger.info("Including v1 API router at /api")
     app.include_router(v1_router, prefix="/api")
     
     # Mount static files
+    logger.info(f"Mounting static files from {settings.static_dir}")
     app.mount(
         "/static", 
         StaticFiles(directory=str(settings.static_dir)), 
@@ -38,6 +51,7 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
     )
     
     # Configure templates
+    logger.info(f"Configuring templates from {settings.templates_dir}")
     templates = Jinja2Templates(directory=str(settings.templates_dir))
     
     # Health check endpoint
@@ -72,3 +86,15 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
 
 # Create app instance for uvicorn
 app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    settings = ConciergeSettings()
+    logger.info(f"Starting Concierge server on {settings.host}:{settings.port}")
+    uvicorn.run(
+        app,
+        host=settings.host,
+        port=settings.port,
+        log_level="info" if not settings.debug else "debug"
+    )

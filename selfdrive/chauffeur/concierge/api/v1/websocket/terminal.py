@@ -10,8 +10,9 @@ from fastapi.websockets import WebSocketState
 from openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager import PTYManager
 from openpilot.selfdrive.chauffeur.concierge.core.security.terminal_security import TerminalSecurityManager
 from openpilot.selfdrive.chauffeur.concierge.app.dependencies import get_pty_manager
+from openpilot.selfdrive.chauffeur.concierge.core.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging("api.v1.websocket.terminal")
 
 class TerminalWebSocket:
     """Handles WebSocket connections for terminal sessions"""
@@ -28,12 +29,19 @@ class TerminalWebSocket:
         
     async def handle_connection(self):
         """Main WebSocket connection handler"""
+        logger.info(f"=== NEW WEBSOCKET CONNECTION ===")
+        logger.debug(f"WebSocket client: {self.websocket.client}")
+        logger.debug(f"WebSocket headers: {self.websocket.headers}")
+        
         await self.websocket.accept()
+        logger.info("WebSocket connection accepted")
         
         try:
             while True:
                 # Receive message from client
+                logger.debug("Waiting for client message...")
                 message = await self.websocket.receive_text()
+                logger.debug(f"Received message: {message[:100]}...")  # Log first 100 chars
                 await self.handle_message(message)
                 
         except WebSocketDisconnect:
@@ -41,7 +49,7 @@ class TerminalWebSocket:
             await self.cleanup()
             
         except Exception as e:
-            logger.error(f"WebSocket error: {e}")
+            logger.error(f"WebSocket error: {type(e).__name__}: {e}", exc_info=True)
             await self.cleanup()
             
     async def handle_message(self, message: str):
@@ -97,10 +105,19 @@ class TerminalWebSocket:
     
     async def handle_init(self, data: dict):
         """Initialize terminal session"""
+        logger.info("=== HANDLE INIT ===")
+        logger.debug(f"Init data: {data}")
+        
         session_id = data.get('session_id', 'default')
+        logger.debug(f"Session ID: {session_id}")
         
         # Validate session ID
-        if not self.security.validate_session_id(session_id):
+        logger.debug(f"Validating session ID: {session_id}")
+        is_valid = self.security.validate_session_id(session_id)
+        logger.debug(f"Session ID validation result: {is_valid}")
+        
+        if not is_valid:
+            logger.error(f"Invalid session ID: {session_id}")
             await self.send_error("Invalid session ID")
             return
         
@@ -110,23 +127,29 @@ class TerminalWebSocket:
         
         try:
             # Create PTY process
+            logger.debug("Creating PTY process...")
             process = await self.pty_manager.create_pty(
                 session_id=self.session_id,
                 rows=rows,
                 cols=cols
             )
+            logger.debug(f"PTY process created: {process}")
             
             # Start reading from PTY
-            await self.pty_manager.read_from_pty(
+            logger.debug("Starting PTY reader...")
+            reader_task = await self.pty_manager.read_from_pty(
                 self.session_id,
                 self.handle_pty_output
             )
+            logger.debug(f"PTY reader task: {reader_task}")
             
             # Send initialization success
+            logger.debug("Sending init success...")
             await self.send_message({
                 'type': 'init_success',
                 'session_id': self.session_id
             })
+            logger.info("Terminal initialization complete")
             
         except Exception as e:
             logger.error(f"Failed to initialize terminal: {e}")
@@ -158,11 +181,13 @@ class TerminalWebSocket:
         
     async def handle_pty_output(self, data: bytes):
         """Handle output from PTY"""
+        logger.debug(f"handle_pty_output called with {len(data)} bytes")
         # Send output to client
         await self.send_message({
             'type': 'output',
             'data': data.decode('utf-8', errors='replace')
         })
+        logger.debug("Output sent to client")
         
     async def send_message(self, message: dict):
         """Send message to client"""
@@ -183,10 +208,16 @@ class TerminalWebSocket:
 
 
 # WebSocket endpoint
-async def terminal_websocket_endpoint(
-    websocket: WebSocket,
-    pty_manager: PTYManager = Depends(get_pty_manager)
-):
+async def terminal_websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for terminal connections"""
+    logger.info("=== TERMINAL WEBSOCKET ENDPOINT CALLED ===")
+    logger.debug(f"Client: {websocket.client}")
+    logger.debug(f"Headers: {dict(websocket.headers)}")
+    logger.debug(f"Query params: {dict(websocket.query_params)}")
+    
+    # Get PTY manager instance directly
+    pty_manager = get_pty_manager()
+    logger.debug(f"PTY Manager instance: {pty_manager}")
+    
     handler = TerminalWebSocket(websocket, pty_manager)
     await handler.handle_connection()

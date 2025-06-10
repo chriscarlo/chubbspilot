@@ -9,6 +9,7 @@ Agent instructions for Claude Code working with the chauffeur openpilot fork.
 3. **NEVER log status/changes in CLAUDE.md - use `agentDocumentation/CHANGELOG.md`**
 4. **ALWAYS update CHANGELOG.md and relevant docs with EVERY commit/push**
 5. **Environment-specific capabilities - see Environment Detection section**
+6. **PYTHON TRUTH: See `/data/openpilot/PYTHON_TRUTH.md` - USE ONLY Python 3.11.4**
 
 ## 🚨 TICI PERSISTENCE RULES 🚨
 
@@ -41,16 +42,17 @@ Agent instructions for Claude Code working with the chauffeur openpilot fork.
 
 **CORRECT Installation:**
 ```bash
-# ONLY ACCEPTABLE METHOD - Install to persistent location
-pip3 install --target=/data/openpilot/.local/lib/python3.11/site-packages <package>
+# ONLY ACCEPTABLE METHOD - USE PYTHON 3.11.4 EXPLICITLY
+/home/chris/.pyenv/versions/3.11.4/bin/python3 -m pip install \
+  --target=/data/openpilot/.local/lib/python3.11/site-packages <package>
 ```
 
-**WRONG - WILL BE LOST ON REBOOT:**
+**WRONG - NEVER DO THIS:**
 ```bash
-pip3 install --user <package>              # Goes to /home/comma/.local - EPHEMERAL!
-pip3 install <package>                     # System location is read-only
-sudo pip3 install <package>                # Still wrong, system is read-only
-pip3 install --prefix=/home/comma <package> # EPHEMERAL!
+pip3 install <package>                     # WRONG: Uses system Python 3.12
+pip install --user <package>               # WRONG: Goes to ephemeral location
+sudo pip install <package>                 # WRONG: System is read-only
+pip3 install --target=... <package>        # WRONG: Still uses wrong Python
 ```
 
 **NEVER use these ephemeral locations:**
@@ -68,19 +70,20 @@ git config --global core.sshCommand "ssh -i /persist/comma/.ssh/claude_github_ke
 git remote set-url origin git@github.com:chriscarlo/chauffeur.git
 ```
 
-### 🚨 CRITICAL: Python Path Configuration 🚨
+### 🚨 CRITICAL: Python Configuration - SEE PYTHON_TRUTH.md 🚨
 
-**ENVIRONMENT VARIABLE:**
+**ENVIRONMENT SETUP (REQUIRED EVERY TIME):**
 ```bash
-# The PYTHONPATH MUST include the persistent site-packages
+# USE ONLY PYTHON 3.11.4
 export PYTHONPATH="/data/openpilot:/data/openpilot/.local/lib/python3.11/site-packages"
 ```
 
-**IN PYTHON SCRIPTS:**
+**IN EVERY PYTHON SCRIPT:**
 ```python
 import sys
-# ALWAYS add this at the TOP of scripts that need persistent packages
+# MANDATORY: Add this at the TOP of EVERY script
 sys.path.insert(0, "/data/openpilot/.local/lib/python3.11/site-packages")
+sys.path.insert(0, "/data/openpilot")
 ```
 
 **WHY THIS MATTERS:**
@@ -240,6 +243,7 @@ cansend can0 123#DEADBEEF
 
 **Status/Changes:** `agentDocumentation/CHANGELOG.md`  
 **Technical Docs:** See `agentDocumentation/` for dependencies, build instructions, refactor plans
+**Terminal Status:** Concierge terminal emulator fully operational (see `TERMINAL_REALITY_CHECK.md`)
 
 ## Key Reminders
 

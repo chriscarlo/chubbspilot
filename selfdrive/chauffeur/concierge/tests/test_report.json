@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-06-09T23:17:35.674213",
+  "summary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 2,
+    "skipped": 2
+  },
+  "results": [
+    {
+      "suite": "Terminal WebSocket Tests",
+      "status": "FAILED",
+      "duration": 1.1406784057617188,
+      "critical": true
+    },
+    {
+      "suite": "Security Tests",
+      "status": "FAILED",
+      "duration": 0.3417794704437256,
+      "critical": true
+    },
+    {
+      "suite": "API Endpoint Tests",
+      "status": "SKIPPED",
+      "reason": "File not found"
+    },
+    {
+      "suite": "Performance Tests",
+      "status": "SKIPPED",
+      "reason": "File not found"
+    }
+  ]
+}
