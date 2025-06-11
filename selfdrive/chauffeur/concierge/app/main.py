@@ -87,6 +87,37 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
         """Terminal emulator page"""
         return templates.TemplateResponse("terminal.html", {"request": request})
     
+    # HTMX endpoints for smooth transitions
+    @app.get("/htmx/dashboard")
+    async def htmx_dashboard(request: Request):
+        """Dashboard content for HTMX requests"""
+        if request.headers.get("X-HTMX-Request"):
+            return templates.TemplateResponse("dashboard_content.html", {"request": request})
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    @app.get("/htmx/terminal")
+    async def htmx_terminal(request: Request):
+        """Terminal content for HTMX requests"""
+        if request.headers.get("X-HTMX-Request"):
+            return templates.TemplateResponse("terminal_content.html", {"request": request})
+        return templates.TemplateResponse("terminal.html", {"request": request})
+    
+    @app.get("/htmx/diagnostics")
+    async def htmx_diagnostics(request: Request):
+        """Diagnostics content for HTMX requests"""
+        if request.headers.get("X-HTMX-Request"):
+            return templates.TemplateResponse("diagnostics_content.html", {"request": request})
+        # For now, return a placeholder
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    @app.get("/htmx/logs")
+    async def htmx_logs(request: Request):
+        """Logs content for HTMX requests"""
+        if request.headers.get("X-HTMX-Request"):
+            return templates.TemplateResponse("logs_content.html", {"request": request})
+        # For now, return a placeholder
+        return templates.TemplateResponse("index.html", {"request": request})
+    
     return app
 
 

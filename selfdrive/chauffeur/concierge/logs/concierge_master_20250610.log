@@ -22,3 +22,6 @@
 2025-06-10 16:22:16.874 | DEBUG    | concierge.master                         | setup_logging        | L76   | Logger initialized for module: master
 2025-06-10 16:22:16.877 | DEBUG    | concierge.master                         | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_master_20250610.log
 2025-06-10 16:22:16.877 | DEBUG    | concierge.master                         | setup_logging        | L78   | Debug mode: True
+2025-06-10 18:36:37.018 | DEBUG    | concierge.master                         | setup_logging        | L76   | Logger initialized for module: master
+2025-06-10 18:36:37.022 | DEBUG    | concierge.master                         | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_master_20250610.log
+2025-06-10 18:36:37.022 | DEBUG    | concierge.master                         | setup_logging        | L78   | Debug mode: True

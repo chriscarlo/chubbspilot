@@ -19,16 +19,11 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Animated background -->
-    <div class="dashboard-bg"></div>
-    
-    <!-- Floating particles -->
-    <div class="particles" id="particles"></div>
     
     <!-- Welcome Section -->
     <div class="welcome-section">
       <div class="welcome-greeting" id="greeting">Good Evening</div>
-      <h1 class="welcome-title">The Concierge</h1>
+      <h1 class="welcome-title">Concierge</h1>
       <p class="welcome-subtitle">Your intelligent driving companion awaits</p>
     </div>
     
@@ -61,7 +56,9 @@
     <!-- Main Services Grid -->
     <div class="service-grid">
       <!-- Navigation Service -->
-      <div class="service-card luxury-card fade-in-1" onclick="window.location.href='/navigation'">
+      <div class="service-card luxury-card fade-in-1" 
+           data-page="/navigation"
+           data-htmx="/htmx/navigation">
         <div class="service-icon">🧭</div>
         <h2 class="service-title">Navigation</h2>
         <p class="service-description">Real-time navigation intelligence with advanced route planning and traffic awareness</p>
@@ -78,7 +75,9 @@
       </div>
       
       <!-- Terminal Service -->
-      <div class="service-card luxury-card fade-in-2" onclick="window.location.href='/terminal'">
+      <div class="service-card luxury-card fade-in-2" 
+           data-page="/terminal"
+           data-htmx="/htmx/terminal">
         <div class="service-icon">⚡</div>
         <h2 class="service-title">Command Terminal</h2>
         <p class="service-description">Direct system access with advanced command execution and real-time diagnostics</p>
@@ -92,7 +91,9 @@
       </div>
       
       <!-- Drive Analytics -->
-      <div class="service-card luxury-card fade-in-3" onclick="window.location.href='/drive-data'">
+      <div class="service-card luxury-card fade-in-3" 
+           data-page="/drive-data"
+           data-htmx="/htmx/drive-data">
         <div class="service-icon">📊</div>
         <h2 class="service-title">Drive Analytics</h2>
         <p class="service-description">Comprehensive driving insights with performance metrics and efficiency analysis</p>
@@ -109,7 +110,9 @@
       </div>
       
       <!-- System Diagnostics -->
-      <div class="service-card luxury-card fade-in-4" onclick="window.location.href='/diagnostics'">
+      <div class="service-card luxury-card fade-in-4" 
+           data-page="/diagnostics"
+           data-htmx="/htmx/diagnostics">
         <div class="service-icon">🔧</div>
         <h2 class="service-title">Diagnostics</h2>
         <p class="service-description">Advanced system health monitoring with predictive maintenance alerts</p>
@@ -126,7 +129,9 @@
       </div>
       
       <!-- Logs & Events -->
-      <div class="service-card luxury-card fade-in-5" onclick="window.location.href='/logs'">
+      <div class="service-card luxury-card fade-in-5" 
+           data-page="/logs"
+           data-htmx="/htmx/logs">
         <div class="service-icon">📜</div>
         <h2 class="service-title">Event Logs</h2>
         <p class="service-description">Comprehensive system event tracking with intelligent filtering and analysis</p>
@@ -264,6 +269,121 @@
         document.body.classList.toggle('light-mode');
       }
       
+      // Card expansion animation
+      function expandCardToModule(card, pageUrl, moduleTitle, moduleIcon) {
+        // Get card position
+        const rect = card.getBoundingClientRect();
+        
+        // Add module-active class to body to blur background
+        document.body.classList.add('module-active');
+        
+        // Clone the card for animation
+        const expandingCard = card.cloneNode(true);
+        expandingCard.classList.add('expanding');
+        expandingCard.style.top = rect.top + 'px';
+        expandingCard.style.left = rect.left + 'px';
+        expandingCard.style.width = rect.width + 'px';
+        expandingCard.style.height = rect.height + 'px';
+        document.body.appendChild(expandingCard);
+        
+        // Create module container
+        const moduleContainer = document.createElement('div');
+        moduleContainer.className = 'module-container';
+        moduleContainer.innerHTML = `
+          <div class="module-backdrop" onclick="closeModule()"></div>
+          <div class="module-content">
+            <div class="module-header">
+              <h2 class="module-title">
+                <span>${moduleIcon}</span>
+                ${moduleTitle}
+              </h2>
+              <button class="module-close" onclick="closeModule()">✕</button>
+            </div>
+            <div class="module-body" id="module-body">
+              <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                <div class="htmx-indicator" style="display: block; width: 40px; height: 40px;"></div>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(moduleContainer);
+        
+        // Animate card expansion
+        setTimeout(() => {
+          // Calculate center position
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          
+          expandingCard.style.top = (centerY - rect.height / 2) + 'px';
+          expandingCard.style.left = (centerX - rect.width / 2) + 'px';
+          expandingCard.style.transform = 'scale(2)';
+          expandingCard.style.opacity = '0';
+          
+          // Show module container
+          moduleContainer.classList.add('active');
+        }, 50);
+        
+        // Load content after animation
+        setTimeout(() => {
+          // Remove expanding card
+          expandingCard.remove();
+          
+          // Load the ACTUAL page content using iframe to maintain full functionality
+          const moduleBody = document.getElementById('module-body');
+          
+          // Special handling for terminal to ensure all features work
+          if (pageUrl === '/terminal') {
+            // Use iframe for terminal to preserve WebSocket and all functionality
+            moduleBody.innerHTML = `
+              <iframe src="${pageUrl}" 
+                      style="width: 100%; height: 100%; border: none; border-radius: 12px;"
+                      id="module-iframe">
+              </iframe>
+            `;
+            
+            // Hide the nav header inside the iframe after it loads
+            const iframe = document.getElementById('module-iframe');
+            iframe.onload = function() {
+              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+              // Hide the header inside the iframe to avoid duplication
+              const header = iframeDoc.querySelector('.luxury-header');
+              if (header) header.style.display = 'none';
+              const footer = iframeDoc.querySelector('.luxury-footer');
+              if (footer) footer.style.display = 'none';
+              // Adjust terminal container to full height
+              const terminalWindow = iframeDoc.querySelector('.terminal-window');
+              if (terminalWindow) {
+                terminalWindow.style.height = 'calc(100vh - 2rem)';
+                terminalWindow.style.margin = '1rem';
+              }
+            };
+          } else {
+            // For other modules, show placeholder or load via iframe
+            moduleBody.innerHTML = `
+              <div style="padding: 2rem; text-align: center;">
+                <h3 style="color: var(--text-primary); margin-bottom: 1rem;">${moduleTitle}</h3>
+                <p style="color: var(--text-secondary);">This module is currently under development.</p>
+                <p style="color: var(--text-tertiary); margin-top: 2rem;">Use the navigation bar to access the full ${moduleTitle} page.</p>
+              </div>
+            `;
+          }
+        }, 600);
+      }
+      
+      // Close module
+      window.closeModule = function() {
+        const moduleContainer = document.querySelector('.module-container');
+        if (moduleContainer) {
+          moduleContainer.classList.remove('active');
+          document.body.classList.remove('module-active');
+          
+          setTimeout(() => {
+            moduleContainer.remove();
+          }, 300);
+        }
+      }
+      
+      
       // Initialize dashboard
       document.addEventListener('DOMContentLoaded', function() {
         createParticles();
@@ -281,19 +401,30 @@
           document.documentElement.style.setProperty('--mouse-x', x);
           document.documentElement.style.setProperty('--mouse-y', y);
         });
+        
+        // Handle service card clicks with card expansion animation
+        document.querySelectorAll('.service-card[data-page]').forEach(card => {
+          card.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageUrl = this.getAttribute('data-page');
+            const moduleTitle = this.querySelector('.service-title').textContent;
+            const moduleIcon = this.querySelector('.service-icon').innerHTML;
+            
+            if (pageUrl) {
+              // Create expansion animation
+              expandCardToModule(this, pageUrl, moduleTitle, moduleIcon);
+            }
+          });
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+          // ESC to close module
+          if (e.key === 'Escape') {
+            closeModule();
+          }
+        });
       });
       
-      // Add smooth page transitions
-      document.addEventListener('click', function(e) {
-        if (e.target.matches('a') || e.target.closest('.service-card')) {
-          e.preventDefault();
-          const target = e.target.href || e.target.closest('.service-card').onclick.toString().match(/href='(.+)'/)[1];
-          
-          document.body.style.opacity = '0';
-          setTimeout(() => {
-            window.location.href = target;
-          }, 300);
-        }
-      });
     </script>
 {% endblock %}

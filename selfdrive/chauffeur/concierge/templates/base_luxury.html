@@ -18,6 +18,9 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎩</text></svg>">
     
+    <!-- Dashboard CSS with luxury styles -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
     <!-- Base luxury styles -->
     <style>
       :root {
@@ -41,13 +44,20 @@
         box-sizing: border-box;
       }
       
-      body {
+      html {
+        height: 100%;
         background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+        background-attachment: fixed;
+      }
+      
+      body {
+        background: transparent;
         color: var(--text-primary);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         min-height: 100vh;
+        margin: 0;
       }
       
       /* Custom scrollbar */
@@ -210,15 +220,21 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full flex flex-col">
+    <!-- Animated background -->
+    <div class="dashboard-bg"></div>
+    
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+    
     <!-- Header -->
     <header class="luxury-header px-6 py-4">
       <div class="container mx-auto flex items-center justify-between">
         <a href="/" class="logo-link">
           <span class="logo-icon">🎩</span>
-          <span class="logo-text">{% block page_title %}{% block page_title_text %}The Concierge{% endblock %}{% endblock %}</span>
+          <span class="logo-text">{% block page_title %}{% block page_title_text %}Concierge{% endblock %}{% endblock %}</span>
         </a>
         
-        <nav class="flex items-center gap-2">
+        <nav class="flex items-center gap-2" id="main-nav">
           <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
           <a href="/terminal" class="nav-link {% if request.url.path == '/terminal' %}active{% endif %}">Terminal</a>
           <a href="/diagnostics" class="nav-link {% if request.url.path == '/diagnostics' %}active{% endif %}">Diagnostics</a>
@@ -229,7 +245,7 @@
     </header>
     
     <!-- Main content -->
-    <main class="flex-1 page-enter">
+    <main class="flex-1 page-enter" id="main-content">
       {% block content %}{% endblock %}
     </main>
     
@@ -248,27 +264,84 @@
         event.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
       });
       
-      // Page transition effects
-      window.addEventListener('beforeunload', function() {
+      // Smooth page transitions
+      window.navigateWithTransition = function(url) {
+        // Fade out
         document.body.style.opacity = '0';
-        document.body.style.transition = 'opacity 0.3s ease';
-      });
+        document.body.style.transition = 'opacity 0.2s ease-out';
+        
+        // Navigate after fade
+        setTimeout(() => {
+          window.location.href = url;
+        }, 200);
+      }
       
-      window.addEventListener('pageshow', function() {
-        document.body.style.transition = 'opacity 0.3s ease';
-        document.body.style.opacity = '1';
-      });
-      
-      // Active link highlighting
-      document.addEventListener('DOMContentLoaded', function() {
+      // Update active navigation link
+      function updateActiveNavLink() {
         const currentPath = window.location.pathname;
         const navLinks = document.querySelectorAll('.nav-link');
         
         navLinks.forEach(link => {
+          link.classList.remove('active');
           if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');
           }
         });
+      }
+      
+      // Create floating particles
+      function createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        if (!particlesContainer || particlesContainer.children.length > 0) return;
+        
+        const particleCount = 50;
+        
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDelay = Math.random() * 20 + 's';
+          particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+          particlesContainer.appendChild(particle);
+        }
+      }
+      
+      // Initial page load
+      document.addEventListener('DOMContentLoaded', function() {
+        updateActiveNavLink();
+        createParticles();
+        
+        // Add smooth scrolling
+        document.documentElement.style.scrollBehavior = 'smooth';
+        
+        // Intercept navigation clicks for smooth transitions
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.addEventListener('click', function(e) {
+            if (this.getAttribute('href').startsWith('/')) {
+              e.preventDefault();
+              navigateWithTransition(this.getAttribute('href'));
+            }
+          });
+        });
+      });
+      
+      // Page show animation
+      window.addEventListener('pageshow', function(event) {
+        // Handle back/forward button navigation
+        if (event.persisted) {
+          window.location.reload();
+        }
+        
+        // Fade in
+        requestAnimationFrame(() => {
+          document.body.style.transition = 'opacity 0.3s ease-in';
+          document.body.style.opacity = '1';
+        });
+      });
+      
+      // Before unload
+      window.addEventListener('beforeunload', function() {
+        document.body.style.opacity = '0';
       });
     </script>
     

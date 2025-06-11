@@ -1,91 +1,238 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Concierge Terminal</title>
+{% extends "base_luxury.html" %}
+
+{% block browser_title_suffix %}- Terminal{% endblock %}
+
+{% block page_title_text %}Terminal{% endblock %}
+
+{% block extra_head %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #1e1e1e;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        /* Terminal container styling */
+        .terminal-wrapper {
+            margin: 2rem auto;
+            max-width: 1200px;
+            padding: 0 2rem;
+            animation: fadeInUp 0.5s ease-out;
         }
         
-        #terminal-container {
-            position: absolute;
-            top: 40px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            padding: 10px;
+        .terminal-window {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--glass-shadow);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
         }
         
-        #terminal-header {
-            position: absolute;
+        .terminal-window.fullscreen {
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: 40px;
-            background: #2d2d2d;
-            border-bottom: 1px solid #3e3e3e;
+            bottom: 0;
+            margin: 0;
+            max-width: none;
+            border-radius: 0;
+            z-index: 1000;
+        }
+        
+        .terminal-header {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 1.5rem;
             display: flex;
             align-items: center;
-            padding: 0 10px;
+            justify-content: space-between;
         }
         
-        .header-title {
-            color: #cccccc;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .header-actions {
-            margin-left: auto;
+        .terminal-title {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            gap: 0.75rem;
         }
         
-        .header-button {
-            background: none;
-            border: 1px solid #3e3e3e;
-            color: #cccccc;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .header-button:hover {
-            background: #3e3e3e;
-        }
-        
-        #connection-status {
-            display: inline-block;
+        .connection-indicator {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #e06c75;
-            margin-right: 5px;
+            background: #ff5555;
+            box-shadow: 0 0 10px #ff5555;
+            transition: all 0.3s ease;
         }
         
-        #connection-status.connected {
-            background: #98c379;
+        .connection-indicator.connected {
+            background: var(--accent-glow);
+            box-shadow: 0 0 20px var(--accent-glow);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        .terminal-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .terminal-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .terminal-btn:hover {
+            background: rgba(0, 217, 255, 0.1);
+            border-color: var(--accent-glow);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        
+        .terminal-btn.fullscreen-btn {
+            font-size: 1.2rem;
+        }
+        
+        #terminal-container {
+            height: 600px;
+            padding: 1.5rem;
+            background: #0a0a0a;
+            position: relative;
+        }
+        
+        .terminal-window.fullscreen #terminal-container {
+            height: calc(100vh - 80px);
+        }
+        
+        /* Quick info cards */
+        .terminal-info {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            animation: fadeInUp 0.7s ease-out 0.2s backwards;
+        }
+        
+        .info-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 217, 255, 0.1);
+        }
+        
+        .info-card h3 {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .info-card code {
+            background: rgba(0, 217, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-glow);
+        }
+        
+        /* Override xterm styles for luxury theme */
+        .xterm {
+            padding: 0 !important;
+        }
+        
+        .xterm-viewport {
+            background-color: transparent !important;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
-</head>
-<body>
-    <div id="terminal-header">
-        <div class="header-title">
-            <span id="connection-status"></span>
-            Concierge Terminal
+{% endblock %}
+
+{% block content %}
+    <div class="terminal-wrapper">
+        <div class="terminal-window" id="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-title">
+                    <span class="connection-indicator" id="connection-status"></span>
+                    <span>Command Terminal</span>
+                </div>
+                <div class="terminal-actions">
+                    <button class="terminal-btn" onclick="terminal.clear()">
+                        <span>🧹</span> Clear
+                    </button>
+                    <button class="terminal-btn" onclick="terminal.reset()">
+                        <span>🔄</span> Reset
+                    </button>
+                    <button class="terminal-btn fullscreen-btn" onclick="toggleFullscreen()">
+                        <span id="fullscreen-icon">⛶</span>
+                    </button>
+                </div>
+            </div>
+            <div id="terminal-container"></div>
         </div>
-        <div class="header-actions">
-            <button class="header-button" onclick="terminal.clear()">Clear</button>
-            <button class="header-button" onclick="terminal.reset()">Reset</button>
-            <button class="header-button" onclick="terminal.fit()">Fit</button>
+        
+        <div class="terminal-info">
+            <div class="info-card">
+                <h3>Quick Commands</h3>
+                <p>
+                    <code>ls</code> - List files<br>
+                    <code>cd</code> - Change directory<br>
+                    <code>pwd</code> - Current path<br>
+                    <code>clear</code> - Clear screen
+                </p>
+            </div>
+            <div class="info-card">
+                <h3>Navigation</h3>
+                <p>
+                    Use arrow keys to navigate command history.<br>
+                    <code>Tab</code> for auto-completion<br>
+                    <code>Ctrl+C</code> to cancel
+                </p>
+            </div>
+            <div class="info-card">
+                <h3>Session Info</h3>
+                <p>
+                    Your session persists between connections.<br>
+                    Command history is saved automatically.<br>
+                    Working directory is maintained.
+                </p>
+            </div>
         </div>
     </div>
-    <div id="terminal-container"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
@@ -93,15 +240,57 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
     
     <script>
+        // Fullscreen toggle
+        let isFullscreen = false;
+        function toggleFullscreen() {
+            const termWindow = document.getElementById('terminal-window');
+            const icon = document.getElementById('fullscreen-icon');
+            
+            isFullscreen = !isFullscreen;
+            
+            if (isFullscreen) {
+                termWindow.classList.add('fullscreen');
+                icon.textContent = '⛶';  // Exit fullscreen icon
+                document.body.style.overflow = 'hidden';
+            } else {
+                termWindow.classList.remove('fullscreen');
+                icon.textContent = '⛶';  // Enter fullscreen icon
+                document.body.style.overflow = '';
+            }
+            
+            // Refit terminal after animation
+            setTimeout(() => {
+                if (window.fitAddon) {
+                    window.fitAddon.fit();
+                }
+            }, 400);
+        }
+        
         // Create terminal using globals from CDN
         const term = new Terminal({
             fontFamily: '"Fira Code", "Consolas", "Monaco", monospace',
             fontSize: 14,
             theme: {
-                background: '#1e1e1e',
-                foreground: '#cccccc',
-                cursor: '#ffffff',
-                selection: '#3e4451'
+                background: '#0a0a0a',
+                foreground: '#e0e0e0',
+                cursor: '#00d9ff',
+                selection: 'rgba(0, 217, 255, 0.3)',
+                black: '#1a1a1a',
+                brightBlack: '#404040',
+                red: '#ff5555',
+                brightRed: '#ff8888',
+                green: '#50fa7b',
+                brightGreen: '#69ff94',
+                yellow: '#f1fa8c',
+                brightYellow: '#ffffa5',
+                blue: '#00d9ff',
+                brightBlue: '#33e5ff',
+                magenta: '#ff79c6',
+                brightMagenta: '#ff92df',
+                cyan: '#8be9fd',
+                brightCyan: '#a4ffff',
+                white: '#bbbbbb',
+                brightWhite: '#ffffff'
             },
             cursorBlink: true,
             cursorStyle: 'block',
@@ -110,6 +299,7 @@
         
         // Add fit addon
         const fitAddon = new FitAddon.FitAddon();
+        window.fitAddon = fitAddon; // Make it globally accessible
         term.loadAddon(fitAddon);
         
         // Open terminal in container
@@ -129,7 +319,7 @@
                 console.log('WebSocket connected');
                 connected = true;
                 document.getElementById('connection-status').classList.add('connected');
-                term.write('\r\n\x1b[32mConnected to Concierge Terminal\x1b[0m\r\n');
+                term.write('\r\n\x1b[36m✨ Connected to Concierge Terminal\x1b[0m\r\n');
                 
                 // Send init message to create PTY session
                 ws.send(JSON.stringify({
@@ -160,7 +350,7 @@
                 console.log('WebSocket disconnected');
                 connected = false;
                 document.getElementById('connection-status').classList.remove('connected');
-                term.write('\r\n\x1b[31mDisconnected from server\x1b[0m\r\n');
+                term.write('\r\n\x1b[31m⚠️  Disconnected from server\x1b[0m\r\n');
                 // Attempt to reconnect after 3 seconds
                 setTimeout(connect, 3000);
             };
@@ -182,14 +372,16 @@
         
         // Handle window resize
         window.addEventListener('resize', () => {
-            fitAddon.fit();
-            // Send resize message if connected
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'resize',
-                    rows: term.rows,
-                    cols: term.cols
-                }));
+            if (!isFullscreen) {
+                fitAddon.fit();
+                // Send resize message if connected
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'resize',
+                        rows: term.rows,
+                        cols: term.cols
+                    }));
+                }
             }
         });
         
@@ -203,6 +395,12 @@
         // Start connection
         connect();
         term.focus();
+        
+        // Handle ESC key for fullscreen exit
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                toggleFullscreen();
+            }
+        });
     </script>
-</body>
-</html>
+{% endblock %}
