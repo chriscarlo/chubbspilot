@@ -269,119 +269,69 @@
         document.body.classList.toggle('light-mode');
       }
       
-      // Card expansion animation
+      // Card expansion animation that transitions to the actual page
       function expandCardToModule(card, pageUrl, moduleTitle, moduleIcon) {
         // Get card position
         const rect = card.getBoundingClientRect();
         
-        // Add module-active class to body to blur background
-        document.body.classList.add('module-active');
-        
-        // Clone the card for animation
-        const expandingCard = card.cloneNode(true);
-        expandingCard.classList.add('expanding');
-        expandingCard.style.top = rect.top + 'px';
-        expandingCard.style.left = rect.left + 'px';
-        expandingCard.style.width = rect.width + 'px';
-        expandingCard.style.height = rect.height + 'px';
-        document.body.appendChild(expandingCard);
-        
-        // Create module container
-        const moduleContainer = document.createElement('div');
-        moduleContainer.className = 'module-container';
-        moduleContainer.innerHTML = `
-          <div class="module-backdrop" onclick="closeModule()"></div>
-          <div class="module-content">
-            <div class="module-header">
-              <h2 class="module-title">
-                <span>${moduleIcon}</span>
-                ${moduleTitle}
-              </h2>
-              <button class="module-close" onclick="closeModule()">✕</button>
-            </div>
-            <div class="module-body" id="module-body">
-              <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                <div class="htmx-indicator" style="display: block; width: 40px; height: 40px;"></div>
-              </div>
-            </div>
-          </div>
+        // Create expanding card overlay
+        const expandingOverlay = document.createElement('div');
+        expandingOverlay.style.cssText = `
+          position: fixed;
+          top: ${rect.top}px;
+          left: ${rect.left}px;
+          width: ${rect.width}px;
+          height: ${rect.height}px;
+          background: var(--glass-bg);
+          backdrop-filter: blur(20px);
+          border: 1px solid var(--glass-border);
+          border-radius: 24px;
+          z-index: 9999;
+          transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          pointer-events: none;
         `;
-        document.body.appendChild(moduleContainer);
+        document.body.appendChild(expandingOverlay);
         
-        // Animate card expansion
-        setTimeout(() => {
-          // Calculate center position
-          const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
-          
-          expandingCard.style.top = (centerY - rect.height / 2) + 'px';
-          expandingCard.style.left = (centerX - rect.width / 2) + 'px';
-          expandingCard.style.transform = 'scale(2)';
-          expandingCard.style.opacity = '0';
-          
-          // Show module container
-          moduleContainer.classList.add('active');
-        }, 50);
+        // Create dark overlay that fades in
+        const darkOverlay = document.createElement('div');
+        darkOverlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0);
+          z-index: 9998;
+          transition: background 0.4s ease;
+          pointer-events: none;
+        `;
+        document.body.appendChild(darkOverlay);
         
-        // Load content after animation
+        // Start the animation
+        requestAnimationFrame(() => {
+          // Fade in dark overlay
+          darkOverlay.style.background = 'rgba(0, 0, 0, 0.8)';
+          
+          // Expand card to fullscreen
+          expandingOverlay.style.top = '0';
+          expandingOverlay.style.left = '0';
+          expandingOverlay.style.width = '100vw';
+          expandingOverlay.style.height = '100vh';
+          expandingOverlay.style.borderRadius = '0';
+          expandingOverlay.style.transform = 'scale(1)';
+        });
+        
+        // Navigate to the actual page after animation
         setTimeout(() => {
-          // Remove expanding card
-          expandingCard.remove();
-          
-          // Load the ACTUAL page content using iframe to maintain full functionality
-          const moduleBody = document.getElementById('module-body');
-          
-          // Special handling for terminal to ensure all features work
-          if (pageUrl === '/terminal') {
-            // Use iframe for terminal to preserve WebSocket and all functionality
-            moduleBody.innerHTML = `
-              <iframe src="${pageUrl}" 
-                      style="width: 100%; height: 100%; border: none; border-radius: 12px;"
-                      id="module-iframe">
-              </iframe>
-            `;
-            
-            // Hide the nav header inside the iframe after it loads
-            const iframe = document.getElementById('module-iframe');
-            iframe.onload = function() {
-              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-              // Hide the header inside the iframe to avoid duplication
-              const header = iframeDoc.querySelector('.luxury-header');
-              if (header) header.style.display = 'none';
-              const footer = iframeDoc.querySelector('.luxury-footer');
-              if (footer) footer.style.display = 'none';
-              // Adjust terminal container to full height
-              const terminalWindow = iframeDoc.querySelector('.terminal-window');
-              if (terminalWindow) {
-                terminalWindow.style.height = 'calc(100vh - 2rem)';
-                terminalWindow.style.margin = '1rem';
-              }
-            };
+          // For terminal, use the smooth transition from base template
+          if (window.navigateWithTransition) {
+            window.navigateWithTransition(pageUrl);
           } else {
-            // For other modules, show placeholder or load via iframe
-            moduleBody.innerHTML = `
-              <div style="padding: 2rem; text-align: center;">
-                <h3 style="color: var(--text-primary); margin-bottom: 1rem;">${moduleTitle}</h3>
-                <p style="color: var(--text-secondary);">This module is currently under development.</p>
-                <p style="color: var(--text-tertiary); margin-top: 2rem;">Use the navigation bar to access the full ${moduleTitle} page.</p>
-              </div>
-            `;
+            window.location.href = pageUrl;
           }
         }, 600);
       }
       
-      // Close module
-      window.closeModule = function() {
-        const moduleContainer = document.querySelector('.module-container');
-        if (moduleContainer) {
-          moduleContainer.classList.remove('active');
-          document.body.classList.remove('module-active');
-          
-          setTimeout(() => {
-            moduleContainer.remove();
-          }, 300);
-        }
-      }
       
       
       // Initialize dashboard
@@ -417,13 +367,6 @@
           });
         });
         
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-          // ESC to close module
-          if (e.key === 'Escape') {
-            closeModule();
-          }
-        });
       });
       
     </script>

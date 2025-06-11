@@ -4090,3 +4090,247 @@ ModuleNotFoundError: No module named 'capnp'
 2025-06-10 19:11:02,860 - [36mDEBUG[0m - Output sent to client
 2025-06-10 19:11:04,238 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
 2025-06-10 19:11:04,740 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
+2025-06-10 19:41:42,279 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:41:42,289 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59886)
+2025-06-10 19:41:42,290 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'UJVM4knblfumoAbVZKGJaw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:41:42,290 - [36mDEBUG[0m - Query params: {'session_id': 'module-terminal-session'}
+2025-06-10 19:41:42,291 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:41:42,291 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:41:42,291 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59886)
+2025-06-10 19:41:42,291 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'UJVM4knblfumoAbVZKGJaw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:41:42,292 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:41:42,292 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:41:45,469 - [32mINFO[0m - WebSocket disconnected for session None
+2025-06-10 19:41:48,959 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:41:48,960 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59894)
+2025-06-10 19:41:48,961 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'CdJ3Z8tPrdAolf9gV4rtMA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:41:48,961 - [36mDEBUG[0m - Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 19:41:48,962 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:41:48,962 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:41:48,963 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59894)
+2025-06-10 19:41:48,963 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'CdJ3Z8tPrdAolf9gV4rtMA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:41:48,964 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:41:48,964 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:41:48,983 - [36mDEBUG[0m - Received message: {"type":"init","session_id":"terminal-main-session","rows":37,"cols":134}...
+2025-06-10 19:41:48,986 - [32mINFO[0m - === HANDLE INIT ===
+2025-06-10 19:41:48,986 - [36mDEBUG[0m - Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 37, 'cols': 134}
+2025-06-10 19:41:48,986 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:41:48,987 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:41:48,988 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:41:48,993 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:41:48,994 - [36mDEBUG[0m - Session ID validation result: True
+2025-06-10 19:41:48,996 - [36mDEBUG[0m - Creating PTY process...
+2025-06-10 19:41:48,996 - [32mINFO[0m - === CREATE PTY ===
+2025-06-10 19:41:48,998 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:41:48,999 - [36mDEBUG[0m - Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:41:48,999 - [36mDEBUG[0m - CWD: None
+2025-06-10 19:41:48,999 - [36mDEBUG[0m - Validating session ID...
+2025-06-10 19:41:48,999 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:41:49,000 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:41:49,013 - [32mINFO[0m - Created PTY process 26944 for session terminal-main-session
+2025-06-10 19:41:49,025 - [36mDEBUG[0m - PTY process created: PTYProcess(pid=26944, master_fd=17, slave_fd=22)
+2025-06-10 19:41:49,025 - [36mDEBUG[0m - Starting PTY reader...
+2025-06-10 19:41:49,026 - [32mINFO[0m - Starting PTY reader for session terminal-main-session
+2025-06-10 19:41:49,027 - [36mDEBUG[0m - PTY process found: PID=26944, FD=17
+2025-06-10 19:41:49,028 - [36mDEBUG[0m - Creating reader task for session terminal-main-session
+2025-06-10 19:41:49,029 - [36mDEBUG[0m - Reader task created: <Task pending name='Task-1545' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:41:49,031 - [36mDEBUG[0m - PTY reader task: <Task pending name='Task-1545' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:41:49,032 - [36mDEBUG[0m - Sending init success...
+2025-06-10 19:41:49,033 - [32mINFO[0m - Terminal initialization complete
+2025-06-10 19:41:49,034 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:41:49,036 - [36mDEBUG[0m - Reader task started for session terminal-main-session
+2025-06-10 19:41:49,041 - [32mINFO[0m - Read 39 bytes from PTY (read #1)
+2025-06-10 19:41:49,042 - [36mDEBUG[0m - handle_pty_output called with 39 bytes
+2025-06-10 19:41:49,043 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:41:49,105 - [32mINFO[0m - Read 108 bytes from PTY (read #2)
+2025-06-10 19:41:49,107 - [36mDEBUG[0m - handle_pty_output called with 108 bytes
+2025-06-10 19:41:49,108 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:41:49,120 - [32mINFO[0m - Read 33 bytes from PTY (read #3)
+2025-06-10 19:41:49,121 - [36mDEBUG[0m - handle_pty_output called with 33 bytes
+2025-06-10 19:41:49,122 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:42:37,559 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
+2025-06-10 19:42:38,061 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
+2025-06-10 19:42:39,986 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:42:39,986 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59906)
+2025-06-10 19:42:39,987 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'c8b0KC8/HUUhjWsJ2asOtw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:42:39,987 - [36mDEBUG[0m - Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 19:42:39,988 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:42:39,988 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:42:39,988 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59906)
+2025-06-10 19:42:39,989 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'c8b0KC8/HUUhjWsJ2asOtw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:42:39,990 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:42:39,990 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:42:40,019 - [36mDEBUG[0m - Received message: {"type":"init","session_id":"terminal-main-session","rows":37,"cols":134}...
+2025-06-10 19:42:40,019 - [32mINFO[0m - === HANDLE INIT ===
+2025-06-10 19:42:40,020 - [36mDEBUG[0m - Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 37, 'cols': 134}
+2025-06-10 19:42:40,021 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:42:40,022 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:42:40,022 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:42:40,023 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:42:40,023 - [36mDEBUG[0m - Session ID validation result: True
+2025-06-10 19:42:40,023 - [36mDEBUG[0m - Creating PTY process...
+2025-06-10 19:42:40,024 - [32mINFO[0m - === CREATE PTY ===
+2025-06-10 19:42:40,024 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:42:40,025 - [36mDEBUG[0m - Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:42:40,025 - [36mDEBUG[0m - CWD: None
+2025-06-10 19:42:40,025 - [36mDEBUG[0m - Validating session ID...
+2025-06-10 19:42:40,025 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:42:40,026 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:42:40,034 - [32mINFO[0m - Created PTY process 26948 for session terminal-main-session
+2025-06-10 19:42:40,038 - [36mDEBUG[0m - PTY process created: PTYProcess(pid=26948, master_fd=17, slave_fd=22)
+2025-06-10 19:42:40,039 - [36mDEBUG[0m - Starting PTY reader...
+2025-06-10 19:42:40,040 - [32mINFO[0m - Starting PTY reader for session terminal-main-session
+2025-06-10 19:42:40,040 - [36mDEBUG[0m - PTY process found: PID=26948, FD=17
+2025-06-10 19:42:40,041 - [36mDEBUG[0m - Creating reader task for session terminal-main-session
+2025-06-10 19:42:40,043 - [36mDEBUG[0m - Reader task created: <Task pending name='Task-1603' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:42:40,045 - [36mDEBUG[0m - PTY reader task: <Task pending name='Task-1603' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:42:40,046 - [36mDEBUG[0m - Sending init success...
+2025-06-10 19:42:40,047 - [32mINFO[0m - Terminal initialization complete
+2025-06-10 19:42:40,047 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:42:40,048 - [36mDEBUG[0m - Reader task started for session terminal-main-session
+2025-06-10 19:42:40,050 - [32mINFO[0m - Read 39 bytes from PTY (read #1)
+2025-06-10 19:42:40,050 - [36mDEBUG[0m - handle_pty_output called with 39 bytes
+2025-06-10 19:42:40,051 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:42:40,062 - [32mINFO[0m - Read 141 bytes from PTY (read #2)
+2025-06-10 19:42:40,063 - [36mDEBUG[0m - handle_pty_output called with 141 bytes
+2025-06-10 19:42:40,064 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:42:43,017 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
+2025-06-10 19:42:43,519 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
+2025-06-10 19:43:37,295 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:43:37,297 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59923)
+2025-06-10 19:43:37,298 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'gB6vsgI2BYI5iZmHgzUHHw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:43:37,299 - [36mDEBUG[0m - Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 19:43:37,299 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:43:37,300 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:43:37,300 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59923)
+2025-06-10 19:43:37,301 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'gB6vsgI2BYI5iZmHgzUHHw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:43:37,302 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:43:37,303 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:43:37,326 - [36mDEBUG[0m - Received message: {"type":"init","session_id":"terminal-main-session","rows":37,"cols":134}...
+2025-06-10 19:43:37,327 - [32mINFO[0m - === HANDLE INIT ===
+2025-06-10 19:43:37,328 - [36mDEBUG[0m - Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 37, 'cols': 134}
+2025-06-10 19:43:37,328 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:43:37,329 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:43:37,329 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:43:37,329 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:43:37,330 - [36mDEBUG[0m - Session ID validation result: True
+2025-06-10 19:43:37,330 - [36mDEBUG[0m - Creating PTY process...
+2025-06-10 19:43:37,331 - [32mINFO[0m - === CREATE PTY ===
+2025-06-10 19:43:37,331 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:43:37,332 - [36mDEBUG[0m - Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:43:37,333 - [36mDEBUG[0m - CWD: None
+2025-06-10 19:43:37,334 - [36mDEBUG[0m - Validating session ID...
+2025-06-10 19:43:37,334 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:43:37,335 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:43:37,347 - [32mINFO[0m - Created PTY process 26951 for session terminal-main-session
+2025-06-10 19:43:37,354 - [36mDEBUG[0m - PTY process created: PTYProcess(pid=26951, master_fd=17, slave_fd=22)
+2025-06-10 19:43:37,355 - [36mDEBUG[0m - Starting PTY reader...
+2025-06-10 19:43:37,355 - [32mINFO[0m - Starting PTY reader for session terminal-main-session
+2025-06-10 19:43:37,355 - [36mDEBUG[0m - PTY process found: PID=26951, FD=17
+2025-06-10 19:43:37,356 - [36mDEBUG[0m - Creating reader task for session terminal-main-session
+2025-06-10 19:43:37,356 - [36mDEBUG[0m - Reader task created: <Task pending name='Task-1670' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:43:37,357 - [36mDEBUG[0m - PTY reader task: <Task pending name='Task-1670' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:43:37,357 - [36mDEBUG[0m - Sending init success...
+2025-06-10 19:43:37,359 - [32mINFO[0m - Terminal initialization complete
+2025-06-10 19:43:37,359 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:43:37,359 - [36mDEBUG[0m - Reader task started for session terminal-main-session
+2025-06-10 19:43:37,360 - [32mINFO[0m - Read 39 bytes from PTY (read #1)
+2025-06-10 19:43:37,361 - [36mDEBUG[0m - handle_pty_output called with 39 bytes
+2025-06-10 19:43:37,362 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:43:37,374 - [32mINFO[0m - Read 141 bytes from PTY (read #2)
+2025-06-10 19:43:37,375 - [36mDEBUG[0m - handle_pty_output called with 141 bytes
+2025-06-10 19:43:37,376 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:44:01,562 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
+2025-06-10 19:44:02,065 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
+2025-06-10 19:44:13,431 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:44:13,433 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59931)
+2025-06-10 19:44:13,433 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '0pg8buM071ppGgs+hZNlXw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:44:13,434 - [36mDEBUG[0m - Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 19:44:13,435 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:44:13,435 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:44:13,436 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59931)
+2025-06-10 19:44:13,438 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '0pg8buM071ppGgs+hZNlXw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:44:13,441 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:44:13,443 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:44:13,450 - [36mDEBUG[0m - Received message: {"type":"init","session_id":"terminal-main-session","rows":37,"cols":134}...
+2025-06-10 19:44:13,450 - [32mINFO[0m - === HANDLE INIT ===
+2025-06-10 19:44:13,450 - [36mDEBUG[0m - Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 37, 'cols': 134}
+2025-06-10 19:44:13,450 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:44:13,451 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:44:13,451 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:44:13,451 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:44:13,452 - [36mDEBUG[0m - Session ID validation result: True
+2025-06-10 19:44:13,452 - [36mDEBUG[0m - Creating PTY process...
+2025-06-10 19:44:13,452 - [32mINFO[0m - === CREATE PTY ===
+2025-06-10 19:44:13,453 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:44:13,453 - [36mDEBUG[0m - Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:44:13,453 - [36mDEBUG[0m - CWD: None
+2025-06-10 19:44:13,454 - [36mDEBUG[0m - Validating session ID...
+2025-06-10 19:44:13,454 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:44:13,454 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:44:13,462 - [32mINFO[0m - Created PTY process 26954 for session terminal-main-session
+2025-06-10 19:44:13,466 - [36mDEBUG[0m - PTY process created: PTYProcess(pid=26954, master_fd=17, slave_fd=22)
+2025-06-10 19:44:13,466 - [36mDEBUG[0m - Starting PTY reader...
+2025-06-10 19:44:13,467 - [32mINFO[0m - Starting PTY reader for session terminal-main-session
+2025-06-10 19:44:13,467 - [36mDEBUG[0m - PTY process found: PID=26954, FD=17
+2025-06-10 19:44:13,467 - [36mDEBUG[0m - Creating reader task for session terminal-main-session
+2025-06-10 19:44:13,468 - [36mDEBUG[0m - Reader task created: <Task pending name='Task-1713' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:44:13,469 - [36mDEBUG[0m - PTY reader task: <Task pending name='Task-1713' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:44:13,470 - [36mDEBUG[0m - Sending init success...
+2025-06-10 19:44:13,471 - [32mINFO[0m - Terminal initialization complete
+2025-06-10 19:44:13,472 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:44:13,472 - [36mDEBUG[0m - Reader task started for session terminal-main-session
+2025-06-10 19:44:13,475 - [32mINFO[0m - Read 39 bytes from PTY (read #1)
+2025-06-10 19:44:13,475 - [36mDEBUG[0m - handle_pty_output called with 39 bytes
+2025-06-10 19:44:13,477 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:44:13,490 - [32mINFO[0m - Read 141 bytes from PTY (read #2)
+2025-06-10 19:44:13,490 - [36mDEBUG[0m - handle_pty_output called with 141 bytes
+2025-06-10 19:44:13,491 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:44:19,361 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
+2025-06-10 19:44:19,863 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
+2025-06-10 19:47:25,327 - [32mINFO[0m - === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 19:47:25,328 - [36mDEBUG[0m - Client: Address(host='127.0.0.1', port=59969)
+2025-06-10 19:47:25,329 - [36mDEBUG[0m - Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'i9acu/ajvc1Ta/xyJMVyew==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-10 19:47:25,329 - [36mDEBUG[0m - Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 19:47:25,329 - [36mDEBUG[0m - PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7941dff54bd0>
+2025-06-10 19:47:25,330 - [32mINFO[0m - === NEW WEBSOCKET CONNECTION ===
+2025-06-10 19:47:25,330 - [36mDEBUG[0m - WebSocket client: Address(host='127.0.0.1', port=59969)
+2025-06-10 19:47:25,330 - [36mDEBUG[0m - WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'i9acu/ajvc1Ta/xyJMVyew==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-10 19:47:25,331 - [32mINFO[0m - WebSocket connection accepted
+2025-06-10 19:47:25,331 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:47:25,359 - [36mDEBUG[0m - Received message: {"type":"init","session_id":"terminal-main-session","rows":37,"cols":134}...
+2025-06-10 19:47:25,360 - [32mINFO[0m - === HANDLE INIT ===
+2025-06-10 19:47:25,361 - [36mDEBUG[0m - Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 37, 'cols': 134}
+2025-06-10 19:47:25,361 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:47:25,362 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:47:25,362 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:47:25,363 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:47:25,363 - [36mDEBUG[0m - Session ID validation result: True
+2025-06-10 19:47:25,364 - [36mDEBUG[0m - Creating PTY process...
+2025-06-10 19:47:25,364 - [32mINFO[0m - === CREATE PTY ===
+2025-06-10 19:47:25,364 - [36mDEBUG[0m - Session ID: terminal-main-session
+2025-06-10 19:47:25,364 - [36mDEBUG[0m - Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:47:25,364 - [36mDEBUG[0m - CWD: None
+2025-06-10 19:47:25,365 - [36mDEBUG[0m - Validating session ID...
+2025-06-10 19:47:25,365 - [36mDEBUG[0m - Validating session ID: terminal-main-session
+2025-06-10 19:47:25,365 - [36mDEBUG[0m - Session ID valid: terminal-main-session
+2025-06-10 19:47:25,377 - [32mINFO[0m - Created PTY process 26958 for session terminal-main-session
+2025-06-10 19:47:25,381 - [36mDEBUG[0m - PTY process created: PTYProcess(pid=26958, master_fd=22, slave_fd=23)
+2025-06-10 19:47:25,382 - [36mDEBUG[0m - Starting PTY reader...
+2025-06-10 19:47:25,383 - [32mINFO[0m - Starting PTY reader for session terminal-main-session
+2025-06-10 19:47:25,383 - [36mDEBUG[0m - PTY process found: PID=26958, FD=22
+2025-06-10 19:47:25,383 - [36mDEBUG[0m - Creating reader task for session terminal-main-session
+2025-06-10 19:47:25,384 - [36mDEBUG[0m - Reader task created: <Task pending name='Task-1799' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:47:25,385 - [36mDEBUG[0m - PTY reader task: <Task pending name='Task-1799' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:47:25,386 - [36mDEBUG[0m - Sending init success...
+2025-06-10 19:47:25,387 - [32mINFO[0m - Terminal initialization complete
+2025-06-10 19:47:25,387 - [36mDEBUG[0m - Waiting for client message...
+2025-06-10 19:47:25,388 - [36mDEBUG[0m - Reader task started for session terminal-main-session
+2025-06-10 19:47:25,389 - [32mINFO[0m - Read 39 bytes from PTY (read #1)
+2025-06-10 19:47:25,390 - [36mDEBUG[0m - handle_pty_output called with 39 bytes
+2025-06-10 19:47:25,390 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:47:25,402 - [32mINFO[0m - Read 141 bytes from PTY (read #2)
+2025-06-10 19:47:25,403 - [36mDEBUG[0m - handle_pty_output called with 141 bytes
+2025-06-10 19:47:25,404 - [36mDEBUG[0m - Output sent to client
+2025-06-10 19:47:26,983 - [32mINFO[0m - WebSocket disconnected for session terminal-main-session
+2025-06-10 19:47:27,484 - [32mINFO[0m - Terminated PTY process for session terminal-main-session
