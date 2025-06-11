@@ -10,6 +10,7 @@ import termios
 import asyncio
 import logging
 import resource
+from pathlib import Path
 from typing import Optional, Callable, Dict, Any, Awaitable, Union
 from dataclasses import dataclass
 
@@ -48,6 +49,17 @@ class PTYManager:
         logger.debug(f"Shell: {shell}, Rows: {rows}, Cols: {cols}")
         logger.debug(f"CWD: {cwd}")
         
+        # Ensure we use bash if available
+        if not os.path.exists(shell):
+            logger.warning(f"Shell {shell} not found, trying alternatives")
+            for alt_shell in ["/usr/bin/bash", "/bin/bash", "/bin/sh"]:
+                if os.path.exists(alt_shell):
+                    logger.info(f"Using alternative shell: {alt_shell}")
+                    shell = alt_shell
+                    break
+            else:
+                raise ValueError("No suitable shell found")
+        
         # Security checks
         logger.debug("Validating session ID...")
         if not self.security.validate_session_id(session_id):
@@ -79,7 +91,14 @@ class PTYManager:
             'PATH': '/usr/local/bin:/usr/bin:/bin',
             'HOME': '/data/openpilot',
             'USER': 'comma',
-            'SHELL': shell
+            'SHELL': '/usr/bin/bash',  # Always set bash in environment
+            # Configure bash history for persistence
+            'HISTFILE': '/data/openpilot/.concierge_bash_history',
+            'HISTSIZE': '10000',
+            'HISTFILESIZE': '10000',
+            'HISTCONTROL': 'ignoredups:erasedups',
+            # Enable immediate history append
+            'PROMPT_COMMAND': 'history -a'
         }
         
         if env:
@@ -117,11 +136,16 @@ class PTYManager:
                 # Change working directory
                 os.chdir(cwd)
                 
-                # Execute shell
-                os.execve(shell, [shell], process_env)
+                # Execute shell - temporarily simplified to debug crash
+                os.write(2, f"About to execute shell: {shell}\n".encode())
+                
+                # Just run the shell without custom bashrc for now
+                os.execve(shell, [shell, '-i'], process_env)  # -i for interactive
                 
             except Exception as e:
-                logger.error(f"Child process error: {e}")
+                # Write error to stderr before exiting
+                error_msg = f"Child process error: {type(e).__name__}: {e}\n"
+                os.write(2, error_msg.encode())
                 # Exit child on error
                 os._exit(1)
         
@@ -168,10 +192,16 @@ class PTYManager:
         if session_id not in self.processes:
             raise ValueError(f"Session {session_id} not found")
         
+        # Log what we're receiving
+        logger.debug(f"write_to_pty received {len(data)} bytes: {repr(data[:50])}")
+        
         # Validate input data
         try:
             text_data = data.decode('utf-8', errors='replace')
-            if not self.security.validate_input(text_data):
+            logger.debug(f"Decoded text: {repr(text_data[:50])}")
+            validation_result = self.security.validate_input(text_data)
+            logger.debug(f"Validation result: {validation_result}")
+            if not validation_result:
                 self.security.log_security_event(
                     "INVALID_INPUT", 
                     session_id, 

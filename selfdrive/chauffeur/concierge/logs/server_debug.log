@@ -1,0 +1,398 @@
+INFO:     Will watch for changes in these directories: ['/data/openpilot']
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     Started reloader process [7256] using WatchFiles
+22:08:03 | [36mDEBUG[0m | concierge.master          | Logger initialized for module: master
+22:08:03 | [36mDEBUG[0m | concierge.master          | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_master_20250609.log
+22:08:03 | [36mDEBUG[0m | concierge.master          | Debug mode: True
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Logger initialized for module: app.main
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Debug mode: True
+22:08:03 | [32mINFO[0m | concierge.app.main        | === CREATING CONCIERGE APP ===
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | No settings provided, creating default ConciergeSettings
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Settings: host=0.0.0.0, port=5055, debug=False
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+22:08:03 | [36mDEBUG[0m | concierge.app.main        | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+22:08:03 | [32mINFO[0m | concierge.app.main        | FastAPI app instance created
+22:08:03 | [32mINFO[0m | concierge.app.main        | Including v1 API router at /api
+22:08:03 | [32mINFO[0m | concierge.app.main        | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+22:08:03 | [32mINFO[0m | concierge.app.main        | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+INFO:     Started server process [7259]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+22:08:03 | [36mDEBUG[0m | concierge.core.security.terminal_security | Logger initialized for module: core.security.terminal_security
+22:08:03 | [36mDEBUG[0m | concierge.core.security.terminal_security | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+22:08:03 | [36mDEBUG[0m | concierge.core.security.terminal_security | Debug mode: True
+22:08:03 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Logger initialized for module: core.services.terminal.pty_manager
+22:08:03 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250609.log
+22:08:03 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Debug mode: True
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Logger initialized for module: api.v1.websocket.terminal
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Debug mode: True
+22:08:03 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51663)
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '18lmPUWedywOMK1BkMSt0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'main'}
+22:08:03 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51663)
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '18lmPUWedywOMK1BkMSt0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51663 - "WebSocket /api/v1/terminal/ws?session_id=main" [accepted]
+22:08:03 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"main","rows":42,"cols":194}...
+22:08:03 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'main', 'rows': 42, 'cols': 194}
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: main
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: main
+22:08:03 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: main
+22:08:03 | [31mERROR[0m | concierge.core.security.terminal_security | Session ID length invalid: 4 (must be 8-64)
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: False
+22:08:03 | [31mERROR[0m | concierge.api.v1.websocket.terminal | Invalid session ID: main
+22:08:03 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+22:10:49 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"input","data":"\u001b[15;5~"}...
+22:10:49 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     127.0.0.1:51768 - "GET /terminal HTTP/1.1" 200 OK
+22:10:53 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket disconnected for session None
+INFO:     connection closed
+22:10:53 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51771)
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '+6Vfxro3F7MLgQju3IAO9A==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'terminal-main-session'}
+22:10:53 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51771)
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '+6Vfxro3F7MLgQju3IAO9A==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51771 - "WebSocket /api/v1/terminal/ws?session_id=terminal-main-session" [accepted]
+22:10:53 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+22:10:53 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: terminal-main-session
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: terminal-main-session
+22:10:53 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:10:53 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: True
+22:10:53 | [31mERROR[0m | concierge.api.v1.websocket.terminal | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+22:10:53 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+WARNING:  WatchFiles detected changes in 'selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py', 'openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py'. Reloading...
+INFO:     127.0.0.1:51770 - "GET /terminal HTTP/1.1" 200 OK
+22:11:50 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket disconnected for session terminal-main-session
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 43, in handle_connection
+    message = await self.websocket.receive_text()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 119, in receive_text
+    self._raise_on_disconnect(message)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 113, in _raise_on_disconnect
+    raise WebSocketDisconnect(message["code"], message.get("reason"))
+starlette.websockets.WebSocketDisconnect: (1001, '')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/protocols/websockets/websockets_impl.py", line 244, in run_asgi
+    result = await self.app(self.scope, self.asgi_receive, self.asgi_send)  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 152, in __call__
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 362, in handle
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 95, in app
+    await wrap_app_handling_exceptions(app, session)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 93, in app
+    await func(session)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 383, in app
+    await dependant.call(**solved_result.values)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/routers/terminal.py", line 132, in websocket_endpoint
+    await terminal_websocket_endpoint(websocket)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 214, in terminal_websocket_endpoint
+    handler = TerminalWebSocket(websocket, pty_manager)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 49, in handle_connection
+    await self.cleanup()
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 199, in cleanup
+    await self.pty_manager.terminate_pty(self.session_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Depends' object has no attribute 'terminate_pty'
+INFO:     connection closed
+22:11:50 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51781)
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'AkYtakIzVmimeMbMvvJKKw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'terminal-main-session'}
+22:11:50 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51781)
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'AkYtakIzVmimeMbMvvJKKw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51781 - "WebSocket /api/v1/terminal/ws?session_id=terminal-main-session" [accepted]
+22:11:50 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+22:11:50 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: terminal-main-session
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: terminal-main-session
+22:11:50 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:11:50 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: True
+22:11:50 | [31mERROR[0m | concierge.api.v1.websocket.terminal | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+22:11:50 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     127.0.0.1:51789 - "GET /terminal HTTP/1.1" 200 OK
+22:12:01 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket disconnected for session terminal-main-session
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 43, in handle_connection
+    message = await self.websocket.receive_text()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 119, in receive_text
+    self._raise_on_disconnect(message)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 113, in _raise_on_disconnect
+    raise WebSocketDisconnect(message["code"], message.get("reason"))
+starlette.websockets.WebSocketDisconnect: (1001, '')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/protocols/websockets/websockets_impl.py", line 244, in run_asgi
+    result = await self.app(self.scope, self.asgi_receive, self.asgi_send)  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 152, in __call__
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 362, in handle
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 95, in app
+    await wrap_app_handling_exceptions(app, session)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 93, in app
+    await func(session)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 383, in app
+    await dependant.call(**solved_result.values)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/routers/terminal.py", line 132, in websocket_endpoint
+    await terminal_websocket_endpoint(websocket)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 214, in terminal_websocket_endpoint
+    handler = TerminalWebSocket(websocket, pty_manager)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 49, in handle_connection
+    await self.cleanup()
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 199, in cleanup
+    await self.pty_manager.terminate_pty(self.session_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Depends' object has no attribute 'terminate_pty'
+INFO:     connection closed
+22:12:01 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51792)
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'EGqUUyDJjADdQjkanaMg0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'terminal-main-session'}
+22:12:01 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51792)
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'EGqUUyDJjADdQjkanaMg0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51792 - "WebSocket /api/v1/terminal/ws?session_id=terminal-main-session" [accepted]
+22:12:01 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+22:12:01 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: terminal-main-session
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: terminal-main-session
+22:12:01 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:12:01 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: True
+22:12:01 | [31mERROR[0m | concierge.api.v1.websocket.terminal | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+22:12:01 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+22:13:15 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket disconnected for session terminal-main-session
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 43, in handle_connection
+    message = await self.websocket.receive_text()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 119, in receive_text
+    self._raise_on_disconnect(message)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/websockets.py", line 113, in _raise_on_disconnect
+    raise WebSocketDisconnect(message["code"], message.get("reason"))
+starlette.websockets.WebSocketDisconnect: (1001, '')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/protocols/websockets/websockets_impl.py", line 244, in run_asgi
+    result = await self.app(self.scope, self.asgi_receive, self.asgi_send)  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 152, in __call__
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 362, in handle
+    await self.app(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 95, in app
+    await wrap_app_handling_exceptions(app, session)(scope, receive, send)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/starlette/routing.py", line 93, in app
+    await func(session)
+  File "/data/openpilot/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 383, in app
+    await dependant.call(**solved_result.values)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/routers/terminal.py", line 132, in websocket_endpoint
+    await terminal_websocket_endpoint(websocket)
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 214, in terminal_websocket_endpoint
+    handler = TerminalWebSocket(websocket, pty_manager)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 49, in handle_connection
+    await self.cleanup()
+  File "/data/openpilot/openpilot/selfdrive/chauffeur/concierge/api/v1/websocket/terminal.py", line 199, in cleanup
+    await self.pty_manager.terminate_pty(self.session_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Depends' object has no attribute 'terminate_pty'
+INFO:     connection closed
+22:13:29 | [36mDEBUG[0m | concierge.master          | Logger initialized for module: master
+22:13:29 | [36mDEBUG[0m | concierge.master          | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_master_20250609.log
+22:13:29 | [36mDEBUG[0m | concierge.master          | Debug mode: True
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Logger initialized for module: app.main
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Debug mode: True
+22:13:29 | [32mINFO[0m | concierge.app.main        | === CREATING CONCIERGE APP ===
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | No settings provided, creating default ConciergeSettings
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Settings: host=0.0.0.0, port=5055, debug=False
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+22:13:29 | [36mDEBUG[0m | concierge.app.main        | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+22:13:29 | [32mINFO[0m | concierge.app.main        | FastAPI app instance created
+22:13:29 | [32mINFO[0m | concierge.app.main        | Including v1 API router at /api
+22:13:29 | [32mINFO[0m | concierge.app.main        | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+22:13:29 | [32mINFO[0m | concierge.app.main        | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+INFO:     Started server process [7531]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5055 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51909 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51910 - "GET /terminal HTTP/1.1" 200 OK
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Logger initialized for module: core.security.terminal_security
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Debug mode: True
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Logger initialized for module: core.services.terminal.pty_manager
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250609.log
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Debug mode: True
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Logger initialized for module: api.v1.websocket.terminal
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Debug mode: True
+22:14:37 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51913)
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'QGTefSy5jK94GX6G1T3HxA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'terminal-main-session'}
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7933e56ff190>
+22:14:37 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51913)
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'QGTefSy5jK94GX6G1T3HxA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51913 - "WebSocket /api/v1/terminal/ws?session_id=terminal-main-session" [accepted]
+22:14:37 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+22:14:37 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: True
+22:14:37 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | === CREATE PTY ===
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Session ID: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Shell: /bin/bash, Rows: 42, Cols: 194
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | CWD: None
+22:14:37 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Validating session ID...
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:14:37 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | Created PTY process 7539 for session terminal-main-session
+22:14:37 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     127.0.0.1:51949 - "GET /terminal HTTP/1.1" 200 OK
+22:18:07 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket disconnected for session terminal-main-session
+INFO:     connection closed
+22:18:07 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Client: Address(host='127.0.0.1', port=51955)
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'GjwNKkZDAWXvNrOL0hkKjg==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Query params: {'session_id': 'terminal-main-session'}
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7933e56ff190>
+22:18:07 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === NEW WEBSOCKET CONNECTION ===
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket client: Address(host='127.0.0.1', port=51955)
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'GjwNKkZDAWXvNrOL0hkKjg==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+INFO:     127.0.0.1:51955 - "WebSocket /api/v1/terminal/ws?session_id=terminal-main-session" [accepted]
+22:18:07 | [32mINFO[0m | concierge.api.v1.websocket.terminal | WebSocket connection accepted
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+INFO:     connection open
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+22:18:07 | [32mINFO[0m | concierge.api.v1.websocket.terminal | === HANDLE INIT ===
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Validating session ID: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Session ID validation result: True
+22:18:07 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | === CREATE PTY ===
+22:18:07 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Session ID: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Shell: /bin/bash, Rows: 42, Cols: 194
+22:18:07 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | CWD: None
+22:18:07 | [36mDEBUG[0m | concierge.core.services.terminal.pty_manager | Validating session ID...
+22:18:07 | [36mDEBUG[0m | concierge.core.security.terminal_security | Validating session ID: terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.core.security.terminal_security | Session ID valid: terminal-main-session
+22:18:07 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | Created PTY process 7623 for session terminal-main-session
+22:18:07 | [36mDEBUG[0m | concierge.api.v1.websocket.terminal | Waiting for client message...
+22:18:07 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | Terminated PTY process for session terminal-main-session
+22:18:07 | [32mINFO[0m | concierge.core.services.terminal.pty_manager | PTY reader for session terminal-main-session stopped

@@ -1,177 +1,299 @@
-{% extends "base.html" %}
+{% extends "base_luxury.html" %}
 
-{% block browser_title_suffix %}- Dashboard{% endblock %}
+{% block browser_title_suffix %}- Your Digital Concierge{% endblock %}
 
-{% block page_title_text %}{% endblock %} {# Already "The Concierge" from base, no suffix needed for main page header #}
+{% block page_title_text %}{% endblock %}
 
 {% block extra_head %}
+    <link rel="stylesheet" href="/static/css/dashboard.css">
     <style>
-      .tile {
-        height: 200px;
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
+      /* Override base styles for luxury feel */
+      body {
+        background: transparent;
+        color: var(--text-primary);
       }
-      .tile:hover {
-        transform: scale(1.02);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-      }
-      .cardinal-direction {
-        font-size: 3rem;
-        font-weight: bold;
-        line-height: 1;
-      }
-      .heading-degrees {
-        font-size: 1.5rem;
-        color: var(--text-secondary);
+      .container {
+        max-width: 1400px;
       }
     </style>
 {% endblock %}
 
 {% block content %}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Navigation Tile -->
-        <div
-          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
-          hx-get="/api/status"
-          hx-trigger="load, every 2s"
-          hx-swap="innerHTML"
-          onclick="window.location.href='/navigation'"
-          id="navigation-tile"
-        >
-          <!-- Content will be dynamically replaced -->
-          <div class="flex flex-col items-center justify-center h-full">
-            <div class="cardinal-direction">--</div>
-            <div class="heading-degrees mt-2">-- °</div>
-            <div class="text-secondary mt-4">Navigation</div>
-          </div>
-        </div>
-
-        <!-- Diagnostics Tile -->
-        <div
-          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
-          onclick="window.location.href='/diagnostics'"
-        >
-          <div class="text-3xl font-bold mb-2">
-            <span class="text-accent">Diagnostics</span>
-          </div>
-          <div class="text-secondary">System Health</div>
-        </div>
-
-        <!-- Logs Tile -->
-        <div
-          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
-          onclick="window.location.href='/logs'"
-        >
-          <div class="text-3xl font-bold mb-2">
-            <span class="text-accent">Logs</span>
-          </div>
-          <div class="text-secondary">System Logs</div>
-        </div>
-
-        <!-- Drive Data Tile -->
-        <div
-          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
-          onclick="window.location.href='/drive-data'"
-        >
-          <div class="text-3xl font-bold mb-2">
-            <span class="text-accent">Drive Data</span>
-          </div>
-          <div class="text-secondary">Drive Statistics</div>
-        </div>
-
-        <!-- Test Tile -->
-        <div
-          class="tile p-6 rounded-lg bg-2 ring-1 ring-border shadow-lg flex flex-col items-center justify-center"
-          onclick="window.location.href='/test'"
-        >
-          <div class="text-3xl font-bold mb-2">
-            <span class="text-accent">Test</span>
-          </div>
-          <div class="text-secondary">System Tests</div>
+    <!-- Animated background -->
+    <div class="dashboard-bg"></div>
+    
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <div class="welcome-greeting" id="greeting">Good Evening</div>
+      <h1 class="welcome-title">The Concierge</h1>
+      <p class="welcome-subtitle">Your intelligent driving companion awaits</p>
+    </div>
+    
+    <!-- Status Bar -->
+    <div class="status-bar luxury-card">
+      <div class="status-item">
+        <div class="status-indicator"></div>
+        <div>
+          <div class="status-label">System Status</div>
+          <div class="status-value">Optimal</div>
         </div>
       </div>
-
-    <!-- client-side render logic -->
+      
+      <div class="status-item">
+        <div class="status-label">Vehicle</div>
+        <div class="status-value" id="vehicle-status">Connected</div>
+      </div>
+      
+      <div class="status-item">
+        <div class="status-label">Services</div>
+        <div class="status-value"><span id="active-services">5</span> Active</div>
+      </div>
+      
+      <div class="status-item">
+        <div class="status-label">Uptime</div>
+        <div class="status-value" id="uptime">--:--:--</div>
+      </div>
+    </div>
+    
+    <!-- Main Services Grid -->
+    <div class="service-grid">
+      <!-- Navigation Service -->
+      <div class="service-card luxury-card fade-in-1" onclick="window.location.href='/navigation'">
+        <div class="service-icon">🧭</div>
+        <h2 class="service-title">Navigation</h2>
+        <p class="service-description">Real-time navigation intelligence with advanced route planning and traffic awareness</p>
+        <div class="service-status">
+          <div class="service-metric">
+            <span class="service-metric-value" id="nav-bearing">--</span>
+            <span>heading</span>
+          </div>
+          <div class="service-metric">
+            <span class="service-metric-value" id="nav-speed">--</span>
+            <span>mph</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Terminal Service -->
+      <div class="service-card luxury-card fade-in-2" onclick="window.location.href='/terminal'">
+        <div class="service-icon">⚡</div>
+        <h2 class="service-title">Command Terminal</h2>
+        <p class="service-description">Direct system access with advanced command execution and real-time diagnostics</p>
+        <div class="service-status">
+          <div class="terminal-preview">
+            <span style="color: #00ff00;">system status --all</span><br>
+            <span style="color: #888;">All systems operational</span>
+            <span class="terminal-cursor"></span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Drive Analytics -->
+      <div class="service-card luxury-card fade-in-3" onclick="window.location.href='/drive-data'">
+        <div class="service-icon">📊</div>
+        <h2 class="service-title">Drive Analytics</h2>
+        <p class="service-description">Comprehensive driving insights with performance metrics and efficiency analysis</p>
+        <div class="service-status">
+          <div class="service-metric">
+            <span class="service-metric-value">98%</span>
+            <span>efficiency</span>
+          </div>
+          <div class="service-metric">
+            <span class="service-metric-value" id="total-miles">--</span>
+            <span>miles</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- System Diagnostics -->
+      <div class="service-card luxury-card fade-in-4" onclick="window.location.href='/diagnostics'">
+        <div class="service-icon">🔧</div>
+        <h2 class="service-title">Diagnostics</h2>
+        <p class="service-description">Advanced system health monitoring with predictive maintenance alerts</p>
+        <div class="service-status">
+          <div class="service-metric">
+            <span class="service-metric-value" style="color: #00ff88;">Healthy</span>
+            <span>status</span>
+          </div>
+          <div class="service-metric">
+            <span class="service-metric-value">0</span>
+            <span>alerts</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Logs & Events -->
+      <div class="service-card luxury-card fade-in-5" onclick="window.location.href='/logs'">
+        <div class="service-icon">📜</div>
+        <h2 class="service-title">Event Logs</h2>
+        <p class="service-description">Comprehensive system event tracking with intelligent filtering and analysis</p>
+        <div class="service-status">
+          <div class="service-metric">
+            <span class="service-metric-value" id="log-count">--</span>
+            <span>today</span>
+          </div>
+          <div class="service-metric">
+            <span class="service-metric-value">Live</span>
+            <span>stream</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI Assistant -->
+      <div class="service-card luxury-card fade-in-6" onclick="showAssistant()">
+        <div class="service-icon">🤖</div>
+        <h2 class="service-title">AI Assistant</h2>
+        <p class="service-description">Your personal driving AI with natural language understanding and proactive suggestions</p>
+        <div class="service-status">
+          <div class="service-metric">
+            <span class="service-metric-value">Ready</span>
+            <span>to assist</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="quick-action-btn" onclick="toggleDarkMode()" title="Toggle Theme">
+        🌓
+      </div>
+      <div class="quick-action-btn" onclick="window.location.href='/settings'" title="Settings">
+        ⚙️
+      </div>
+      <div class="quick-action-btn" onclick="window.location.href='/help'" title="Help">
+        ❓
+      </div>
+    </div>
+    
+    <!-- Premium JavaScript -->
     <script>
-      // Function to convert degrees to cardinal direction
-      function degreesToCardinal(degrees) {
-        // Ensure degrees are between 0 and 360
-        degrees = (degrees + 360) % 360;
-
-        // Define cardinal directions with corresponding degree ranges
-        const directions = [
-          { name: "N", min: 348.75, max: 360 },
-          { name: "N", min: 0, max: 11.25 },
-          { name: "NNE", min: 11.25, max: 33.75 },
-          { name: "NE", min: 33.75, max: 56.25 },
-          { name: "ENE", min: 56.25, max: 78.75 },
-          { name: "E", min: 78.75, max: 101.25 },
-          { name: "ESE", min: 101.25, max: 123.75 },
-          { name: "SE", min: 123.75, max: 146.25 },
-          { name: "SSE", min: 146.25, max: 168.75 },
-          { name: "S", min: 168.75, max: 191.25 },
-          { name: "SSW", min: 191.25, max: 213.75 },
-          { name: "SW", min: 213.75, max: 236.25 },
-          { name: "WSW", min: 236.25, max: 258.75 },
-          { name: "W", min: 258.75, max: 281.25 },
-          { name: "WNW", min: 281.25, max: 303.75 },
-          { name: "NW", min: 303.75, max: 326.25 },
-          { name: "NNW", min: 326.25, max: 348.75 }
-        ];
-
-        // Find matching direction
-        for (const direction of directions) {
-          if (direction.min <= degrees && degrees <= direction.max) {
-            return direction.name;
-          }
+      // Create floating particles
+      function createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 50;
+        
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDelay = Math.random() * 20 + 's';
+          particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+          particlesContainer.appendChild(particle);
         }
-
-        return "N"; // Fallback
       }
-
-      document.body.addEventListener("htmx:afterSwap", e => {
-        // only act on our navigation tile
-        if (e.detail.target.id !== "navigation-tile") return;
-
-        const status = JSON.parse(e.detail.xhr.responseText);
-
-        // Check if we have bearing data available
-        let bearing = null;
-        if (status.liveLocationKalman &&
-            status.liveLocationKalman.calibratedOrientationNED &&
-            Array.isArray(status.liveLocationKalman.calibratedOrientationNED.value) &&
-            status.liveLocationKalman.calibratedOrientationNED.value.length >= 3) {
-          // Extract bearing in degrees from calibratedOrientationNED.value[2] (in radians)
-          const bearingRadians = status.liveLocationKalman.calibratedOrientationNED.value[2];
-          bearing = (Math.degrees(bearingRadians) + 360) % 360;
-        }
-
-        // Create the navigation tile content
-        let navContent = `<div class="flex flex-col items-center justify-center h-full">`;
-
-        if (bearing !== null) {
-          const cardinalDirection = degreesToCardinal(bearing);
-          navContent += `
-            <div class="cardinal-direction">${cardinalDirection}</div>
-            <div class="heading-degrees mt-2">${bearing.toFixed(1)}°</div>
-          `;
+      
+      // Update greeting based on time
+      function updateGreeting() {
+        const hour = new Date().getHours();
+        const greetingEl = document.getElementById('greeting');
+        
+        if (hour < 12) {
+          greetingEl.textContent = 'Good Morning';
+        } else if (hour < 17) {
+          greetingEl.textContent = 'Good Afternoon';
         } else {
-          navContent += `
-            <div class="cardinal-direction">--</div>
-            <div class="heading-degrees mt-2">-- °</div>
-          `;
+          greetingEl.textContent = 'Good Evening';
         }
-
-        navContent += `<div class="text-secondary mt-4">Navigation</div></div>`;
-
-        e.detail.target.innerHTML = navContent;
-      });
-
-      // Add Math.degrees function if it doesn't exist
-      if (typeof Math.degrees !== 'function') {
-        Math.degrees = function(radians) {
-          return radians * (180/Math.PI);
-        };
       }
+      
+      // Format uptime
+      function formatUptime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      
+      // Update dashboard metrics
+      let uptimeSeconds = 0;
+      function updateMetrics() {
+        // Update uptime
+        uptimeSeconds++;
+        document.getElementById('uptime').textContent = formatUptime(uptimeSeconds);
+        
+        // Fetch real metrics via HTMX or WebSocket
+        fetch('/api/status')
+          .then(response => response.json())
+          .then(data => {
+            // Update navigation metrics
+            if (data.liveLocationKalman) {
+              const speed = data.liveLocationKalman.velocityCalibrated?.value?.[0] || 0;
+              document.getElementById('nav-speed').textContent = Math.round(speed * 2.237).toString(); // m/s to mph
+              
+              if (data.liveLocationKalman.calibratedOrientationNED?.value?.[2]) {
+                const bearingRadians = data.liveLocationKalman.calibratedOrientationNED.value[2];
+                const bearingDegrees = (bearingRadians * 180 / Math.PI + 360) % 360;
+                const cardinal = degreesToCardinal(bearingDegrees);
+                document.getElementById('nav-bearing').textContent = `${cardinal} ${bearingDegrees.toFixed(0)}°`;
+              }
+            }
+            
+            // Update other metrics
+            if (data.drivingStats) {
+              document.getElementById('total-miles').textContent = 
+                Math.round(data.drivingStats.totalDistance * 0.000621371).toLocaleString(); // meters to miles
+            }
+            
+            if (data.logCount) {
+              document.getElementById('log-count').textContent = data.logCount.toLocaleString();
+            }
+          })
+          .catch(console.error);
+      }
+      
+      // Cardinal direction helper
+      function degreesToCardinal(degrees) {
+        const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 
+                          'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        const index = Math.round(degrees / 22.5) % 16;
+        return directions[index];
+      }
+      
+      // Show AI Assistant (placeholder)
+      function showAssistant() {
+        // TODO: Implement AI assistant modal/chat interface
+        alert('AI Assistant coming soon! This will provide natural language interaction with your Concierge.');
+      }
+      
+      // Toggle dark mode (placeholder)
+      function toggleDarkMode() {
+        document.body.classList.toggle('light-mode');
+      }
+      
+      // Initialize dashboard
+      document.addEventListener('DOMContentLoaded', function() {
+        createParticles();
+        updateGreeting();
+        updateMetrics();
+        
+        // Update metrics every second
+        setInterval(updateMetrics, 1000);
+        
+        // Add subtle mouse movement effect
+        document.addEventListener('mousemove', (e) => {
+          const x = e.clientX / window.innerWidth;
+          const y = e.clientY / window.innerHeight;
+          
+          document.documentElement.style.setProperty('--mouse-x', x);
+          document.documentElement.style.setProperty('--mouse-y', y);
+        });
+      });
+      
+      // Add smooth page transitions
+      document.addEventListener('click', function(e) {
+        if (e.target.matches('a') || e.target.closest('.service-card')) {
+          e.preventDefault();
+          const target = e.target.href || e.target.closest('.service-card').onclick.toString().match(/href='(.+)'/)[1];
+          
+          document.body.style.opacity = '0';
+          setTimeout(() => {
+            window.location.href = target;
+          }, 300);
+        }
+      });
     </script>
 {% endblock %}

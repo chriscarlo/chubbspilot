@@ -1,0 +1,591 @@
+2025-06-09 22:08:03.833 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L76   | Logger initialized for module: api.v1.websocket.terminal
+2025-06-09 22:08:03.834 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+2025-06-09 22:08:03.834 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:08:03.834 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:08:03.834 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L209  | Client: Address(host='127.0.0.1', port=51663)
+2025-06-09 22:08:03.834 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L210  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '18lmPUWedywOMK1BkMSt0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:08:03.834 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L211  | Query params: {'session_id': 'main'}
+2025-06-09 22:08:03.834 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:08:03.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51663)
+2025-06-09 22:08:03.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '18lmPUWedywOMK1BkMSt0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:08:03.835 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:08:03.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:08:03.841 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"main","rows":42,"cols":194}...
+2025-06-09 22:08:03.841 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:08:03.841 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'main', 'rows': 42, 'cols': 194}
+2025-06-09 22:08:03.841 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: main
+2025-06-09 22:08:03.841 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: main
+2025-06-09 22:08:03.842 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: False
+2025-06-09 22:08:03.842 | ERROR    | concierge.api.v1.websocket.terminal      | handle_init          | L120  | Invalid session ID: main
+2025-06-09 22:08:03.842 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:10:49.462 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"input","data":"\u001b[15;5~"}...
+2025-06-09 22:10:49.463 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:10:53.085 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session None
+2025-06-09 22:10:53.454 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:10:53.456 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L209  | Client: Address(host='127.0.0.1', port=51771)
+2025-06-09 22:10:53.457 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L210  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '+6Vfxro3F7MLgQju3IAO9A==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:10:53.458 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L211  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:10:53.458 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:10:53.459 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51771)
+2025-06-09 22:10:53.460 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': '+6Vfxro3F7MLgQju3IAO9A==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:10:53.462 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:10:53.462 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:10:53.469 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:10:53.469 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:10:53.469 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:10:53.469 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:10:53.470 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:10:53.471 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:10:53.471 | ERROR    | concierge.api.v1.websocket.terminal      | handle_init          | L149  | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+2025-06-09 22:10:53.471 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:11:50.350 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-09 22:11:50.688 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:11:50.688 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L209  | Client: Address(host='127.0.0.1', port=51781)
+2025-06-09 22:11:50.688 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L210  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'AkYtakIzVmimeMbMvvJKKw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:11:50.688 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L211  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:11:50.688 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:11:50.689 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51781)
+2025-06-09 22:11:50.689 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'AkYtakIzVmimeMbMvvJKKw==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:11:50.689 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:11:50.689 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:11:50.693 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:11:50.693 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:11:50.693 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:11:50.693 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:11:50.693 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:11:50.694 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:11:50.694 | ERROR    | concierge.api.v1.websocket.terminal      | handle_init          | L149  | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+2025-06-09 22:11:50.694 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:12:01.613 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-09 22:12:01.937 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:12:01.937 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L209  | Client: Address(host='127.0.0.1', port=51792)
+2025-06-09 22:12:01.938 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L210  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'EGqUUyDJjADdQjkanaMg0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:12:01.938 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L211  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:12:01.938 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:12:01.938 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51792)
+2025-06-09 22:12:01.938 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'EGqUUyDJjADdQjkanaMg0Q==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:12:01.939 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:12:01.939 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:12:01.944 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:12:01.945 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:12:01.945 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:12:01.945 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:12:01.945 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:12:01.946 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:12:01.946 | ERROR    | concierge.api.v1.websocket.terminal      | handle_init          | L149  | Failed to initialize terminal: 'Depends' object has no attribute 'create_pty'
+2025-06-09 22:12:01.946 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:13:15.287 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-09 22:14:37.606 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L76   | Logger initialized for module: api.v1.websocket.terminal
+2025-06-09 22:14:37.606 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+2025-06-09 22:14:37.606 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:14:37.607 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L205  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:14:37.607 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L206  | Client: Address(host='127.0.0.1', port=51913)
+2025-06-09 22:14:37.607 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L207  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'QGTefSy5jK94GX6G1T3HxA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:14:37.607 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:14:37.607 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L212  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7933e56ff190>
+2025-06-09 22:14:37.608 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:14:37.608 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51913)
+2025-06-09 22:14:37.609 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'QGTefSy5jK94GX6G1T3HxA==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:14:37.609 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:14:37.609 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:14:37.614 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:14:37.614 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:14:37.614 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:14:37.614 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:14:37.614 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:14:37.615 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:14:37.623 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:18:07.114 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-09 22:18:07.453 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L205  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:18:07.454 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L206  | Client: Address(host='127.0.0.1', port=51955)
+2025-06-09 22:18:07.454 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L207  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'GjwNKkZDAWXvNrOL0hkKjg==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:18:07.455 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L208  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:18:07.456 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L212  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x7933e56ff190>
+2025-06-09 22:18:07.456 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:18:07.457 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=51955)
+2025-06-09 22:18:07.457 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'GjwNKkZDAWXvNrOL0hkKjg==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:18:07.459 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:18:07.459 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:18:07.467 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:18:07.468 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:18:07.468 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:18:07.468 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:18:07.468 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:18:07.469 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:18:07.480 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:25:18.374 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L76   | Logger initialized for module: api.v1.websocket.terminal
+2025-06-09 22:25:18.374 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+2025-06-09 22:25:18.374 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:25:18.375 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=52378)
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'd7Oxv+2RlLyPrYteoldjwQ==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x72f339f51610>
+2025-06-09 22:25:18.375 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=52378)
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'd7Oxv+2RlLyPrYteoldjwQ==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:25:18.375 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:25:18.375 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:25:18.379 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:25:18.379 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:25:18.379 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:25:18.379 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:25:18.380 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:25:18.380 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:25:18.380 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:25:18.384 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=7882, master_fd=28, slave_fd=29)
+2025-06-09 22:25:18.384 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:25:18.385 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-8' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:212>>
+2025-06-09 22:25:18.385 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:25:18.385 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:25:18.385 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:25:18.388 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:25:18.388 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:25:19.390 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:25:19.391 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:25:21.391 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:25:21.392 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:25:25.393 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:25:25.394 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:25:34.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 54 bytes
+2025-06-09 22:25:34.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:25:34.849 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 25 bytes
+2025-06-09 22:25:34.849 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:29:28.302 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:29:28.302 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45006)
+2025-06-09 22:29:28.302 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'YlhsNJwCGQIB0+yD4cEvlQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:29:28.303 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session-12345'}
+2025-06-09 22:29:28.303 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x72f339f51610>
+2025-06-09 22:29:28.303 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:29:28.303 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45006)
+2025-06-09 22:29:28.303 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'YlhsNJwCGQIB0+yD4cEvlQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:29:28.303 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:29:28.303 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.305 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session-12345", "rows": 24, "cols": 80}...
+2025-06-09 22:29:28.305 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:29:28.306 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session-12345', 'rows': 24, 'cols': 80}
+2025-06-09 22:29:28.306 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session-12345
+2025-06-09 22:29:28.306 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.306 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:29:28.306 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:29:28.311 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=7937, master_fd=30, slave_fd=31)
+2025-06-09 22:29:28.311 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:29:28.311 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-14' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:212>>
+2025-06-09 22:29:28.311 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:29:28.312 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:29:28.312 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.314 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:29:28.321 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session-12345
+2025-06-09 22:29:28.323 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45020)
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '0YE8LzlQdatyNJJhNyQznw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session-12345'}
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x72f339f51610>
+2025-06-09 22:29:28.323 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45020)
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '0YE8LzlQdatyNJJhNyQznw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:29:28.323 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:29:28.323 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.325 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session-12345", "rows": 24, "cols": 80}...
+2025-06-09 22:29:28.325 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:29:28.326 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session-12345', 'rows': 24, 'cols': 80}
+2025-06-09 22:29:28.326 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:29:28.326 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:29:28.330 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=7939, master_fd=31, slave_fd=32)
+2025-06-09 22:29:28.330 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:29:28.331 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-20' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:212>>
+2025-06-09 22:29:28.331 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:29:28.331 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:29:28.332 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.334 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:29:28.334 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:29:28.334 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo 'TEST_OUTPUT_12345'\n"}...
+2025-06-09 22:29:28.334 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.348 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 26 bytes
+2025-06-09 22:29:28.348 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:29:28.358 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session-12345
+2025-06-09 22:29:28.367 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:29:28.367 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45032)
+2025-06-09 22:29:28.368 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'hMS69naP6kLMo0GH/IQ63g==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:29:28.368 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session-12345'}
+2025-06-09 22:29:28.368 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x72f339f51610>
+2025-06-09 22:29:28.368 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:29:28.369 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45032)
+2025-06-09 22:29:28.369 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'hMS69naP6kLMo0GH/IQ63g==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:29:28.370 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:29:28.370 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.374 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session-12345", "rows": 24, "cols": 80}...
+2025-06-09 22:29:28.374 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:29:28.374 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session-12345', 'rows': 24, 'cols': 80}
+2025-06-09 22:29:28.374 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session-12345
+2025-06-09 22:29:28.374 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.375 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:29:28.375 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:29:28.381 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=7940, master_fd=32, slave_fd=33)
+2025-06-09 22:29:28.381 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:29:28.382 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-26' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:212>>
+2025-06-09 22:29:28.382 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:29:28.383 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:29:28.383 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.385 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "resize", "rows": 40, "cols": 120}...
+2025-06-09 22:29:28.385 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.386 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo $LINES $COLUMNS\n"}...
+2025-06-09 22:29:28.386 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:29:28.386 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 128 bytes
+2025-06-09 22:29:28.387 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:31:33.938 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session-12345
+2025-06-09 22:32:25.299 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45462)
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'HucZK8BUXfhKv8ohq0qTbw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-abc-12345678'}
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x72f339f51610>
+2025-06-09 22:32:25.299 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45462)
+2025-06-09 22:32:25.299 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'HucZK8BUXfhKv8ohq0qTbw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:32:25.300 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:32:25.300 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:32:25.302 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-abc-12345678", "rows": 24, "cols": 80}...
+2025-06-09 22:32:25.302 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:32:25.302 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-abc-12345678', 'rows': 24, 'cols': 80}
+2025-06-09 22:32:25.302 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-abc-12345678
+2025-06-09 22:32:25.302 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-abc-12345678
+2025-06-09 22:32:25.303 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:32:25.303 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:32:25.307 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=7997, master_fd=30, slave_fd=31)
+2025-06-09 22:32:25.307 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:32:25.308 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-34' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:212>>
+2025-06-09 22:32:25.308 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:32:25.309 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:32:25.309 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:32:25.311 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:32:25.312 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:32:26.316 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:32:26.316 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:32:28.313 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:32:28.313 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:32:32.313 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-09 22:32:32.313 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:32:32.316 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-abc-12345678
+2025-06-09 22:33:26.257 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L76   | Logger initialized for module: api.v1.websocket.terminal
+2025-06-09 22:33:26.257 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_api_v1_websocket_terminal_20250609.log
+2025-06-09 22:33:26.257 | DEBUG    | concierge.api.v1.websocket.terminal      | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:33:26.257 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:33:26.257 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=52633)
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'B9AwNI6z0vQO8aYgr0OesQ==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'}
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-09 22:33:26.258 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=52633)
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'connection': 'Upgrade', 'pragma': 'no-cache', 'cache-control': 'no-cache', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0', 'upgrade': 'websocket', 'origin': 'http://localhost:5055', 'sec-websocket-version': '13', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'en-US,en;q=0.9', 'sec-websocket-key': 'B9AwNI6z0vQO8aYgr0OesQ==', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits'})
+2025-06-09 22:33:26.258 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:33:26.258 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:33:26.269 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type":"init","session_id":"terminal-main-session","rows":42,"cols":194}...
+2025-06-09 22:33:26.270 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:33:26.270 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 42, 'cols': 194}
+2025-06-09 22:33:26.271 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-09 22:33:26.271 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-09 22:33:26.272 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:33:26.273 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:33:26.286 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=8079, master_fd=28, slave_fd=29)
+2025-06-09 22:33:26.286 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:33:26.289 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-8' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-09 22:33:26.289 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:33:26.290 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:33:26.290 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:33:26.292 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-09 22:33:26.293 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:33:37.543 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:33:37.543 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45712)
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'lD3lKcw/GBQt7k6C4onIZg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-abc-12345678'}
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-09 22:33:37.544 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45712)
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'lD3lKcw/GBQt7k6C4onIZg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:33:37.544 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:33:37.544 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:33:37.546 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-abc-12345678", "rows": 24, "cols": 80}...
+2025-06-09 22:33:37.546 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:33:37.546 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-abc-12345678', 'rows': 24, 'cols': 80}
+2025-06-09 22:33:37.546 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-abc-12345678
+2025-06-09 22:33:37.546 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-abc-12345678
+2025-06-09 22:33:37.547 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:33:37.547 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:33:37.552 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=8108, master_fd=30, slave_fd=31)
+2025-06-09 22:33:37.552 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:33:37.552 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-16' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-09 22:33:37.552 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:33:37.553 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:33:37.553 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:33:37.554 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-09 22:33:37.555 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:33:45.565 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-abc-12345678
+2025-06-09 22:34:47.881 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-09 22:34:47.881 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=46188)
+2025-06-09 22:34:47.881 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'ZuzoDAn3oJG3ndJ9nl58GQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-09 22:34:47.882 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'validation-test-123456'}
+2025-06-09 22:34:47.882 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-09 22:34:47.882 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-09 22:34:47.882 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=46188)
+2025-06-09 22:34:47.882 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'ZuzoDAn3oJG3ndJ9nl58GQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-09 22:34:47.882 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-09 22:34:47.882 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "validation-test-123456", "rows": 24, "cols": 80}...
+2025-06-09 22:34:47.884 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'validation-test-123456', 'rows': 24, 'cols': 80}
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: validation-test-123456
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: validation-test-123456
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-09 22:34:47.884 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-09 22:34:47.888 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=8137, master_fd=30, slave_fd=31)
+2025-06-09 22:34:47.888 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-09 22:34:47.889 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-22' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-09 22:34:47.889 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-09 22:34:47.890 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-09 22:34:47.890 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:34:47.891 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-09 22:34:47.891 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:34:47.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo 'Hello Terminal'\n"}...
+2025-06-09 22:34:47.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:34:47.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 41 bytes
+2025-06-09 22:34:47.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:34:47.905 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo $USER $HOME $SHELL\n"}...
+2025-06-09 22:34:47.905 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-09 22:34:47.915 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 58 bytes
+2025-06-09 22:34:47.916 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-09 22:34:49.923 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session validation-test-123456
+2025-06-09 22:55:10.792 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-10 00:10:22.243 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:10:22.246 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=48620)
+2025-06-10 00:10:22.246 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'QeFtYxw7ZCSQb9gqLe1N9g==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:10:22.247 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'terminal-main-session'}
+2025-06-10 00:10:22.247 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:10:22.248 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:10:22.248 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=48620)
+2025-06-10 00:10:22.248 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'QeFtYxw7ZCSQb9gqLe1N9g==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:10:22.250 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:10:22.250 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:10:22.264 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "terminal-main-session", "rows": 24, "cols": 80}...
+2025-06-10 00:10:22.265 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:10:22.265 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'terminal-main-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:10:22.265 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: terminal-main-session
+2025-06-10 00:10:22.266 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: terminal-main-session
+2025-06-10 00:10:22.268 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:10:22.268 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:10:22.276 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19151, master_fd=28, slave_fd=29)
+2025-06-10 00:10:22.277 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:10:22.278 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-37' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:10:22.279 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:10:22.280 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:10:22.281 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:10:22.285 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:10:22.286 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:10:22.785 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo 'Hello from terminal!'\n"}...
+2025-06-10 00:10:22.786 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:10:22.788 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 53 bytes
+2025-06-10 00:10:22.788 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:12:26.504 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session terminal-main-session
+2025-06-10 00:13:20.038 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=46760)
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'XPxCDghHy5kjQr9XH0KoPA==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:13:20.039 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=46760)
+2025-06-10 00:13:20.039 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'XPxCDghHy5kjQr9XH0KoPA==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:13:20.040 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:13:20.040 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:13:20.043 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:13:20.043 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:13:20.043 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:13:20.043 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:13:20.043 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:13:20.043 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:13:20.044 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:13:20.048 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19309, master_fd=28, slave_fd=29)
+2025-06-10 00:13:20.048 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:13:20.049 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-43' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:13:20.049 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:13:20.049 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:13:20.049 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:13:20.052 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:13:20.053 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:15:25.236 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:15:25.236 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=46232)
+2025-06-10 00:15:25.236 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '9klOpUyC/kGJRtGHWWUeZg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:15:25.236 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:15:25.237 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:15:25.237 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:15:25.237 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=46232)
+2025-06-10 00:15:25.237 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '9klOpUyC/kGJRtGHWWUeZg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:15:25.237 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:15:25.237 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:25.241 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:15:25.241 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:15:25.241 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:15:25.241 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:15:25.241 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:15:25.242 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:15:25.242 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:15:25.245 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19501, master_fd=28, slave_fd=29)
+2025-06-10 00:15:25.246 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:15:25.246 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-58' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:15:25.246 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:15:25.247 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:15:25.247 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:25.249 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:15:25.249 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:15:25.251 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:15:25.757 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:15:25.757 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45352)
+2025-06-10 00:15:25.757 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '6Ry12kbQBRXCwXqmcNjNrA==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:15:25.757 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:15:25.758 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:15:25.758 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:15:25.758 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45352)
+2025-06-10 00:15:25.758 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': '6Ry12kbQBRXCwXqmcNjNrA==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:15:25.758 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:15:25.758 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:25.760 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:15:25.760 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:15:25.760 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:15:25.760 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:15:25.760 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:15:25.761 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:15:25.761 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:15:25.765 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19502, master_fd=28, slave_fd=29)
+2025-06-10 00:15:25.765 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:15:25.766 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-64' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:15:25.766 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:15:25.767 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:15:25.767 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:25.768 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo 'CONCIERGE_TEST_OUTPUT'\n"}...
+2025-06-10 00:15:25.769 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:25.769 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 57 bytes
+2025-06-10 00:15:25.769 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:15:26.774 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:15:27.826 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:15:27.826 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=45364)
+2025-06-10 00:15:27.826 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'p4I1oQVMqw8UeltFxibuvw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:15:27.827 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:15:27.827 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:15:27.827 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:15:27.827 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=45364)
+2025-06-10 00:15:27.827 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'p4I1oQVMqw8UeltFxibuvw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:15:27.828 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:15:27.828 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:27.829 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:15:27.830 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:15:27.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:15:27.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:15:27.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:15:27.834 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19503, master_fd=28, slave_fd=29)
+2025-06-10 00:15:27.834 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:15:27.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-71' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:15:27.835 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:15:27.835 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:15:27.836 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:27.837 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:15:27.837 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:15:27.838 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "resize", "cols": 100, "rows": 30}...
+2025-06-10 00:15:27.840 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:27.840 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "pwd\nls\n"}...
+2025-06-10 00:15:27.840 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:15:27.852 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 1572 bytes
+2025-06-10 00:15:27.852 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:15:28.845 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:16:03.277 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:16:03.277 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=47294)
+2025-06-10 00:16:03.277 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'KVQuysr+/CeFCfS9Gr2XHg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:16:03.277 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:16:03.277 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:16:03.277 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:16:03.278 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=47294)
+2025-06-10 00:16:03.278 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'KVQuysr+/CeFCfS9Gr2XHg==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:16:03.278 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:16:03.278 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:03.280 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:16:03.280 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:16:03.280 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:16:03.281 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:16:03.281 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:16:03.284 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19586, master_fd=28, slave_fd=29)
+2025-06-10 00:16:03.284 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:16:03.285 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-78' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:16:03.285 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:16:03.286 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:16:03.286 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:03.288 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:16:03.288 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:16:03.290 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:16:03.809 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:16:03.809 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=47306)
+2025-06-10 00:16:03.810 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'lARAGXqmGFPh+NVl+GzevQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:16:03.811 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:16:03.811 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:16:03.812 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:16:03.812 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=47306)
+2025-06-10 00:16:03.812 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'lARAGXqmGFPh+NVl+GzevQ==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:16:03.813 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:16:03.813 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:03.818 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:16:03.818 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:16:03.819 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:16:03.819 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:16:03.819 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:16:03.819 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:16:03.820 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:16:03.825 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19587, master_fd=28, slave_fd=29)
+2025-06-10 00:16:03.826 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:16:03.827 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-84' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:16:03.827 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:16:03.827 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:16:03.828 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:03.829 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:16:03.829 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:16:03.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "echo 'CONCIERGE_TEST_OUTPUT'\n"}...
+2025-06-10 00:16:03.830 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:03.841 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 55 bytes
+2025-06-10 00:16:03.842 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:16:04.847 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session
+2025-06-10 00:16:05.889 | INFO     | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L213  | === TERMINAL WEBSOCKET ENDPOINT CALLED ===
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L214  | Client: Address(host='127.0.0.1', port=47324)
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L215  | Headers: {'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'B/LWAojv3RAaiDw3rwxPhw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'}
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L216  | Query params: {'session_id': 'test-session'}
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | terminal_websocket_endpoint | L220  | PTY Manager instance: <openpilot.selfdrive.chauffeur.concierge.core.services.terminal.pty_manager.PTYManager object at 0x78572d611790>
+2025-06-10 00:16:05.890 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L32   | === NEW WEBSOCKET CONNECTION ===
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L33   | WebSocket client: Address(host='127.0.0.1', port=47324)
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L34   | WebSocket headers: Headers({'host': 'localhost:5055', 'upgrade': 'websocket', 'connection': 'Upgrade', 'sec-websocket-key': 'B/LWAojv3RAaiDw3rwxPhw==', 'sec-websocket-version': '13', 'sec-websocket-extensions': 'permessage-deflate; client_max_window_bits', 'user-agent': 'Python/3.11 websockets/15.0.1'})
+2025-06-10 00:16:05.890 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L37   | WebSocket connection accepted
+2025-06-10 00:16:05.890 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:05.892 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "init", "session_id": "test-session", "rows": 24, "cols": 80}...
+2025-06-10 00:16:05.893 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L108  | === HANDLE INIT ===
+2025-06-10 00:16:05.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L109  | Init data: {'type': 'init', 'session_id': 'test-session', 'rows': 24, 'cols': 80}
+2025-06-10 00:16:05.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L112  | Session ID: test-session
+2025-06-10 00:16:05.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L115  | Validating session ID: test-session
+2025-06-10 00:16:05.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L117  | Session ID validation result: True
+2025-06-10 00:16:05.893 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L130  | Creating PTY process...
+2025-06-10 00:16:05.899 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L136  | PTY process created: PTYProcess(pid=19588, master_fd=28, slave_fd=29)
+2025-06-10 00:16:05.899 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L139  | Starting PTY reader...
+2025-06-10 00:16:05.900 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L144  | PTY reader task: <Task pending name='Task-91' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:16:05.900 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_init          | L147  | Sending init success...
+2025-06-10 00:16:05.901 | INFO     | concierge.api.v1.websocket.terminal      | handle_init          | L152  | Terminal initialization complete
+2025-06-10 00:16:05.901 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:05.902 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 2 bytes
+2025-06-10 00:16:05.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:16:05.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "resize", "cols": 100, "rows": 30}...
+2025-06-10 00:16:05.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:05.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "input", "data": "pwd\nls\n"}...
+2025-06-10 00:16:05.903 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:05.916 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L184  | handle_pty_output called with 1572 bytes
+2025-06-10 00:16:05.916 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_pty_output    | L190  | Output sent to client
+2025-06-10 00:16:06.908 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L44   | Received message: {"type": "noop"}...
+2025-06-10 00:16:06.909 | WARNING  | concierge.api.v1.websocket.terminal      | handle_message       | L80   | Unknown message type: noop
+2025-06-10 00:16:06.909 | DEBUG    | concierge.api.v1.websocket.terminal      | handle_connection    | L42   | Waiting for client message...
+2025-06-10 00:16:06.911 | INFO     | concierge.api.v1.websocket.terminal      | handle_connection    | L48   | WebSocket disconnected for session test-session

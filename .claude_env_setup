@@ -1,0 +1,16 @@
+#!/bin/bash
+# Claude environment auto-detection script
+# Source this from .bashrc or .zshrc to auto-configure environment
+
+# Only run if we're in the openpilot directory structure
+if [[ "$PWD" == *"/openpilot"* ]] || [[ "$PWD" == "/data/openpilot" ]]; then
+    # Check if credentials need updating (compare hostname with last setup)
+    CURRENT_HOSTNAME=$(hostname)
+    LAST_SETUP_FILE="/data/openpilot/.last_setup_hostname"
+    
+    if [ ! -f "$LAST_SETUP_FILE" ] || [ "$(cat $LAST_SETUP_FILE 2>/dev/null)" != "$CURRENT_HOSTNAME" ]; then
+        # Run setup script silently
+        /data/openpilot/scripts/setup_environment_credentials.sh > /dev/null 2>&1
+        echo "$CURRENT_HOSTNAME" > "$LAST_SETUP_FILE"
+    fi
+fi

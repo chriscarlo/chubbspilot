@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block browser_title %}Concierge{% block browser_title_suffix %}{% endblock %}{% endblock %}</title>
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎩</text></svg>">
+    
+    <!-- Base luxury styles -->
+    <style>
+      :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        --premium-gold: #d4af37;
+        --premium-silver: #c0c0c0;
+        --premium-black: #0a0a0a;
+        --text-primary: #ffffff;
+        --text-secondary: rgba(255, 255, 255, 0.7);
+        --text-tertiary: rgba(255, 255, 255, 0.4);
+        --gradient-start: #1a1a2e;
+        --gradient-end: #16213e;
+        --accent-glow: #00d9ff;
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+      }
+      
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: var(--gradient-start);
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: 5px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-glow);
+      }
+      
+      /* Glass header */
+      .luxury-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--glass-border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        transition: all 0.3s ease;
+      }
+      
+      .luxury-header:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      
+      /* Navigation links */
+      .nav-link {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        position: relative;
+        padding: 0.5rem 1rem;
+        letter-spacing: 0.05em;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+      }
+      
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2px;
+        background: var(--accent-glow);
+        transition: all 0.3s ease;
+        transform: translateX(-50%);
+      }
+      
+      .nav-link:hover {
+        color: var(--text-primary);
+      }
+      
+      .nav-link:hover::after {
+        width: 80%;
+      }
+      
+      .nav-link.active {
+        color: var(--accent-glow);
+      }
+      
+      .nav-link.active::after {
+        width: 80%;
+      }
+      
+      /* Logo effect */
+      .logo-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+      }
+      
+      .logo-link:hover {
+        transform: translateY(-2px);
+      }
+      
+      .logo-icon {
+        font-size: 2rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 217, 255, 0.3));
+        animation: float-subtle 3s ease-in-out infinite;
+      }
+      
+      @keyframes float-subtle {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+      
+      .logo-text {
+        font-size: 1.5rem;
+        font-weight: 200;
+        letter-spacing: 0.1em;
+        background: linear-gradient(135deg, var(--text-primary) 0%, var(--premium-silver) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      /* Footer */
+      .luxury-footer {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--glass-border);
+        margin-top: auto;
+        padding: 2rem 0;
+      }
+      
+      /* Loading animation */
+      .htmx-request .htmx-indicator {
+        display: inline-block;
+      }
+      
+      .htmx-indicator {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--accent-glow);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        filter: drop-shadow(0 0 4px var(--accent-glow));
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Page transitions */
+      .page-enter {
+        animation: fadeInUp 0.5s ease-out;
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col">
+    <!-- Header -->
+    <header class="luxury-header px-6 py-4">
+      <div class="container mx-auto flex items-center justify-between">
+        <a href="/" class="logo-link">
+          <span class="logo-icon">🎩</span>
+          <span class="logo-text">{% block page_title %}{% block page_title_text %}The Concierge{% endblock %}{% endblock %}</span>
+        </a>
+        
+        <nav class="flex items-center gap-2">
+          <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+          <a href="/terminal" class="nav-link {% if request.url.path == '/terminal' %}active{% endif %}">Terminal</a>
+          <a href="/diagnostics" class="nav-link {% if request.url.path == '/diagnostics' %}active{% endif %}">Diagnostics</a>
+          <a href="/logs" class="nav-link {% if request.url.path == '/logs' %}active{% endif %}">Logs</a>
+          <a href="/api/docs" class="nav-link {% if request.url.path == '/api/docs' %}active{% endif %}">API</a>
+        </nav>
+      </div>
+    </header>
+    
+    <!-- Main content -->
+    <main class="flex-1 page-enter">
+      {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="luxury-footer">
+      <div class="container mx-auto text-center">
+        <p class="text-sm text-secondary mb-1">Concierge v2.0.0 | Your Intelligent Driving Companion</p>
+        <p class="text-xs text-tertiary">© 2025 Chauffeur | <span class="htmx-indicator"></span></p>
+      </div>
+    </footer>
+    
+    <!-- Global scripts -->
+    <script>
+      // HTMX configuration
+      document.body.addEventListener('htmx:configRequest', (event) => {
+        event.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
+      });
+      
+      // Page transition effects
+      window.addEventListener('beforeunload', function() {
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 0.3s ease';
+      });
+      
+      window.addEventListener('pageshow', function() {
+        document.body.style.transition = 'opacity 0.3s ease';
+        document.body.style.opacity = '1';
+      });
+      
+      // Active link highlighting
+      document.addEventListener('DOMContentLoaded', function() {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.nav-link');
+        
+        navLinks.forEach(link => {
+          if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+          }
+        });
+      });
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

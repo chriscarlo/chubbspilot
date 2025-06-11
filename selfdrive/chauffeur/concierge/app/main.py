@@ -54,10 +54,16 @@ def create_app(settings: ConciergeSettings = None) -> FastAPI:
     logger.info(f"Configuring templates from {settings.templates_dir}")
     templates = Jinja2Templates(directory=str(settings.templates_dir))
     
-    # Health check endpoint
+    # Dashboard page endpoint
     @app.get("/")
-    async def root():
-        """Root endpoint - health check"""
+    async def root(request: Request):
+        """Root endpoint - serve dashboard page"""
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    # API info endpoint
+    @app.get("/api/info")
+    async def api_info():
+        """API information endpoint"""
         return {
             "message": "Concierge Web Server",
             "version": "2.0.0",

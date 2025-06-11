@@ -65,11 +65,16 @@ class TerminalSecurityManager:
             logger.warning("Null bytes in input")
             return False
         
-        # Check for control characters (except common ones)
-        control_chars = set(range(32)) - {7, 8, 9, 10, 13, 27}  # Allow bell, backspace, tab, newline, carriage return, escape
-        if any(ord(c) in control_chars for c in data):
-            logger.warning("Dangerous control characters in input")
-            return False
+        # Allow all control characters for terminal functionality
+        # Terminal emulators need control sequences for arrow keys, function keys, etc.
+        # Common sequences include:
+        # - Arrow keys: ESC[A, ESC[B, ESC[C, ESC[D
+        # - Home/End: ESC[H, ESC[F
+        # - Page Up/Down: ESC[5~, ESC[6~
+        # - Function keys: ESC[11~, ESC[12~, etc.
+        
+        # We still check for dangerous patterns in commands themselves
+        # via validate_command() which is called when commands are executed
         
         return True
     
@@ -104,7 +109,9 @@ class TerminalSecurityManager:
         # Whitelist of safe environment variables
         safe_vars = {
             'PATH', 'HOME', 'USER', 'SHELL', 'TERM', 'LANG', 'LC_ALL',
-            'PWD', 'OLDPWD', 'SHLVL', 'PS1', 'PS2', 'COLORTERM'
+            'PWD', 'OLDPWD', 'SHLVL', 'PS1', 'PS2', 'COLORTERM',
+            # History-related variables for persistent command history
+            'HISTFILE', 'HISTSIZE', 'HISTFILESIZE', 'HISTCONTROL', 'PROMPT_COMMAND'
         }
         
         for key, value in env.items():

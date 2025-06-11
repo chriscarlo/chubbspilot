@@ -128,8 +128,10 @@ class TerminalWebSocket:
         try:
             # Create PTY process
             logger.debug("Creating PTY process...")
+            # Explicitly specify bash shell
             process = await self.pty_manager.create_pty(
                 session_id=self.session_id,
+                shell="/usr/bin/bash",  # Force bash
                 rows=rows,
                 cols=cols
             )
