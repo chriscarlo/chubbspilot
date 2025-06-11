@@ -2,6 +2,23 @@
 
 This document tracks significant changes, implementations, and status updates for the chauffeur openpilot fork.
 
+## June 10, 2025 - 19:30 UTC
+
+### Card Expansion Architecture Fix (Commit: 0e9330cd)
+- **Problem**: Created duplicate implementations of modules (terminal, diagnostics, etc.) in JavaScript
+  - Navigation links loaded actual pages (/terminal)
+  - Card clicks loaded newly created duplicate versions
+  - Created maintenance nightmare with divergent codebases
+- **Solution**: Fixed card expansion to use actual routes via iframe
+  - Removed all duplicate module implementations (loadTerminalModule, etc.)
+  - Card expansion now loads the actual /terminal page in an iframe
+  - Ensures complete consistency between navigation and card access
+  - Terminal loads the same perfected version from both entry points
+- **Architecture Decision**: Card expansion animation serves as a fancy modal wrapper around actual page content, not a separate implementation
+- **Files Modified**:
+  - `/templates/index.html` - Removed duplicate implementations, added iframe loading
+  - `/static/css/dashboard.css` - Added card expansion animation styles
+
 ## June 10, 2025 - 11:45 UTC
 
 ### Epic Luxury Dashboard Redesign for Concierge
