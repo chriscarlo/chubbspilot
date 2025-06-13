@@ -29,9 +29,7 @@ def download():
   latest_version = get_latest_version()
 
   urls = [
-    f"https://github.com/chriscarlo/mapd/releases/download/{latest_version}/mapd",
-    f"https://github.com/pfeiferj/openpilot-mapd/releases/download/{latest_version}/mapd",  # Fallback to original
-    f"https://gitlab.com/FrogAi/FrogPilot-Resources/-/raw/Mapd/{latest_version}"
+    f"https://github.com/chriscarlo/mapd/releases/download/{latest_version}/mapd"
   ]
 
   for url in urls:
