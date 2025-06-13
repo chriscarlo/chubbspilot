@@ -1,0 +1,92 @@
+2025-06-09 22:08:03.831 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L76   | Logger initialized for module: core.security.terminal_security
+2025-06-09 22:08:03.831 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+2025-06-09 22:08:03.831 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:08:03.842 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: main
+2025-06-09 22:08:03.842 | ERROR    | concierge.core.security.terminal_security | validate_session_id  | L170  | Session ID length invalid: 4 (must be 8-64)
+2025-06-09 22:10:53.470 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:10:53.470 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:11:50.694 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:11:50.694 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:12:01.945 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:12:01.945 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:14:37.603 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L76   | Logger initialized for module: core.security.terminal_security
+2025-06-09 22:14:37.604 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+2025-06-09 22:14:37.604 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:14:37.615 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:14:37.615 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:14:37.616 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:14:37.616 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:18:07.469 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:18:07.469 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:18:07.470 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:18:07.471 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:25:18.373 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L76   | Logger initialized for module: core.security.terminal_security
+2025-06-09 22:25:18.373 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+2025-06-09 22:25:18.373 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:25:18.380 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:25:18.380 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:25:18.380 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:25:18.380 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:29:28.306 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.306 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:29:28.306 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.306 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.326 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:29:28.374 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.374 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:29:28.376 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session-12345
+2025-06-09 22:29:28.376 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session-12345
+2025-06-09 22:32:25.303 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-abc-12345678
+2025-06-09 22:32:25.303 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-abc-12345678
+2025-06-09 22:32:25.303 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-abc-12345678
+2025-06-09 22:32:25.303 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-abc-12345678
+2025-06-09 22:33:26.255 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L76   | Logger initialized for module: core.security.terminal_security
+2025-06-09 22:33:26.255 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_security_terminal_security_20250609.log
+2025-06-09 22:33:26.255 | DEBUG    | concierge.core.security.terminal_security | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:33:26.271 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:33:26.272 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:33:26.276 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-09 22:33:26.276 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-09 22:33:37.546 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-abc-12345678
+2025-06-09 22:33:37.547 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-abc-12345678
+2025-06-09 22:33:37.547 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-abc-12345678
+2025-06-09 22:33:37.547 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-abc-12345678
+2025-06-09 22:34:47.884 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: validation-test-123456
+2025-06-09 22:34:47.884 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: validation-test-123456
+2025-06-09 22:34:47.885 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: validation-test-123456
+2025-06-09 22:34:47.885 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: validation-test-123456
+2025-06-10 00:10:22.266 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-10 00:10:22.268 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-10 00:10:22.270 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: terminal-main-session
+2025-06-10 00:10:22.270 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: terminal-main-session
+2025-06-10 00:13:20.043 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:13:20.043 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:13:20.044 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:13:20.044 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:25.241 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:25.242 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:25.242 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:25.242 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:25.761 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:25.761 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:25.761 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:25.761 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:15:27.830 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:03.281 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:03.819 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:03.819 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:03.820 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:03.820 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:05.893 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:05.893 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session
+2025-06-10 00:16:05.894 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L166  | Validating session ID: test-session
+2025-06-10 00:16:05.894 | DEBUG    | concierge.core.security.terminal_security | validate_session_id  | L178  | Session ID valid: test-session

@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@source "../templates/index.html";
+@source "../static/js/app.js";
+
+@theme {
+  --color-1: #0d1117;
+  --color-2: #161b22;
+  --color-3: #21262d;
+  --color-surface: #30363d;
+  --color-primary: #c9d1d9;
+  --color-secondary: #8b949e;
+  --color-muted: #6e7681;
+  --color-accent: #58a6ff;
+  --color-accent-2: #539bf5;
+  --color-border: #30363d;
+  --font-sans: 'Helvetica';
+}
+
+@layer components {
+  .concierge-title {
+    @apply text-2xl font-bold tracking-tight text-center;
+  }
+}
+
+/* @theme block intentionally removed for this test */
+/* @source for index.html and app.js removed for this specific test */

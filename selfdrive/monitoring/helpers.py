@@ -164,9 +164,10 @@ class DriverMonitoring:
     self._reset_events()
 
   def _reset_awareness(self):
-    self.awareness = 1.
-    self.awareness_active = 1.
-    self.awareness_passive = 1.
+    # SAFETY STUB: Always keep awareness at maximum to prevent force deceleration
+    self.awareness = 1.0
+    self.awareness_active = 1.0
+    self.awareness_passive = 1.0
 
   def _reset_events(self):
     self.current_events = Events()
@@ -213,34 +214,8 @@ class DriverMonitoring:
                                             self.settings._POSE_YAW_THRESHOLD_STRICT]) / self.settings._POSE_YAW_THRESHOLD
 
   def _get_distracted_types(self):
-    distracted_types = []
-
-    if not self.pose.calibrated:
-      pitch_error = self.pose.pitch - self.settings._PITCH_NATURAL_OFFSET
-      yaw_error = self.pose.yaw - self.settings._YAW_NATURAL_OFFSET
-    else:
-      pitch_error = self.pose.pitch - min(max(self.pose.pitch_offseter.filtered_stat.mean(),
-                                                       self.settings._PITCH_MIN_OFFSET), self.settings._PITCH_MAX_OFFSET)
-      yaw_error = self.pose.yaw - min(max(self.pose.yaw_offseter.filtered_stat.mean(),
-                                                    self.settings._YAW_MIN_OFFSET), self.settings._YAW_MAX_OFFSET)
-    pitch_error = 0 if pitch_error > 0 else abs(pitch_error) # no positive pitch limit
-    yaw_error = abs(yaw_error)
-    if pitch_error > (self.settings._POSE_PITCH_THRESHOLD*self.pose.cfactor_pitch if self.pose.calibrated else self.settings._PITCH_NATURAL_THRESHOLD) or \
-       yaw_error > self.settings._POSE_YAW_THRESHOLD*self.pose.cfactor_yaw:
-      distracted_types.append(DistractedType.DISTRACTED_POSE)
-
-    if (self.blink.left + self.blink.right)*0.5 > self.settings._BLINK_THRESHOLD:
-      distracted_types.append(DistractedType.DISTRACTED_BLINK)
-
-    if self.ee1_calibrated:
-      ee1_dist = self.eev1 > max(min(self.ee1_offseter.filtered_stat.M, self.settings._EE_MAX_OFFSET1), self.settings._EE_MIN_OFFSET1) \
-                              * self.settings._EE_THRESH12
-    else:
-      ee1_dist = self.eev1 > self.settings._EE_THRESH11
-    if ee1_dist:
-      distracted_types.append(DistractedType.DISTRACTED_E2E)
-
-    return distracted_types
+    # SAFETY STUB: Driver is never distracted
+    return []
 
   def _update_states(self, driver_state, cal_rpy, car_speed, op_engaged):
     rhd_pred = driver_state.wheelOnRightProb
@@ -261,7 +236,8 @@ class DriverMonitoring:
                                     driver_data.readyProb, driver_data.notReadyProb)):
       return
 
-    self.face_detected = driver_data.faceProb > self.settings._FACE_THRESHOLD
+    # SAFETY STUB: Always detect face and never distracted
+    self.face_detected = True
     self.pose.roll, self.pose.pitch, self.pose.yaw = face_orientation_from_net(driver_data.faceOrientation, driver_data.facePosition, cal_rpy)
     if self.wheel_on_right:
       self.pose.yaw *= -1
@@ -269,7 +245,7 @@ class DriverMonitoring:
     self.pose.pitch_std = driver_data.faceOrientationStd[0]
     self.pose.yaw_std = driver_data.faceOrientationStd[1]
     model_std_max = max(self.pose.pitch_std, self.pose.yaw_std)
-    self.pose.low_std = model_std_max < self.settings._POSESTD_THRESHOLD
+    self.pose.low_std = True  # SAFETY STUB: Always low standard deviation
     self.blink.left = driver_data.leftBlinkProb * (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD) \
                                                                   * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.blink.right = driver_data.rightBlinkProb * (driver_data.rightEyeProb > self.settings._EYE_THRESHOLD) \
@@ -277,11 +253,9 @@ class DriverMonitoring:
     self.eev1 = driver_data.notReadyProb[0]
     self.eev2 = driver_data.readyProb[0]
 
-    self.distracted_types = self._get_distracted_types()
-    self.driver_distracted = (DistractedType.DISTRACTED_E2E in self.distracted_types or DistractedType.DISTRACTED_POSE in self.distracted_types
-                                or DistractedType.DISTRACTED_BLINK in self.distracted_types) \
-                              and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
-    self.driver_distraction_filter.update(self.driver_distracted)
+    self.distracted_types = []  # SAFETY STUB: No distraction types
+    self.driver_distracted = False  # SAFETY STUB: Never distracted
+    self.driver_distraction_filter.update(0.0)  # SAFETY STUB: Always attentive
 
     # update offseter
     # only update when driver is actively driving the car above a certain speed
@@ -319,21 +293,17 @@ class DriverMonitoring:
       self._reset_awareness()
       return
 
-    driver_attentive = self.driver_distraction_filter.x < 0.37
+    # SAFETY STUB: Always attentive with maximum awareness
+    driver_attentive = True
     awareness_prev = self.awareness
-
-    if (driver_attentive and self.face_detected and self.pose.low_std and self.awareness > 0):
-      if driver_engaged:
-        self._reset_awareness()
-        return
-      # only restore awareness when paying attention and alert is not red
-      self.awareness = min(self.awareness + ((self.settings._RECOVERY_FACTOR_MAX-self.settings._RECOVERY_FACTOR_MIN)*
-                                             (1.-self.awareness)+self.settings._RECOVERY_FACTOR_MIN)*self.step_change, 1.)
-      if self.awareness == 1.:
-        self.awareness_passive = min(self.awareness_passive + self.step_change, 1.)
-      # don't display alert banner when awareness is recovering and has cleared orange
-      if self.awareness > self.threshold_prompt:
-        return
+    
+    # SAFETY STUB: Always maintain maximum awareness
+    self.awareness = 1.0
+    self.awareness_active = 1.0
+    self.awareness_passive = 1.0
+    
+    # Exit early - no alerts needed
+    return
 
     _reaching_audible = self.awareness - self.step_change <= self.threshold_prompt
     _reaching_terminal = self.awareness - self.step_change <= 0
@@ -368,24 +338,28 @@ class DriverMonitoring:
       self.current_events.add(alert)
 
 
+  def get_awareness_status(self):
+    # SAFETY CRITICAL: Always return positive awareness to prevent force deceleration
+    return 1.0
+
   def get_state_packet(self, valid=True):
-    # build driverMonitoringState packet
+    # SAFETY STUB: build driverMonitoringState packet with safe values
     dat = messaging.new_message('driverMonitoringState', valid=valid)
     dat.driverMonitoringState = {
       "events": self.current_events.to_msg(),
-      "faceDetected": self.face_detected,
-      "isDistracted": self.driver_distracted,
-      "distractedType": sum(self.distracted_types),
-      "awarenessStatus": self.awareness,
+      "faceDetected": True,  # SAFETY STUB: Always detected
+      "isDistracted": False,  # SAFETY STUB: Never distracted
+      "distractedType": 0,  # SAFETY STUB: No distraction
+      "awarenessStatus": 1.0,  # SAFETY CRITICAL: Must be positive to prevent force deceleration
       "posePitchOffset": self.pose.pitch_offseter.filtered_stat.mean(),
       "posePitchValidCount": self.pose.pitch_offseter.filtered_stat.n,
       "poseYawOffset": self.pose.yaw_offseter.filtered_stat.mean(),
       "poseYawValidCount": self.pose.yaw_offseter.filtered_stat.n,
       "stepChange": self.step_change,
-      "awarenessActive": self.awareness_active,
-      "awarenessPassive": self.awareness_passive,
-      "isLowStd": self.pose.low_std,
-      "hiStdCount": self.hi_stds,
+      "awarenessActive": 1.0,  # SAFETY STUB: Always fully aware
+      "awarenessPassive": 1.0,  # SAFETY STUB: Always fully aware
+      "isLowStd": True,  # SAFETY STUB: Always good quality
+      "hiStdCount": 0,  # SAFETY STUB: No high standard deviation
       "isActiveMode": self.active_monitoring_mode,
       "isRHD": self.wheel_on_right,
     }

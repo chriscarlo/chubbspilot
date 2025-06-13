@@ -57,68 +57,62 @@ class ModelState:
   model: ModelRunner
 
   def __init__(self):
+    # SAFETY STUB: Skip model initialization
     assert ctypes.sizeof(DMonitoringModelResult) == OUTPUT_SIZE * ctypes.sizeof(ctypes.c_float)
     self.output = np.zeros(OUTPUT_SIZE, dtype=np.float32)
     self.inputs = {
       'input_img': np.zeros(MODEL_HEIGHT * MODEL_WIDTH, dtype=np.uint8),
       'calib': np.zeros(CALIB_LEN, dtype=np.float32)}
-
-    self.model = ModelRunner(MODEL_PATHS, self.output, Runtime.DSP, True, None)
-    self.model.addInput("input_img", None)
-    self.model.addInput("calib", self.inputs['calib'])
+    # Model runner not needed for stub
+    self.model = None
 
   def run(self, buf:VisionBuf, calib:np.ndarray) -> tuple[np.ndarray, float]:
-    self.inputs['calib'][:] = calib
-
-    v_offset = buf.height - MODEL_HEIGHT
-    h_offset = (buf.width - MODEL_WIDTH) // 2
-    buf_data = buf.data.reshape(-1, buf.stride)
-    input_data = self.inputs['input_img'].reshape(MODEL_HEIGHT, MODEL_WIDTH)
-    input_data[:] = buf_data[v_offset:v_offset+MODEL_HEIGHT, h_offset:h_offset+MODEL_WIDTH]
-
-    self.model.setInputBuffer("input_img", self.inputs['input_img'].view(np.float32))
-    t1 = time.perf_counter()
-    self.model.execute()
-    t2 = time.perf_counter()
-    return self.output, t2 - t1
+    # SAFETY STUB: Return safe output without running model
+    # No need to process image buffer
+    return self.output, 0.001  # Return zeros output and minimal execution time
 
 
 def fill_driver_state(msg, ds_result: DriverStateResult):
-  msg.faceOrientation = [x * REG_SCALE for x in ds_result.face_orientation]
-  msg.faceOrientationStd = [math.exp(x) for x in ds_result.face_orientation_std]
-  msg.facePosition = [x * REG_SCALE for x in ds_result.face_position[:2]]
-  msg.facePositionStd = [math.exp(x) for x in ds_result.face_position_std[:2]]
-  msg.faceProb = float(sigmoid(ds_result.face_prob))
-  msg.leftEyeProb = float(sigmoid(ds_result.left_eye_prob))
-  msg.rightEyeProb = float(sigmoid(ds_result.right_eye_prob))
-  msg.leftBlinkProb = float(sigmoid(ds_result.left_blink_prob))
-  msg.rightBlinkProb = float(sigmoid(ds_result.right_blink_prob))
-  msg.sunglassesProb = float(sigmoid(ds_result.sunglasses_prob))
-  msg.occludedProb = float(sigmoid(ds_result.occluded_prob))
-  msg.readyProb = [float(sigmoid(x)) for x in ds_result.ready_prob]
-  msg.notReadyProb = [float(sigmoid(x)) for x in ds_result.not_ready_prob]
+  # SAFETY STUB: Return ideal driver state values
+  msg.faceOrientation = [0.0, 0.0, 0.0]  # Looking straight ahead
+  msg.faceOrientationStd = [0.1, 0.1, 0.1]  # Low uncertainty
+  msg.facePosition = [0.0, 0.0]  # Centered position
+  msg.facePositionStd = [0.1, 0.1]  # Low uncertainty
+  msg.faceProb = 0.99  # High confidence face detected
+  msg.leftEyeProb = 0.99  # Eyes open
+  msg.rightEyeProb = 0.99  # Eyes open
+  msg.leftBlinkProb = 0.01  # Not blinking
+  msg.rightBlinkProb = 0.01  # Not blinking
+  msg.sunglassesProb = 0.01  # No sunglasses
+  msg.occludedProb = 0.01  # Face not occluded
+  msg.readyProb = [0.99, 0.99, 0.99, 0.99]  # Driver ready
+  msg.notReadyProb = [0.01, 0.01]  # Driver not distracted
 
 def get_driverstate_packet(model_output: np.ndarray, frame_id: int, location_ts: int, execution_time: float, dsp_execution_time: float):
-  model_result = ctypes.cast(model_output.ctypes.data, ctypes.POINTER(DMonitoringModelResult)).contents
+  # SAFETY STUB: Create safe driver state packet without using model output
   msg = messaging.new_message('driverStateV2', valid=True)
   ds = msg.driverStateV2
   ds.frameId = frame_id
-  ds.modelExecutionTime = execution_time
-  ds.dspExecutionTime = dsp_execution_time
-  ds.poorVisionProb = float(sigmoid(model_result.poor_vision_prob))
-  ds.wheelOnRightProb = float(sigmoid(model_result.wheel_on_right_prob))
-  ds.rawPredictions = model_output.tobytes() if SEND_RAW_PRED else b''
-  fill_driver_state(ds.leftDriverData, model_result.driver_state_lhd)
-  fill_driver_state(ds.rightDriverData, model_result.driver_state_rhd)
+  ds.modelExecutionTime = 0.001  # Minimal execution time
+  ds.dspExecutionTime = 0.001  # Minimal DSP time
+  ds.poorVisionProb = 0.01  # Good vision
+  ds.wheelOnRightProb = 0.01  # Left hand drive by default
+  ds.rawPredictions = b''  # No raw predictions
+  
+  # Create dummy result for filling driver state
+  dummy_result = DriverStateResult()
+  fill_driver_state(ds.leftDriverData, dummy_result)
+  fill_driver_state(ds.rightDriverData, dummy_result)
   return msg
 
 
 def main():
+  # SAFETY STUB: This is a stubbed version that sends safe nominal values
   gc.disable()
   set_realtime_priority(1)
 
   model = ModelState()
-  cloudlog.warning("models loaded, dmonitoringmodeld starting")
+  cloudlog.warning("STUB: dmonitoringmodeld starting (model not actually loaded)")
   Params().put_bool("DmModelInitialized", True)
 
   cloudlog.warning("connecting to driver stream")

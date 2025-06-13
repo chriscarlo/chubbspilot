@@ -1,0 +1,1046 @@
+2025-06-10 00:44:03.547 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L76   | Logger initialized for module: core.services.terminal.pty_manager
+2025-06-10 00:44:03.547 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250610.log
+2025-06-10 00:44:03.547 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L78   | Debug mode: True
+2025-06-10 00:44:03.552 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:44:03.552 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: test-session
+2025-06-10 00:44:03.552 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 24, Cols: 80
+2025-06-10 00:44:03.552 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:44:03.553 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:44:03.555 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21770 for session test-session
+2025-06-10 00:44:03.556 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session test-session
+2025-06-10 00:44:03.556 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21770, FD=27
+2025-06-10 00:44:03.556 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session test-session
+2025-06-10 00:44:03.556 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-10' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:44:03.557 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session test-session
+2025-06-10 00:44:03.559 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:44:04.062 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session test-session
+2025-06-10 00:44:44.623 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:44:44.623 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 00:44:44.623 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 00:44:44.623 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:44:44.623 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:44:44.628 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21773 for session terminal-main-session
+2025-06-10 00:44:44.631 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 00:44:44.631 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21773, FD=28
+2025-06-10 00:44:44.631 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 00:44:44.632 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-18' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:44:44.634 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 00:44:44.635 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:44:56.668 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 33 bytes from PTY (read #2)
+2025-06-10 00:45:09.446 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 00:46:55.093 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:46:55.093 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 00:46:55.094 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 00:46:55.094 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:46:55.094 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:46:55.099 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21804 for session terminal-main-session
+2025-06-10 00:46:55.103 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 00:46:55.103 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21804, FD=27
+2025-06-10 00:46:55.104 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 00:46:55.105 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-25' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:46:55.108 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 00:46:55.110 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:46:58.678 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:46:58.679 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 00:46:58.679 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 00:46:58.679 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:46:58.680 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:46:58.687 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21805 for session terminal-main-session
+2025-06-10 00:46:58.690 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 00:46:58.690 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21805, FD=30
+2025-06-10 00:46:58.691 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 00:46:58.692 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-32' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:46:58.694 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 00:46:58.695 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:46:58.826 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 00:46:58.930 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 00:48:40.853 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:48:40.853 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 00:48:40.853 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 00:48:40.853 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:48:40.853 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:48:40.855 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21834 for session terminal-main-session
+2025-06-10 00:48:40.856 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 00:48:40.856 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21834, FD=29
+2025-06-10 00:48:40.856 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 00:48:40.857 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-39' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:48:40.857 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 00:48:40.858 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:48:42.542 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #2)
+2025-06-10 00:48:43.367 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #3)
+2025-06-10 00:48:43.578 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #4)
+2025-06-10 00:48:43.662 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #5)
+2025-06-10 00:48:46.045 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #6)
+2025-06-10 00:48:46.213 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #7)
+2025-06-10 00:48:46.354 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #8)
+2025-06-10 00:48:46.499 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #9)
+2025-06-10 00:48:47.649 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #10)
+2025-06-10 00:48:48.728 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #11)
+2025-06-10 00:48:49.806 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #12)
+2025-06-10 00:48:49.817 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1475 bytes from PTY (read #13)
+2025-06-10 00:48:58.982 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #14)
+2025-06-10 00:48:59.843 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #15)
+2025-06-10 00:49:02.190 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #16)
+2025-06-10 00:49:02.362 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #17)
+2025-06-10 00:49:02.494 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #18)
+2025-06-10 00:49:02.644 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #19)
+2025-06-10 00:49:03.152 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #20)
+2025-06-10 00:49:03.863 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #21)
+2025-06-10 00:49:03.988 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #22)
+2025-06-10 00:49:04.067 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #23)
+2025-06-10 00:49:04.079 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 217 bytes from PTY (read #24)
+2025-06-10 00:49:05.451 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #25)
+2025-06-10 00:49:05.539 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #26)
+2025-06-10 00:49:05.592 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #27)
+2025-06-10 00:49:06.125 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #28)
+2025-06-10 00:49:06.285 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #29)
+2025-06-10 00:49:06.428 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #30)
+2025-06-10 00:49:29.767 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #31)
+2025-06-10 00:49:30.889 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #32)
+2025-06-10 00:49:31.051 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #33)
+2025-06-10 00:49:31.062 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 217 bytes from PTY (read #34)
+2025-06-10 00:49:32.372 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #35)
+2025-06-10 00:49:32.526 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #36)
+2025-06-10 00:49:32.620 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #37)
+2025-06-10 00:49:32.814 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #38)
+2025-06-10 00:49:36.544 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #39)
+2025-06-10 00:49:36.622 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #40)
+2025-06-10 00:49:36.861 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #41)
+2025-06-10 00:49:36.934 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #42)
+2025-06-10 00:49:37.313 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #43)
+2025-06-10 00:49:37.692 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #44)
+2025-06-10 00:49:37.819 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #45)
+2025-06-10 00:49:38.172 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #46)
+2025-06-10 00:49:38.564 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #47)
+2025-06-10 00:49:38.776 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #48)
+2025-06-10 00:49:38.855 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #49)
+2025-06-10 00:49:39.061 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #50)
+2025-06-10 00:49:39.237 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #51)
+2025-06-10 00:49:39.370 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #52)
+2025-06-10 00:49:39.496 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #53)
+2025-06-10 00:49:40.248 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #54)
+2025-06-10 00:49:40.319 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #55)
+2025-06-10 00:49:40.442 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1477 bytes from PTY (read #56)
+2025-06-10 00:53:39.610 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 00:53:39.610 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 00:53:39.611 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 00:53:39.611 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 00:53:39.611 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 00:53:39.613 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 21879 for session terminal-main-session
+2025-06-10 00:53:39.615 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 00:53:39.615 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=21879, FD=31
+2025-06-10 00:53:39.615 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 00:53:39.616 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-46' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 00:53:39.617 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 00:53:39.618 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 00:53:39.751 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 00:53:39.851 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 01:18:48.674 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 01:18:48.674 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 01:18:48.674 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 01:18:48.674 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 01:18:48.675 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 01:18:48.680 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22874 for session terminal-main-session
+2025-06-10 01:18:48.683 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 01:18:48.684 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22874, FD=29
+2025-06-10 01:18:48.684 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 01:18:48.684 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-53' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 01:18:48.686 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 01:18:48.687 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 01:18:52.865 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #2)
+2025-06-10 01:18:54.148 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #3)
+2025-06-10 01:18:54.468 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #4)
+2025-06-10 01:18:57.280 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 38 bytes from PTY (read #5)
+2025-06-10 01:19:04.727 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 01:19:04.728 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 01:19:04.728 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 01:19:04.728 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 01:19:04.728 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 01:19:04.730 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22875 for session terminal-main-session
+2025-06-10 01:19:04.732 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 01:19:04.732 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22875, FD=28
+2025-06-10 01:19:04.732 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 01:19:04.732 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-60' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 01:19:04.734 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 01:19:04.735 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 01:19:04.901 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 01:19:04.968 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 01:19:22.023 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 01:19:22.023 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 01:19:22.024 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 01:19:22.024 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 01:19:22.025 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 01:19:22.031 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22880 for session terminal-main-session
+2025-06-10 01:19:22.039 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 01:19:22.041 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22880, FD=27
+2025-06-10 01:19:22.042 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 01:19:22.042 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-66' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 01:19:22.046 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 01:19:22.048 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 03:00:57.693 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 03:33:09.042 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 03:33:09.054 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 03:33:09.057 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 03:33:09.069 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 03:33:09.071 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 03:33:09.200 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22891 for session terminal-main-session
+2025-06-10 03:33:09.261 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 03:33:09.273 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22891, FD=27
+2025-06-10 03:33:09.276 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 03:33:09.290 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-72' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 03:33:09.350 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 03:33:09.368 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 03:51:56.317 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 03:51:56.474 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 03:51:56.476 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 03:51:56.477 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 03:51:56.588 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 03:51:56.590 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 03:51:56.953 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22929 for session terminal-main-session
+2025-06-10 03:51:57.001 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 03:51:57.014 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22929, FD=27
+2025-06-10 03:51:57.016 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 03:51:57.081 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-78' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 03:51:57.129 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 03:51:57.147 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 05:06:34.940 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 05:32:28.915 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 05:32:28.916 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 05:32:28.918 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 05:32:28.931 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 05:32:28.934 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 05:32:29.082 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22941 for session terminal-main-session
+2025-06-10 05:32:29.131 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 05:32:29.133 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22941, FD=27
+2025-06-10 05:32:29.147 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 05:32:29.162 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-84' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 05:32:29.229 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 05:32:29.299 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 06:02:09.293 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 06:02:09.618 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 06:02:09.620 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 06:02:09.622 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 06:02:09.624 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 06:02:09.625 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 06:02:09.693 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22946 for session terminal-main-session
+2025-06-10 06:02:09.719 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 06:02:09.721 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22946, FD=27
+2025-06-10 06:02:09.723 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 06:02:09.730 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-90' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 06:02:09.759 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 06:02:10.075 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 06:02:29.292 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 06:02:31.480 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 06:02:31.482 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 06:02:31.483 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 06:02:31.485 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 06:02:31.486 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 06:02:31.544 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 22967 for session terminal-main-session
+2025-06-10 06:02:31.608 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 06:02:31.622 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=22967, FD=27
+2025-06-10 06:02:31.625 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 06:02:31.655 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-96' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 06:02:31.742 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 06:02:31.910 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:15:09.633 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 07:15:09.633 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 07:15:09.633 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 07:15:09.634 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 07:15:09.634 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 07:15:20.613 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 23058 for session terminal-main-session
+2025-06-10 07:15:20.620 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 07:15:20.620 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=23058, FD=29
+2025-06-10 07:15:20.621 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 07:15:20.622 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-102' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 07:15:20.634 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 07:15:20.636 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 07:15:20.637 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:15:20.649 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 07:15:47.230 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 07:15:47.230 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 07:15:47.230 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 07:15:47.230 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 07:15:47.230 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 07:15:47.233 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 23666 for session terminal-main-session
+2025-06-10 07:15:47.235 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 07:15:47.235 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=23666, FD=33
+2025-06-10 07:15:47.235 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 07:15:47.236 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-109' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 07:15:47.237 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 07:15:47.238 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:15:50.342 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #2)
+2025-06-10 07:15:59.624 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #3)
+2025-06-10 07:22:20.294 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 07:22:20.294 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 07:22:20.294 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 07:22:20.294 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 07:22:20.294 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 07:22:20.302 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 24405 for session terminal-main-session
+2025-06-10 07:22:20.304 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 07:22:20.305 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=24405, FD=34
+2025-06-10 07:22:20.305 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 07:22:20.306 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-116' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 07:22:20.307 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 07:22:20.309 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:22:20.717 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 07:22:20.762 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 07:24:08.429 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 07:24:08.429 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 07:24:08.429 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 07:24:08.430 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 07:24:08.430 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 07:24:08.432 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 24429 for session terminal-main-session
+2025-06-10 07:24:08.433 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 07:24:08.433 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=24429, FD=33
+2025-06-10 07:24:08.433 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 07:24:08.434 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-123' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 07:24:08.435 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 07:24:08.436 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:24:10.221 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #2)
+2025-06-10 07:24:10.328 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #3)
+2025-06-10 07:24:10.456 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #4)
+2025-06-10 07:24:10.467 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1482 bytes from PTY (read #5)
+2025-06-10 07:24:11.966 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #6)
+2025-06-10 07:24:12.140 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #7)
+2025-06-10 07:24:12.208 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #8)
+2025-06-10 07:24:12.360 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #9)
+2025-06-10 07:24:12.595 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #10)
+2025-06-10 07:24:13.111 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #11)
+2025-06-10 07:24:14.580 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #12)
+2025-06-10 07:24:14.657 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #13)
+2025-06-10 07:24:14.794 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #14)
+2025-06-10 07:24:14.805 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1482 bytes from PTY (read #15)
+2025-06-10 07:42:57.503 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 07:42:57.504 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 07:42:57.504 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 07:42:57.504 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 07:42:57.505 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 07:42:57.511 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 24449 for session terminal-main-session
+2025-06-10 07:42:57.512 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 07:42:57.512 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=24449, FD=35
+2025-06-10 07:42:57.512 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 07:42:57.512 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-130' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 07:42:57.513 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 07:42:57.517 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 07:42:57.607 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L308  | Terminated PTY process for session terminal-main-session
+2025-06-10 07:42:57.642 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L260  | PTY reader for session terminal-main-session stopped (read 1 times)
+2025-06-10 10:31:58.695 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L46   | === CREATE PTY ===
+2025-06-10 10:31:58.697 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L47   | Session ID: terminal-main-session
+2025-06-10 10:31:58.697 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Shell: /bin/sh, Rows: 42, Cols: 194
+2025-06-10 10:31:58.697 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | CWD: None
+2025-06-10 10:31:58.697 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L52   | Validating session ID...
+2025-06-10 10:31:58.734 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L144  | Created PTY process 24837 for session terminal-main-session
+2025-06-10 10:31:58.736 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L204  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:31:58.736 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L210  | PTY process found: PID=24837, FD=33
+2025-06-10 10:31:58.737 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L263  | Creating reader task for session terminal-main-session
+2025-06-10 10:31:58.738 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L266  | Reader task created: <Task pending name='Task-137' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:213>>
+2025-06-10 10:31:58.740 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L214  | Reader task started for session terminal-main-session
+2025-06-10 10:31:58.755 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #1)
+2025-06-10 10:32:00.624 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #2)
+2025-06-10 10:32:03.902 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #3)
+2025-06-10 10:32:04.044 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 3 bytes from PTY (read #4)
+2025-06-10 10:32:04.149 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 6 bytes from PTY (read #5)
+2025-06-10 10:32:04.903 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #6)
+2025-06-10 10:32:05.025 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1 bytes from PTY (read #7)
+2025-06-10 10:32:05.111 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #8)
+2025-06-10 10:32:05.126 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 1523 bytes from PTY (read #9)
+2025-06-10 10:32:05.139 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #10)
+2025-06-10 10:32:06.711 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 4 bytes from PTY (read #11)
+2025-06-10 10:32:08.272 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 2 bytes from PTY (read #12)
+2025-06-10 10:32:08.283 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L237  | Read 30 bytes from PTY (read #13)
+2025-06-10 10:38:11.923 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L76   | Logger initialized for module: core.services.terminal.pty_manager
+2025-06-10 10:38:11.923 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250610.log
+2025-06-10 10:38:11.923 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L78   | Debug mode: True
+2025-06-10 10:38:11.933 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:38:11.933 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:38:11.933 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:38:11.933 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:38:11.933 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:38:11.937 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25100 for session terminal-main-session
+2025-06-10 10:38:11.940 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:38:11.940 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25100, FD=20
+2025-06-10 10:38:11.940 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:38:11.941 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-8' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:38:11.945 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:38:11.947 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:38:11.961 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 108 bytes from PTY (read #2)
+2025-06-10 10:38:11.972 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 33 bytes from PTY (read #3)
+2025-06-10 10:40:21.797 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:40:21.798 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:40:21.798 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:40:21.798 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:40:21.798 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:40:21.802 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25104 for session terminal-main-session
+2025-06-10 10:40:21.805 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:40:21.805 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25104, FD=23
+2025-06-10 10:40:21.805 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:40:21.805 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-15' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:40:21.807 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:40:21.807 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:40:21.819 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:40:21.919 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L332  | Terminated PTY process for session terminal-main-session
+2025-06-10 10:40:21.942 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L284  | PTY reader for session terminal-main-session stopped (read 2 times)
+2025-06-10 10:40:34.099 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:40:34.099 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:40:34.099 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:40:34.099 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:40:34.100 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:40:34.104 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25107 for session terminal-main-session
+2025-06-10 10:40:34.106 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:40:34.107 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25107, FD=21
+2025-06-10 10:40:34.107 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:40:34.108 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-22' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:40:34.112 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:40:34.113 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:40:34.125 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:40:35.954 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #3)
+2025-06-10 10:40:36.053 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #4)
+2025-06-10 10:40:36.490 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #5)
+2025-06-10 10:40:36.502 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1556 bytes from PTY (read #6)
+2025-06-10 10:40:39.300 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 2 bytes from PTY (read #7)
+2025-06-10 10:40:39.727 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #8)
+2025-06-10 10:40:39.992 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #9)
+2025-06-10 10:40:41.634 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #10)
+2025-06-10 10:40:41.766 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #11)
+2025-06-10 10:40:42.493 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #12)
+2025-06-10 10:40:42.660 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #13)
+2025-06-10 10:40:42.763 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #14)
+2025-06-10 10:40:42.921 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #15)
+2025-06-10 10:40:43.045 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #16)
+2025-06-10 10:40:44.883 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #17)
+2025-06-10 10:40:46.375 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #18)
+2025-06-10 10:40:46.614 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #19)
+2025-06-10 10:40:46.697 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #20)
+2025-06-10 10:40:47.065 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #21)
+2025-06-10 10:40:47.214 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #22)
+2025-06-10 10:40:47.357 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #23)
+2025-06-10 10:40:47.505 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #24)
+2025-06-10 10:40:48.393 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #25)
+2025-06-10 10:40:48.444 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #26)
+2025-06-10 10:40:48.548 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #27)
+2025-06-10 10:40:48.679 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #28)
+2025-06-10 10:40:48.874 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #29)
+2025-06-10 10:40:48.945 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #30)
+2025-06-10 10:40:49.144 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 51 bytes from PTY (read #31)
+2025-06-10 10:40:49.956 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #32)
+2025-06-10 10:40:50.069 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #33)
+2025-06-10 10:40:50.137 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #34)
+2025-06-10 10:40:50.148 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 949 bytes from PTY (read #35)
+2025-06-10 10:40:51.877 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #36)
+2025-06-10 10:40:52.050 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #37)
+2025-06-10 10:40:52.147 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #38)
+2025-06-10 10:40:52.280 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #39)
+2025-06-10 10:40:52.378 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #40)
+2025-06-10 10:40:58.497 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #41)
+2025-06-10 10:40:58.677 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #42)
+2025-06-10 10:40:58.880 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #43)
+2025-06-10 10:40:59.040 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #44)
+2025-06-10 10:40:59.758 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #45)
+2025-06-10 10:40:59.911 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 3 bytes from PTY (read #46)
+2025-06-10 10:40:59.957 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #47)
+2025-06-10 10:41:00.162 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #48)
+2025-06-10 10:41:00.319 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #49)
+2025-06-10 10:41:00.492 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #50)
+2025-06-10 10:41:00.586 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #51)
+2025-06-10 10:41:00.641 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #52)
+2025-06-10 10:41:00.790 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #53)
+2025-06-10 10:41:00.871 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #54)
+2025-06-10 10:41:01.037 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #55)
+2025-06-10 10:41:01.110 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #56)
+2025-06-10 10:41:01.154 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #57)
+2025-06-10 10:41:01.239 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #58)
+2025-06-10 10:41:01.364 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #59)
+2025-06-10 10:41:01.563 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #60)
+2025-06-10 10:41:01.575 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 56 bytes from PTY (read #61)
+2025-06-10 10:41:03.127 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 20 bytes from PTY (read #62)
+2025-06-10 10:41:03.288 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #63)
+2025-06-10 10:41:03.438 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 13 bytes from PTY (read #64)
+2025-06-10 10:41:03.594 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #65)
+2025-06-10 10:41:03.741 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #66)
+2025-06-10 10:41:03.900 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #67)
+2025-06-10 10:41:04.063 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #68)
+2025-06-10 10:41:04.228 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #69)
+2025-06-10 10:41:04.393 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #70)
+2025-06-10 10:41:04.543 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #71)
+2025-06-10 10:41:05.489 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 16 bytes from PTY (read #72)
+2025-06-10 10:41:05.618 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 27 bytes from PTY (read #73)
+2025-06-10 10:41:05.995 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 23 bytes from PTY (read #74)
+2025-06-10 10:41:06.140 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #75)
+2025-06-10 10:41:06.295 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #76)
+2025-06-10 10:41:06.428 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #77)
+2025-06-10 10:41:06.779 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 20 bytes from PTY (read #78)
+2025-06-10 10:41:07.026 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #79)
+2025-06-10 10:41:07.302 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 13 bytes from PTY (read #80)
+2025-06-10 10:41:07.669 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #81)
+2025-06-10 10:41:07.929 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #82)
+2025-06-10 10:41:08.345 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 16 bytes from PTY (read #83)
+2025-06-10 10:41:08.516 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 27 bytes from PTY (read #84)
+2025-06-10 10:41:08.686 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 23 bytes from PTY (read #85)
+2025-06-10 10:41:09.756 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 20 bytes from PTY (read #86)
+2025-06-10 10:41:09.935 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #87)
+2025-06-10 10:41:10.090 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 13 bytes from PTY (read #88)
+2025-06-10 10:41:11.790 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 16 bytes from PTY (read #89)
+2025-06-10 10:41:11.994 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 27 bytes from PTY (read #90)
+2025-06-10 10:41:12.170 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 23 bytes from PTY (read #91)
+2025-06-10 10:41:15.891 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 20 bytes from PTY (read #92)
+2025-06-10 10:41:16.069 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #93)
+2025-06-10 10:41:16.220 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 13 bytes from PTY (read #94)
+2025-06-10 10:41:16.700 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #95)
+2025-06-10 10:41:26.166 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #96)
+2025-06-10 10:41:26.177 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 75 bytes from PTY (read #97)
+2025-06-10 10:41:32.912 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 2480 bytes from PTY (read #98)
+2025-06-10 10:44:04.297 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L76   | Logger initialized for module: core.services.terminal.pty_manager
+2025-06-10 10:44:04.297 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250610.log
+2025-06-10 10:44:04.297 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L78   | Debug mode: True
+2025-06-10 10:44:04.305 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:44:04.305 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:44:04.305 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:44:04.306 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:44:04.306 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:44:04.309 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25253 for session terminal-main-session
+2025-06-10 10:44:04.311 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:44:04.311 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25253, FD=20
+2025-06-10 10:44:04.311 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:44:04.311 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-8' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:44:04.313 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:44:04.314 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:44:04.326 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:52:51.382 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:52:51.382 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:52:51.382 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:52:51.382 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:52:51.383 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:52:51.386 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25353 for session terminal-main-session
+2025-06-10 10:52:51.387 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:52:51.388 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25353, FD=23
+2025-06-10 10:52:51.388 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:52:51.388 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-16' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:52:51.390 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:52:51.391 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:52:51.403 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:52:51.531 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L332  | Terminated PTY process for session terminal-main-session
+2025-06-10 10:52:51.638 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L284  | PTY reader for session terminal-main-session stopped (read 2 times)
+2025-06-10 10:52:52.517 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:52:52.518 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:52:52.518 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:52:52.518 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:52:52.518 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:52:52.523 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25356 for session terminal-main-session
+2025-06-10 10:52:52.527 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:52:52.527 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25356, FD=22
+2025-06-10 10:52:52.527 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:52:52.528 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-23' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:52:52.530 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:52:52.531 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:52:52.543 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:52:54.974 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #3)
+2025-06-10 10:52:55.048 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #4)
+2025-06-10 10:52:55.172 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #5)
+2025-06-10 10:52:55.185 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1577 bytes from PTY (read #6)
+2025-06-10 10:52:56.301 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #7)
+2025-06-10 10:52:56.489 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #8)
+2025-06-10 10:52:56.558 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #9)
+2025-06-10 10:52:56.935 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #10)
+2025-06-10 10:52:57.010 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #11)
+2025-06-10 10:52:58.328 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #12)
+2025-06-10 10:52:58.377 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #13)
+2025-06-10 10:52:58.538 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #14)
+2025-06-10 10:52:58.646 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #15)
+2025-06-10 10:52:58.845 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #16)
+2025-06-10 10:52:58.856 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 38 bytes from PTY (read #17)
+2025-06-10 10:52:59.349 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #18)
+2025-06-10 10:52:59.446 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #19)
+2025-06-10 10:52:59.526 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #20)
+2025-06-10 10:52:59.538 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #21)
+2025-06-10 10:53:00.262 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #22)
+2025-06-10 10:53:00.411 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #23)
+2025-06-10 10:53:00.483 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #24)
+2025-06-10 10:53:00.619 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #25)
+2025-06-10 10:53:00.743 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #26)
+2025-06-10 10:53:01.111 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #27)
+2025-06-10 10:53:01.184 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #28)
+2025-06-10 10:53:01.310 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #29)
+2025-06-10 10:53:01.476 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #30)
+2025-06-10 10:53:01.613 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #31)
+2025-06-10 10:53:01.701 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 55 bytes from PTY (read #32)
+2025-06-10 10:53:02.398 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #33)
+2025-06-10 10:53:02.495 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #34)
+2025-06-10 10:53:02.643 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 11 bytes from PTY (read #35)
+2025-06-10 10:53:02.655 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 817 bytes from PTY (read #36)
+2025-06-10 10:53:03.940 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 2 bytes from PTY (read #37)
+2025-06-10 10:53:04.675 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 12 bytes from PTY (read #38)
+2025-06-10 10:53:05.025 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 9 bytes from PTY (read #39)
+2025-06-10 10:53:05.375 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 19 bytes from PTY (read #40)
+2025-06-10 10:53:05.768 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #41)
+2025-06-10 10:53:05.987 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #42)
+2025-06-10 10:53:06.268 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #43)
+2025-06-10 10:53:06.444 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #44)
+2025-06-10 10:53:07.058 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #45)
+2025-06-10 10:53:08.690 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #46)
+2025-06-10 10:53:08.858 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #47)
+2025-06-10 10:53:14.601 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 21 bytes from PTY (read #48)
+2025-06-10 10:53:14.796 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 22 bytes from PTY (read #49)
+2025-06-10 10:53:14.968 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #50)
+2025-06-10 10:53:15.120 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 15 bytes from PTY (read #51)
+2025-06-10 10:53:15.304 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #52)
+2025-06-10 10:53:15.466 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #53)
+2025-06-10 10:53:15.627 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #54)
+2025-06-10 10:53:15.800 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #55)
+2025-06-10 10:53:16.099 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 2 bytes from PTY (read #56)
+2025-06-10 10:53:17.011 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 12 bytes from PTY (read #57)
+2025-06-10 10:53:18.064 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 9 bytes from PTY (read #58)
+2025-06-10 10:53:19.844 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 19 bytes from PTY (read #59)
+2025-06-10 10:53:28.971 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 22 bytes from PTY (read #60)
+2025-06-10 10:53:30.031 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 19 bytes from PTY (read #61)
+2025-06-10 10:53:30.471 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #62)
+2025-06-10 10:53:30.952 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #63)
+2025-06-10 10:53:31.229 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #64)
+2025-06-10 10:53:31.387 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #65)
+2025-06-10 10:53:31.653 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 21 bytes from PTY (read #66)
+2025-06-10 10:53:31.702 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #67)
+2025-06-10 10:53:32.403 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 21 bytes from PTY (read #68)
+2025-06-10 10:53:32.552 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 22 bytes from PTY (read #69)
+2025-06-10 10:53:32.687 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #70)
+2025-06-10 10:53:32.837 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 15 bytes from PTY (read #71)
+2025-06-10 10:53:32.973 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #72)
+2025-06-10 10:53:33.118 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #73)
+2025-06-10 10:53:33.270 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #74)
+2025-06-10 10:53:33.407 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #75)
+2025-06-10 10:53:33.551 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #76)
+2025-06-10 10:53:34.214 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 2 bytes from PTY (read #77)
+2025-06-10 10:53:34.752 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 12 bytes from PTY (read #78)
+2025-06-10 10:53:34.786 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 9 bytes from PTY (read #79)
+2025-06-10 10:53:34.813 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 19 bytes from PTY (read #80)
+2025-06-10 10:53:34.833 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 25 bytes from PTY (read #81)
+2025-06-10 10:53:34.860 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #82)
+2025-06-10 10:53:34.887 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #83)
+2025-06-10 10:53:34.914 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #84)
+2025-06-10 10:53:34.941 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #85)
+2025-06-10 10:53:34.969 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #86)
+2025-06-10 10:53:34.996 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #87)
+2025-06-10 10:53:35.023 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #88)
+2025-06-10 10:53:35.050 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #89)
+2025-06-10 10:53:35.077 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #90)
+2025-06-10 10:53:35.107 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #91)
+2025-06-10 10:53:35.133 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #92)
+2025-06-10 10:53:35.160 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #93)
+2025-06-10 10:53:35.187 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #94)
+2025-06-10 10:53:35.358 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 21 bytes from PTY (read #95)
+2025-06-10 10:53:35.513 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 22 bytes from PTY (read #96)
+2025-06-10 10:53:35.665 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #97)
+2025-06-10 10:53:36.248 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 15 bytes from PTY (read #98)
+2025-06-10 10:53:36.275 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 5 bytes from PTY (read #99)
+2025-06-10 10:53:36.297 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #100)
+2025-06-10 10:53:36.325 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #101)
+2025-06-10 10:53:36.354 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #102)
+2025-06-10 10:53:36.383 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #103)
+2025-06-10 10:53:36.412 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #104)
+2025-06-10 10:53:36.439 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #105)
+2025-06-10 10:53:36.468 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #106)
+2025-06-10 10:53:36.497 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #107)
+2025-06-10 10:53:36.529 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #108)
+2025-06-10 10:53:36.556 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #109)
+2025-06-10 10:53:36.584 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #110)
+2025-06-10 10:53:36.610 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #111)
+2025-06-10 10:53:36.639 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #112)
+2025-06-10 10:53:36.669 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #113)
+2025-06-10 10:53:36.697 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 1 bytes from PTY (read #114)
+2025-06-10 10:53:48.055 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 10:53:48.055 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 10:53:48.055 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 10:53:48.055 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 10:53:48.056 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 10:53:48.061 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 25362 for session terminal-main-session
+2025-06-10 10:53:48.064 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L228  | Starting PTY reader for session terminal-main-session
+2025-06-10 10:53:48.064 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | PTY process found: PID=25362, FD=21
+2025-06-10 10:53:48.065 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L287  | Creating reader task for session terminal-main-session
+2025-06-10 10:53:48.065 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L290  | Reader task created: <Task pending name='Task-30' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:237>>
+2025-06-10 10:53:48.068 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L238  | Reader task started for session terminal-main-session
+2025-06-10 10:53:48.069 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 39 bytes from PTY (read #1)
+2025-06-10 10:53:48.081 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L261  | Read 141 bytes from PTY (read #2)
+2025-06-10 10:53:48.203 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L332  | Terminated PTY process for session terminal-main-session
+2025-06-10 10:53:48.204 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L284  | PTY reader for session terminal-main-session stopped (read 2 times)
+2025-06-10 18:05:50.941 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L76   | Logger initialized for module: core.services.terminal.pty_manager
+2025-06-10 18:05:50.953 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250610.log
+2025-06-10 18:05:50.953 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L78   | Debug mode: True
+2025-06-10 18:05:51.241 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:05:51.242 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:05:51.242 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 18:05:51.243 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:05:51.245 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:05:51.740 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26301 for session terminal-main-session
+2025-06-10 18:05:51.820 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:05:51.821 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26301, FD=22
+2025-06-10 18:05:51.823 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:05:51.834 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-5695' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:05:51.850 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:05:51.944 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:05:52.031 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:05:52.063 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 8 bytes from PTY (read #3)
+2025-06-10 18:05:52.075 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 25 bytes from PTY (read #4)
+2025-06-10 18:05:57.379 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:06:07.490 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:06:07.491 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:06:07.492 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 18:06:07.492 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:06:07.492 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:06:07.711 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26305 for session terminal-main-session
+2025-06-10 18:06:07.749 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:06:07.750 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26305, FD=22
+2025-06-10 18:06:07.750 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:06:07.752 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-5712' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:06:07.756 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:06:07.757 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:06:07.859 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:06:07.872 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:06:10.168 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:07:46.767 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:07:46.769 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:07:46.769 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 42, Cols: 194
+2025-06-10 18:07:46.770 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:07:46.770 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:07:46.928 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26393 for session terminal-main-session
+2025-06-10 18:07:46.939 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:07:46.940 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26393, FD=22
+2025-06-10 18:07:46.940 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:07:46.945 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-5809' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:07:46.957 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:07:46.966 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:07:47.024 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:07:47.037 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:07:48.745 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:16:14.567 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:16:14.571 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:16:14.571 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:16:14.573 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:16:14.575 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:16:14.912 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26405 for session terminal-main-session
+2025-06-10 18:16:15.025 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:16:15.025 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26405, FD=22
+2025-06-10 18:16:15.036 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:16:15.075 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-5980' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:16:15.094 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:16:15.112 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:16:15.276 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:16:15.293 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:16:23.998 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:16:33.343 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:16:33.343 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:16:33.343 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:16:33.343 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:16:33.344 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:16:33.445 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26410 for session terminal-main-session
+2025-06-10 18:16:33.452 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:16:33.453 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26410, FD=22
+2025-06-10 18:16:33.456 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:16:33.459 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-5997' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:16:33.491 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:16:33.492 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:16:33.534 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:16:33.548 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:26:35.568 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L196  | write_to_pty received 5 bytes: b'\x1b[15~'
+2025-06-10 18:26:35.575 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L201  | Decoded text: '\x1b[15~'
+2025-06-10 18:26:35.577 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L203  | Validation result: True
+2025-06-10 18:26:35.596 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 1 bytes from PTY (read #4)
+2025-06-10 18:26:35.620 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 1 bytes from PTY (read #5)
+2025-06-10 18:26:43.007 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:26:43.626 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:26:43.627 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:26:43.628 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:26:43.628 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:26:43.630 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:26:43.895 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26464 for session terminal-main-session
+2025-06-10 18:26:43.906 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:26:43.906 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26464, FD=22
+2025-06-10 18:26:43.907 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:26:43.911 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-6007' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:26:43.931 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:26:43.947 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:26:44.149 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:26:44.198 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:27:02.798 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:27:02.806 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:27:02.806 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:27:02.807 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:27:02.807 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:27:02.807 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:27:02.913 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26467 for session terminal-main-session
+2025-06-10 18:27:02.928 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:27:02.928 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26467, FD=22
+2025-06-10 18:27:02.928 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:27:02.930 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-6021' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:27:02.944 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:27:02.946 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:27:02.990 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:27:03.003 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:27:09.042 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:27:12.091 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:27:12.091 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:27:12.091 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:27:12.091 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:27:12.091 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:27:12.139 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26470 for session terminal-main-session
+2025-06-10 18:27:12.143 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:27:12.143 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26470, FD=22
+2025-06-10 18:27:12.143 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:27:12.143 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-6031' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:27:12.146 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:27:12.147 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:27:12.175 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:27:12.187 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:27:16.264 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:27:23.384 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:27:23.384 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:27:23.384 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:27:23.385 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:27:23.385 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:27:23.453 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26473 for session terminal-main-session
+2025-06-10 18:27:23.457 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:27:23.458 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26473, FD=22
+2025-06-10 18:27:23.458 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:27:23.461 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-6047' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:27:23.471 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:27:23.474 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:27:23.501 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:27:23.517 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:27:54.588 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:28:04.499 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:28:04.500 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:28:04.500 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:28:04.500 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:28:04.501 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:28:04.638 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26477 for session terminal-main-session
+2025-06-10 18:28:04.670 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:28:04.670 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26477, FD=22
+2025-06-10 18:28:04.672 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:28:04.682 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-6067' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:28:04.700 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:28:04.701 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:28:04.768 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:28:04.781 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:28:11.782 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:39:51.248 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L76   | Logger initialized for module: core.services.terminal.pty_manager
+2025-06-10 18:39:51.254 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_core_services_terminal_pty_manager_20250610.log
+2025-06-10 18:39:51.256 | DEBUG    | concierge.core.services.terminal.pty_manager | setup_logging        | L78   | Debug mode: True
+2025-06-10 18:39:51.513 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:39:51.513 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:39:51.513 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:39:51.513 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:39:51.516 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:39:51.931 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26525 for session terminal-main-session
+2025-06-10 18:39:51.955 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:39:51.956 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26525, FD=22
+2025-06-10 18:39:51.957 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:39:51.969 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-20' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:39:51.992 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:39:52.041 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:39:52.135 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:39:52.152 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:39:53.382 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:39:55.110 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:39:55.110 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:39:55.111 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:39:55.111 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:39:55.111 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:39:55.197 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26529 for session terminal-main-session
+2025-06-10 18:39:55.228 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:39:55.228 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26529, FD=22
+2025-06-10 18:39:55.229 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:39:55.230 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-30' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:39:55.237 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:39:55.239 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:39:55.261 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:39:55.275 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:39:57.073 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:39:59.524 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:39:59.524 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:39:59.524 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:39:59.524 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:39:59.525 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:39:59.587 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26532 for session terminal-main-session
+2025-06-10 18:39:59.622 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:39:59.623 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26532, FD=16
+2025-06-10 18:39:59.624 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:39:59.627 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-38' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:39:59.630 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:39:59.634 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:39:59.663 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:39:59.677 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:40:08.643 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:40:53.514 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:40:53.515 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:40:53.516 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:40:53.517 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:40:53.519 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:40:53.865 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26535 for session terminal-main-session
+2025-06-10 18:40:53.906 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:40:53.908 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26535, FD=22
+2025-06-10 18:40:53.909 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:40:53.956 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-97' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:40:54.012 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:40:54.031 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:40:54.193 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:40:54.207 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:40:55.237 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 18:41:38.845 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 18:41:38.846 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 18:41:38.846 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 18:41:38.847 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 18:41:38.847 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 18:41:39.034 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26538 for session terminal-main-session
+2025-06-10 18:41:39.076 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 18:41:39.077 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26538, FD=22
+2025-06-10 18:41:39.077 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 18:41:39.081 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-132' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 18:41:39.090 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 18:41:39.100 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 18:41:39.234 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 18:41:39.250 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 18:41:49.391 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L196  | write_to_pty received 1 bytes: b'\x03'
+2025-06-10 18:41:49.391 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L201  | Decoded text: '\x03'
+2025-06-10 18:41:49.392 | DEBUG    | concierge.core.services.terminal.pty_manager | write_to_pty         | L203  | Validation result: True
+2025-06-10 18:41:49.393 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 11 bytes from PTY (read #4)
+2025-06-10 18:41:49.405 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 52 bytes from PTY (read #5)
+2025-06-10 18:42:09.974 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:01:46.143 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:01:46.146 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:01:46.147 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 19:01:46.147 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:01:46.148 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:01:46.172 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26700 for session terminal-main-session
+2025-06-10 19:01:46.180 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:01:46.182 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26700, FD=17
+2025-06-10 19:01:46.184 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:01:46.188 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1201' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:01:46.200 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:01:46.214 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:01:46.255 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 19:01:46.269 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 19:01:52.374 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:01:54.235 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:01:54.236 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:01:54.237 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 19:01:54.237 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:01:54.237 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:01:54.247 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26703 for session terminal-main-session
+2025-06-10 19:01:54.251 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:01:54.251 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26703, FD=22
+2025-06-10 19:01:54.252 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:01:54.254 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1211' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:01:54.263 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:01:54.265 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:01:54.279 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:01:55.982 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:02:01.049 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:02:01.050 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:02:01.050 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 19:02:01.050 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:02:01.051 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:02:01.056 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26706 for session terminal-main-session
+2025-06-10 19:02:01.060 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:02:01.061 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26706, FD=22
+2025-06-10 19:02:01.062 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:02:01.064 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1224' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:02:01.070 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:02:01.071 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:02:01.083 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:02:03.195 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:10:55.919 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:10:55.919 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:10:55.920 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 19:10:55.920 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:10:55.920 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:10:55.930 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26712 for session terminal-main-session
+2025-06-10 19:10:55.933 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:10:55.933 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26712, FD=17
+2025-06-10 19:10:55.934 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:10:55.935 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1404' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:10:55.937 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:10:55.943 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:10:55.955 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:11:00.676 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:11:02.832 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:11:02.832 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:11:02.832 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 146
+2025-06-10 19:11:02.832 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:11:02.832 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:11:02.840 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26715 for session terminal-main-session
+2025-06-10 19:11:02.843 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:11:02.843 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26715, FD=17
+2025-06-10 19:11:02.844 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:11:02.844 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1415' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:11:02.846 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:11:02.847 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:11:02.859 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:11:04.740 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:41:48.996 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:41:48.998 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:41:48.999 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:41:48.999 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:41:48.999 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:41:49.013 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26944 for session terminal-main-session
+2025-06-10 19:41:49.026 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:41:49.027 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26944, FD=17
+2025-06-10 19:41:49.028 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:41:49.029 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1545' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:41:49.036 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:41:49.041 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:41:49.105 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 108 bytes from PTY (read #2)
+2025-06-10 19:41:49.120 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 33 bytes from PTY (read #3)
+2025-06-10 19:42:38.061 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:42:40.024 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:42:40.024 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:42:40.025 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:42:40.025 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:42:40.025 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:42:40.034 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26948 for session terminal-main-session
+2025-06-10 19:42:40.040 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:42:40.040 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26948, FD=17
+2025-06-10 19:42:40.041 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:42:40.043 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1603' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:42:40.048 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:42:40.050 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:42:40.062 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:42:43.519 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:43:37.331 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:43:37.331 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:43:37.332 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:43:37.333 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:43:37.334 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:43:37.347 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26951 for session terminal-main-session
+2025-06-10 19:43:37.355 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:43:37.355 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26951, FD=17
+2025-06-10 19:43:37.356 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:43:37.356 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1670' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:43:37.359 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:43:37.360 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:43:37.374 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:44:02.065 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:44:13.452 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:44:13.453 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:44:13.453 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:44:13.453 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:44:13.454 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:44:13.462 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26954 for session terminal-main-session
+2025-06-10 19:44:13.467 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:44:13.467 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26954, FD=17
+2025-06-10 19:44:13.467 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:44:13.468 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1713' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:44:13.472 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:44:13.475 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:44:13.490 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:44:19.863 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session
+2025-06-10 19:47:25.364 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L47   | === CREATE PTY ===
+2025-06-10 19:47:25.364 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L48   | Session ID: terminal-main-session
+2025-06-10 19:47:25.364 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L49   | Shell: /usr/bin/bash, Rows: 37, Cols: 134
+2025-06-10 19:47:25.364 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L50   | CWD: None
+2025-06-10 19:47:25.365 | DEBUG    | concierge.core.services.terminal.pty_manager | create_pty           | L64   | Validating session ID...
+2025-06-10 19:47:25.377 | INFO     | concierge.core.services.terminal.pty_manager | create_pty           | L168  | Created PTY process 26958 for session terminal-main-session
+2025-06-10 19:47:25.383 | INFO     | concierge.core.services.terminal.pty_manager | read_from_pty        | L234  | Starting PTY reader for session terminal-main-session
+2025-06-10 19:47:25.383 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L240  | PTY process found: PID=26958, FD=22
+2025-06-10 19:47:25.383 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L293  | Creating reader task for session terminal-main-session
+2025-06-10 19:47:25.384 | DEBUG    | concierge.core.services.terminal.pty_manager | read_from_pty        | L296  | Reader task created: <Task pending name='Task-1799' coro=<PTYManager.read_from_pty.<locals>.reader() running at /data/openpilot/openpilot/selfdrive/chauffeur/concierge/core/services/terminal/pty_manager.py:243>>
+2025-06-10 19:47:25.388 | DEBUG    | concierge.core.services.terminal.pty_manager | reader               | L244  | Reader task started for session terminal-main-session
+2025-06-10 19:47:25.389 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 39 bytes from PTY (read #1)
+2025-06-10 19:47:25.402 | INFO     | concierge.core.services.terminal.pty_manager | reader               | L267  | Read 141 bytes from PTY (read #2)
+2025-06-10 19:47:27.484 | INFO     | concierge.core.services.terminal.pty_manager | terminate_pty        | L338  | Terminated PTY process for session terminal-main-session

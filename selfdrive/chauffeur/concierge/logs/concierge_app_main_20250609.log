@@ -1,0 +1,108 @@
+2025-06-09 22:07:33.510 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:07:33.510 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:07:33.511 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:07:33.511 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:07:33.511 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:07:33.511 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:07:33.511 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:07:33.512 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:07:33.512 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:07:33.512 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:07:33.524 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:07:33.524 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:08:03.369 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:08:03.369 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:08:03.370 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:08:03.370 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:08:03.370 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:08:03.370 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:08:03.370 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:08:03.370 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:08:03.371 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:08:03.371 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:08:03.384 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:08:03.385 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:13:00.406 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:13:00.406 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:13:00.406 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:13:00.406 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:13:00.406 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:13:00.407 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:13:00.407 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:13:00.407 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:13:00.407 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:13:00.408 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:13:00.419 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:13:00.419 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:13:29.506 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:13:29.506 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:13:29.506 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:13:29.507 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:13:29.507 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:13:29.507 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:13:29.507 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:13:29.507 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:13:29.508 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:13:29.508 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:13:29.519 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:13:29.519 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:25:17.438 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:25:17.438 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:25:17.438 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:25:17.438 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:25:17.439 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:25:17.439 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:25:17.439 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:25:17.439 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:25:17.439 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:25:17.439 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:25:17.450 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:25:17.450 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 22:33:25.802 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:33:25.802 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 22:33:25.803 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 22:33:25.803 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 22:33:25.815 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 22:33:25.815 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:39:51.168 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 23:39:51.169 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:39:51.169 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:39:51.170 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 23:39:51.170 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 23:39:51.179 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:39:51.180 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:40:12.733 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 23:40:12.733 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 23:40:12.733 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 23:40:12.733 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 23:40:12.733 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 23:40:12.733 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 23:40:12.734 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:40:12.734 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:40:12.734 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 23:40:12.734 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 23:40:12.745 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:40:12.745 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:40:36.733 | DEBUG    | concierge.app.main                       | setup_logging        | L76   | Logger initialized for module: app.main
+2025-06-09 23:40:36.733 | DEBUG    | concierge.app.main                       | setup_logging        | L77   | Log file: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/logs/concierge_app_main_20250609.log
+2025-06-09 23:40:36.733 | DEBUG    | concierge.app.main                       | setup_logging        | L78   | Debug mode: True
+2025-06-09 23:40:36.733 | INFO     | concierge.app.main                       | create_app           | L18   | === CREATING CONCIERGE APP ===
+2025-06-09 23:40:36.734 | DEBUG    | concierge.app.main                       | create_app           | L21   | No settings provided, creating default ConciergeSettings
+2025-06-09 23:40:36.734 | DEBUG    | concierge.app.main                       | create_app           | L24   | Settings: host=0.0.0.0, port=5055, debug=False
+2025-06-09 23:40:36.734 | DEBUG    | concierge.app.main                       | create_app           | L25   | Static dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:40:36.734 | DEBUG    | concierge.app.main                       | create_app           | L26   | Templates dir: /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates
+2025-06-09 23:40:36.734 | INFO     | concierge.app.main                       | create_app           | L36   | FastAPI app instance created
+2025-06-09 23:40:36.734 | INFO     | concierge.app.main                       | create_app           | L42   | Including v1 API router at /api
+2025-06-09 23:40:36.743 | INFO     | concierge.app.main                       | create_app           | L46   | Mounting static files from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/static
+2025-06-09 23:40:36.744 | INFO     | concierge.app.main                       | create_app           | L54   | Configuring templates from /data/openpilot/openpilot/selfdrive/chauffeur/concierge/templates

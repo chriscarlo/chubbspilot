@@ -1,6 +1,7 @@
 import cereal.messaging as messaging
 from cereal import car, custom
 from panda import Panda
+from types import SimpleNamespace
 from openpilot.common.params import Params
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CAR, HyundaiFlagsCP, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, \
@@ -27,6 +28,10 @@ BUTTONS_DICT = {Buttons.RES_ACCEL: ButtonType.accelCruise, Buttons.SET_DECEL: Bu
 
 
 class CarInterface(CarInterfaceBase):
+  def __init__(self, CP, CarController, CarState):
+    super().__init__(CP, CarController, CarState)
+    self.can_error_counter = 0
+    
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
     use_new_api = params.get_bool("NewLongAPI")
@@ -229,6 +234,26 @@ class CarInterface(CarInterfaceBase):
     # for blinkers
     if CP.flags & HyundaiFlags.ENABLE_BLINKERS:
       disable_ecu(logcan, sendcan, bus=CanBus(CP).ECAN, addr=0x7B1, com_cont_req=b'\x28\x83\x01')
+
+  def update(self, c: car.CarControl, can_strings: list[bytes], params_list: SimpleNamespace, frogpilot_toggles) -> car.CarState:
+    # Call parent update method
+    ret = super().update(c, can_strings, params_list, frogpilot_toggles)
+    
+    # Hyundai CAN timing workaround: require 20 consecutive invalid frames before setting canValid to False
+    can_valid_check = all(cp.can_valid for cp in self.can_parsers if cp is not None)
+    
+    if not can_valid_check:
+      self.can_error_counter += 1
+    else:
+      self.can_error_counter = 0
+    
+    # Only set canValid to False if we've seen 20 consecutive invalid frames
+    if self.can_error_counter < 20:
+      ret.canValid = True
+    else:
+      ret.canValid = False
+    
+    return ret
 
   def _update(self, c, frogpilot_toggles):
     ret, fp_ret = self.CS.update(self.cp, self.cp_cam, frogpilot_toggles)

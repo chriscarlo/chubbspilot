@@ -1,0 +1,47 @@
+#!/bin/bash
+# Concierge Terminal Bash Configuration
+
+# History configuration for persistence
+export HISTFILE=/data/openpilot/.concierge_bash_history
+export HISTSIZE=10000
+export HISTFILESIZE=10000
+export HISTCONTROL=ignoredups:erasedups
+
+# Append to history immediately after each command
+export PROMPT_COMMAND='history -a'
+
+# Enable history expansion with !
+set -o histexpand
+
+# Enable history substitution with arrow keys
+set -o history
+
+# Load existing history if file exists
+if [ -f "$HISTFILE" ]; then
+    history -r "$HISTFILE"
+fi
+
+# Custom prompt showing current directory
+export PS1='\[\033[01;32m\]\u@concierge\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+# Aliases for convenience
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Set default editor
+export EDITOR=nano
+
+# Enable color support
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
+# Source the regular bashrc if it exists
+if [ -f /etc/bash.bashrc ]; then
+    . /etc/bash.bashrc
+fi
+
+# Source user's bashrc if it exists  
+if [ -f ~/.bashrc ]; then
+    . ~/.bashrc
+fi
