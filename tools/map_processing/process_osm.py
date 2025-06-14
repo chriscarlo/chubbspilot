@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# OBSOLETE: This tool depends on mapd_py which has been removed.
+# It needs to be updated to work with the new mapd system.
 # import osmnx as ox # No longer needed
 import sys
 import time
@@ -10,10 +12,15 @@ import numpy as np
 import math # Added for tiling
 from collections import defaultdict # Added for collecting index data
 
-# Import our geometry functions
-from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
-# Import generated protobuf classes
-from tools.map_processing import osm_speed_data_pb2
+# DISABLED: mapd_py has been removed
+print("ERROR: This tool is obsolete. mapd_py has been removed from the codebase.")
+print("Please update this tool to work with the new mapd system.")
+import sys
+sys.exit(1)
+
+# Original imports (no longer available):
+# from openpilot.selfdrive.frogpilot.navigation.mapd_py import geometry
+# from tools.map_processing import osm_speed_data_pb2
 # REMOVED: from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import curvature_to_speed
 
 # --- ADDED IMPORTS FOR EMBEDDED curvature_to_speed ---

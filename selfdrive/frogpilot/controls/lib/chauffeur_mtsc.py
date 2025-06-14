@@ -1,5 +1,5 @@
 # PFEIFER – MTSC – Modified by FrogAi for FrogPilot
-# CHAUFFEUR MTSC – Refactored to use mapd_py for path and curvature data
+# CHAUFFEUR MTSC – Uses liveMapData cereal messages for path and curvature data
 #
 # Version 2025-05-01a  (queue simplification, freshness fix, error logging)
 

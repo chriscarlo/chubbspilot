@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# OBSOLETE: This tool depends on mapd_py which has been removed.
+# It needs to be updated to work with the new mapd system.
 import os
 import sys
 import time
@@ -30,13 +32,16 @@ except Exception as e_path:
 # Assuming this script is run from a location where these imports work,
 # e.g., from openpilot root, or selfdrive/frogpilot/tools/
 # Adjust sys.path if necessary, or ensure PYTHONPATH is set
-try:
-    from selfdrive.frogpilot.navigation.mapd_py.reader import MapReader, TILE_SIZE_DEG, get_tile_id, REGION_BOUNDS, TILE_DATA_BASE_DIR
-    from selfdrive.frogpilot.navigation.mapd_py import matcher
-    from selfdrive.frogpilot.navigation.mapd_py import geometry # For TO_RADIANS, bearing etc.
-except ImportError as e:
-    print(f"CRITICAL ERROR: Could not import mapd_py components. Make sure script is run from openpilot root or PYTHONPATH is set.")
-    print(f"Details: {e}")
+# DISABLED: mapd_py has been removed
+print("ERROR: This tool is obsolete. mapd_py has been removed from the codebase.")
+print("Please update this tool to work with the new mapd system.")
+import sys
+sys.exit(1)
+
+# Original imports (no longer available):
+# from selfdrive.frogpilot.navigation.mapd_py.reader import MapReader, TILE_SIZE_DEG, get_tile_id, REGION_BOUNDS, TILE_DATA_BASE_DIR
+# from selfdrive.frogpilot.navigation.mapd_py import matcher
+# from selfdrive.frogpilot.navigation.mapd_py import geometry
     print("Example: python selfdrive/frogpilot/tools/map_processing/mapd_rtm.py") # Assuming mapd_rtm.py is in tools/map_processing
     exit(1)
 # --- End mapd_py imports ---

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# OBSOLETE: This test depends on mapd_py which has been removed.
+# It needs to be updated to work with the new mapd system.
 import sys
 import os
 import time
@@ -12,9 +14,10 @@ try:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     openpilot_root = script_dir # Assuming script is in the root of the openpilot workspace.
     sys.path.insert(0, openpilot_root)
-    # Directly import MapReader
-    from selfdrive.frogpilot.navigation.mapd_py.reader import MapReader
-    print("Imports successful (Params, MapReader).")
+    # DISABLED: mapd_py has been removed
+    print("ERROR: This test is obsolete. mapd_py has been removed from the codebase.")
+    print("Please update this test to work with the new mapd system.")
+    sys.exit(1)
 except ImportError as e:
     print(f"ImportError: {e}")
     print("Make sure you are running this script from a location where")

@@ -205,15 +205,6 @@
       "radarState"
     ]
   },
-  "mapd_py": {
-    "publishes": [
-      "liveMapData"
-    ],
-    "subscribes": [
-      "carState",
-      "liveLocationKalman"
-    ]
-  },
   "camerad": {
     "publishes": [
       "driverCameraState",
@@ -286,6 +277,12 @@
       "gpsLocationExternal",
       "liveLocationKalman",
       "ubloxGnss"
+    ],
+    "subscribes": []
+  },
+  "mapd": {
+    "publishes": [
+      "liveMapData"
     ],
     "subscribes": []
   },
