@@ -19,7 +19,7 @@ import cereal.messaging as messaging
 from cereal import log
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL, Ratekeeper
-from openpilot.system.swaglog import cloudlog
+from openpilot.common.swaglog import cloudlog
 
 
 MAPD_PATH = Path(__file__).parent / "mapd"
