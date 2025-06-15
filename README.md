@@ -226,3 +226,13 @@ NO WARRANTY EXPRESSED OR IMPLIED.**
 
 ![openpilot tests](https://github.com/commaai/openpilot/actions/workflows/selfdrive_tests.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/commaai/openpilot/branch/master/graph/badge.svg)](https://codecov.io/gh/commaai/openpilot)
+
+Developer Environment Setup
+---------------------------
+To set up a local environment run:
+
+```bash
+bash bootstrap.sh
+source /workspace/activate_env.sh
+```
+
