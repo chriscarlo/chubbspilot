@@ -43,12 +43,15 @@ def ensure_mapd_binary():
         if download_script.exists():
             cloudlog.info("Attempting to download mapd binary...")
             try:
-                result = subprocess.run([str(download_script)], capture_output=True, text=True)
+                result = subprocess.run([str(download_script)], capture_output=True, text=True, timeout=60)
                 if result.returncode == 0:
                     cloudlog.info("Successfully downloaded mapd binary")
                 else:
                     cloudlog.error(f"Failed to download mapd binary: {result.stderr}")
                     return False
+            except subprocess.TimeoutExpired:
+                cloudlog.error("Download script timed out after 60 seconds")
+                return False
             except Exception as e:
                 cloudlog.error(f"Error running download script: {e}")
                 return False

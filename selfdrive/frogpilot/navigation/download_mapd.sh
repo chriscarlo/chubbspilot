@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_BINARY="$SCRIPT_DIR/mapd"
 
 # mapd release info
-MAPD_VERSION="v1.9.0"  # Update this to latest version as needed
+MAPD_VERSION="v1.10.0"  # Update this to latest version as needed
 MAPD_REPO="pfeiferj/mapd"
 RELEASE_URL="https://github.com/$MAPD_REPO/releases/download/$MAPD_VERSION"
 
@@ -18,10 +18,15 @@ echo "Downloading mapd binary version $MAPD_VERSION..."
 ARCH=$(uname -m)
 case "$ARCH" in
     aarch64|arm64)
-        BINARY_NAME="mapd-linux-arm64"
+        BINARY_NAME="mapd"  # The actual binary is just named 'mapd' for ARM64
         ;;
     x86_64)
-        BINARY_NAME="mapd-linux-amd64"
+        # For x86_64 development, use the stub
+        echo "Note: x86_64 detected - using development stub"
+        cp "$SCRIPT_DIR/mapd_stub.py" "$OUTPUT_BINARY"
+        chmod +x "$OUTPUT_BINARY"
+        echo "Development stub installed successfully"
+        exit 0
         ;;
     *)
         echo "Error: Unsupported architecture: $ARCH"
@@ -34,9 +39,9 @@ DOWNLOAD_URL="$RELEASE_URL/$BINARY_NAME"
 echo "Downloading from: $DOWNLOAD_URL"
 
 if command -v wget &> /dev/null; then
-    wget -O "$OUTPUT_BINARY" "$DOWNLOAD_URL"
+    wget --timeout=30 --tries=2 -O "$OUTPUT_BINARY" "$DOWNLOAD_URL"
 elif command -v curl &> /dev/null; then
-    curl -L -o "$OUTPUT_BINARY" "$DOWNLOAD_URL"
+    curl --connect-timeout 10 --max-time 30 -L -o "$OUTPUT_BINARY" "$DOWNLOAD_URL"
 else
     echo "Error: Neither wget nor curl is available"
     exit 1
