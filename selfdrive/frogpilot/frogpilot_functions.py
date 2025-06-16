@@ -222,6 +222,34 @@ def setup_frogpilot(build_metadata):
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
 
+  # Enable SSH and set up GitHub keys at boot
+  print("Setting up SSH access for chriscarlo...")
+  try:
+    # Enable SSH - using the global params
+    params.put_bool("SshEnabled", True)
+    
+    # Set GitHub username
+    username = "chriscarlo"
+    params.put("GithubUsername", username)
+    
+    # Fetch and store GitHub SSH keys
+    try:
+      import requests
+      keys_response = requests.get(f"https://github.com/{username}.keys", timeout=30)
+      if keys_response.status_code == 200:
+        params.put("GithubSshKeys", keys_response.text)
+        print(f"Successfully fetched SSH keys for {username}")
+      else:
+        print(f"Failed to fetch SSH keys: HTTP {keys_response.status_code}")
+    except Exception as e:
+      print(f"Error fetching SSH keys: {e}")
+      # If network fails, still enable SSH - sshd will start even without keys
+      # You can manually add keys later via /data/params/d/GithubSshKeys
+    
+    print("SSH enabled and configured for boot")
+  except Exception as e:
+    print(f"Error setting up SSH: {e}")
+
 def uninstall_frogpilot():
   boot_logo_location = Path("/usr/comma/bg.jpg")
   stock_boot_logo = Path(__file__).parent / "assets/other_images/stock_bg.jpg"
