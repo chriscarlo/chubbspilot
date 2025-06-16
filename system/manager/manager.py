@@ -2,6 +2,7 @@
 import datetime
 import os
 import signal
+import subprocess
 import sys
 import traceback
 
@@ -97,6 +98,15 @@ def manager_init() -> None:
   except PermissionError:
     print("WARNING: failed to make /dev/shm")
 
+  # Check dependencies (non-blocking)
+  print("[BOOT] Checking dependencies...")
+  dep_check_script = os.path.join(BASEDIR, "check_boot_deps.py")
+  if os.path.exists(dep_check_script):
+    try:
+      subprocess.run(["python3", dep_check_script], timeout=10)
+    except Exception as e:
+      print(f"[BOOT] Dependency check failed: {e}")
+  
   # set version params
   params.put("Version", build_metadata.openpilot.version)
   params.put("TermsVersion", terms_version)

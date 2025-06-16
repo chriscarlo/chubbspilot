@@ -18,6 +18,15 @@ TOTAL_SCONS_NODES = 2820
 MAX_BUILD_PROGRESS = 100
 
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
+  # Check and install dependencies before building
+  dep_script = Path(BASEDIR) / "install_dependencies.sh"
+  if dep_script.exists() and AGNOS:
+    spinner.update("Checking dependencies...")
+    try:
+      subprocess.run([str(dep_script)], check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+      cloudlog.warning(f"Dependency check had warnings: {e.stderr}")
+  
   env = os.environ.copy()
   env['SCONS_PROGRESS'] = "1"
   nproc = os.cpu_count()
