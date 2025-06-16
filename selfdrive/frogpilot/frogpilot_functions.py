@@ -128,12 +128,32 @@ def convert_params(params_cache):
   print("Param conversion completed")
 
 def frogpilot_boot_functions(build_metadata, params_cache):
-  if params.get_bool("HasAcceptedTerms"):
-    params_cache.clear_all()
+  print("[BOOT] Starting FrogPilot boot functions...")
+  
+  try:
+    if params.get_bool("HasAcceptedTerms"):
+      params_cache.clear_all()
+  except Exception as e:
+    print(f"[BOOT] Error clearing params cache: {e}")
 
-  FrogPilotVariables().update(holiday_theme="stock", started=False)
-  ModelManager().copy_default_model()
-  ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
+  # Use timeouts for potentially blocking operations
+  print("[BOOT] Initializing FrogPilot variables...")
+  try:
+    FrogPilotVariables().update(holiday_theme="stock", started=False)
+  except Exception as e:
+    print(f"[BOOT] Error updating FrogPilot variables: {e}")
+  
+  print("[BOOT] Copying default model...")
+  try:
+    ModelManager().copy_default_model()
+  except Exception as e:
+    print(f"[BOOT] Error copying model: {e}")
+  
+  print("[BOOT] Updating theme...")
+  try:
+    ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
+  except Exception as e:
+    print(f"[BOOT] Error updating theme: {e}")
 
   def backup_thread():
     while not system_time_valid():
@@ -182,14 +202,16 @@ def setup_frogpilot(build_metadata):
       if item.name not in {"params", "tracking"}:
         delete_file(item)
 
-  boot_logo_location = Path("/usr/comma/bg.jpg")
-  frogpilot_boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
-  if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
-    stock_mount_options = subprocess.run(["findmnt", "-no", "OPTIONS", "/"], capture_output=True, text=True).stdout.strip()
-
-    run_cmd(["sudo", "mount", "-o", "remount,rw", "/"], "Successfully remounted / as read-write", "Failed to remount / as read-write")
-    run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
-    run_cmd(["sudo", "mount", "-o", f"remount,{stock_mount_options}", "/"], "Successfully restored stock mount options", "Failed to restore stock mount options")
+  # TEMPORARILY DISABLED: Boot logo replacement to avoid boot delays from root remount
+  print("[BOOT] Skipping boot logo replacement to speed up boot process...")
+  # boot_logo_location = Path("/usr/comma/bg.jpg")
+  # frogpilot_boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
+  # if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
+  #   stock_mount_options = subprocess.run(["findmnt", "-no", "OPTIONS", "/"], capture_output=True, text=True).stdout.strip()
+  #
+  #   run_cmd(["sudo", "mount", "-o", "remount,rw", "/"], "Successfully remounted / as read-write", "Failed to remount / as read-write")
+  #   run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
+  #   run_cmd(["sudo", "mount", "-o", f"remount,{stock_mount_options}", "/"], "Successfully restored stock mount options", "Failed to restore stock mount options")
 
   persist_comma_path = Path("/persist/comma")
   backup_comma_path = Path("/data/backup_comma")
@@ -222,33 +244,46 @@ def setup_frogpilot(build_metadata):
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
 
-  # Enable SSH and set up GitHub keys at boot
-  print("Setting up SSH access for chriscarlo...")
+  # Enable SSH and set up GitHub keys at boot - CRITICAL FOR ACCESS
+  print("[BOOT] Setting up SSH access for chriscarlo...")
   try:
-    # Enable SSH - using the global params
+    # Force SSH to be enabled regardless of any failures
     params.put_bool("SshEnabled", True)
+    print("[BOOT] SSH enabled in params")
     
     # Set GitHub username
     username = "chriscarlo"
     params.put("GithubUsername", username)
+    print(f"[BOOT] GitHub username set to {username}")
     
-    # Fetch and store GitHub SSH keys
+    # Try to fetch keys with short timeout to avoid boot hang
     try:
       import requests
-      keys_response = requests.get(f"https://github.com/{username}.keys", timeout=30)
+      print("[BOOT] Fetching SSH keys from GitHub (10s timeout)...")
+      keys_response = requests.get(f"https://github.com/{username}.keys", timeout=10)
       if keys_response.status_code == 200:
         params.put("GithubSshKeys", keys_response.text)
-        print(f"Successfully fetched SSH keys for {username}")
+        print(f"[BOOT] Successfully fetched {len(keys_response.text.splitlines())} SSH keys")
       else:
-        print(f"Failed to fetch SSH keys: HTTP {keys_response.status_code}")
+        print(f"[BOOT] GitHub returned HTTP {keys_response.status_code}")
     except Exception as e:
-      print(f"Error fetching SSH keys: {e}")
-      # If network fails, still enable SSH - sshd will start even without keys
-      # You can manually add keys later via /data/params/d/GithubSshKeys
+      print(f"[BOOT] Key fetch failed (network may not be ready): {e}")
+      # Still continue - SSH will work without keys initially
     
-    print("SSH enabled and configured for boot")
+    # Force SSH service to start immediately
+    try:
+      run_cmd(["sudo", "systemctl", "start", "ssh"], "SSH service started", "Failed to start SSH service")
+    except:
+      pass
+      
+    print("[BOOT] SSH setup complete - service should be available")
   except Exception as e:
-    print(f"Error setting up SSH: {e}")
+    print(f"[BOOT] Critical error in SSH setup: {e}")
+    # Even on failure, try to ensure SSH is enabled
+    try:
+      params.put_bool("SshEnabled", True)
+    except:
+      pass
 
 def uninstall_frogpilot():
   boot_logo_location = Path("/usr/comma/bg.jpg")

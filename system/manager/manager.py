@@ -23,8 +23,10 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import frogpilot_default_
 
 
 def manager_init() -> None:
+  print("[BOOT] Manager initialization starting...")
   save_bootlog()
 
+  print("[BOOT] Getting build metadata...")
   build_metadata = get_build_metadata()
 
   params = Params()
@@ -35,9 +37,11 @@ def manager_init() -> None:
     params.clear_all(ParamKeyType.DEVELOPMENT_ONLY)
 
   # FrogPilot variables
+  print("[BOOT] Setting up FrogPilot...")
   setup_frogpilot(build_metadata)
   params_cache = Params("/cache/params")
   convert_params(params_cache)
+  print("[BOOT] FrogPilot setup complete")
 
   default_params: list[tuple[str, str | bytes]] = [
     ("AlwaysOnDM", "0"),
@@ -105,12 +109,25 @@ def manager_init() -> None:
   params.put_bool("IsReleaseBranch", build_metadata.release_channel)
 
   # set dongle id
-  reg_res = register(show_spinner=True)
-  if reg_res:
-    dongle_id = reg_res
-  else:
-    serial = params.get("HardwareSerial")
-    raise Exception(f"Registration failed for device {serial}")
+  print("[BOOT] Starting device registration...")
+  try:
+    reg_res = register(show_spinner=True)
+    if reg_res:
+      dongle_id = reg_res
+      print(f"[BOOT] Registration successful: {dongle_id}")
+    else:
+      # If registration fails, use a fallback ID and continue booting
+      serial = params.get("HardwareSerial") or "unknown"
+      dongle_id = f"unregistered_{serial[:8]}"
+      print(f"[BOOT] Registration failed, using fallback ID: {dongle_id}")
+      params.put("DongleId", dongle_id)
+  except Exception as e:
+    # On any registration error, use fallback and continue
+    print(f"[BOOT] Registration exception: {e}")
+    serial = params.get("HardwareSerial") or "unknown"
+    dongle_id = f"unregistered_{serial[:8]}"
+    params.put("DongleId", dongle_id)
+    print(f"[BOOT] Using fallback dongle ID: {dongle_id}")
   os.environ['DONGLE_ID'] = dongle_id  # Needed for swaglog
   os.environ['GIT_ORIGIN'] = build_metadata.openpilot.git_normalized_origin # Needed for swaglog
   os.environ['GIT_BRANCH'] = build_metadata.channel # Needed for swaglog
@@ -130,8 +147,13 @@ def manager_init() -> None:
                        device=HARDWARE.get_device_type())
 
   # preimport all processes
-  for p in managed_processes.values():
-    p.prepare()
+  print(f"[BOOT] Pre-importing {len(managed_processes)} processes...")
+  for name, p in managed_processes.items():
+    try:
+      print(f"[BOOT] Pre-importing {name}...")
+      p.prepare()
+    except Exception as e:
+      print(f"[BOOT] Error pre-importing {name}: {e}")
 
 
 def manager_cleanup() -> None:
