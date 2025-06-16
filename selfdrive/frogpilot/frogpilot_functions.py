@@ -168,12 +168,27 @@ def frogpilot_boot_functions(build_metadata, params_cache):
   threading.Thread(target=backup_thread, daemon=True).start()
 
 def setup_frogpilot(build_metadata):
-  run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
-  run_cmd(["sudo", "chmod", "0777", "/cache"], "Successfully updated /cache permissions", "Failed to update /cache permissions")
+  print("[BOOT] Starting FrogPilot setup...")
+  
+  # Add a small delay to let system stabilize
+  time.sleep(2)
+  
+  try:
+    run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
+  except Exception as e:
+    print(f"[BOOT] Non-critical error remounting /persist: {e}")
+    
+  try:
+    run_cmd(["sudo", "chmod", "0777", "/cache"], "Successfully updated /cache permissions", "Failed to update /cache permissions")
+  except Exception as e:
+    print(f"[BOOT] Non-critical error updating /cache permissions: {e}")
 
-  CRASHES_DIR.mkdir(parents=True, exist_ok=True)
-  MODELS_PATH.mkdir(parents=True, exist_ok=True)
-  THEME_SAVE_PATH.mkdir(parents=True, exist_ok=True)
+  try:
+    CRASHES_DIR.mkdir(parents=True, exist_ok=True)
+    MODELS_PATH.mkdir(parents=True, exist_ok=True)
+    THEME_SAVE_PATH.mkdir(parents=True, exist_ok=True)
+  except Exception as e:
+    print(f"[BOOT] Error creating directories: {e}")
 
   for source_suffix, destination_suffix in [
     ("world_frog_day/colors", "theme_packs/frog/colors"),

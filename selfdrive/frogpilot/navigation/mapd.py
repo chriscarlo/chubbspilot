@@ -38,19 +38,32 @@ def ensure_mapd_binary():
     if not os.path.exists(binary_path):
         cloudlog.warning("mapd binary not found at " + binary_path)
         
+        # Check if we're early in boot - network might not be ready
+        uptime = 0
+        try:
+            with open('/proc/uptime', 'r') as f:
+                uptime = float(f.read().split()[0])
+        except:
+            pass
+            
+        if uptime < 120:  # Less than 2 minutes since boot
+            cloudlog.info("System recently booted, skipping mapd download for now")
+            return False
+        
         # Try to download the binary
         download_script = Path(__file__).parent / "download_mapd.sh"
         if download_script.exists():
             cloudlog.info("Attempting to download mapd binary...")
             try:
-                result = subprocess.run([str(download_script)], capture_output=True, text=True, timeout=60)
+                # Use shorter timeout and run in background if needed
+                result = subprocess.run([str(download_script)], capture_output=True, text=True, timeout=30)
                 if result.returncode == 0:
                     cloudlog.info("Successfully downloaded mapd binary")
                 else:
                     cloudlog.error(f"Failed to download mapd binary: {result.stderr}")
                     return False
             except subprocess.TimeoutExpired:
-                cloudlog.error("Download script timed out after 60 seconds")
+                cloudlog.error("Download script timed out after 30 seconds")
                 return False
             except Exception as e:
                 cloudlog.error(f"Error running download script: {e}")
@@ -313,25 +326,51 @@ def main():
     """Main entry point for the mapd Python wrapper."""
     cloudlog.info("mapd wrapper starting")
     
+    # BOOT PROTECTION: Delay startup to let system stabilize
+    cloudlog.info("mapd delaying startup for 30 seconds to let system boot...")
+    time.sleep(30)
+    
     # Ensure params directories exist
-    params_mem = Params("/dev/shm/params")
-    params_persist = Params()
+    try:
+        params_mem = Params("/dev/shm/params")
+        params_persist = Params()
+    except Exception as e:
+        cloudlog.error(f"Failed to initialize params: {e}")
+        time.sleep(60)
+        return
     
     # Reset map parameters on startup
-    params_mem.put("RoadName", b"")
-    params_mem.put("MapSpeedLimit", b"0")
-    params_mem.put("MapCurvatures", b"[]")
-    params_mem.put("MapTargetVelocities", b"[]")
+    try:
+        params_mem.put("RoadName", b"")
+        params_mem.put("MapSpeedLimit", b"0")
+        params_mem.put("MapCurvatures", b"[]")
+        params_mem.put("MapTargetVelocities", b"[]")
+    except Exception as e:
+        cloudlog.error(f"Failed to reset map parameters: {e}")
     
-    # Ensure mapd binary exists
-    if not ensure_mapd_binary():
-        cloudlog.error("mapd binary not available, exiting")
-        return
+    # Ensure mapd binary exists - but don't exit if it fails
+    binary_available = False
+    for attempt in range(3):
+        if ensure_mapd_binary():
+            binary_available = True
+            break
+        cloudlog.warning(f"mapd binary not available, attempt {attempt + 1}/3")
+        time.sleep(30)
+    
+    if not binary_available:
+        cloudlog.error("mapd binary not available after retries, running in degraded mode")
+        # Run a simple monitoring loop without mapd
+        while True:
+            time.sleep(60)
+            # Periodically retry
+            if ensure_mapd_binary():
+                if start_mapd():
+                    break
     
     # Start mapd
     if not start_mapd():
-        cloudlog.error("Failed to start mapd, exiting")
-        return
+        cloudlog.error("Failed to start mapd, will retry periodically")
+        # Don't exit - run in degraded mode
     
     # Start bridge thread
     stop_event = threading.Event()

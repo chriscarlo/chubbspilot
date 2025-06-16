@@ -35,6 +35,10 @@ def qcomgps(started, params, CP: car.CarParams, classic_model, tinygrad_model, f
 def always_run(started, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
   return True
 
+def mapd_enabled(started, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
+  # Allow mapd to be disabled via parameter for debugging boot issues
+  return params.get_bool("MapdEnabled", True)
+
 def only_onroad(started: bool, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
   return started
 
@@ -107,14 +111,10 @@ procs = [
 
   # FrogPilot processes
   NativeProcess("classic_modeld", "selfdrive/classic_modeld", ["./classic_modeld"], run_classic_modeld),
-  # PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
+  PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
   PythonProcess("frogpilot_process", "selfdrive.frogpilot.frogpilot_process", always_run),
-  PythonProcess("mapd", "selfdrive.frogpilot.navigation.mapd", always_run),
+  PythonProcess("mapd", "selfdrive.frogpilot.navigation.mapd", mapd_enabled),
   NativeProcess("tinygrad_modeld", "selfdrive/tinygrad_modeld", ["./tinygrad_modeld"], run_tinygrad_modeld),
-  PythonProcess("live_root_cause_monitor", "tools.debug.live_root_cause_monitor", always_run),
-
-  # Chauffeur processes
-  PythonProcess("concierge", "selfdrive.chauffeur.concierge.main", always_run),
 ]
 
 managed_processes = {p.name: p for p in procs}
