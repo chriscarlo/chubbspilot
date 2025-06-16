@@ -36,8 +36,9 @@ def always_run(started, params, CP: car.CarParams, classic_model, tinygrad_model
   return True
 
 def mapd_enabled(started, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
-  # Allow mapd to be disabled via parameter for debugging boot issues
-  return params.get_bool("MapdEnabled", True)
+  # TEMPORARILY DISABLED during boot debugging
+  # Re-enable by setting MapdEnabled param to true
+  return params.get_bool("MapdEnabled", False)
 
 def only_onroad(started: bool, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
   return started

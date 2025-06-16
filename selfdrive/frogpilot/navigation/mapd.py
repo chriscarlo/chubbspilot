@@ -326,9 +326,18 @@ def main():
     """Main entry point for the mapd Python wrapper."""
     cloudlog.info("mapd wrapper starting")
     
-    # BOOT PROTECTION: Delay startup to let system stabilize
-    cloudlog.info("mapd delaying startup for 30 seconds to let system boot...")
-    time.sleep(30)
+    # BOOT PROTECTION: Check if we're early in boot
+    try:
+        with open('/proc/uptime', 'r') as f:
+            uptime = float(f.read().split()[0])
+            if uptime < 60:  # Less than 1 minute since boot
+                delay = max(5, 60 - uptime)  # Wait until at least 60s uptime
+                cloudlog.info(f"mapd delaying startup for {delay:.1f}s (current uptime: {uptime:.1f}s)...")
+                time.sleep(delay)
+    except Exception as e:
+        cloudlog.error(f"Failed to check uptime: {e}")
+        # Still delay a bit if we can't check uptime
+        time.sleep(10)
     
     # Ensure params directories exist
     try:

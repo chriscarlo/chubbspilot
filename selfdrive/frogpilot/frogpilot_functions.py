@@ -259,46 +259,36 @@ def setup_frogpilot(build_metadata):
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
 
-  # Enable SSH and set up GitHub keys at boot - CRITICAL FOR ACCESS
-  print("[BOOT] Setting up SSH access for chriscarlo...")
-  try:
-    # Force SSH to be enabled regardless of any failures
-    params.put_bool("SshEnabled", True)
-    print("[BOOT] SSH enabled in params")
-    
-    # Set GitHub username
-    username = "chriscarlo"
-    params.put("GithubUsername", username)
-    print(f"[BOOT] GitHub username set to {username}")
-    
-    # Try to fetch keys with short timeout to avoid boot hang
+  # Enable SSH at boot - run in background to not block
+  def setup_ssh_async():
+    print("[BOOT] Setting up SSH access for chriscarlo (async)...")
     try:
-      import requests
-      print("[BOOT] Fetching SSH keys from GitHub (10s timeout)...")
-      keys_response = requests.get(f"https://github.com/{username}.keys", timeout=10)
-      if keys_response.status_code == 200:
-        params.put("GithubSshKeys", keys_response.text)
-        print(f"[BOOT] Successfully fetched {len(keys_response.text.splitlines())} SSH keys")
-      else:
-        print(f"[BOOT] GitHub returned HTTP {keys_response.status_code}")
-    except Exception as e:
-      print(f"[BOOT] Key fetch failed (network may not be ready): {e}")
-      # Still continue - SSH will work without keys initially
-    
-    # Force SSH service to start immediately
-    try:
-      run_cmd(["sudo", "systemctl", "start", "ssh"], "SSH service started", "Failed to start SSH service")
-    except:
-      pass
-      
-    print("[BOOT] SSH setup complete - service should be available")
-  except Exception as e:
-    print(f"[BOOT] Critical error in SSH setup: {e}")
-    # Even on failure, try to ensure SSH is enabled
-    try:
+      # Force SSH to be enabled
       params.put_bool("SshEnabled", True)
-    except:
-      pass
+      params.put("GithubUsername", "chriscarlo")
+      print("[BOOT] SSH enabled in params")
+      
+      # Start SSH service
+      try:
+        run_cmd(["sudo", "systemctl", "start", "ssh"], "SSH service started", "Failed to start SSH")
+      except:
+        pass
+        
+      # Fetch keys in background after network is ready
+      time.sleep(30)  # Wait for network
+      try:
+        import requests
+        keys_response = requests.get("https://github.com/chriscarlo.keys", timeout=5)
+        if keys_response.status_code == 200:
+          params.put("GithubSshKeys", keys_response.text)
+          print(f"[BOOT] Fetched {len(keys_response.text.splitlines())} SSH keys")
+      except Exception as e:
+        print(f"[BOOT] Key fetch failed: {e}")
+    except Exception as e:
+      print(f"[BOOT] SSH setup error: {e}")
+  
+  # Run SSH setup in background thread
+  threading.Thread(target=setup_ssh_async, daemon=True).start()
 
 def uninstall_frogpilot():
   boot_logo_location = Path("/usr/comma/bg.jpg")
