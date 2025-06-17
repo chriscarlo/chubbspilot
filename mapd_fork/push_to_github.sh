@@ -1,0 +1,27 @@
+#!/bin/bash
+# Script to push mapd fork to chriscarlo GitHub account
+
+echo "This script will help you push the mapd fork to your GitHub account."
+echo ""
+echo "Current setup:"
+echo "- Remote URL: git@github.com:chriscarlo/mapd.git"
+echo "- SSH Key: ~/.ssh/claude_github_key"
+echo ""
+echo "To create the repository and push:"
+echo ""
+echo "1. Go to: https://github.com/new"
+echo "   - Repository name: mapd"
+echo "   - Description: Fork of openpilot-mapd for custom 2023 Kia EV6 development"
+echo "   - Make it public"
+echo "   - Do NOT initialize with README (we already have one)"
+echo ""
+echo "2. Once created, run:"
+echo "   git push -u origin main"
+echo ""
+echo "If you get permission denied:"
+echo "   - Make sure your SSH key is added to GitHub:"
+echo "   - Copy this key to https://github.com/settings/keys"
+echo ""
+cat /home/chris/.ssh/claude_github_key.pub
+echo ""
+echo "3. The openpilot code has been updated to check your fork first for mapd binaries"

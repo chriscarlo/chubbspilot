@@ -1,0 +1,8 @@
+Just run this after creating the repo on GitHub:
+
+cd /data/openpilot/mapd_fork && git push -u origin main
+
+The repository URL is already set up correctly (git@github.com:chriscarlo/mapd.git)
+and the SSH key is configured properly.
+
+GitHub requires repos to be created via web interface or API, not via git push.
