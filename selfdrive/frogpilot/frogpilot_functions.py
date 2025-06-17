@@ -5,6 +5,7 @@ import datetime
 import filecmp
 import glob
 import os
+import requests
 import shutil
 import subprocess
 import tarfile
@@ -23,6 +24,41 @@ from openpilot.selfdrive.frogpilot.assets.theme_manager import HOLIDAY_THEME_PAT
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import delete_file, run_cmd
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, EXCLUDED_KEYS, MODELS_PATH, THEME_SAVE_PATH, FrogPilotVariables, frogpilot_default_params, get_frogpilot_toggles, params
 
+def fix_agnos_ssh():
+  """Emergency fix for AGNOS-level SSH configuration that looks in /data/persist/comma/ssh/"""
+  try:
+    # Create the persist directory structure
+    persist_ssh_dir = Path("/data/persist/comma/ssh")
+    persist_ssh_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Hardcoded values for emergency access
+    github_username = "chriscarlo"
+    ssh_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPTHWjyGrpClCVb/rK9rR2PmID3KbjUPMVFEMRsCjV/q claude-code-temp"
+    
+    # Write to AGNOS persist location
+    (persist_ssh_dir / "GithubUsername").write_text(github_username)
+    (persist_ssh_dir / "GithubSshKeys").write_text(ssh_key + "\n")
+    
+    # Also ensure params location has the same data
+    params_dir = Path("/data/params/d")
+    params_dir.mkdir(parents=True, exist_ok=True)
+    (params_dir / "GithubUsername").write_text(github_username)
+    (params_dir / "GithubSshKeys").write_text(ssh_key + "\n")
+    
+    # Try to fetch all keys from GitHub
+    try:
+      import requests
+      keys = requests.get(f"https://github.com/{github_username}.keys", timeout=5)
+      if keys.status_code == 200:
+        (persist_ssh_dir / "GithubSshKeys").write_text(keys.text)
+        (params_dir / "GithubSshKeys").write_text(keys.text)
+    except:
+      pass  # Use hardcoded key if fetch fails
+    
+    print("AGNOS SSH fix applied - keys in both locations")
+  except Exception as e:
+    print(f"Failed to apply AGNOS SSH fix: {e}")
+
 def backup_directory(backup, destination, success_message, fail_message, minimum_backup_size=0, compressed=False):
   in_progress_destination = destination.parent / (destination.name + "_in_progress")
 
@@ -32,7 +68,7 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
       print("Backup already exists. Aborting...")
       return
 
-    run_cmd(["sudo", "rsync", "-avq", "--ignore-errors", f"{backup}/.", in_progress_destination], "", fail_message)
+    run_cmd(["sudo", "rsync", "-avq", f"{backup}/.", in_progress_destination], "", fail_message)
 
     tar_file = destination.parent / (destination.name + "_in_progress.tar")
     with tarfile.open(tar_file, "w") as tar:
@@ -65,7 +101,7 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
       print("Backup already exists. Aborting...")
       return
 
-    run_cmd(["sudo", "rsync", "-avq", "--ignore-errors", f"{backup}/.", in_progress_destination], success_message, fail_message)
+    run_cmd(["sudo", "rsync", "-avq", f"{backup}/.", in_progress_destination], success_message, fail_message)
     in_progress_destination.rename(destination)
 
 def cleanup_backups(directory, limit, success_message, fail_message, compressed=False):
@@ -85,7 +121,7 @@ def cleanup_backups(directory, limit, success_message, fail_message, compressed=
 
 def backup_frogpilot(build_metadata):
   backup_path = Path("/data/backups")
-  maximum_backups = 1
+  maximum_backups = 5
   cleanup_backups(backup_path, maximum_backups, "Successfully cleaned up old FrogPilot backups", "Failed to cleanup old FrogPilot backups", compressed=True)
 
   _, _, free = shutil.disk_usage(backup_path)
@@ -128,32 +164,12 @@ def convert_params(params_cache):
   print("Param conversion completed")
 
 def frogpilot_boot_functions(build_metadata, params_cache):
-  print("[BOOT] Starting FrogPilot boot functions...")
-  
-  try:
-    if params.get_bool("HasAcceptedTerms"):
-      params_cache.clear_all()
-  except Exception as e:
-    print(f"[BOOT] Error clearing params cache: {e}")
+  if params.get_bool("HasAcceptedTerms"):
+    params_cache.clear_all()
 
-  # Use timeouts for potentially blocking operations
-  print("[BOOT] Initializing FrogPilot variables...")
-  try:
-    FrogPilotVariables().update(holiday_theme="stock", started=False)
-  except Exception as e:
-    print(f"[BOOT] Error updating FrogPilot variables: {e}")
-  
-  print("[BOOT] Copying default model...")
-  try:
-    ModelManager().copy_default_model()
-  except Exception as e:
-    print(f"[BOOT] Error copying model: {e}")
-  
-  print("[BOOT] Updating theme...")
-  try:
-    ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
-  except Exception as e:
-    print(f"[BOOT] Error updating theme: {e}")
+  FrogPilotVariables().update(holiday_theme="stock", started=False)
+  ModelManager().copy_default_model()
+  ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
   def backup_thread():
     while not system_time_valid():
@@ -168,27 +184,15 @@ def frogpilot_boot_functions(build_metadata, params_cache):
   threading.Thread(target=backup_thread, daemon=True).start()
 
 def setup_frogpilot(build_metadata):
-  print("[BOOT] Starting FrogPilot setup...")
-  
-  # Add a small delay to let system stabilize
-  time.sleep(2)
-  
-  try:
-    run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
-  except Exception as e:
-    print(f"[BOOT] Non-critical error remounting /persist: {e}")
-    
-  try:
-    run_cmd(["sudo", "chmod", "0777", "/cache"], "Successfully updated /cache permissions", "Failed to update /cache permissions")
-  except Exception as e:
-    print(f"[BOOT] Non-critical error updating /cache permissions: {e}")
+  run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
+  run_cmd(["sudo", "chmod", "0777", "/cache"], "Successfully updated /cache permissions", "Failed to update /cache permissions")
 
-  try:
-    CRASHES_DIR.mkdir(parents=True, exist_ok=True)
-    MODELS_PATH.mkdir(parents=True, exist_ok=True)
-    THEME_SAVE_PATH.mkdir(parents=True, exist_ok=True)
-  except Exception as e:
-    print(f"[BOOT] Error creating directories: {e}")
+  # Emergency SSH fix for AGNOS-level SSH configuration
+  fix_agnos_ssh()
+
+  CRASHES_DIR.mkdir(parents=True, exist_ok=True)
+  MODELS_PATH.mkdir(parents=True, exist_ok=True)
+  THEME_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 
   for source_suffix, destination_suffix in [
     ("world_frog_day/colors", "theme_packs/frog/colors"),
@@ -217,16 +221,14 @@ def setup_frogpilot(build_metadata):
       if item.name not in {"params", "tracking"}:
         delete_file(item)
 
-  # TEMPORARILY DISABLED: Boot logo replacement to avoid boot delays from root remount
-  print("[BOOT] Skipping boot logo replacement to speed up boot process...")
-  # boot_logo_location = Path("/usr/comma/bg.jpg")
-  # frogpilot_boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
-  # if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
-  #   stock_mount_options = subprocess.run(["findmnt", "-no", "OPTIONS", "/"], capture_output=True, text=True).stdout.strip()
-  #
-  #   run_cmd(["sudo", "mount", "-o", "remount,rw", "/"], "Successfully remounted / as read-write", "Failed to remount / as read-write")
-  #   run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
-  #   run_cmd(["sudo", "mount", "-o", f"remount,{stock_mount_options}", "/"], "Successfully restored stock mount options", "Failed to restore stock mount options")
+  boot_logo_location = Path("/usr/comma/bg.jpg")
+  frogpilot_boot_logo = Path(__file__).parent / "assets/other_images/frogpilot_boot_logo.png"
+  if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
+    stock_mount_options = subprocess.run(["findmnt", "-no", "OPTIONS", "/"], capture_output=True, text=True).stdout.strip()
+
+    run_cmd(["sudo", "mount", "-o", "remount,rw", "/"], "Successfully remounted / as read-write", "Failed to remount / as read-write")
+    run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
+    run_cmd(["sudo", "mount", "-o", f"remount,{stock_mount_options}", "/"], "Successfully restored stock mount options", "Failed to restore stock mount options")
 
   persist_comma_path = Path("/persist/comma")
   backup_comma_path = Path("/data/backup_comma")
@@ -258,37 +260,6 @@ def setup_frogpilot(build_metadata):
   if build_metadata.channel == "FrogPilot-Development" and Path("/persist/frogsgomoo.py").is_file():
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
-
-  # Enable SSH at boot - run in background to not block
-  def setup_ssh_async():
-    print("[BOOT] Setting up SSH access for chriscarlo (async)...")
-    try:
-      # Force SSH to be enabled
-      params.put_bool("SshEnabled", True)
-      params.put("GithubUsername", "chriscarlo")
-      print("[BOOT] SSH enabled in params")
-      
-      # Start SSH service
-      try:
-        run_cmd(["sudo", "systemctl", "start", "ssh"], "SSH service started", "Failed to start SSH")
-      except:
-        pass
-        
-      # Fetch keys in background after network is ready
-      time.sleep(30)  # Wait for network
-      try:
-        import requests
-        keys_response = requests.get("https://github.com/chriscarlo.keys", timeout=5)
-        if keys_response.status_code == 200:
-          params.put("GithubSshKeys", keys_response.text)
-          print(f"[BOOT] Fetched {len(keys_response.text.splitlines())} SSH keys")
-      except Exception as e:
-        print(f"[BOOT] Key fetch failed: {e}")
-    except Exception as e:
-      print(f"[BOOT] SSH setup error: {e}")
-  
-  # Run SSH setup in background thread
-  threading.Thread(target=setup_ssh_async, daemon=True).start()
 
 def uninstall_frogpilot():
   boot_logo_location = Path("/usr/comma/bg.jpg")
