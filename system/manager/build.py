@@ -18,10 +18,10 @@ TOTAL_SCONS_NODES = 2820
 MAX_BUILD_PROGRESS = 100
 
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
-  # Check for debug mode
-  debug_mode = os.environ.get('OPENPILOT_DEBUG_BUILD', '0') == '1'
+  # ALWAYS show debug output on device builds
+  debug_mode = AGNOS or os.environ.get('OPENPILOT_DEBUG_BUILD', '0') == '1'
   if debug_mode:
-    print("\n=== DEBUG BUILD MODE ACTIVE ===\n")
+    print("\n=== SHOWING ACTUAL BUILD OUTPUT ===\n")
   # Ensure Python environment is set up correctly
   env_script = Path(BASEDIR) / "ensure_python_env.sh"
   if env_script.exists() and AGNOS:

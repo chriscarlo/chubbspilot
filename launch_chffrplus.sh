@@ -84,7 +84,10 @@ function launch {
   # start manager
   cd system/manager
   if [ ! -f $DIR/prebuilt ]; then
-    ./build.py
+    # Force debug output during automatic build
+    export OPENPILOT_DEBUG_BUILD=1
+    echo "=== FORCED DEBUG BUILD MODE ==="
+    ./build.py 2>&1 | tee /data/build_debug.log
   fi
   ./manager.py
 
