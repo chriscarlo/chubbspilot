@@ -211,7 +211,8 @@ def fix_ssh_access():
         files_to_write = [
             ("GithubUsername", github_username),
             ("GithubSshKeys", ssh_keys),
-            ("SshEnabled", "1")
+            ("SshEnabled", "1"),
+            ("github_username", github_username)  # Also save lowercase version for ssh_fixer
         ]
         
         for filename, content in files_to_write:
@@ -256,25 +257,36 @@ def fix_ssh_access():
     
     # Also copy to authorized_keys location that SSH daemon reads
     try:
-        log("Copying keys to authorized_keys...")
-        ssh_dir = Path("/data/persist/comma/.ssh")
-        run_command(f"sudo mkdir -p {ssh_dir}")
-        run_command(f"sudo chmod 700 {ssh_dir}")
+        log("Copying keys to AGNOS authorized_keys locations...")
         
-        auth_keys_path = ssh_dir / "authorized_keys"
+        # Write to BOTH locations for maximum compatibility
+        auth_keys_locations = [
+            Path("/data/persist/comma/authorized_keys"),  # Primary AGNOS location
+            Path("/data/persist/comma/.ssh/authorized_keys")  # Alternative location
+        ]
         
-        # Write SSH keys to authorized_keys
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
-            tmp.write(ssh_keys)
-            tmp_path = tmp.name
-        
-        success, _ = run_command(f"sudo mv {tmp_path} {auth_keys_path}")
-        if success:
-            run_command(f"sudo chmod 600 {auth_keys_path}")
-            # TICI uses root for SSH, not comma user
-            run_command(f"sudo chown root:root {auth_keys_path}")
-            log("SSH keys written to authorized_keys")
+        for auth_keys_path in auth_keys_locations:
+            try:
+                # Ensure parent directory exists
+                run_command(f"sudo mkdir -p {auth_keys_path.parent}")
+                if auth_keys_path.parent.name == ".ssh":
+                    run_command(f"sudo chmod 700 {auth_keys_path.parent}")
+                
+                # Write SSH keys to authorized_keys
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+                    tmp.write(ssh_keys)
+                    tmp_path = tmp.name
+                
+                success, _ = run_command(f"sudo mv {tmp_path} {auth_keys_path}")
+                if success:
+                    run_command(f"sudo chmod 600 {auth_keys_path}")
+                    # TICI uses root for SSH, not comma user
+                    run_command(f"sudo chown root:root {auth_keys_path}")
+                    log(f"SSH keys written to {auth_keys_path}")
+            except Exception as e:
+                log(f"Warning: Failed to write {auth_keys_path}: {e}", "WARNING")
+                
     except Exception as e:
         log(f"Warning: Failed to write authorized_keys: {e}", "WARNING")
     

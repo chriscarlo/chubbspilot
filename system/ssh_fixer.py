@@ -6,12 +6,14 @@ Runs periodically to check and fix SSH configuration
 
 import time
 import subprocess
+import urllib.request
 from pathlib import Path
 from datetime import datetime
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
 
 SSH_CHECK_INTERVAL = 300  # Check every 5 minutes
+GITHUB_USERNAME_FILE = "/data/persist/comma/ssh/github_username"
 
 
 def log_to_error_file(message):
@@ -35,39 +37,90 @@ def log_to_error_file(message):
         cloudlog.error(f"Failed to write to error log: {e}")
 
 
-def check_ssh_access():
-    """Check if SSH is ACTUALLY WORKING by verifying the AGNOS authorized_keys file."""
+def get_github_username():
+    """Get GitHub username from persist location or params."""
     try:
-        # The ONLY thing that matters for AGNOS SSH is if authorized_keys exists
-        # and has the right keys in /data/persist/comma/
-        authorized_keys_path = Path("/data/persist/comma/authorized_keys")
+        # First check persist location (survives uninstalls)
+        username_file = Path(GITHUB_USERNAME_FILE)
+        if username_file.exists():
+            username = username_file.read_text().strip()
+            if username:
+                return username
         
+        # Fall back to params
+        params = Params()
+        username = params.get("GithubUsername", encoding='utf-8')
+        if username:
+            # Save to persist for future use
+            username_file.parent.mkdir(parents=True, exist_ok=True)
+            username_file.write_text(username)
+            return username
+        
+        return None
+    except Exception as e:
+        cloudlog.error(f"Error getting GitHub username: {e}")
+        return None
+
+
+def fetch_github_keys(username):
+    """Fetch current SSH keys from GitHub."""
+    try:
+        url = f"https://github.com/{username}.keys"
+        with urllib.request.urlopen(url, timeout=10) as response:
+            if response.status == 200:
+                keys = response.read().decode('utf-8').strip()
+                return keys if keys else None
+        return None
+    except Exception as e:
+        cloudlog.error(f"Error fetching GitHub keys: {e}")
+        return None
+
+
+def check_ssh_access():
+    """Check if SSH is properly configured with the CURRENT GitHub keys."""
+    try:
+        # Get the GitHub username
+        username = get_github_username()
+        if not username:
+            cloudlog.warning("No GitHub username configured")
+            return False
+        
+        # Check if authorized_keys exists
+        authorized_keys_path = Path("/data/persist/comma/authorized_keys")
         if not authorized_keys_path.exists():
             cloudlog.warning("authorized_keys missing from persist location")
             return False
-            
-        if authorized_keys_path.stat().st_size < 100:  # SSH keys are typically >200 bytes
-            cloudlog.warning("authorized_keys file too small, likely corrupted")
-            return False
-            
-        # Also check the persist SSH directory has the right structure
-        persist_ssh_dir = Path("/data/persist/comma/ssh")
-        if not persist_ssh_dir.exists():
-            cloudlog.warning("persist SSH directory missing")
-            return False
-            
-        # If we have keys in params but not in persist, SSH is broken
-        params_keys = Path("/data/params/d/GithubSshKeys")
-        persist_keys = Path("/data/persist/comma/ssh/GithubSshKeys")
         
-        if params_keys.exists() and not persist_keys.exists():
-            cloudlog.warning("Keys exist in params but not in persist - SSH is broken")
+        # Fetch current keys from GitHub
+        current_github_keys = fetch_github_keys(username)
+        if not current_github_keys:
+            cloudlog.warning(f"Could not fetch keys for {username} from GitHub")
+            # If we can't fetch, assume current config is OK (don't break working SSH)
+            return True
+        
+        # Read current authorized_keys
+        current_authorized = authorized_keys_path.read_text().strip()
+        
+        # Compare keys (normalize whitespace)
+        github_lines = set(line.strip() for line in current_github_keys.split('\n') if line.strip())
+        authorized_lines = set(line.strip() for line in current_authorized.split('\n') if line.strip())
+        
+        if github_lines != authorized_lines:
+            cloudlog.warning(f"GitHub keys for {username} don't match authorized_keys")
+            log_to_error_file(f"GitHub keys changed for {username} - update needed")
             return False
-            
+        
+        # Also ensure keys are in OpenPilot locations for consistency
+        persist_keys = Path("/data/persist/comma/ssh/GithubSshKeys")
+        if not persist_keys.exists():
+            cloudlog.warning("Keys missing from persist SSH directory")
+            return False
+        
         return True
     except Exception as e:
         cloudlog.error(f"Error checking SSH access: {e}")
-        return False
+        # On error, assume config is OK to avoid breaking working SSH
+        return True
 
 
 def run_ssh_fix():
@@ -98,14 +151,21 @@ def run_ssh_fix():
 
 
 def main():
-    """Main loop - monitors and fixes SSH access to prevent lockouts."""
+    """Main loop - monitors GitHub SSH keys and keeps them in sync."""
     cloudlog.bind(daemon="ssh_fixer")
     cloudlog.info("SSH fixer service started")
-    log_to_error_file("SSH fixer service started - monitoring AGNOS SSH configuration")
     
     params = Params()
     last_fix_attempt = 0
+    last_successful_check = 0
     startup_check_done = False
+    
+    # Log startup with username
+    username = get_github_username()
+    if username:
+        log_to_error_file(f"SSH monitor started - tracking GitHub keys for: {username}")
+    else:
+        log_to_error_file("SSH monitor started - no GitHub username configured yet")
     
     while True:
         try:
@@ -113,21 +173,33 @@ def main():
             if params.get_bool("SshEnabled"):
                 current_time = time.time()
                 
-                # Check if SSH is ACTUALLY working (authorized_keys in persist location)
+                # Check SSH configuration (including GitHub key sync)
                 if not check_ssh_access():
                     # On startup, fix immediately. Otherwise respect cooldown.
                     if not startup_check_done or (current_time - last_fix_attempt > 300):
-                        cloudlog.warning("SSH is broken - authorized_keys missing or corrupted")
-                        log_to_error_file("CRITICAL: SSH access broken - attempting repair...")
+                        username = get_github_username()
+                        if username:
+                            cloudlog.warning(f"SSH keys out of sync for {username}")
+                            log_to_error_file(f"Updating SSH keys from GitHub for {username}...")
+                        else:
+                            cloudlog.warning("SSH broken - no GitHub username")
+                            log_to_error_file("SSH broken - no GitHub username configured")
                         
                         if run_ssh_fix():
-                            cloudlog.info("SSH access repaired successfully")
-                            log_to_error_file("SUCCESS: SSH access restored - authorized_keys rebuilt")
+                            cloudlog.info("SSH keys synchronized successfully")
+                            log_to_error_file("SUCCESS: SSH keys updated from GitHub")
                         else:
-                            cloudlog.error("Failed to repair SSH access")
-                            log_to_error_file("ERROR: SSH repair failed - use Fix SSH button in UI")
+                            cloudlog.error("Failed to sync SSH keys")
+                            log_to_error_file("ERROR: Failed to sync keys - use Fix SSH button")
                         
                         last_fix_attempt = current_time
+                else:
+                    # Log successful checks periodically
+                    if current_time - last_successful_check > 3600:  # Every hour
+                        username = get_github_username()
+                        if username:
+                            log_to_error_file(f"SSH keys verified - in sync with GitHub ({username})")
+                        last_successful_check = current_time
                 
                 startup_check_done = True
             
