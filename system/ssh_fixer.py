@@ -36,19 +36,38 @@ def log_to_error_file(message):
 
 
 def check_ssh_access():
-    """Check if SSH keys are properly configured."""
-    persist_path = Path("/data/persist/comma/ssh/GithubSshKeys")
-    standard_path = Path("/data/params/d/GithubSshKeys")
-    
-    # Check if keys exist in persistent location
-    if persist_path.exists() and persist_path.stat().st_size > 0:
+    """Check if SSH is ACTUALLY WORKING by verifying the AGNOS authorized_keys file."""
+    try:
+        # The ONLY thing that matters for AGNOS SSH is if authorized_keys exists
+        # and has the right keys in /data/persist/comma/
+        authorized_keys_path = Path("/data/persist/comma/authorized_keys")
+        
+        if not authorized_keys_path.exists():
+            cloudlog.warning("authorized_keys missing from persist location")
+            return False
+            
+        if authorized_keys_path.stat().st_size < 100:  # SSH keys are typically >200 bytes
+            cloudlog.warning("authorized_keys file too small, likely corrupted")
+            return False
+            
+        # Also check the persist SSH directory has the right structure
+        persist_ssh_dir = Path("/data/persist/comma/ssh")
+        if not persist_ssh_dir.exists():
+            cloudlog.warning("persist SSH directory missing")
+            return False
+            
+        # If we have keys in params but not in persist, SSH is broken
+        params_keys = Path("/data/params/d/GithubSshKeys")
+        persist_keys = Path("/data/persist/comma/ssh/GithubSshKeys")
+        
+        if params_keys.exists() and not persist_keys.exists():
+            cloudlog.warning("Keys exist in params but not in persist - SSH is broken")
+            return False
+            
         return True
-    
-    # Check if keys exist in standard location
-    if standard_path.exists() and standard_path.stat().st_size > 0:
-        return True
-    
-    return False
+    except Exception as e:
+        cloudlog.error(f"Error checking SSH access: {e}")
+        return False
 
 
 def run_ssh_fix():
@@ -79,65 +98,46 @@ def run_ssh_fix():
 
 
 def main():
-    """Main loop - periodically check and fix SSH access."""
+    """Main loop - monitors and fixes SSH access to prevent lockouts."""
     cloudlog.bind(daemon="ssh_fixer")
     cloudlog.info("SSH fixer service started")
-    log_to_error_file("SSH fixer service started")
+    log_to_error_file("SSH fixer service started - monitoring AGNOS SSH configuration")
     
     params = Params()
     last_fix_attempt = 0
-    check_count = 0
+    startup_check_done = False
     
-    # CHECK IMMEDIATELY ON STARTUP - DON'T WAIT!
-    cloudlog.info("Running initial SSH check on startup...")
-    log_to_error_file("Running initial SSH check on startup...")
-    
-    if params.get_bool("SshEnabled") and not check_ssh_access():
-        cloudlog.warning("SSH access appears broken on startup, attempting immediate fix...")
-        log_to_error_file("SSH access appears broken on startup, attempting immediate fix...")
-        
-        if run_ssh_fix():
-            cloudlog.info("SSH access restored on startup")
-            log_to_error_file("SSH access restored on startup")
-        else:
-            log_to_error_file("SSH fix attempt failed on startup")
-        
-        last_fix_attempt = time.time()
-    
-    # Now enter the regular check loop
     while True:
         try:
-            check_count += 1
-            
-            # Check if SSH is enabled
+            # Only check if SSH is enabled
             if params.get_bool("SshEnabled"):
-                # Check if SSH access is working
+                current_time = time.time()
+                
+                # Check if SSH is ACTUALLY working (authorized_keys in persist location)
                 if not check_ssh_access():
-                    current_time = time.time()
-                    # Avoid fixing too frequently
-                    if current_time - last_fix_attempt > 60:
-                        cloudlog.warning("SSH access appears broken, attempting fix...")
-                        log_to_error_file(f"Check #{check_count}: SSH access appears broken, attempting fix...")
+                    # On startup, fix immediately. Otherwise respect cooldown.
+                    if not startup_check_done or (current_time - last_fix_attempt > 300):
+                        cloudlog.warning("SSH is broken - authorized_keys missing or corrupted")
+                        log_to_error_file("CRITICAL: SSH access broken - attempting repair...")
                         
                         if run_ssh_fix():
-                            cloudlog.info("SSH access restored")
-                            log_to_error_file("SSH access restored successfully")
+                            cloudlog.info("SSH access repaired successfully")
+                            log_to_error_file("SUCCESS: SSH access restored - authorized_keys rebuilt")
                         else:
-                            log_to_error_file("SSH fix attempt failed")
+                            cloudlog.error("Failed to repair SSH access")
+                            log_to_error_file("ERROR: SSH repair failed - use Fix SSH button in UI")
                         
                         last_fix_attempt = current_time
-                else:
-                    # Log periodically that SSH is working
-                    if check_count % 12 == 0:  # Every hour
-                        log_to_error_file(f"Check #{check_count}: SSH access is working properly")
+                
+                startup_check_done = True
             
-            # Sleep before next check
+            # Check every 5 minutes
             time.sleep(SSH_CHECK_INTERVAL)
             
         except Exception as e:
             cloudlog.error(f"SSH fixer error: {e}")
             log_to_error_file(f"SSH fixer error: {e}")
-            time.sleep(60)  # Sleep shorter on error
+            time.sleep(60)  # Retry sooner on error
 
 
 if __name__ == "__main__":

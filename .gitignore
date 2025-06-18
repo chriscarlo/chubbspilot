@@ -86,3 +86,4 @@ Pipfile
 
 # Claude Code guidance file
 CLAUDE.md
+selfdrive/frogpilot/ui/qt/widgets/moc_*.cc
