@@ -33,3 +33,14 @@ private:
   // FrogPilot variables
   Params params_cache{"/cache/params"};
 };
+
+// SSH fix button widget
+class SshFixButton : public ButtonControl {
+  Q_OBJECT
+
+public:
+  SshFixButton();
+
+private:
+  void fixSshAccess();
+};

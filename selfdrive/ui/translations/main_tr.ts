@@ -1922,6 +1922,22 @@ This overrides &apos;Conditional Experimental Mode&apos;.</source>
         <source> second</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Status Widget</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show the current status in the onroad UI.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Match Follow Distance - %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The higher the percentage the more 1:1 the follow distance. 80% is 1:1 follow distance.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotManageControl</name>
@@ -2622,6 +2638,14 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <source>Enter the text for the bottom half</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Brake Indicator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Turns current speed value to red when the brake pedal is pressed.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotUtilitiesPanel</name>
@@ -2874,6 +2898,26 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
     </message>
     <message>
         <source>MANAGE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Chubbs&apos; Custom Tuning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Chubbs&apos; Custom tuning for Hyundai/Kia/Genesis vehicles, which smoothes acceleration and braking to help achieve a &apos;limo&apos; stop.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable Radar Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable this to attempt to enable radar tracks for Hyundai, Kia, and Genesis models equipped with the supported Mando SCC radar.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Smoother Braking</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3156,14 +3200,6 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>&apos;Conditional Experimental Mode&apos; Status</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show &apos;Conditional Experimental Mode&apos;&apos;s current status in the onroad UI.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Model Stopping Point</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3361,10 +3397,6 @@ Default matches half of the MUTCD standard lane line width of 4 inches.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Adjacent Leads</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Lead Info</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3450,6 +3482,22 @@ Default matches the MUTCD standard of 4 inches.</source>
         <source>Adjust how thick the road edges appear on the display.
 
 Default matches half of the MUTCD standard of 4 inches.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Adjacent Leads Tracking</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show adjacent leads being detected by the car&apos;s radar.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Radar Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show all of the radar points being tracked by the car&apos;s radar.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4231,6 +4279,41 @@ This may take up to a minute.</source>
     <message>
         <source>Username &apos;%1&apos; doesn&apos;t exist on GitHub</source>
         <translation>Github kullanıcısı %1 bulunamadı</translation>
+    </message>
+</context>
+<context>
+    <name>SshFixButton</name>
+    <message>
+        <source>Fix SSH Access</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FIX SSH</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore SSH access by properly configuring the persistent SSH storage. Use this if you&apos;re unable to SSH into your device after modifying AGNOS-level SSH settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FIXING...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to run SSH fix script: timeout</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SSH access has been restored!
+
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to fix SSH access.
+
+</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

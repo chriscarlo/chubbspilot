@@ -159,6 +159,7 @@ AdvancedNetworking::AdvancedNetworking(QWidget* parent, WifiManager* wifi): QWid
   // SSH keys
   list->addItem(new SshToggle());
   list->addItem(new SshControl());
+  list->addItem(new SshFixButton());
 
   // Roaming toggle
   const bool roamingEnabled = params.getBool("GsmRoaming");
