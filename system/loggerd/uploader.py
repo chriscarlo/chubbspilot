@@ -14,14 +14,14 @@ from collections.abc import Iterator
 
 from cereal import log
 import cereal.messaging as messaging
-from openpilot.common.api import Api
-from openpilot.common.params import Params
-from openpilot.common.realtime import set_core_affinity
-from openpilot.system.hardware.hw import Paths
-from openpilot.system.loggerd.xattr_cache import getxattr, setxattr
-from openpilot.common.swaglog import cloudlog
+from common.api import Api
+from common.params import Params
+from common.realtime import set_core_affinity
+from system.hardware.hw import Paths
+from system.loggerd.xattr_cache import getxattr, setxattr
+from common.swaglog import cloudlog
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
 NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.upload'

@@ -4,12 +4,12 @@ import subprocess
 from pathlib import Path
 
 # NOTE: Do NOT import anything here that needs be built (e.g. params)
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.spinner import Spinner
-from openpilot.common.text_window import TextWindow
-from openpilot.system.hardware import AGNOS
-from openpilot.common.swaglog import cloudlog, add_file_handler
-from openpilot.system.version import get_build_metadata
+from common.basedir import BASEDIR
+from common.spinner import Spinner
+from common.text_window import TextWindow
+from system.hardware import AGNOS
+from common.swaglog import cloudlog, add_file_handler
+from system.version import get_build_metadata
 
 MAX_CACHE_SIZE = 4e9 if "CI" in os.environ else 2e9
 CACHE_DIR = Path("/data/scons_cache" if AGNOS else "/tmp/scons_cache")
@@ -18,6 +18,15 @@ TOTAL_SCONS_NODES = 2820
 MAX_BUILD_PROGRESS = 100
 
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
+  # Check and install dependencies before building
+  dep_script = Path(BASEDIR) / "install_dependencies.sh"
+  if dep_script.exists() and AGNOS:
+    spinner.update("Checking dependencies...")
+    try:
+      subprocess.run([str(dep_script)], check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+      cloudlog.warning(f"Dependency check had warnings: {e.stderr}")
+  
   env = os.environ.copy()
   env['SCONS_PROGRESS'] = "1"
   nproc = os.cpu_count()

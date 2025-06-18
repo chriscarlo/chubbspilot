@@ -4,14 +4,14 @@ import sys
 from collections import defaultdict
 from typing import Any
 
-from openpilot.common.git import get_commit
-from openpilot.system.hardware import PC
-from openpilot.tools.lib.openpilotci import BASE_URL, get_url
-from openpilot.selfdrive.test.process_replay.compare_logs import compare_logs, format_diff
-from openpilot.selfdrive.test.process_replay.process_replay import get_process_config, replay_process
-from openpilot.tools.lib.framereader import FrameReader
-from openpilot.tools.lib.logreader import LogReader
-from openpilot.tools.lib.helpers import save_log
+from common.git import get_commit
+from system.hardware import PC
+from tools.lib.openpilotci import BASE_URL, get_url
+from selfdrive.test.process_replay.compare_logs import compare_logs, format_diff
+from selfdrive.test.process_replay.process_replay import get_process_config, replay_process
+from tools.lib.framereader import FrameReader
+from tools.lib.logreader import LogReader
+from tools.lib.helpers import save_log
 
 TEST_ROUTE = "2f4452b03ccb98f0|2022-12-03--13-45-30"
 SEGMENT = 6
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     import requests
     import threading
     import http.server
-    from openpilot.tools.lib.openpilotci import upload_bytes
+    from tools.lib.openpilotci import upload_bytes
     os.environ['MAPS_HOST'] = 'http://localhost:5000'
 
     class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
   # upload new refs
   if (update or failed) and not PC:
-    from openpilot.tools.lib.openpilotci import upload_file
+    from tools.lib.openpilotci import upload_file
 
     print("Uploading new refs")
 

@@ -2,7 +2,7 @@ import pytest
 import time
 import numpy as np
 
-from openpilot.system.hardware.tici.hardware import Tici
+from system.hardware.tici.hardware import Tici
 
 HARDWARE = Tici()
 

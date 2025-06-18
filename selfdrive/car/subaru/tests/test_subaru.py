@@ -1,5 +1,5 @@
 from cereal import car
-from openpilot.selfdrive.car.subaru.fingerprints import FW_VERSIONS
+from selfdrive.car.subaru.fingerprints import FW_VERSIONS
 
 Ecu = car.CarParams.Ecu
 

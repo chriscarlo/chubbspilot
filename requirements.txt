@@ -1,0 +1,24 @@
+# comma service libraries
+common
+cereal
+msgq
+opendbc
+requests
+# dev libraries
+autobahn==23.6.2
+notebook
+parameterized
+pexpect
+plotly
+pygame
+pyopencl
+PyQt5>=5.15
+PyQtWebEngine
+pytest
+pyyaml
+rtree
+sentry-sdk
+shapely
+sip
+smatplotlib
+libusb1

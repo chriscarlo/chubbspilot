@@ -2,8 +2,8 @@ import random
 import re
 
 from cereal import car
-from openpilot.selfdrive.car.volkswagen.values import CAR, FW_QUERY_CONFIG, WMI
-from openpilot.selfdrive.car.volkswagen.fingerprints import FW_VERSIONS
+from selfdrive.car.volkswagen.values import CAR, FW_QUERY_CONFIG, WMI
+from selfdrive.car.volkswagen.fingerprints import FW_VERSIONS
 
 Ecu = car.CarParams.Ecu
 

@@ -2,21 +2,21 @@ import math
 import numpy as np
 
 from cereal import car
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.numpy_fast import clip, interp
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car import carlog, apply_meas_steer_torque_limits, apply_std_steer_angle_limits, common_fault_avoidance, create_gas_interceptor_command, make_can_msg, rate_limit
-from openpilot.selfdrive.car.secoc import add_mac, build_sync_mac
-from openpilot.selfdrive.car.interfaces import CarControllerBase
-from openpilot.selfdrive.car.toyota import toyotacan
-from openpilot.selfdrive.car.toyota.values import CAR, STATIC_DSU_MSGS, NO_STOP_TIMER_CAR, TSS2_CAR, \
+from common.filter_simple import FirstOrderFilter
+from common.numpy_fast import clip, interp
+from common.realtime import DT_CTRL
+from selfdrive.car import carlog, apply_meas_steer_torque_limits, apply_std_steer_angle_limits, common_fault_avoidance, create_gas_interceptor_command, make_can_msg, rate_limit
+from selfdrive.car.secoc import add_mac, build_sync_mac
+from selfdrive.car.interfaces import CarControllerBase
+from selfdrive.car.toyota import toyotacan
+from selfdrive.car.toyota.values import CAR, STATIC_DSU_MSGS, NO_STOP_TIMER_CAR, TSS2_CAR, \
                                         MIN_ACC_SPEED, PEDAL_TRANSITION, CarControllerParams, ToyotaFlags, \
                                         UNSUPPORTED_DSU_CAR, STOP_AND_GO_CAR
-from openpilot.selfdrive.controls.lib.drive_helpers import CRUISE_LONG_PRESS
-from openpilot.selfdrive.controls.lib.pid import PIDController
+from selfdrive.controls.lib.drive_helpers import CRUISE_LONG_PRESS
+from selfdrive.controls.lib.pid import PIDController
 from opendbc.can.packer import CANPacker
 
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
+from selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 SteerControlType = car.CarParams.SteerControlType

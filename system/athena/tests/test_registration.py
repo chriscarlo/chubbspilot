@@ -2,10 +2,10 @@ import json
 from Crypto.PublicKey import RSA
 from pathlib import Path
 
-from openpilot.common.params import Params
-from openpilot.system.athena.registration import register, UNREGISTERED_DONGLE_ID
-from openpilot.system.athena.tests.helpers import MockResponse
-from openpilot.system.hardware.hw import Paths
+from common.params import Params
+from system.athena.registration import register, UNREGISTERED_DONGLE_ID
+from system.athena.tests.helpers import MockResponse
+from system.hardware.hw import Paths
 
 
 class TestRegistration:
@@ -35,7 +35,7 @@ class TestRegistration:
     self.params.put("HardwareSerial", "serial")
     self._generate_keys()
 
-    m = mocker.patch("openpilot.system.athena.registration.api_get", autospec=True)
+    m = mocker.patch("system.athena.registration.api_get", autospec=True)
     dongle = "DONGLE_ID_123"
     self.params.put("DongleId", dongle)
     assert register() == dongle
@@ -43,7 +43,7 @@ class TestRegistration:
 
   def test_no_keys(self, mocker):
     # missing pubkey
-    m = mocker.patch("openpilot.system.athena.registration.api_get", autospec=True)
+    m = mocker.patch("system.athena.registration.api_get", autospec=True)
     dongle = register()
     assert m.call_count == 0
     assert dongle == UNREGISTERED_DONGLE_ID
@@ -52,7 +52,7 @@ class TestRegistration:
   def test_missing_cache(self, mocker):
     # keys exist but no dongle id
     self._generate_keys()
-    m = mocker.patch("openpilot.system.athena.registration.api_get", autospec=True)
+    m = mocker.patch("system.athena.registration.api_get", autospec=True)
     dongle = "DONGLE_ID_123"
     m.return_value = MockResponse(json.dumps({'dongle_id': dongle}), 200)
     assert register() == dongle
@@ -66,7 +66,7 @@ class TestRegistration:
   def test_unregistered(self, mocker):
     # keys exist, but unregistered
     self._generate_keys()
-    m = mocker.patch("openpilot.system.athena.registration.api_get", autospec=True)
+    m = mocker.patch("system.athena.registration.api_get", autospec=True)
     m.return_value = MockResponse(None, 402)
     dongle = register()
     assert m.call_count == 1

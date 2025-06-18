@@ -1,6 +1,6 @@
 # ruff: noqa: E501
 from cereal import car
-from openpilot.selfdrive.car.hyundai.values import CAR
+from selfdrive.car.hyundai.values import CAR
 
 # The existence of SCC or RDR in the fwdRadar FW usually determines the radar's function,
 # i.e. if it sends the SCC messages or if another ECU like the camera or ADAS Driving ECU does
@@ -1048,6 +1048,9 @@ FW_VERSIONS = {
       b'\xf1\x00CV1 MFC  AT USA LHD 1.00 1.00 99210-CV200 230510',
       b'\xf1\x00CV1 MFC  AT USA LHD 1.00 1.05 99210-CV000 211027',
       b'\xf1\x00CV1 MFC  AT USA LHD 1.00 1.06 99210-CV000 220328',
+    ],
+    (Ecu.cornerRadar, 0x7b7, None): [
+      b'\xf1\x8b #\x12\x12',  # Placeholder firmware version, replace with actual
     ],
   },
   CAR.HYUNDAI_IONIQ_5: {

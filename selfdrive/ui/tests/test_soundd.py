@@ -1,7 +1,7 @@
 from cereal import car
 from cereal import messaging
 from cereal.messaging import SubMaster, PubMaster
-from openpilot.selfdrive.ui.soundd import CONTROLS_TIMEOUT, check_controls_timeout_alert
+from selfdrive.ui.soundd import CONTROLS_TIMEOUT, check_controls_timeout_alert
 
 import time
 

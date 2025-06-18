@@ -1,9 +1,9 @@
 import pytest
 import requests
-from openpilot.selfdrive.car.fingerprints import MIGRATION
-from openpilot.tools.lib.comma_car_segments import get_comma_car_segments_database, get_url
-from openpilot.tools.lib.logreader import LogReader
-from openpilot.tools.lib.route import SegmentRange
+from selfdrive.car.fingerprints import MIGRATION
+from tools.lib.comma_car_segments import get_comma_car_segments_database, get_url
+from tools.lib.logreader import LogReader
+from tools.lib.route import SegmentRange
 
 
 @pytest.mark.skip(reason="huggingface is flaky, run this test manually to check for issues")

@@ -1,10 +1,10 @@
 from cereal import car, custom
 from panda import Panda
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.ford.fordcan import CanBus
-from openpilot.selfdrive.car.ford.values import Ecu, FordFlags
-from openpilot.selfdrive.car.interfaces import CarInterfaceBase
+from common.conversions import Conversions as CV
+from selfdrive.car import create_button_events, get_safety_config
+from selfdrive.car.ford.fordcan import CanBus
+from selfdrive.car.ford.values import Ecu, FordFlags
+from selfdrive.car.interfaces import CarInterfaceBase
 
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type

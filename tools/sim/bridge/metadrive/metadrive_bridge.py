@@ -4,10 +4,10 @@ from multiprocessing import Queue
 from metadrive.component.sensors.base_camera import _cuda_enable
 from metadrive.component.map.pg_map import MapGenerateMethod
 
-from openpilot.tools.sim.bridge.common import SimulatorBridge
-from openpilot.tools.sim.bridge.metadrive.metadrive_common import RGBCameraRoad, RGBCameraWide
-from openpilot.tools.sim.bridge.metadrive.metadrive_world import MetaDriveWorld
-from openpilot.tools.sim.lib.camerad import W, H
+from tools.sim.bridge.common import SimulatorBridge
+from tools.sim.bridge.metadrive.metadrive_common import RGBCameraRoad, RGBCameraWide
+from tools.sim.bridge.metadrive.metadrive_world import MetaDriveWorld
+from tools.sim.lib.camerad import W, H
 
 
 def straight_block(length):

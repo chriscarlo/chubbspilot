@@ -624,6 +624,10 @@ struct RadarState @0x9a185389d6fdd05f {
   leadRightFar @16 :LeadData;
   cumLagMs @5 :Float32;
 
+  # Advanced blindspot detection using corner radar
+  leftForwardBlindspot @17 :Bool;
+  rightForwardBlindspot @18 :Bool;
+
   struct LeadData {
     dRel @0 :Float32;
     yRel @1 :Float32;
@@ -640,6 +644,7 @@ struct RadarState @0x9a185389d6fdd05f {
     modelProb @13 :Float32;
     radar @14 :Bool;
     radarTrackId @15 :Int32 = -1;
+    ttc @16 :Float32; # Added Time To Collision field
 
     aLeadDEPRECATED @5 :Float32;
   }
@@ -1112,7 +1117,7 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   shouldStop @37: Bool;
   allowThrottle @38: Bool;
   allowBrake @39: Bool;
-
+  emergencyFactor @40: Float32;
 
   solverExecutionTime @35 :Float32;
 
@@ -1158,6 +1163,7 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
     y @1 :List(Float32);
   }
 }
+
 struct UiPlan {
   frameId @2 :UInt32;
   position @0 :XYZTData;
@@ -2089,7 +2095,7 @@ struct LiveTorqueParametersData {
   useParams @12 :Bool;
 }
 
-struct LiveMapDataDEPRECATED {
+struct LiveMapData {
   speedLimitValid @0 :Bool;
   speedLimit @1 :Float32;
   speedAdvisoryValid @12 :Bool;
@@ -2107,6 +2113,28 @@ struct LiveMapDataDEPRECATED {
   roadCurvature @9 :List(Float32);
   distToTurn @10 :Float32;
   mapValid @11 :Bool;
+  currentRoadName @17 :Text;
+
+  # Curvature / Segment Data for VTSC/MTSC
+  curvatureDataValid @18 :Bool;
+  currentSegment @19 :CurrentSegmentData;
+  nextSegments @20 :List(NextSegmentData);
+  turnSpeedLimit @21 :Float32;
+
+  struct CurrentSegmentData {
+    segmentId @0 :Int64;
+    distanceAlongSegment @1 :Float32;       # Distance progressed along the current segment (m)
+    curvatureDerivedSpeedsMps @2 :List(Float32); # Pre-calculated speeds based on curvature for nodes ahead
+    distancesForSpeeds @3 :List(Float32);   # Cumulative distance from segment start corresponding to each speed (m)
+  }
+
+  struct NextSegmentData {
+    segmentId @0 :Int64;
+    distanceToStart @1 :Float32;            # Cumulative distance from car to start of this segment (m)
+    segmentLength @2 :Float32;              # Length of this segment (m)
+    curvatureDerivedSpeedsMps @3 :List(Float32); # Pre-calculated speeds based on curvature for nodes in this segment
+    distancesForSpeeds @4 :List(Float32);   # Cumulative distance from this segment's start corresponding to each speed (m)
+  }
 }
 
 struct CameraOdometry {
@@ -2372,11 +2400,12 @@ struct Event {
     frogpilotDeviceState @109 :Custom.FrogPilotDeviceState;
     frogpilotNavigation @110 :Custom.FrogPilotNavigation;
     frogpilotPlan @111 :Custom.FrogPilotPlan;
-    customReserved5 @112 :Custom.CustomReserved5;
-    customReserved6 @113 :Custom.CustomReserved6;
+    chauffeurHKGTuning @112 :Custom.ChauffeurHKGTuning;
+    chauffeurTurnSpeedControl @113 :Custom.ChauffeurTurnSpeedControl;
     customReserved7 @114 :Custom.CustomReserved7;
     customReserved8 @115 :Custom.CustomReserved8;
     customReserved9 @116 :Custom.CustomReserved9;
+
 
     # *********** legacy + deprecated ***********
     model @9 :Legacy.ModelData; # TODO: rename modelV2 and mark this as deprecated
@@ -2392,7 +2421,7 @@ struct Event {
     cellInfoDEPRECATED @28 :List(Legacy.CellInfo);
     wifiScanDEPRECATED @29 :List(Legacy.WifiScan);
     uiNavigationEventDEPRECATED @50 :Legacy.UiNavigationEvent;
-    liveMapDataDEPRECATED @62 :LiveMapDataDEPRECATED;
+    liveMapData @62 :LiveMapData;
     gpsPlannerPointsDEPRECATED @40 :Legacy.GPSPlannerPoints;
     gpsPlannerPlanDEPRECATED @41 :Legacy.GPSPlannerPlan;
     applanixRawDEPRECATED @42 :Data;

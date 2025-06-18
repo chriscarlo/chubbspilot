@@ -1,7 +1,7 @@
 from collections import namedtuple
 from msgq.visionipc import VisionStreamType
-from openpilot.common.realtime import DT_MDL, DT_DMON
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
+from common.realtime import DT_MDL, DT_DMON
+from common.transformations.camera import DEVICE_CAMERAS
 
 VideoStreamMeta = namedtuple("VideoStreamMeta", ["camera_state", "encode_index", "stream", "dt", "frame_sizes"])
 ROAD_CAMERA_FRAME_SIZES = {k: (v.dcam.width, v.dcam.height) for k, v in DEVICE_CAMERAS.items()}

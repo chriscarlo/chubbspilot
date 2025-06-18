@@ -12,18 +12,18 @@ from flaky import flaky
 import cereal.messaging as messaging
 from cereal import log
 from cereal.services import SERVICE_LIST
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.params import Params
-from openpilot.common.timeout import Timeout
-from openpilot.system.hardware.hw import Paths
-from openpilot.system.loggerd.xattr_cache import getxattr
-from openpilot.system.loggerd.deleter import PRESERVE_ATTR_NAME, PRESERVE_ATTR_VALUE
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.system.version import get_version
-from openpilot.tools.lib.helpers import RE
-from openpilot.tools.lib.logreader import LogReader
+from common.basedir import BASEDIR
+from common.params import Params
+from common.timeout import Timeout
+from system.hardware.hw import Paths
+from system.loggerd.xattr_cache import getxattr
+from system.loggerd.deleter import PRESERVE_ATTR_NAME, PRESERVE_ATTR_VALUE
+from system.manager.process_config import managed_processes
+from system.version import get_version
+from tools.lib.helpers import RE
+from tools.lib.logreader import LogReader
 from msgq.visionipc import VisionIpcServer, VisionStreamType
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
+from common.transformations.camera import DEVICE_CAMERAS
 
 SentinelType = log.Sentinel.SentinelType
 

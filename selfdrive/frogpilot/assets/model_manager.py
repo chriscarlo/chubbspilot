@@ -9,9 +9,9 @@ import urllib.request
 
 from pathlib import Path
 
-from openpilot.selfdrive.frogpilot.assets.download_functions import GITLAB_URL, download_file, get_repository_url, handle_error, handle_request_error, verify_download
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import delete_file
-from openpilot.selfdrive.frogpilot.frogpilot_variables import DEFAULT_CLASSIC_MODEL, DEFAULT_MODEL, DEFAULT_TINYGRAD_MODEL, MODELS_PATH, params, params_memory
+from selfdrive.frogpilot.assets.download_functions import GITLAB_URL, download_file, get_repository_url, handle_error, handle_request_error, verify_download
+from selfdrive.frogpilot.frogpilot_utilities import delete_file
+from selfdrive.frogpilot.frogpilot_variables import DEFAULT_CLASSIC_MODEL, DEFAULT_MODEL, DEFAULT_TINYGRAD_MODEL, MODELS_PATH, params, params_memory
 
 VERSION = "v13"
 

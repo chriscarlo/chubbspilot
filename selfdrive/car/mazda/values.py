@@ -2,10 +2,10 @@ from dataclasses import dataclass, field
 from enum import IntFlag
 
 from cereal import car
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
-from openpilot.selfdrive.car.docs_definitions import CarHarness, CarDocs, CarParts
-from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
+from common.conversions import Conversions as CV
+from selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
+from selfdrive.car.docs_definitions import CarHarness, CarDocs, CarParts
+from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
 
 Ecu = car.CarParams.Ecu
 

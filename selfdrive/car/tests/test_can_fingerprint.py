@@ -1,8 +1,8 @@
 from parameterized import parameterized
 
 from cereal import log, messaging
-from openpilot.selfdrive.car.car_helpers import FRAME_FINGERPRINT, can_fingerprint
-from openpilot.selfdrive.car.fingerprints import _FINGERPRINTS as FINGERPRINTS
+from selfdrive.car.car_helpers import FRAME_FINGERPRINT, can_fingerprint
+from selfdrive.car.fingerprints import _FINGERPRINTS as FINGERPRINTS
 
 
 class TestCanFingerprint:

@@ -6,8 +6,8 @@ import datetime
 import subprocess
 
 import cereal.messaging as messaging
-from openpilot.system.qcomgpsd.qcomgpsd import at_cmd, wait_for_modem
-from openpilot.system.manager.process_config import managed_processes
+from system.qcomgpsd.qcomgpsd import at_cmd, wait_for_modem
+from system.manager.process_config import managed_processes
 
 GOOD_SIGNAL = bool(int(os.getenv("GOOD_SIGNAL", '0')))
 

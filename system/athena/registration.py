@@ -7,13 +7,13 @@ import string
 from pathlib import Path
 
 from datetime import datetime, timedelta
-from openpilot.common.api import api_get
-from openpilot.common.params import Params
-from openpilot.common.spinner import Spinner
-from openpilot.selfdrive.controls.lib.alertmanager import set_offroad_alert
-from openpilot.system.hardware import HARDWARE, PC
-from openpilot.system.hardware.hw import Paths
-from openpilot.common.swaglog import cloudlog
+from common.api import api_get
+from common.params import Params
+from common.spinner import Spinner
+from selfdrive.controls.lib.alertmanager import set_offroad_alert
+from system.hardware import HARDWARE, PC
+from system.hardware.hw import Paths
+from common.swaglog import cloudlog
 
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
@@ -26,6 +26,9 @@ def is_registered_device() -> bool:
 
 def register(show_spinner=False) -> str | None:
   params = Params()
+
+  # Explicitly remove the unregistered device alert
+  set_offroad_alert("Offroad_UnofficialHardware", False)
 
   IMEI = params.get("IMEI", encoding='utf8')
   HardwareSerial = params.get("HardwareSerial", encoding='utf8')
@@ -95,7 +98,8 @@ def register(show_spinner=False) -> str | None:
 
   if dongle_id:
     params.put("DongleId", dongle_id)
-    set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
+    # Disable the alert for unregistered devices
+    # set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
   return dongle_id
 
 

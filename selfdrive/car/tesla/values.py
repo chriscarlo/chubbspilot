@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 from cereal import car
-from openpilot.selfdrive.car import AngleRateLimit, CarSpecs, PlatformConfig, Platforms, dbc_dict
-from openpilot.selfdrive.car.docs_definitions import CarDocs
-from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
+from selfdrive.car import AngleRateLimit, CarSpecs, PlatformConfig, Platforms, dbc_dict
+from selfdrive.car.docs_definitions import CarDocs
+from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
 
 Ecu = car.CarParams.Ecu
 

@@ -1,8 +1,8 @@
 import itertools
 from parameterized import parameterized_class
 
-from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import STOP_DISTANCE
-from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
+from selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import STOP_DISTANCE
+from selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
 
 
 # TODO: make new FCW tests

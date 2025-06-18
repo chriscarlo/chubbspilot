@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 import math
 import numpy as np
-from openpilot.common.numpy_fast import clip, interp
+from common.numpy_fast import clip, interp
 
 import cereal.messaging as messaging
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.simple_kalman import KF1D
-from openpilot.common.realtime import DT_MDL
-from openpilot.selfdrive.modeld.constants import ModelConstants
-from openpilot.selfdrive.car.interfaces import ACCEL_MIN, ACCEL_MAX
-from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
-from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
-from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC, LEAD_ACCEL_TAU
-from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUISE_UNSET, CONTROL_N, get_speed_error
-from openpilot.common.swaglog import cloudlog
+from common.conversions import Conversions as CV
+from common.filter_simple import FirstOrderFilter
+from common.simple_kalman import KF1D
+from common.realtime import DT_MDL
+from selfdrive.modeld.constants import ModelConstants
+from selfdrive.car.interfaces import ACCEL_MIN, ACCEL_MAX
+from selfdrive.controls.lib.longcontrol import LongCtrlState
+from selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
+from selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC, LEAD_ACCEL_TAU
+from selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUISE_UNSET, CONTROL_N, get_speed_error
+from common.swaglog import cloudlog
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
-A_CRUISE_MIN = -1.2
-A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
+A_CRUISE_MIN = -6.0
+A_CRUISE_MAX_VALS = [4.0, 3.0, 2.0, 1.0]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.5
-MIN_ALLOW_THROTTLE_SPEED = 2.5
+MIN_ALLOW_THROTTLE_SPEED = 14.0      # stays in 'always allow' until ~30 mph
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]

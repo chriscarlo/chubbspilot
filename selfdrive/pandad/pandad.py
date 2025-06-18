@@ -7,10 +7,10 @@ import subprocess
 from typing import NoReturn
 
 from panda import Panda, PandaDFU, PandaProtocolMismatch, FW_PATH
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.params import Params
-from openpilot.system.hardware import HARDWARE
-from openpilot.common.swaglog import cloudlog
+from common.basedir import BASEDIR
+from common.params import Params
+from system.hardware import HARDWARE
+from common.swaglog import cloudlog
 
 
 def get_expected_signature(panda: Panda) -> bytes:

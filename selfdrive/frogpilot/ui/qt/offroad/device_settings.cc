@@ -56,7 +56,7 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
       }
       deviceToggle = new FrogPilotParamValueControl(param, title, desc, icon, minBrightness, 101, QString(), brightnessLabels);
     } else if (param == "ScreenTimeout" || param == "ScreenTimeoutOnroad") {
-      deviceToggle = new FrogPilotParamValueControl(param, title, desc, icon, 5, 60, tr(" seconds"));
+      deviceToggle = new FrogPilotParamValueControl(param, title, desc, icon, 5, 300, tr(" seconds"));
 
     } else {
       deviceToggle = new ParamControl(param, title, desc, icon);

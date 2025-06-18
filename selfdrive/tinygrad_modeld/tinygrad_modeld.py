@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 import os
-from openpilot.system.hardware import TICI
+from system.hardware import TICI
 
 #
 if TICI:
   from tinygrad.tensor import Tensor
   from tinygrad.dtype import dtypes
-  from openpilot.selfdrive.tinygrad_modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
+  from selfdrive.tinygrad_modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
   os.environ['QCOM'] = '1'
 else:
-  from openpilot.selfdrive.tinygrad_modeld.runners.ort_helpers import make_onnx_cpu_runner
+  from selfdrive.tinygrad_modeld.runners.ort_helpers import make_onnx_cpu_runner
 import time
 import pickle
 import numpy as np
@@ -19,21 +19,21 @@ from pathlib import Path
 from setproctitle import setproctitle
 from cereal.messaging import PubMaster, SubMaster
 from msgq.visionipc import VisionIpcClient, VisionStreamType, VisionBuf
-from openpilot.common.swaglog import cloudlog
-from openpilot.common.params import Params
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.realtime import config_realtime_process
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
-from openpilot.common.transformations.model import get_warp_matrix
-from openpilot.system import sentry
-from openpilot.selfdrive.car.car_helpers import get_demo_car_params
-from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
-from openpilot.selfdrive.tinygrad_modeld.parse_model_outputs import Parser
-from openpilot.selfdrive.tinygrad_modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState
-from openpilot.selfdrive.tinygrad_modeld.constants import ModelConstants
-from openpilot.selfdrive.tinygrad_modeld.models.commonmodel_pyx import DrivingModelFrame, CLContext
+from common.swaglog import cloudlog
+from common.params import Params
+from common.filter_simple import FirstOrderFilter
+from common.realtime import config_realtime_process
+from common.transformations.camera import DEVICE_CAMERAS
+from common.transformations.model import get_warp_matrix
+from system import sentry
+from selfdrive.car.car_helpers import get_demo_car_params
+from selfdrive.controls.lib.desire_helper import DesireHelper
+from selfdrive.tinygrad_modeld.parse_model_outputs import Parser
+from selfdrive.tinygrad_modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState
+from selfdrive.tinygrad_modeld.constants import ModelConstants
+from selfdrive.tinygrad_modeld.models.commonmodel_pyx import DrivingModelFrame, CLContext
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import METADATAS_PATH, MODELS_PATH, get_frogpilot_toggles
+from selfdrive.frogpilot.frogpilot_variables import METADATAS_PATH, MODELS_PATH, get_frogpilot_toggles
 
 PROCESS_NAME = "selfdrive.tinygrad_modeld.tinygrad_modeld"
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')

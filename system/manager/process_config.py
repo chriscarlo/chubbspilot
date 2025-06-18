@@ -1,9 +1,9 @@
 import os
 
 from cereal import car
-from openpilot.common.params import Params
-from openpilot.system.hardware import PC, TICI
-from openpilot.system.manager.process import PythonProcess, NativeProcess, DaemonProcess
+from common.params import Params
+from system.hardware import PC, TICI
+from system.manager.process import PythonProcess, NativeProcess, DaemonProcess
 
 WEBCAM = os.getenv("USE_WEBCAM") is not None
 
@@ -34,6 +34,11 @@ def qcomgps(started, params, CP: car.CarParams, classic_model, tinygrad_model, f
 
 def always_run(started, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
   return True
+
+def mapd_enabled(started, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
+  # TEMPORARILY DISABLED during boot debugging
+  # Re-enable by setting MapdEnabled param to true
+  return params.get_bool("MapdEnabled", False)
 
 def only_onroad(started: bool, params, CP: car.CarParams, classic_model, tinygrad_model, frogpilot_toggles) -> bool:
   return started
@@ -109,11 +114,8 @@ procs = [
   NativeProcess("classic_modeld", "selfdrive/classic_modeld", ["./classic_modeld"], run_classic_modeld),
   PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
   PythonProcess("frogpilot_process", "selfdrive.frogpilot.frogpilot_process", always_run),
-  PythonProcess("mapd", "selfdrive.frogpilot.navigation.mapd", always_run),
+  PythonProcess("mapd", "selfdrive.frogpilot.navigation.mapd", mapd_enabled),
   NativeProcess("tinygrad_modeld", "selfdrive/tinygrad_modeld", ["./tinygrad_modeld"], run_tinygrad_modeld),
-  
-  # SSH fixer service
-  PythonProcess("ssh_fixer", "system.ssh_fixer", always_run),
 ]
 
 managed_processes = {p.name: p for p in procs}

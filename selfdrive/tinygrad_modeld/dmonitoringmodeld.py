@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import os
-from openpilot.system.hardware import TICI
+from system.hardware import TICI
 if TICI:
   from tinygrad.tensor import Tensor
   from tinygrad.dtype import dtypes
-  from openpilot.selfdrive.tinygrad_modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
+  from selfdrive.tinygrad_modeld.runners.tinygrad_helpers import qcom_tensor_from_opencl_address
   os.environ['QCOM'] = '1'
 else:
-  from openpilot.selfdrive.tinygrad_modeld.runners.ort_helpers import make_onnx_cpu_runner
+  from selfdrive.tinygrad_modeld.runners.ort_helpers import make_onnx_cpu_runner
 import gc
 import math
 import time
@@ -20,13 +20,13 @@ from setproctitle import setproctitle
 from cereal import messaging
 from cereal.messaging import PubMaster, SubMaster
 from msgq.visionipc import VisionIpcClient, VisionStreamType, VisionBuf
-from openpilot.common.swaglog import cloudlog
-from openpilot.common.realtime import set_realtime_priority
-from openpilot.common.transformations.model import dmonitoringmodel_intrinsics, DM_INPUT_SIZE
-from openpilot.common.transformations.camera import _ar_ox_fisheye, _os_fisheye
-from openpilot.selfdrive.tinygrad_modeld.models.commonmodel_pyx import CLContext, MonitoringModelFrame
-from openpilot.selfdrive.tinygrad_modeld.parse_model_outputs import sigmoid
-from openpilot.system import sentry
+from common.swaglog import cloudlog
+from common.realtime import set_realtime_priority
+from common.transformations.model import dmonitoringmodel_intrinsics, DM_INPUT_SIZE
+from common.transformations.camera import _ar_ox_fisheye, _os_fisheye
+from selfdrive.tinygrad_modeld.models.commonmodel_pyx import CLContext, MonitoringModelFrame
+from selfdrive.tinygrad_modeld.parse_model_outputs import sigmoid
+from system import sentry
 
 MODEL_WIDTH, MODEL_HEIGHT = DM_INPUT_SIZE
 CALIB_LEN = 3

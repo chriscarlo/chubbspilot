@@ -3,9 +3,9 @@ import numpy as np
 from collections import defaultdict
 from enum import Enum
 
-from openpilot.tools.lib.logreader import LogReader
-from openpilot.selfdrive.test.process_replay.migration import migrate_all
-from openpilot.selfdrive.test.process_replay.process_replay import replay_process_with_name
+from tools.lib.logreader import LogReader
+from selfdrive.test.process_replay.migration import migrate_all
+from selfdrive.test.process_replay.process_replay import replay_process_with_name
 
 TEST_ROUTE = "ff2bd20623fcaeaa|2023-09-05--10-14-54/4"
 GPS_MESSAGES = ['gpsLocationExternal', 'gpsLocation']

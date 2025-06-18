@@ -2,9 +2,9 @@
 import numpy as np
 
 from cereal import messaging
-from openpilot.common.realtime import Ratekeeper
-from openpilot.common.retry import retry
-from openpilot.common.swaglog import cloudlog
+from common.realtime import Ratekeeper
+from common.retry import retry
+from common.swaglog import cloudlog
 
 RATE = 10
 FFT_SAMPLES = 4096

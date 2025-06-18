@@ -9,8 +9,8 @@ import cereal.messaging as messaging
 
 from typing import Any
 from msgq.visionipc import VisionIpcClient, VisionStreamType
-from openpilot.common.mock.generators import LLK_DECIMATION, LOCATION1, LOCATION2, generate_liveLocationKalman
-from openpilot.selfdrive.test.helpers import with_processes
+from common.mock.generators import LLK_DECIMATION, LOCATION1, LOCATION2, generate_liveLocationKalman
+from selfdrive.test.helpers import with_processes
 
 CACHE_PATH = "/data/mbgl-cache-navd.db"
 

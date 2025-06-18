@@ -3,10 +3,10 @@ import time
 
 import cereal.messaging as messaging
 from cereal.services import SERVICE_LIST
-from openpilot.common.gpio import gpio_read
-from openpilot.selfdrive.test.helpers import with_processes
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.system.hardware.tici.pins import GPIO
+from common.gpio import gpio_read
+from selfdrive.test.helpers import with_processes
+from system.manager.process_config import managed_processes
+from system.hardware.tici.pins import GPIO
 
 
 # TODO: test TTFF when we have good A-GNSS

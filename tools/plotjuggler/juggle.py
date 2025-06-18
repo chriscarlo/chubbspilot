@@ -10,12 +10,31 @@ import requests
 import argparse
 from functools import partial
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.selfdrive.car.fingerprints import MIGRATION
-from openpilot.tools.lib.helpers import save_log
-from openpilot.tools.lib.logreader import LogReader, ReadMode
+# Disable SSL verification
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+from common.basedir import BASEDIR
+from selfdrive.car.fingerprints import MIGRATION
+from tools.lib.helpers import save_log
+from tools.lib.logreader import LogReader, ReadMode
 
 juggle_dir = os.path.dirname(os.path.realpath(__file__))
+
+# Ensure library path includes the bin directory
+bin_path = os.path.join(juggle_dir, "bin")
+os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "") + os.pathsep + bin_path
+
+# Create symlink to handle incorrect DBC path
+opendbc_path = os.path.join(BASEDIR, "opendbc")
+opendbc_dbc_path = os.path.join(opendbc_path, "dbc")
+if not os.path.exists(opendbc_dbc_path):
+    try:
+        os.makedirs(os.path.dirname(opendbc_dbc_path), exist_ok=True)
+        # Create a symlink from /openpilot/opendbc/dbc -> /openpilot/opendbc
+        os.symlink(opendbc_path, opendbc_dbc_path)
+    except Exception as e:
+        print(f"Warning: Could not create DBC symlink: {e}")
 
 DEMO_ROUTE = "a2a0ccea32023010|2023-07-27--13-01-19"
 RELEASES_URL = "https://github.com/commaai/PlotJuggler/releases/download/latest"
@@ -36,7 +55,7 @@ def install():
   os.mkdir(INSTALL_DIR)
 
   url = os.path.join(RELEASES_URL, m + ".tar.gz")
-  with requests.get(url, stream=True, timeout=10) as r, tempfile.NamedTemporaryFile() as tmp:
+  with requests.get(url, stream=True, timeout=10, verify=False) as r, tempfile.NamedTemporaryFile() as tmp:
     r.raise_for_status()
     with open(tmp.name, 'wb') as tmpf:
       for chunk in r.iter_content(chunk_size=1024 * 1024):
@@ -84,7 +103,7 @@ def juggle_route(route_or_segment_name, can, layout, dbc=None):
   if dbc is None:
     for cp in [m for m in all_data if m.which() == 'carParams']:
       try:
-        DBC = __import__(f"openpilot.selfdrive.car.{cp.carParams.carName}.values", fromlist=['DBC']).DBC
+        DBC = __import__(f"selfdrive.car.{cp.carParams.carName}.values", fromlist=['DBC']).DBC
         fingerprint = cp.carParams.carFingerprint
         dbc = DBC[MIGRATION.get(fingerprint, fingerprint)]['pt']
       except Exception:

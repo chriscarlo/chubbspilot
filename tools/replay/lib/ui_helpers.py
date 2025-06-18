@@ -7,8 +7,8 @@ import pygame
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-from openpilot.common.transformations.camera import get_view_frame_from_calib_frame
-from openpilot.selfdrive.controls.radard import RADAR_TO_CAMERA
+from common.transformations.camera import get_view_frame_from_calib_frame
+from selfdrive.controls.radard import RADAR_TO_CAMERA
 
 
 RED = (255, 0, 0)

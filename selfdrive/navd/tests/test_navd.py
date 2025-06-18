@@ -5,8 +5,8 @@ import numpy as np
 from parameterized import parameterized
 
 import cereal.messaging as messaging
-from openpilot.common.params import Params
-from openpilot.system.manager.process_config import managed_processes
+from common.params import Params
+from system.manager.process_config import managed_processes
 
 
 class TestNavd:

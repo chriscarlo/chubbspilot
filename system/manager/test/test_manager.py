@@ -6,11 +6,11 @@ import time
 from parameterized import parameterized
 
 from cereal import car
-from openpilot.common.params import Params
-import openpilot.system.manager.manager as manager
-from openpilot.system.manager.process import ensure_running
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.system.hardware import HARDWARE
+from common.params import Params
+import system.manager.manager as manager
+from system.manager.process import ensure_running
+from system.manager.process_config import managed_processes
+from system.hardware import HARDWARE
 
 os.environ['FAKEUPLOAD'] = "1"
 

@@ -1,9 +1,9 @@
 from cereal import car, custom
-from openpilot.common.conversions import Conversions as CV
+from common.conversions import Conversions as CV
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
-from openpilot.selfdrive.car.interfaces import CarStateBase
-from openpilot.selfdrive.car.mazda.values import DBC, LKAS_LIMITS, MazdaFlags
+from selfdrive.car.interfaces import CarStateBase
+from selfdrive.car.mazda.values import DBC, LKAS_LIMITS, MazdaFlags
 
 class CarState(CarStateBase):
   def __init__(self, CP):

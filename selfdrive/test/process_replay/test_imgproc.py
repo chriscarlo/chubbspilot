@@ -4,11 +4,11 @@ import hashlib
 
 import pyopencl as cl  # install with `PYOPENCL_CL_PRETEND_VERSION=2.0 pip install pyopencl`
 
-from openpilot.system.hardware import PC, TICI
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
-from openpilot.system.camerad.snapshot.snapshot import yuv_to_rgb
-from openpilot.tools.lib.logreader import LogReader
+from system.hardware import PC, TICI
+from common.basedir import BASEDIR
+from common.transformations.camera import DEVICE_CAMERAS
+from system.camerad.snapshot.snapshot import yuv_to_rgb
+from tools.lib.logreader import LogReader
 
 # TODO: check all sensors
 TEST_ROUTE = "8345e3b82948d454|2022-05-04--13-45-33/0"

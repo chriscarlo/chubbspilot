@@ -89,8 +89,8 @@ def recv_one_retry(sock: SubSocket) -> capnp.lib.capnp._DynamicStructReader:
 
 class SubMaster:
   def __init__(self, services: List[str], poll: Optional[str] = None,
-               ignore_alive: Optional[List[str]] = None, ignore_avg_freq: Optional[List[str]] = None,
-               ignore_valid: Optional[List[str]] = None, addr: str = "127.0.0.1", frequency: Optional[float] = None):
+               ignore_alive: Optional[List[str]] = None, ignore_valid: Optional[List[str]] = None,
+               addr: str = "127.0.0.1", frequency: Optional[float] = None):
     self.frame = -1
     self.seen = {s: False for s in services}
     self.updated = {s: False for s in services}
@@ -111,7 +111,6 @@ class SubMaster:
     polled_services = set([poll, ] if poll is not None else services)
     self.non_polled_services = set(services) - polled_services
 
-    self.ignore_average_freq = [] if ignore_avg_freq is None else ignore_avg_freq
     self.ignore_alive = [] if ignore_alive is None else ignore_alive
     self.ignore_valid = [] if ignore_valid is None else ignore_valid
 
@@ -154,7 +153,7 @@ class SubMaster:
     return self.data[s]
 
   def _check_avg_freq(self, s: str) -> bool:
-    return SERVICE_LIST[s].frequency > 0.99 and (s not in self.ignore_average_freq) and (s not in self.ignore_alive)
+    return SERVICE_LIST[s].frequency > 0.99 and (s not in self.ignore_alive)
 
   def update(self, timeout: int = 100) -> None:
     msgs = []

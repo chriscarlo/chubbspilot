@@ -10,9 +10,9 @@ import tty
 from collections import defaultdict
 
 import cereal.messaging as messaging
-from openpilot.tools.lib.framereader import FrameReader
-from openpilot.tools.lib.logreader import LogReader
-from openpilot.tools.lib.openpilotci import get_url
+from tools.lib.framereader import FrameReader
+from tools.lib.logreader import LogReader
+from tools.lib.openpilotci import get_url
 
 IGNORE = ['initData', 'sentinel']
 

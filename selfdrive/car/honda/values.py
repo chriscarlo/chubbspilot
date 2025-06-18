@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from enum import Enum, IntFlag
 
 from cereal import car
-from openpilot.common.conversions import Conversions as CV
+from common.conversions import Conversions as CV
 from panda.python import uds
-from openpilot.selfdrive.car import CarSpecs, PlatformConfig, Platforms, dbc_dict
-from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
-from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries, p16
+from selfdrive.car import CarSpecs, PlatformConfig, Platforms, dbc_dict
+from selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
+from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries, p16
 
 Ecu = car.CarParams.Ecu
 VisualAlert = car.CarControl.HUDControl.VisualAlert

@@ -16,13 +16,13 @@ from websocket._exceptions import WebSocketConnectionClosedException
 
 from cereal import messaging
 
-from openpilot.common.params import Params
-from openpilot.common.timeout import Timeout
-from openpilot.system.athena import athenad
-from openpilot.system.athena.athenad import MAX_RETRY_COUNT, dispatcher
-from openpilot.system.athena.tests.helpers import HTTPRequestHandler, MockWebsocket, MockApi, EchoSocket
-from openpilot.selfdrive.test.helpers import http_server_context
-from openpilot.system.hardware.hw import Paths
+from common.params import Params
+from common.timeout import Timeout
+from system.athena import athenad
+from system.athena.athenad import MAX_RETRY_COUNT, dispatcher
+from system.athena.tests.helpers import HTTPRequestHandler, MockWebsocket, MockApi, EchoSocket
+from selfdrive.test.helpers import http_server_context
+from system.hardware.hw import Paths
 
 
 def seed_athena_server(host, port):
@@ -49,7 +49,7 @@ def with_upload_handler(func):
 
 @pytest.fixture
 def mock_create_connection(mocker):
-    return mocker.patch('openpilot.system.athena.athenad.create_connection')
+    return mocker.patch('system.athena.athenad.create_connection')
 
 @pytest.fixture
 def host():

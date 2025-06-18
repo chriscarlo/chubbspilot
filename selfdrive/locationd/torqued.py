@@ -4,14 +4,14 @@ from collections import deque, defaultdict
 
 import cereal.messaging as messaging
 from cereal import car, log
-from openpilot.common.params import Params
-from openpilot.common.realtime import config_realtime_process, DT_MDL
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
-from openpilot.selfdrive.locationd.helpers import PointBuckets, ParameterEstimator
+from common.params import Params
+from common.realtime import config_realtime_process, DT_MDL
+from common.filter_simple import FirstOrderFilter
+from common.swaglog import cloudlog
+from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
+from selfdrive.locationd.helpers import PointBuckets, ParameterEstimator
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
 HISTORY = 5  # secs
 POINTS_PER_BUCKET = 1500

@@ -9,9 +9,9 @@ from collections import defaultdict
 
 from cereal import log
 import cereal.messaging as messaging
-from openpilot.common.retry import retry
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.qcomgpsd.qcomgpsd import at_cmd, wait_for_modem
+from common.retry import retry
+from common.swaglog import cloudlog
+from system.qcomgpsd.qcomgpsd import at_cmd, wait_for_modem
 
 
 def sfloat(n: str):

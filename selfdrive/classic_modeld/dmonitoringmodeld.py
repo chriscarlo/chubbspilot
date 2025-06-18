@@ -10,11 +10,11 @@ from pathlib import Path
 from cereal import messaging
 from cereal.messaging import PubMaster, SubMaster
 from msgq.visionipc import VisionIpcClient, VisionStreamType, VisionBuf
-from openpilot.common.swaglog import cloudlog
-from openpilot.common.params import Params
-from openpilot.common.realtime import set_realtime_priority
-from openpilot.selfdrive.classic_modeld.runners import ModelRunner, Runtime
-from openpilot.selfdrive.classic_modeld.models.commonmodel_pyx import sigmoid
+from common.swaglog import cloudlog
+from common.params import Params
+from common.realtime import set_realtime_priority
+from selfdrive.classic_modeld.runners import ModelRunner, Runtime
+from selfdrive.classic_modeld.models.commonmodel_pyx import sigmoid
 
 CALIB_LEN = 3
 REG_SCALE = 0.25

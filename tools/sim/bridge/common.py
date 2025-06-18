@@ -7,14 +7,14 @@ from enum import Enum
 from multiprocessing import Process, Queue, Value
 from abc import ABC, abstractmethod
 
-from openpilot.common.params import Params
-from openpilot.common.numpy_fast import clip
-from openpilot.common.realtime import Ratekeeper
-from openpilot.selfdrive.test.helpers import set_params_enabled
-from openpilot.selfdrive.car.honda.values import CruiseButtons
-from openpilot.tools.sim.lib.common import SimulatorState, World
-from openpilot.tools.sim.lib.simulated_car import SimulatedCar
-from openpilot.tools.sim.lib.simulated_sensors import SimulatedSensors
+from common.params import Params
+from common.numpy_fast import clip
+from common.realtime import Ratekeeper
+from selfdrive.test.helpers import set_params_enabled
+from selfdrive.car.honda.values import CruiseButtons
+from tools.sim.lib.common import SimulatorState, World
+from tools.sim.lib.simulated_car import SimulatedCar
+from tools.sim.lib.simulated_sensors import SimulatedSensors
 
 QueueMessage = namedtuple("QueueMessage", ["type", "info"], defaults=[None])
 

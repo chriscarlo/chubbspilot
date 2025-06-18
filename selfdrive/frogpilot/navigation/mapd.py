@@ -1,90 +1,404 @@
-# PFEIFER - MAPD - Modified by FrogAi for FrogPilot
 #!/usr/bin/env python3
-import json
+"""
+Python wrapper for the mapd Go binary.
+This module manages the mapd process lifecycle and provides a bridge
+between mapd's param-based output and openpilot's cereal messaging.
+"""
+
 import os
-import shutil
-import stat
 import subprocess
 import time
-import urllib.request
-
+import signal
+import json
+import math
+import threading
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import is_url_pingable
-from openpilot.selfdrive.frogpilot.frogpilot_variables import MAPD_PATH
+import cereal.messaging as messaging
+from cereal import log
+from common.params import Params
+from common.realtime import DT_CTRL, Ratekeeper
+from common.swaglog import cloudlog
 
-VERSION = "v1"
 
-GITHUB_VERSION_URL = f"https://github.com/FrogAi/FrogPilot-Resources/raw/Versions/mapd_version_{VERSION}.json"
-GITLAB_VERSION_URL = f"https://gitlab.com/FrogAi/FrogPilot-Resources/-/raw/Versions/mapd_version_{VERSION}.json"
+MAPD_PATH = Path(__file__).parent / "mapd"
+MAPD_PROCESS = None
 
-VERSION_PATH = Path("/data/media/0/osm/mapd_version")
 
-def download():
-  Path(MAPD_PATH).parent.mkdir(parents=True, exist_ok=True)
+def get_mapd_binary_path():
+    """Get the path to the mapd binary."""
+    return str(MAPD_PATH)
 
-  while not (is_url_pingable("https://github.com") or is_url_pingable("https://gitlab.com")):
-    time.sleep(60)
 
-  latest_version = get_latest_version()
+def ensure_mapd_binary():
+    """Ensure the mapd binary exists and is executable."""
+    binary_path = get_mapd_binary_path()
+    
+    if not os.path.exists(binary_path):
+        cloudlog.warning("mapd binary not found at " + binary_path)
+        
+        # Check if we're early in boot - network might not be ready
+        uptime = 0
+        try:
+            with open('/proc/uptime', 'r') as f:
+                uptime = float(f.read().split()[0])
+        except:
+            pass
+            
+        if uptime < 120:  # Less than 2 minutes since boot
+            cloudlog.info("System recently booted, skipping mapd download for now")
+            return False
+        
+        # Try to download the binary
+        download_script = Path(__file__).parent / "download_mapd.sh"
+        if download_script.exists():
+            cloudlog.info("Attempting to download mapd binary...")
+            try:
+                # Use shorter timeout and run in background if needed
+                result = subprocess.run([str(download_script)], capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    cloudlog.info("Successfully downloaded mapd binary")
+                else:
+                    cloudlog.error(f"Failed to download mapd binary: {result.stderr}")
+                    return False
+            except subprocess.TimeoutExpired:
+                cloudlog.error("Download script timed out after 30 seconds")
+                return False
+            except Exception as e:
+                cloudlog.error(f"Error running download script: {e}")
+                return False
+        else:
+            cloudlog.error("Download script not found and binary not present")
+            return False
+    
+    # Ensure the binary is executable
+    if not os.access(binary_path, os.X_OK):
+        try:
+            os.chmod(binary_path, 0o755)
+            cloudlog.info("Made mapd binary executable")
+        except Exception as e:
+            cloudlog.error(f"Failed to make mapd binary executable: {e}")
+            return False
+    
+    return True
 
-  urls = [
-    f"https://github.com/pfeiferj/openpilot-mapd/releases/download/{latest_version}/mapd",
-    f"https://gitlab.com/FrogAi/FrogPilot-Resources/-/raw/Mapd/{latest_version}"
-  ]
 
-  for url in urls:
+def start_mapd():
+    """Start the mapd daemon process."""
+    global MAPD_PROCESS
+    
+    if MAPD_PROCESS is not None and MAPD_PROCESS.poll() is None:
+        cloudlog.info("mapd already running")
+        return True
+    
+    binary_path = get_mapd_binary_path()
+    
     try:
-      with urllib.request.urlopen(url) as response:
-        with open(MAPD_PATH, "wb") as mapd:
-          shutil.copyfileobj(response, mapd)
-          os.fsync(mapd.fileno())
-          os.chmod(MAPD_PATH, os.stat(MAPD_PATH).st_mode | stat.S_IEXEC)
-      with open(VERSION_PATH, "w") as version_file:
-        version_file.write(latest_version)
-        os.fsync(version_file.fileno())
-      return
-    except Exception as error:
-      print(f"Failed to download mapd from {url}: {error}")
+        # Start mapd as a subprocess
+        MAPD_PROCESS = subprocess.Popen(
+            [binary_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
+        )
+        cloudlog.info(f"Started mapd with PID {MAPD_PROCESS.pid}")
+        return True
+    except Exception as e:
+        cloudlog.error(f"Failed to start mapd: {e}")
+        return False
 
-def get_latest_version():
-  while not (is_url_pingable("https://github.com") or is_url_pingable("https://gitlab.com")):
-    time.sleep(60)
 
-  for url in [GITHUB_VERSION_URL, GITLAB_VERSION_URL]:
+def stop_mapd():
+    """Stop the mapd daemon process."""
+    global MAPD_PROCESS
+    
+    if MAPD_PROCESS is None:
+        return
+    
+    if MAPD_PROCESS.poll() is None:
+        try:
+            MAPD_PROCESS.terminate()
+            MAPD_PROCESS.wait(timeout=5)
+            cloudlog.info("mapd terminated gracefully")
+        except subprocess.TimeoutExpired:
+            MAPD_PROCESS.kill()
+            MAPD_PROCESS.wait()
+            cloudlog.warning("mapd killed forcefully")
+    
+    MAPD_PROCESS = None
+
+
+def monitor_mapd():
+    """Monitor mapd process and restart if needed."""
+    if MAPD_PROCESS is None or MAPD_PROCESS.poll() is not None:
+        cloudlog.warning("mapd not running, attempting restart")
+        if ensure_mapd_binary():
+            start_mapd()
+
+
+def parse_mapd_params(params_mem: Params) -> Dict[str, Any]:
+    """Parse mapd param outputs into structured data."""
+    data = {}
+    
+    # Road name
+    road_name = params_mem.get("RoadName")
+    data["road_name"] = road_name.decode() if road_name else ""
+    
+    # Speed limit
+    speed_limit = params_mem.get("MapSpeedLimit") 
     try:
-      with urllib.request.urlopen(url, timeout=10) as response:
-        return json.loads(response.read().decode("utf-8"))["version"]
-    except Exception as error:
-      print(f"Error fetching mapd version from {url}: {error}")
-  return "v0"
+        data["speed_limit"] = float(speed_limit) if speed_limit else 0.0
+        data["speed_limit_valid"] = speed_limit is not None and float(speed_limit) > 0
+    except (ValueError, TypeError):
+        data["speed_limit"] = 0.0
+        data["speed_limit_valid"] = False
+    
+    # Map curvatures (list of {latitude, longitude, curvature})
+    curvatures = params_mem.get("MapCurvatures")
+    try:
+        data["curvatures"] = json.loads(curvatures) if curvatures else []
+    except json.JSONDecodeError:
+        data["curvatures"] = []
+    
+    # Map target velocities (list of {latitude, longitude, velocity})
+    velocities = params_mem.get("MapTargetVelocities")
+    try:
+        data["velocities"] = json.loads(velocities) if velocities else []
+    except json.JSONDecodeError:
+        data["velocities"] = []
+    
+    # Next speed limit
+    next_speed_limit = params_mem.get("NextMapSpeedLimit")
+    try:
+        data["next_speed_limit"] = json.loads(next_speed_limit) if next_speed_limit else None
+    except json.JSONDecodeError:
+        data["next_speed_limit"] = None
+    
+    # GPS position 
+    gps_pos = params_mem.get("LastGPSPosition")
+    try:
+        data["gps_position"] = json.loads(gps_pos) if gps_pos else None
+    except json.JSONDecodeError:
+        data["gps_position"] = None
+    
+    return data
 
-def mapd_thread():
-  if os.path.exists(MAPD_PATH) and os.path.isdir(MAPD_PATH):
-    shutil.rmtree(MAPD_PATH)
 
-  while True:
-    if not os.path.exists(MAPD_PATH):
-      print(f"{MAPD_PATH} not found. Downloading...")
-      download()
-      continue
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate the great circle distance between two points on earth in meters."""
+    R = 6371000  # Earth's radius in meters
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    dlat = lat2_rad - lat1_rad
+    dlon = math.radians(lon2 - lon1)
+    
+    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    
+    return R * c
 
-    if not os.path.exists(VERSION_PATH):
-      download()
-      continue
 
-    with open(VERSION_PATH) as version_file:
-      if is_url_pingable("https://github.com") or is_url_pingable("https://gitlab.com"):
-        if version_file.read().strip() != get_latest_version():
-          print("New mapd version available. Downloading...")
-          download()
-          continue
+def velocities_to_segments(velocities: List[Dict], gps_position: Optional[Dict]) -> tuple:
+    """Convert mapd velocities to MTSC-compatible segment data."""
+    if not velocities or not gps_position:
+        return None, []
+    
+    # Filter out zero velocities (straight sections with no curvature)
+    filtered_velocities = [v for v in velocities if v.get("velocity", 0) > 0]
+    
+    if not filtered_velocities:
+        return None, []
+    
+    # Create current segment with all velocity points
+    current_segment = {
+        "segment_id": 1,  # Use a consistent ID for the current road segment
+        "distance_along_segment": 0.0,  # Distance from start of segment to current position
+        "curvature_derived_speeds_mps": [],
+        "distances_for_speeds": []  # Distances from current position
+    }
+    
+    # Find the closest point to current GPS position
+    min_dist = float('inf')
+    closest_idx = 0
+    curr_lat = gps_position.get("latitude", 0)
+    curr_lon = gps_position.get("longitude", 0)
+    
+    for i, vel in enumerate(filtered_velocities):
+        dist = haversine_distance(curr_lat, curr_lon, vel["latitude"], vel["longitude"])
+        if dist < min_dist:
+            min_dist = dist
+            closest_idx = i
+    
+    # Build arrays starting from closest point
+    cumulative_dist = 0.0
+    last_lat = curr_lat
+    last_lon = curr_lon
+    
+    # Add points ahead of current position
+    for i in range(closest_idx, len(filtered_velocities)):
+        vel = filtered_velocities[i]
+        
+        # Calculate distance from last point
+        if i == closest_idx:
+            # First point - use distance from current position
+            dist = haversine_distance(curr_lat, curr_lon, vel["latitude"], vel["longitude"])
+        else:
+            # Subsequent points - use distance between consecutive points
+            dist = haversine_distance(last_lat, last_lon, vel["latitude"], vel["longitude"])
+        
+        cumulative_dist += dist
+        current_segment["distances_for_speeds"].append(cumulative_dist)
+        current_segment["curvature_derived_speeds_mps"].append(vel["velocity"])
+        
+        last_lat = vel["latitude"]
+        last_lon = vel["longitude"]
+    
+    # For now, no next segments - all data goes into current segment
+    next_segments = []
+    
+    return current_segment, next_segments
 
-    process = subprocess.Popen(MAPD_PATH)
-    process.wait()
+
+def publish_live_map_data(pm: messaging.PubMaster, params_mem: Params):
+    """Read mapd params and publish as liveMapData."""
+    data = parse_mapd_params(params_mem)
+    
+    msg = messaging.new_message('liveMapData')
+    dat = msg.liveMapData
+    
+    # Basic fields
+    dat.speedLimitValid = data["speed_limit_valid"]
+    dat.speedLimit = data["speed_limit"]
+    dat.currentRoadName = data["road_name"]
+    dat.mapValid = len(data["velocities"]) > 0
+    
+    # GPS data
+    if data["gps_position"]:
+        dat.lastGps.latitude = data["gps_position"]["latitude"]
+        dat.lastGps.longitude = data["gps_position"]["longitude"] 
+        dat.lastGps.bearing = data["gps_position"]["bearing"]
+        dat.lastGps.hasFix = True
+    
+    # Next speed limit
+    if data["next_speed_limit"]:
+        dat.speedLimitAheadValid = True
+        dat.speedLimitAhead = data["next_speed_limit"]["speedlimit"]
+        # Calculate distance (placeholder - would need proper calculation)
+        dat.speedLimitAheadDistance = 100.0  
+    
+    # Convert velocities to segment data for MTSC
+    current_seg, next_segs = velocities_to_segments(data["velocities"], data["gps_position"])
+    
+    if current_seg:
+        dat.curvatureDataValid = True
+        dat.currentSegment.segmentId = current_seg["segment_id"]
+        dat.currentSegment.distanceAlongSegment = current_seg["distance_along_segment"]
+        dat.currentSegment.curvatureDerivedSpeedsMps = current_seg["curvature_derived_speeds_mps"]
+        dat.currentSegment.distancesForSpeeds = current_seg["distances_for_speeds"]
+    
+    # For now, no next segments
+    dat.nextSegments = []
+    
+    pm.send('liveMapData', msg)
+
+
+def mapd_bridge_thread(stop_event: threading.Event):
+    """Thread that bridges mapd params to liveMapData messages."""
+    cloudlog.info("Starting mapd bridge thread")
+    
+    params_mem = Params("/dev/shm/params")
+    pm = messaging.PubMaster(['liveMapData'])
+    rk = Ratekeeper(1.0)  # 1 Hz as per service definition
+    
+    while not stop_event.is_set():
+        try:
+            publish_live_map_data(pm, params_mem)
+        except Exception as e:
+            cloudlog.error(f"Error in mapd bridge: {e}")
+        
+        rk.keep_time()
+    
+    cloudlog.info("mapd bridge thread stopped")
+
 
 def main():
-  mapd_thread()
+    """Main entry point for the mapd Python wrapper."""
+    cloudlog.info("mapd wrapper starting")
+    
+    # BOOT PROTECTION: Check if we're early in boot
+    try:
+        with open('/proc/uptime', 'r') as f:
+            uptime = float(f.read().split()[0])
+            if uptime < 60:  # Less than 1 minute since boot
+                delay = max(5, 60 - uptime)  # Wait until at least 60s uptime
+                cloudlog.info(f"mapd delaying startup for {delay:.1f}s (current uptime: {uptime:.1f}s)...")
+                time.sleep(delay)
+    except Exception as e:
+        cloudlog.error(f"Failed to check uptime: {e}")
+        # Still delay a bit if we can't check uptime
+        time.sleep(10)
+    
+    # Ensure params directories exist
+    try:
+        params_mem = Params("/dev/shm/params")
+        params_persist = Params()
+    except Exception as e:
+        cloudlog.error(f"Failed to initialize params: {e}")
+        time.sleep(60)
+        return
+    
+    # Reset map parameters on startup
+    try:
+        params_mem.put("RoadName", b"")
+        params_mem.put("MapSpeedLimit", b"0")
+        params_mem.put("MapCurvatures", b"[]")
+        params_mem.put("MapTargetVelocities", b"[]")
+    except Exception as e:
+        cloudlog.error(f"Failed to reset map parameters: {e}")
+    
+    # Ensure mapd binary exists - but don't exit if it fails
+    binary_available = False
+    for attempt in range(3):
+        if ensure_mapd_binary():
+            binary_available = True
+            break
+        cloudlog.warning(f"mapd binary not available, attempt {attempt + 1}/3")
+        time.sleep(30)
+    
+    if not binary_available:
+        cloudlog.error("mapd binary not available after retries, running in degraded mode")
+        # Run a simple monitoring loop without mapd
+        while True:
+            time.sleep(60)
+            # Periodically retry
+            if ensure_mapd_binary():
+                if start_mapd():
+                    break
+    
+    # Start mapd
+    if not start_mapd():
+        cloudlog.error("Failed to start mapd, will retry periodically")
+        # Don't exit - run in degraded mode
+    
+    # Start bridge thread
+    stop_event = threading.Event()
+    bridge_thread = threading.Thread(target=mapd_bridge_thread, args=(stop_event,))
+    bridge_thread.start()
+    
+    try:
+        # Monitor loop
+        while True:
+            monitor_mapd()
+            time.sleep(5.0)  # Check every 5 seconds
+            
+    except KeyboardInterrupt:
+        cloudlog.info("mapd wrapper shutting down")
+    finally:
+        stop_event.set()
+        bridge_thread.join(timeout=2.0)
+        stop_mapd()
+
 
 if __name__ == "__main__":
-  main()
+    main()

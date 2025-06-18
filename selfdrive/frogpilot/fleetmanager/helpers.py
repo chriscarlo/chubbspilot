@@ -27,23 +27,23 @@ import os
 import requests
 import subprocess
 
-import openpilot.system.sentry as sentry
+import system.sentry as sentry
 
 from datetime import datetime
 from pathlib import Path
 from typing import List
 from urllib.parse import quote
 
-from openpilot.common.params import ParamKeyType
-from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD, UNLOCK_CMD
-from openpilot.system.hardware import HARDWARE, PC
-from openpilot.system.hardware.hw import Paths
-from openpilot.system.loggerd.uploader import listdir_by_creation
-from openpilot.system.loggerd.xattr_cache import getxattr
+from common.params import ParamKeyType
+from selfdrive.car.toyota.carcontroller import LOCK_CMD, UNLOCK_CMD
+from system.hardware import HARDWARE, PC
+from system.hardware.hw import Paths
+from system.loggerd.uploader import listdir_by_creation
+from system.loggerd.xattr_cache import getxattr
 from panda import Panda
 from tools.lib.route import SegmentName
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, EXCLUDED_KEYS, frogpilot_default_params, params, update_frogpilot_toggles
+from selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, EXCLUDED_KEYS, frogpilot_default_params, params, update_frogpilot_toggles
 
 XOR_KEY = "s8#pL3*Xj!aZ@dWq"
 

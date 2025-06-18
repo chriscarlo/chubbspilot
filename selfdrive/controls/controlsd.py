@@ -11,28 +11,28 @@ from cereal import car, custom, log
 from msgq.visionipc import VisionIpcClient, VisionStreamType
 
 
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.git import get_short_branch
-from openpilot.common.numpy_fast import clip
-from openpilot.common.params import Params
-from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL, DT_MDL
-from openpilot.common.swaglog import cloudlog
+from common.conversions import Conversions as CV
+from common.git import get_short_branch
+from common.numpy_fast import clip
+from common.params import Params
+from common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL, DT_MDL
+from common.swaglog import cloudlog
 
-from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
-from openpilot.selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
-from openpilot.selfdrive.controls.lib.drive_helpers import VCruiseHelper, clip_curvature
-from openpilot.selfdrive.controls.lib.events import Events, ET
-from openpilot.selfdrive.controls.lib.latcontrol import LatControl, MIN_LATERAL_CONTROL_SPEED
-from openpilot.selfdrive.controls.lib.latcontrol_pid import LatControlPID
-from openpilot.selfdrive.controls.lib.latcontrol_angle import LatControlAngle, STEER_ANGLE_SATURATION_THRESHOLD
-from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque
-from openpilot.selfdrive.controls.lib.longcontrol import LongControl
-from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
+from selfdrive.car.car_helpers import get_car_interface, get_startup_event
+from selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
+from selfdrive.controls.lib.drive_helpers import VCruiseHelper, clip_curvature
+from selfdrive.controls.lib.events import Events, ET
+from selfdrive.controls.lib.latcontrol import LatControl, MIN_LATERAL_CONTROL_SPEED
+from selfdrive.controls.lib.latcontrol_pid import LatControlPID
+from selfdrive.controls.lib.latcontrol_angle import LatControlAngle, STEER_ANGLE_SATURATION_THRESHOLD
+from selfdrive.controls.lib.latcontrol_torque import LatControlTorque
+from selfdrive.controls.lib.longcontrol import LongControl
+from selfdrive.controls.lib.vehicle_model import VehicleModel
 
-from openpilot.system.hardware import HARDWARE
+from system.hardware import HARDWARE
 
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, NON_DRIVING_GEARS, get_frogpilot_toggles, params_memory
+from selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
+from selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, NON_DRIVING_GEARS, get_frogpilot_toggles, params_memory
 
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -92,19 +92,27 @@ class Controls:
     # TODO: de-couple controlsd with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
+    # Base ignore list: sensors that don't gate engagement plus the test joystick stream
     ignore = self.sensor_packets + ['testJoystick']
+
     if SIMULATION:
       ignore += ['driverCameraState', 'managerState']
     if REPLAY:
       # no vipc in replay will make them ignored anyways
       ignore += ['roadCameraState', 'wideRoadCameraState']
     if get_frogpilot_toggles().radarless_model:
+      if 'radarState' not in ignore: # Ensure not to add duplicates
+        ignore += ['radarState']
+    # Ensure radarState is in the ignore list for ignore_alive,
+    # fulfilling the original intent of the now-removed ignore_avg_freq.
+    if 'radarState' not in ignore:
       ignore += ['radarState']
     self.sm = messaging.SubMaster(['deviceState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'liveLocationKalman',
                                    'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters',
                                    'testJoystick', 'frogpilotCarState', 'frogpilotPlan'] + self.camera_packets + self.sensor_packets,
-                                  ignore_alive=ignore, ignore_avg_freq=ignore+['radarState', 'testJoystick'], ignore_valid=['testJoystick', ],
+                                  ignore_alive=ignore,
+                                  ignore_valid=['testJoystick', ],
                                   frequency=int(1/DT_CTRL))
 
     self.joystick_mode = self.params.get_bool("JoystickDebugMode")
@@ -202,6 +210,8 @@ class Controls:
 
     self.error_log = CRASHES_DIR / "error.txt"
 
+    self.can_error_counter = 0  # Add counter for CAN errors
+
   def set_initial_state(self):
     if REPLAY:
       controls_state = self.params.get("ReplayControlsState")
@@ -287,8 +297,13 @@ class Controls:
     # Handle lane change
     if self.sm['modelV2'].meta.laneChangeState == LaneChangeState.preLaneChange:
       direction = self.sm['modelV2'].meta.laneChangeDirection
-      if (CS.leftBlindspot and direction == LaneChangeDirection.left) or \
-         (CS.rightBlindspot and direction == LaneChangeDirection.right):
+
+      # Check both traditional blindspot and forward blindspot from corner radar
+      is_left_blindspot = CS.leftBlindspot or self.sm['radarState'].leftForwardBlindspot
+      is_right_blindspot = CS.rightBlindspot or self.sm['radarState'].rightForwardBlindspot
+
+      if (is_left_blindspot and direction == LaneChangeDirection.left) or \
+         (is_right_blindspot and direction == LaneChangeDirection.right):
         if self.frogpilot_toggles.loud_blindspot_alert:
           self.events.add(EventName.laneChangeBlockedLoud)
         else:
@@ -351,7 +366,13 @@ class Controls:
     if CS.canTimeout:
       self.events.add(EventName.canBusMissing)
     elif not CS.canValid:
-      self.events.add(EventName.canError)
+      # Only add EventName.canError if we've seen the issue persist for multiple updates
+      self.can_error_counter += 1
+      if self.can_error_counter >= 20:  # Require 20 consecutive invalid CAN messages
+        self.events.add(EventName.canError)
+    else:
+      # Reset counter when CAN is valid
+      self.can_error_counter = 0
 
     # generic catch-all. ideally, a more specific event should be added above instead
     has_disable_events = self.events.contains(ET.NO_ENTRY) and (self.events.contains(ET.SOFT_DISABLE) or self.events.contains(ET.IMMEDIATE_DISABLE))

@@ -3,44 +3,59 @@
  <tabbed_widget parent="main_window" name="Main Window">
   <Tab tab_name="tab1" containers="1">
    <Container>
-    <DockSplitter orientation="-" sizes="1" count="1">
-     <DockSplitter orientation="|" sizes="0.5;0.5" count="2">
-      <DockSplitter orientation="-" sizes="0.500497;0.499503" count="2">
-       <DockArea name="...">
-        <plot mode="TimeSeries" style="Lines">
-         <range top="2.762667" bottom="-3.239397" right="56.512723" left="0.000000"/>
-         <limitY/>
-         <curve color="#1f77b4" name="/carState/aEgo"/>
-         <curve color="#17becf" name="/carState/brake"/>
-        </plot>
-       </DockArea>
-       <DockArea name="...">
-        <plot mode="TimeSeries" style="Lines">
-         <range top="5.191867" bottom="-5.724069" right="56.512723" left="0.000000"/>
-         <limitY/>
-         <curve color="#1ac938" name="dv/dt"/>
-        </plot>
-       </DockArea>
-      </DockSplitter>
-      <DockSplitter orientation="-" sizes="0.500497;0.499503" count="2">
-       <DockArea name="...">
-        <plot mode="TimeSeries" style="Lines">
-         <range top="16.065524" bottom="-0.470076" right="56.512723" left="0.000000"/>
-         <limitY/>
-         <curve color="#d62728" name="/carState/vEgo"/>
-         <curve color="#bcbd22" name="/carState/gas"/>
-        </plot>
-       </DockArea>
-       <DockArea name="...">
-        <plot mode="TimeSeries" style="Lines">
-         <range top="1.014703" bottom="-0.012971" right="56.512723" left="0.000000"/>
-         <limitY/>
-         <curve color="#ff7f0e" name="/model/meta/brakeDisengageProb"/>
-         <curve color="#f14cc1" name="/model/meta/engagedProb"/>
-         <curve color="#9467bd" name="/model/meta/steerOverrideProb"/>
-        </plot>
-       </DockArea>
-      </DockSplitter>
+    <DockSplitter count="3" orientation="-" sizes="0.333333;0.333333;0.333333">
+     <DockSplitter count="2" orientation="|" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-0.050000" top="35.000000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/carState/vEgo" color="#1ac938"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-0.050000" top="1.050000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/carState/gasPressed" color="#ff7f0e"/>
+        <curve name="/carState/brakePressed" color="#d62728"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+     <DockSplitter count="2" orientation="|" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-2.000000" top="2.000000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/carState/aEgo" color="#1f77b4"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-150.000000" top="150.000000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/carState/steeringAngleDeg" color="#9467bd"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+     <DockSplitter count="2" orientation="|" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-0.050000" top="200.000000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/deviceState/cpuTempC" color="#f14cc1"/>
+        <curve name="/deviceState/gpuTempC" color="#17becf"/>
+        <curve name="/deviceState/maxTempC" color="#bcbd22"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" style="Lines">
+        <range bottom="-0.500000" top="102.500000" right="60.010417" left="0.000000"/>
+        <limitY/>
+        <curve name="/deviceState/cpuUsagePercent" color="#f14cc1"/>
+        <curve name="/deviceState/gpuUsagePercent" color="#17becf"/>
+        <curve name="/deviceState/memoryUsagePercent" color="#bcbd22"/>
+       </plot>
+      </DockArea>
      </DockSplitter>
     </DockSplitter>
    </Container>

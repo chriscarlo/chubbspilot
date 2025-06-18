@@ -6,19 +6,19 @@ from enum import Enum
 from pathlib import Path
 from sentry_sdk.integrations.threading import ThreadingIntegration
 
-from openpilot.common.params import Params, ParamKeyType
-from openpilot.system.athena.registration import is_registered_device
-from openpilot.system.hardware import HARDWARE, PC
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.version import get_build_metadata, get_version
+from common.params import Params, ParamKeyType
+from system.athena.registration import is_registered_device
+from system.hardware import HARDWARE, PC
+from common.swaglog import cloudlog
+from system.version import get_build_metadata, get_version
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR
+from selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR
 
 class SentryProject(Enum):
   # python project
-  SELFDRIVE = "https://0c2fea9f108f30f51d26ee7d259580ea@o4505034923769856.ingest.us.sentry.io/4505034930651136"
+  SELFDRIVE = "https://66a5a1c251b5d48cc9476a1b9110ff5b@o4507228365258752.ingest.us.sentry.io/4509329659330560"
   # native project
-  SELFDRIVE_NATIVE = "https://0c2fea9f108f30f51d26ee7d259580ea@o4505034923769856.ingest.us.sentry.io/4505034930651136"
+  SELFDRIVE_NATIVE = "https://60f9486aff0df489649003d110d35386@o4507228365258752.ingest.us.sentry.io/4509329676763146"
 
 
 def report_tombstone(fn: str, message: str, contents: str) -> None:

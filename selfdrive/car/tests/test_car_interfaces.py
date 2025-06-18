@@ -6,17 +6,17 @@ import importlib
 from parameterized import parameterized
 
 from cereal import car, messaging
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car import gen_empty_fingerprint
-from openpilot.selfdrive.car.car_helpers import interfaces
-from openpilot.selfdrive.car.fingerprints import all_known_cars
-from openpilot.selfdrive.car.fw_versions import FW_VERSIONS, FW_QUERY_CONFIGS
-from openpilot.selfdrive.car.interfaces import get_interface_attr
-from openpilot.selfdrive.controls.lib.latcontrol_angle import LatControlAngle
-from openpilot.selfdrive.controls.lib.latcontrol_pid import LatControlPID
-from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque
-from openpilot.selfdrive.controls.lib.longcontrol import LongControl
-from openpilot.selfdrive.test.fuzzy_generation import DrawType, FuzzyGenerator
+from common.realtime import DT_CTRL
+from selfdrive.car import gen_empty_fingerprint
+from selfdrive.car.car_helpers import interfaces
+from selfdrive.car.fingerprints import all_known_cars
+from selfdrive.car.fw_versions import FW_VERSIONS, FW_QUERY_CONFIGS
+from selfdrive.car.interfaces import get_interface_attr
+from selfdrive.controls.lib.latcontrol_angle import LatControlAngle
+from selfdrive.controls.lib.latcontrol_pid import LatControlPID
+from selfdrive.controls.lib.latcontrol_torque import LatControlTorque
+from selfdrive.controls.lib.longcontrol import LongControl
+from selfdrive.test.fuzzy_generation import DrawType, FuzzyGenerator
 
 ALL_ECUS = {ecu for ecus in FW_VERSIONS.values() for ecu in ecus.keys()}
 ALL_ECUS |= {ecu for config in FW_QUERY_CONFIGS.values() for ecu in config.extra_ecus}

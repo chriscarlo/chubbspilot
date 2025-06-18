@@ -3,11 +3,11 @@ import random
 from pathlib import Path
 
 
-import openpilot.system.loggerd.deleter as deleter
-import openpilot.system.loggerd.uploader as uploader
-from openpilot.common.params import Params
-from openpilot.system.hardware.hw import Paths
-from openpilot.system.loggerd.xattr_cache import setxattr
+import system.loggerd.deleter as deleter
+import system.loggerd.uploader as uploader
+from common.params import Params
+from system.hardware.hw import Paths
+from system.loggerd.xattr_cache import setxattr
 
 
 def create_random_file(file_path: Path, size_mb: float, lock: bool = False, upload_xattr: bytes = None) -> None:

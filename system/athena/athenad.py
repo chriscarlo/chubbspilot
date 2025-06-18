@@ -15,812 +15,801 @@ import sys
 import tempfile
 import threading
 import time
-from dataclasses import asdict, dataclass, replace
-from datetime import datetime
+import tarfile
+import shutil
+from dataclasses import asdict, dataclass, field, replace
+from datetime import datetime, timedelta
 from functools import partial
 from queue import Queue
 from typing import cast
-from collections.abc import Callable
+import concurrent.futures
 
-import requests
-from jsonrpc import JSONRPCResponseManager, dispatcher
-from websocket import (ABNF, WebSocket, WebSocketException, WebSocketTimeoutException,
-                       create_connection)
-
+# OpenPilot / system imports
 import cereal.messaging as messaging
-from cereal import log
-from cereal.services import SERVICE_LIST
-from openpilot.common.api import Api
-from openpilot.common.file_helpers import CallbackReader
-from openpilot.common.params import Params
-from openpilot.common.realtime import set_core_affinity
-from openpilot.system.hardware import HARDWARE, PC
-from openpilot.system.loggerd.xattr_cache import getxattr, setxattr
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.version import get_build_metadata
-from openpilot.system.hardware.hw import Paths
+from cereal import log               # Ensure log is imported for log.DeviceState.NetworkType
+from common.file_helpers import CallbackReader
+from common.params import Params
+from common.realtime import set_core_affinity
+from common.swaglog import cloudlog
+
+# ---- Azure imports ----
+try:
+  from azure.storage.fileshare import ShareFileClient, ShareDirectoryClient
+  from azure.core.exceptions import ServiceResponseError, ResourceNotFoundError, ResourceExistsError
+except ImportError:
+  cloudlog.exception("Azure storage fileshare SDK not installed! Please `pip install azure-storage-file-share`.")
+  ShareFileClient = None
+  ShareDirectoryClient = None
+  ServiceResponseError = None
+  ResourceNotFoundError = None
+  ResourceExistsError = None
+
+try:
+    import zstandard as zstd
+except ImportError:
+    zstd = None
+    cloudlog.error(
+        "zstandard library not found – cannot create .tar.zst archives. "
+        "Run  `pip install zstandard`  or archives will fail."
+    )
+
+# Constants
+HANDLER_THREADS = 1
+MAX_RETRY_COUNT = 5
+RETRY_DELAY = 10
+HOURLY_CLEAR_INTERVAL = 3600  # 1 hour in seconds
+
+# Azure File Share config
+AZURE_SHARE_NAME = "chauffeurlogs"
+AZURE_BASE_DIR   = "rlogs"
+BASE_REALDATA_PATH = "/data/media/0/realdata"
+STAGING_ARCHIVE_DIR = os.path.join(BASE_REALDATA_PATH, "..", "rlog_staging_archives") # e.g., /data/media/0/rlog_staging_archives
+
+# Debug flag - only True when running directly
+DEBUG = __name__ == "__main__"
+
+# Global state
+last_clear_time = 0  # Timestamp of the last queue clear
+
+def debug_print(*args, **kwargs):
+  if DEBUG:
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [DEBUG]", *args, **kwargs)
+
+def debug_queue_status():
+  """Print current status of upload queue and active uploads"""
+  if not DEBUG:
+    return
+  active_count = len([x for x in cur_upload_items.values() if x is not None])
+  with upload_queue.mutex:
+      queue_size = upload_queue.qsize()
+  print("\n[DEBUG] === Queue Status ===")
+  print(f"Active uploads: {active_count}")
+  print(f"Queue size: {queue_size}")
+  current_items_copy = dict(cur_upload_items)
+  for tid, item in current_items_copy.items():
+    if item is not None:
+      print(f"  Thread {tid}: {item.path} -> {item.azure_subdir} (progress: {item.progress}, retries: {item.retry_count})")
+  print("Next 3 queued items:")
+  with upload_queue.mutex:
+    items = list(upload_queue.queue)[:3]
+  for item in items:
+    print(f"  {item.path} -> {item.azure_subdir} (retries: {item.retry_count})")
+  print("========================\n")
 
 
-ATHENA_HOST = os.getenv('ATHENA_HOST', 'wss://athena.comma.ai')
-HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
-LOCAL_PORT_WHITELIST = {8022}
+# -------------------------------------------------------------------------------
+# Azure Connection / Upload
+# -------------------------------------------------------------------------------
+def get_azure_connection_string() -> str:
+  """ Reads the Azure connection string from /persist/azure_conn_string """
+  try:
+    if not hasattr(get_azure_connection_string, "conn_str_cache"):
+      with open("/persist/azure_conn_string", "r") as f:
+        conn_str = f.read().strip()
+        get_azure_connection_string.conn_str_cache = conn_str
+        debug_print(f"Successfully read Azure connection string (length: {len(conn_str)})")
+    return get_azure_connection_string.conn_str_cache
+  except Exception as e:
+    debug_print(f"Failed to read Azure connection string: {str(e)}")
+    cloudlog.exception("azure.get_azure_connection_string.exception")
+    get_azure_connection_string.conn_str_cache = ""
+    return ""
 
-LOG_ATTR_NAME = 'user.upload'
-LOG_ATTR_VALUE_MAX_UNIX_TIME = int.to_bytes(2147483647, 4, sys.byteorder)
-RECONNECT_TIMEOUT_S = 70
+def azure_file_exists(conn_str, share_name, dir_path, filename):
+    if ShareDirectoryClient is None or ResourceNotFoundError is None:
+        raise Exception("Azure SDK not available for file existence check.")
+    try:
+        dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, dir_path)
+        file_client = dir_client.get_file_client(filename)
+        file_client.get_file_properties()
+        debug_print(f"Azure file check: EXISTS - {dir_path}/{filename}")
+        return True
+    except ResourceNotFoundError:
+        debug_print(f"Azure file check: NOT FOUND - {dir_path}/{filename}")
+        return False
+    except Exception as e:
+        debug_print(f"Azure file check: Error checking {dir_path}/{filename} - {str(e)}")
+        cloudlog.warning(f"Azure file existence check failed for {dir_path}/{filename}: {str(e)}")
+        raise
 
-RETRY_DELAY = 10  # seconds
-MAX_RETRY_COUNT = 30  # Try for at most 5 minutes if upload fails immediately
-MAX_AGE = 31 * 24 * 3600  # seconds
-WS_FRAME_SIZE = 4096
+def ensure_azure_directory_exists(conn_str, share_name, azure_path):
+    if ShareDirectoryClient is None or ResourceExistsError is None:
+        raise Exception("Azure SDK not available for directory creation.")
+    parts = azure_path.strip('/').split('/')
+    current_path = ""
+    for part in parts:
+        if not part: continue
+        current_path = f"{current_path}/{part}" if current_path else part
+        try:
+            dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, current_path)
+            dir_client.create_directory()
+            debug_print(f"Ensured Azure directory exists: {current_path}")
+        except ResourceExistsError:
+            pass
+        except Exception as e:
+            debug_print(f"Error creating/checking directory {current_path}: {str(e)}")
+            cloudlog.exception(f"Azure ensure_azure_directory_exists error for {current_path}", exc_info=e)
+            raise
 
-NetworkType = log.DeviceState.NetworkType
+def list_azure_directories(conn_str, share_name, dir_path):
+    if ShareDirectoryClient is None:
+        raise Exception("Azure SDK not available for listing directories.")
+    try:
+        dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, dir_path)
+        return [item['name'] for item in dir_client.list_directories_and_files() if item['is_directory']]
+    except ResourceNotFoundError:
+        debug_print(f"Azure list directories: Path not found - {dir_path}")
+        return []
+    except Exception as e:
+        debug_print(f"Azure list directories: Error listing {dir_path} - {str(e)}")
+        cloudlog.warning(f"Azure directory listing failed for {dir_path}: {str(e)}")
+        raise
 
-UploadFileDict = dict[str, str | int | float | bool]
-UploadItemDict = dict[str, str | bool | int | float | dict[str, str]]
+def rename_azure_directory(conn_str, share_name, old_dir_path, new_dir_path):
+    if ShareDirectoryClient is None:
+        raise Exception("Azure SDK not available for renaming directories.")
+    try:
+        dir_client = ShareDirectoryClient.from_connection_string(conn_str, share_name, old_dir_path)
+        new_parent_path = os.path.dirname(new_dir_path)
+        if new_parent_path and new_parent_path != '.':
+             ensure_azure_directory_exists(conn_str, share_name, new_parent_path)
+        debug_print(f"Attempting to rename Azure directory from '{old_dir_path}' to '{new_dir_path}'")
+        dir_client.rename_directory(new_dir_path)
+        debug_print(f"Successfully renamed Azure directory: '{old_dir_path}' -> '{new_dir_path}'")
+        return True
+    except ResourceNotFoundError:
+        debug_print(f"Azure rename directory: Source directory not found - {old_dir_path}")
+        return False
+    except ResourceExistsError:
+        debug_print(f"Azure rename directory: Target directory already exists - {new_dir_path}")
+        return True
+    except Exception as e:
+        debug_print(f"Azure rename directory: Error renaming {old_dir_path} to {new_dir_path} - {str(e)}")
+        cloudlog.warning(f"Azure directory rename failed for {old_dir_path} -> {new_dir_path}: {str(e)}")
+        raise
 
-UploadFilesToUrlResponse = dict[str, int | list[UploadItemDict] | list[str]]
+def _do_upload_azure(upload_item: UploadItem):
+  """ Upload a file to Azure File Share. Creates target directory. Skips if exists. """
+  conn_str = get_azure_connection_string()
+  if not conn_str or ShareDirectoryClient is None or ShareFileClient is None:
+    debug_print("Azure upload not configured - missing connection string or SDK")
+    raise Exception("Azure upload not configured (missing connection string or azure-storage-file-share).")
+
+  local_path = upload_item.path
+  filename = os.path.basename(local_path)
+  # Determine target directory on Azure; if azure_subdir given, nest it, otherwise root under base
+  if upload_item.azure_subdir:
+      azure_target_dir = f"{AZURE_BASE_DIR}/{upload_item.azure_subdir}"
+  else:
+      azure_target_dir = AZURE_BASE_DIR
+
+  debug_print(f"\n[DEBUG] === Starting Azure Upload Attempt ===")
+  debug_print(f"Local path: {local_path}")
+  debug_print(f"Target Azure directory: {azure_target_dir}")
+  debug_print(f"Target Azure filename: {filename}")
+
+  try:
+    file_size = os.path.getsize(local_path)
+    debug_print(f"Local file size: {file_size} bytes")
+  except FileNotFoundError:
+    debug_print(f"File not found locally: {local_path}")
+    raise
+  except OSError as e:
+    debug_print(f"Error stating local file {local_path}: {e}")
+    raise
+
+  try:
+    debug_print("Ensuring Azure directory exists...")
+    ensure_azure_directory_exists(conn_str, AZURE_SHARE_NAME, azure_target_dir)
+
+    if azure_file_exists(conn_str, AZURE_SHARE_NAME, azure_target_dir, filename):
+      debug_print(f"File already exists on Azure, skipping upload: {azure_target_dir}/{filename}")
+      return
+
+    debug_print("Creating Azure file client for upload...")
+    dir_client = ShareDirectoryClient.from_connection_string(
+      conn_str, AZURE_SHARE_NAME, azure_target_dir
+    )
+    file_client = dir_client.get_file_client(filename)
+
+    debug_print("Starting file upload...")
+    with open(local_path, "rb") as f:
+        file_client.upload_file(f, timeout=600)
+    debug_print(f"File upload completed successfully: {azure_target_dir}/{filename}")
+    debug_print("=== Azure Upload Attempt Complete ===\n")
+
+    cloudlog.event("azure._do_upload_azure.success",
+                   subdir=upload_item.azure_subdir or "",
+                   local_path=local_path,
+                   azure_path=f"{azure_target_dir}/{filename}")
+  except (ResourceNotFoundError, FileNotFoundError) as e:
+      if isinstance(e, FileNotFoundError):
+          raise
+      debug_print(f"Azure resource not found during upload op for {azure_target_dir}/{filename}: {str(e)}")
+      cloudlog.warning(f"Azure ResourceNotFoundError during upload op for {azure_target_dir}/{filename}: {e}")
+      raise
+  except ServiceResponseError as e:
+      debug_print(f"Azure ServiceResponseError during upload for {azure_target_dir}/{filename}: {str(e)}")
+      cloudlog.warning(f"Azure ServiceResponseError for {azure_target_dir}/{filename}: {e}")
+      raise
+  except Exception as e:
+    debug_print(f"Error during Azure upload process for {azure_target_dir}/{filename}: {str(e)}")
+    cloudlog.exception(f"azure._do_upload_azure exception for {azure_target_dir}/{filename}", exc_info=e)
+    raise
 
 
-@dataclass
-class UploadFile:
-  fn: str
-  url: str
-  headers: dict[str, str]
-  allow_cellular: bool
-
-  @classmethod
-  def from_dict(cls, d: dict) -> UploadFile:
-    return cls(d.get("fn", ""), d.get("url", ""), d.get("headers", {}), d.get("allow_cellular", False))
-
-
+# -------------------------------------------------------------------------------
+# Upload Items/Queue
+# -------------------------------------------------------------------------------
 @dataclass
 class UploadItem:
   path: str
-  url: str
-  headers: dict[str, str]
   created_at: int
   id: str | None
+  url: str = ""
+  headers: dict[str, str] = field(default_factory=dict)
   retry_count: int = 0
   current: bool = False
-  progress: float = 0
-  allow_cellular: bool = False
+  progress: float = 0.0
+  allow_cellular: bool = True
+  azure_subdir: str | None = None
+  original_segment_to_delete: str | None = None # Path to the original segment dir to delete after archive upload
 
   @classmethod
   def from_dict(cls, d: dict) -> UploadItem:
-    return cls(d["path"], d["url"], d["headers"], d["created_at"], d["id"], d["retry_count"], d["current"],
-               d["progress"], d["allow_cellular"])
-
-
-dispatcher["echo"] = lambda s: s
-recv_queue: Queue[str] = queue.Queue()
-send_queue: Queue[str] = queue.Queue()
-upload_queue: Queue[UploadItem] = queue.Queue()
-low_priority_send_queue: Queue[str] = queue.Queue()
-log_recv_queue: Queue[str] = queue.Queue()
-cancelled_uploads: set[str] = set()
-
-cur_upload_items: dict[int, UploadItem | None] = {}
-
-
-def strip_bz2_extension(fn: str) -> str:
-  if fn.endswith('.bz2'):
-    return fn[:-4]
-  return fn
-
+    return cls(
+      path=d.get("path", ""),
+      url=d.get("url", ""),
+      headers=d.get("headers", {}),
+      created_at=d.get("created_at", 0),
+      id=d.get("id"),
+      retry_count=d.get("retry_count", 0),
+      current=d.get("current", False),
+      progress=d.get("progress", 0.0),
+      allow_cellular=d.get("allow_cellular", True),
+      azure_subdir=d.get("azure_subdir"),
+      original_segment_to_delete=d.get("original_segment_to_delete"),
+    )
 
 class AbortTransferException(Exception):
   pass
 
+cur_upload_items: dict[int, UploadItem | None] = {}
+cancelled_uploads: set[str] = set()
+upload_queue: Queue[UploadItem] = queue.Queue()
 
 class UploadQueueCache:
+  PARAM_NAME = "AzureUploadQueue"
 
   @staticmethod
-  def initialize(upload_queue: Queue[UploadItem]) -> None:
+  def initialize(upload_queue_instance: Queue[UploadItem]) -> None:
+    global last_clear_time
+    params = Params()
     try:
-      upload_queue_json = Params().get("AthenadUploadQueue")
+      upload_queue_json = params.get(UploadQueueCache.PARAM_NAME, encoding='utf-8')
       if upload_queue_json is not None:
-        for item in json.loads(upload_queue_json):
-          upload_queue.put(UploadItem.from_dict(item))
-    except Exception:
-      cloudlog.exception("athena.UploadQueueCache.initialize.exception")
+        loaded_count = 0
+        items_data = json.loads(upload_queue_json)
+        for item_dict in items_data:
+          try:
+              item = UploadItem.from_dict(item_dict)
+              if item.path and item.id:
+                  item = replace(item, progress=0.0, current=False, retry_count=item.retry_count)
+                  upload_queue_instance.put(item)
+                  loaded_count += 1
+          except (TypeError, KeyError) as e:
+              debug_print(f"Error parsing item from cache: {item_dict}, Error: {e}")
+              cloudlog.warning("Failed to parse item from AzureUploadQueue cache",
+                               item_dict=item_dict, error=str(e))
+        debug_print(f"Initialized queue with {loaded_count} items from cache.")
+      else:
+        debug_print("No cached queue found.")
+      last_clear_time = time.time()
+    except json.JSONDecodeError:
+      cloudlog.error("Failed to decode AzureUploadQueue JSON, clearing cache.")
+      params.remove(UploadQueueCache.PARAM_NAME)
+      last_clear_time = time.time()
+    except Exception as e:
+      cloudlog.exception("azure.UploadQueueCache.initialize.exception")
+      params.remove(UploadQueueCache.PARAM_NAME)
+      last_clear_time = time.time()
 
   @staticmethod
-  def cache(upload_queue: Queue[UploadItem]) -> None:
+  def cache(upload_queue_instance: Queue[UploadItem]) -> None:
+    params = Params()
+    items_to_cache = []
     try:
-      queue: list[UploadItem | None] = list(upload_queue.queue)
-      items = [asdict(i) for i in queue if i is not None and (i.id not in cancelled_uploads)]
-      Params().put("AthenadUploadQueue", json.dumps(items))
-    except Exception:
-      cloudlog.exception("athena.UploadQueueCache.cache.exception")
+      current_items_copy = dict(cur_upload_items)
+      for item in current_items_copy.values():
+          if item is not None and item.progress < 1.0:
+              items_to_cache.append(asdict(item))
 
+      with upload_queue_instance.mutex:
+          queued_items = list(upload_queue_instance.queue)
+      for item in queued_items:
+          if item is not None and item.progress < 1.0:
+              if not any(cached_item['id'] == item.id for cached_item in items_to_cache):
+                  items_to_cache.append(asdict(item))
 
-def handle_long_poll(ws: WebSocket, exit_event: threading.Event | None) -> None:
-  end_event = threading.Event()
-
-  threads = [
-    threading.Thread(target=ws_manage, args=(ws, end_event), name='ws_manage'),
-    threading.Thread(target=ws_recv, args=(ws, end_event), name='ws_recv'),
-    threading.Thread(target=ws_send, args=(ws, end_event), name='ws_send'),
-    threading.Thread(target=upload_handler, args=(end_event,), name='upload_handler'),
-    threading.Thread(target=log_handler, args=(end_event,), name='log_handler'),
-    threading.Thread(target=stat_handler, args=(end_event,), name='stat_handler'),
-  ] + [
-    threading.Thread(target=jsonrpc_handler, args=(end_event,), name=f'worker_{x}')
-    for x in range(HANDLER_THREADS)
-  ]
-
-  for thread in threads:
-    thread.start()
-  try:
-    while not end_event.wait(0.1):
-      if exit_event is not None and exit_event.is_set():
-        end_event.set()
-  except (KeyboardInterrupt, SystemExit):
-    end_event.set()
-    raise
-  finally:
-    for thread in threads:
-      cloudlog.debug(f"athena.joining {thread.name}")
-      thread.join()
-
-
-def jsonrpc_handler(end_event: threading.Event) -> None:
-  dispatcher["startLocalProxy"] = partial(startLocalProxy, end_event)
-  while not end_event.is_set():
-    try:
-      data = recv_queue.get(timeout=1)
-      if "method" in data:
-        cloudlog.event("athena.jsonrpc_handler.call_method", data=data)
-        response = JSONRPCResponseManager.handle(data, dispatcher)
-        send_queue.put_nowait(response.json)
-      elif "id" in data and ("result" in data or "error" in data):
-        log_recv_queue.put_nowait(data)
+      if items_to_cache:
+          debug_print(f"Caching {len(items_to_cache)} items to {UploadQueueCache.PARAM_NAME}")
+          params.put(UploadQueueCache.PARAM_NAME, json.dumps(items_to_cache))
       else:
-        raise Exception("not a valid request or response")
-    except queue.Empty:
-      pass
-    except Exception as e:
-      cloudlog.exception("athena jsonrpc handler failed")
-      send_queue.put_nowait(json.dumps({"error": str(e)}))
+          if params.check(UploadQueueCache.PARAM_NAME):
+              debug_print(f"Queue empty/completed, removing {UploadQueueCache.PARAM_NAME}")
+              params.remove(UploadQueueCache.PARAM_NAME)
+          else:
+              debug_print("Queue empty, no cache to remove.")
+    except Exception:
+      cloudlog.exception("azure.UploadQueueCache.cache.exception")
+
+  @staticmethod
+  def clear_cache() -> None:
+    try:
+        Params().remove(UploadQueueCache.PARAM_NAME)
+        debug_print(f"Cleared cached queue param: {UploadQueueCache.PARAM_NAME}")
+    except Exception:
+        cloudlog.exception("azure.UploadQueueCache.clear_cache.exception")
 
 
+# -------------------------------------------------------------------------------
+# Upload Handler Thread
+# -------------------------------------------------------------------------------
 def retry_upload(tid: int, end_event: threading.Event, increase_count: bool = True) -> None:
-  item = cur_upload_items[tid]
-  if item is not None and item.retry_count < MAX_RETRY_COUNT:
-    new_retry_count = item.retry_count + 1 if increase_count else item.retry_count
+  item = cur_upload_items.get(tid)
+  if item is None:
+    debug_print(f"Thread {tid}: No item found to retry.")
+    return
 
-    item = replace(
-      item,
-      retry_count=new_retry_count,
-      progress=0,
-      current=False
-    )
-    upload_queue.put_nowait(item)
+  new_retry_count = item.retry_count + 1 if increase_count else item.retry_count
+
+  try:
+    upload_queue.task_done()
+    debug_print(f"Thread {tid}: Marked task done for retry of {item.id}")
+  except Exception as e:
+    debug_print(f"Warning calling task_done before retry: {e}")
+
+  if new_retry_count > MAX_RETRY_COUNT:
+    debug_print(f"Thread {tid}: Max retries reached for {item.path}. Giving up.")
+    cloudlog.event("azure.upload_handler.max_retries", item=asdict(item), error=True)
+    cur_upload_items[tid] = replace(item, progress=1.0, current=False)
     UploadQueueCache.cache(upload_queue)
-
     cur_upload_items[tid] = None
+    return
 
-    for _ in range(RETRY_DELAY):
-      time.sleep(1)
-      if end_event.is_set():
-        break
+  debug_print(f"Thread {tid}: Retrying upload for {item.path} (retry {new_retry_count})")
+  requeued_item = replace(item, retry_count=new_retry_count, progress=0.0, current=False)
+  upload_queue.put_nowait(requeued_item)
+  UploadQueueCache.cache(upload_queue)
+  cur_upload_items[tid] = None
 
-
-def cb(sm, item, tid, end_event: threading.Event, sz: int, cur: int) -> None:
-  # Abort transfer if connection changed to metered after starting upload
-  # or if athenad is shutting down to re-connect the websocket
-  sm.update(0)
-  metered = sm['deviceState'].networkMetered
-  if metered and (not item.allow_cellular):
-    raise AbortTransferException
-
-  if end_event.is_set():
-    raise AbortTransferException
-
-  cur_upload_items[tid] = replace(item, progress=cur / sz if sz else 1)
-
+  interrupted = end_event.wait(RETRY_DELAY)
+  if interrupted:
+      debug_print(f"Thread {tid}: Retry delayed interrupted by shutdown.")
 
 def upload_handler(end_event: threading.Event) -> None:
   sm = messaging.SubMaster(['deviceState'])
   tid = threading.get_ident()
+  debug_print(f"Upload handler started (Thread {tid})")
 
   while not end_event.is_set():
     cur_upload_items[tid] = None
-
+    item = None
     try:
-      cur_upload_items[tid] = item = replace(upload_queue.get(timeout=1), current=True)
+      item = upload_queue.get(timeout=1)
+      cur_upload_items[tid] = replace(item, current=True)
+      debug_print(f"Processing upload item: {item.id} -> {item.path}")
 
       if item.id in cancelled_uploads:
         cancelled_uploads.remove(item.id)
+        cur_upload_items[tid] = replace(item, progress=1.0, current=False)
+        upload_queue.task_done()
+        UploadQueueCache.cache(upload_queue)
         continue
 
-      # Remove item if too old
-      age = datetime.now() - datetime.fromtimestamp(item.created_at / 1000)
-      if age.total_seconds() > MAX_AGE:
-        cloudlog.event("athena.upload_handler.expired", item=item, error=True)
-        continue
-
-      # Check if uploading over metered connection is allowed
       sm.update(0)
+      if not sm.valid['deviceState']:
+        retry_upload(tid, end_event, increase_count=False)
+        continue
+
       metered = sm['deviceState'].networkMetered
       network_type = sm['deviceState'].networkType.raw
-      if metered and (not item.allow_cellular):
-        retry_upload(tid, end_event, False)
+
+      is_connected = network_type != 0
+      if not is_connected or (metered and not item.allow_cellular):
+        retry_upload(tid, end_event, increase_count=False)
         continue
 
       try:
         fn = item.path
         try:
-          sz = os.path.getsize(fn)
-        except OSError:
-          sz = -1
+          if not os.path.isfile(fn):
+             raise FileNotFoundError(f"{fn} disappeared")
+          file_size = os.path.getsize(fn)
+        except:
+          file_size = 0
 
-        cloudlog.event("athena.upload_handler.upload_start", fn=fn, sz=sz, network_type=network_type, metered=metered, retry_count=item.retry_count)
-        response = _do_upload(item, partial(cb, sm, item, tid, end_event))
+        cloudlog.event("azure.upload_handler.upload_start",
+                       fn=fn, sz=file_size,
+                       azure_subdir=item.azure_subdir or "",
+                       network_type=network_type, metered=metered,
+                       retry_count=item.retry_count)
 
-        if response.status_code not in (200, 201, 401, 403, 412):
-          cloudlog.event("athena.upload_handler.retry", status_code=response.status_code, fn=fn, sz=sz, network_type=network_type, metered=metered)
-          retry_upload(tid, end_event)
-        else:
-          cloudlog.event("athena.upload_handler.success", fn=fn, sz=sz, network_type=network_type, metered=metered)
+        _do_upload_azure(item)
 
+        cur_upload_items[tid] = replace(item, progress=1.0, current=False)
+        cloudlog.event("azure.upload_handler.success",
+                       fn=fn, sz=file_size,
+                       azure_subdir=item.azure_subdir or "",
+                       network_type=network_type, metered=metered)
+
+        # --- Start Deletion Logic ---
+        try:
+          debug_print(f"Attempting to delete uploaded archive file: {item.path}")
+          os.remove(item.path) # Delete the archive from staging/temp location
+          debug_print(f"Deleted archive file: {item.path}")
+
+          if item.original_segment_to_delete:
+            # Ensure the path is a directory and exists before attempting to delete
+            if os.path.isdir(item.original_segment_to_delete):
+              debug_print(f"Attempting to delete original segment directory: {item.original_segment_to_delete}")
+              shutil.rmtree(item.original_segment_to_delete)
+              debug_print(f"Deleted original segment directory: {item.original_segment_to_delete}")
+              cloudlog.event("azure.upload_handler.cleanup_success",
+                             archive_path=item.path, source_dir=item.original_segment_to_delete)
+            else:
+              debug_print(f"Original segment directory not found or already deleted: {item.original_segment_to_delete}")
+              cloudlog.warning("azure.upload_handler.cleanup_skip_source_dir_not_found",
+                               archive_path=item.path, source_dir=item.original_segment_to_delete)
+          elif item.id and "archive" in item.id: # Heuristic for archive items that might be missing the new field (e.g. from old cache)
+            cloudlog.warning("azure.upload_handler.cleanup_missing_original_segment_path",
+                             item_id=item.id, archive_path=item.path)
+            debug_print(f"No original_segment_to_delete path for item: {item.id}, archive: {item.path}")
+
+        except OSError as e:
+          debug_print(f"Error deleting local files after upload: {e}")
+          cloudlog.exception("azure.upload_handler.cleanup_error",
+                             archive_path=item.path,
+                             source_dir=item.original_segment_to_delete or "N/A",
+                             error=str(e))
+        # --- End Deletion Logic ---
+
+        upload_queue.task_done()
         UploadQueueCache.cache(upload_queue)
-      except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.SSLError):
-        cloudlog.event("athena.upload_handler.timeout", fn=fn, sz=sz, network_type=network_type, metered=metered)
+
+      except FileNotFoundError:
+        cloudlog.event("azure.upload_handler.not_found",
+                       fn=item.path, azure_subdir=item.azure_subdir or "")
+        cur_upload_items[tid] = replace(item, progress=1.0, current=False)
+        upload_queue.task_done()
+        UploadQueueCache.cache(upload_queue)
+
+      except (ConnectionError, TimeoutError, ServiceResponseError,
+              socket.timeout, ResourceNotFoundError) as e:
+        cloudlog.warning("azure.upload_handler.network_error",
+                         fn=item.path, azure_subdir=item.azure_subdir or "",
+                         network_type=network_type, error=str(e))
         retry_upload(tid, end_event)
+
       except AbortTransferException:
-        cloudlog.event("athena.upload_handler.abort", fn=fn, sz=sz, network_type=network_type, metered=metered)
-        retry_upload(tid, end_event, False)
+        cloudlog.event("azure.upload_handler.abort",
+                       fn=item.path, azure_subdir=item.azure_subdir or "",
+                       network_type=network_type, metered=metered)
+        retry_upload(tid, end_event, increase_count=False)
+
+      except Exception as e:
+        cloudlog.exception("azure.upload_handler.azure_upload_fail",
+                           network_type=network_type)
+        retry_upload(tid, end_event)
 
     except queue.Empty:
-      pass
+      continue
+
     except Exception:
-      cloudlog.exception("athena.upload_handler.exception")
-
-
-def _do_upload(upload_item: UploadItem, callback: Callable = None) -> requests.Response:
-  path = upload_item.path
-  compress = False
-
-  # If file does not exist, but does exist without the .bz2 extension we will compress on the fly
-  if not os.path.exists(path) and os.path.exists(strip_bz2_extension(path)):
-    path = strip_bz2_extension(path)
-    compress = True
-
-  with open(path, "rb") as f:
-    content = f.read()
-    if compress:
-      cloudlog.event("athena.upload_handler.compress", fn=path, fn_orig=upload_item.path)
-      content = bz2.compress(content)
-
-  with io.BytesIO(content) as data:
-    return requests.put(upload_item.url,
-                        data=CallbackReader(data, callback, len(content)) if callback else data,
-                        headers={**upload_item.headers, 'Content-Length': str(len(content))},
-                        timeout=30)
-
-
-# security: user should be able to request any message from their car
-@dispatcher.add_method
-def getMessage(service: str, timeout: int = 1000) -> dict:
-  if service is None or service not in SERVICE_LIST:
-    raise Exception("invalid service")
-
-  socket = messaging.sub_sock(service, timeout=timeout)
-  ret = messaging.recv_one(socket)
-
-  if ret is None:
-    raise TimeoutError
-
-  # this is because capnp._DynamicStructReader doesn't have typing information
-  return cast(dict, ret.to_dict())
-
-
-@dispatcher.add_method
-def getVersion() -> dict[str, str]:
-  build_metadata = get_build_metadata()
-  return {
-    "version": build_metadata.openpilot.version,
-    "remote": build_metadata.openpilot.git_normalized_origin,
-    "branch": build_metadata.channel,
-    "commit": build_metadata.openpilot.git_commit,
-  }
-
-
-@dispatcher.add_method
-def setNavDestination(latitude: int = 0, longitude: int = 0, place_name: str = None, place_details: str = None) -> dict[str, int]:
-  destination = {
-    "latitude": latitude,
-    "longitude": longitude,
-    "place_name": place_name,
-    "place_details": place_details,
-  }
-  Params().put("NavDestination", json.dumps(destination))
-
-  return {"success": 1}
-
-
-def scan_dir(path: str, prefix: str) -> list[str]:
-  files = []
-  # only walk directories that match the prefix
-  # (glob and friends traverse entire dir tree)
-  with os.scandir(path) as i:
-    for e in i:
-      rel_path = os.path.relpath(e.path, Paths.log_root())
-      if e.is_dir(follow_symlinks=False):
-        # add trailing slash
-        rel_path = os.path.join(rel_path, '')
-        # if prefix is a partial dir name, current dir will start with prefix
-        # if prefix is a partial file name, prefix with start with dir name
-        if rel_path.startswith(prefix) or prefix.startswith(rel_path):
-          files.extend(scan_dir(e.path, prefix))
+      cloudlog.exception("azure.upload_handler.outer_exception")
+      if item is not None and cur_upload_items.get(tid) is not None:
+        retry_upload(tid, end_event, increase_count=False)
       else:
-        if rel_path.startswith(prefix):
-          files.append(rel_path)
-  return files
+        end_event.wait(5)
 
-@dispatcher.add_method
-def listDataDirectory(prefix='') -> list[str]:
-  return scan_dir(Paths.log_root(), prefix)
+    finally:
+      if cur_upload_items.get(tid) is not None:
+        try:
+          upload_queue.task_done()
+        except:
+          pass
+        cur_upload_items[tid] = None
 
-
-@dispatcher.add_method
-def uploadFileToUrl(fn: str, url: str, headers: dict[str, str]) -> UploadFilesToUrlResponse:
-  # this is because mypy doesn't understand that the decorator doesn't change the return type
-  response: UploadFilesToUrlResponse = uploadFilesToUrls([{
-    "fn": fn,
-    "url": url,
-    "headers": headers,
-  }])
-  return response
+  debug_print(f"Upload handler thread {tid} exiting.")
 
 
-@dispatcher.add_method
-def uploadFilesToUrls(files_data: list[UploadFileDict]) -> UploadFilesToUrlResponse:
-  files = map(UploadFile.from_dict, files_data)
-
-  items: list[UploadItemDict] = []
-  failed: list[str] = []
-  for file in files:
-    if len(file.fn) == 0 or file.fn[0] == '/' or '..' in file.fn or len(file.url) == 0:
-      failed.append(file.fn)
-      continue
-
-    path = os.path.join(Paths.log_root(), file.fn)
-    if not os.path.exists(path) and not os.path.exists(strip_bz2_extension(path)):
-      failed.append(file.fn)
-      continue
-
-    # Skip item if already in queue
-    url = file.url.split('?')[0]
-    if any(url == item['url'].split('?')[0] for item in listUploadQueue()):
-      continue
-
-    item = UploadItem(
-      path=path,
-      url=file.url,
-      headers=file.headers,
-      created_at=int(time.time() * 1000),
-      id=None,
-      allow_cellular=file.allow_cellular,
-    )
-    upload_id = hashlib.sha1(str(item).encode()).hexdigest()
-    item = replace(item, id=upload_id)
-    upload_queue.put_nowait(item)
-    items.append(asdict(item))
-
-  UploadQueueCache.cache(upload_queue)
-
-  resp: UploadFilesToUrlResponse = {"enqueued": len(items), "items": items}
-  if failed:
-    resp["failed"] = failed
-
-  return resp
-
-
-@dispatcher.add_method
-def listUploadQueue() -> list[UploadItemDict]:
-  items = list(upload_queue.queue) + list(cur_upload_items.values())
-  return [asdict(i) for i in items if (i is not None) and (i.id not in cancelled_uploads)]
-
-
-@dispatcher.add_method
-def cancelUpload(upload_id: str | list[str]) -> dict[str, int | str]:
-  if not isinstance(upload_id, list):
-    upload_id = [upload_id]
-
-  uploading_ids = {item.id for item in list(upload_queue.queue)}
-  cancelled_ids = uploading_ids.intersection(upload_id)
-  if len(cancelled_ids) == 0:
-    return {"success": 0, "error": "not found"}
-
-  cancelled_uploads.update(cancelled_ids)
-  return {"success": 1}
-
-@dispatcher.add_method
-def setRouteViewed(route: str) -> dict[str, int | str]:
-  # maintain a list of the last 10 routes viewed in connect
-  params = Params()
-
-  r = params.get("AthenadRecentlyViewedRoutes", encoding="utf8")
-  routes = [] if r is None else r.split(",")
-  routes.append(route)
-
-  # remove duplicates
-  routes = list(dict.fromkeys(routes))
-
-  params.put("AthenadRecentlyViewedRoutes", ",".join(routes[-10:]))
-  return {"success": 1}
-
-
-def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local_port: int) -> dict[str, int]:
-  try:
-    if local_port not in LOCAL_PORT_WHITELIST:
-      raise Exception("Requested local port not whitelisted")
-
-    cloudlog.debug("athena.startLocalProxy.starting")
-
-    dongle_id = Params().get("DongleId").decode('utf8')
-    identity_token = Api(dongle_id).get_token()
-    ws = create_connection(remote_ws_uri,
-                           cookie="jwt=" + identity_token,
-                           enable_multithread=True)
-
-    # Set TOS to keep connection responsive while under load.
-    # DSCP of 36/HDD_LINUX_AC_VI with the minimum delay flag
-    ws.sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x90)
-
-    ssock, csock = socket.socketpair()
-    local_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    local_sock.connect(('127.0.0.1', local_port))
-    local_sock.setblocking(False)
-
-    proxy_end_event = threading.Event()
-    threads = [
-      threading.Thread(target=ws_proxy_recv, args=(ws, local_sock, ssock, proxy_end_event, global_end_event)),
-      threading.Thread(target=ws_proxy_send, args=(ws, local_sock, csock, proxy_end_event))
-    ]
-    for thread in threads:
-      thread.start()
-
-    cloudlog.debug("athena.startLocalProxy.started")
-    return {"success": 1}
-  except Exception as e:
-    cloudlog.exception("athenad.startLocalProxy.exception")
-    raise e
-
-
-@dispatcher.add_method
-def getPublicKey() -> str | None:
-  if not os.path.isfile(Paths.persist_root() + '/comma/id_rsa.pub'):
-    return None
-
-  with open(Paths.persist_root() + '/comma/id_rsa.pub') as f:
-    return f.read()
-
-
-@dispatcher.add_method
-def getSshAuthorizedKeys() -> str:
-  return Params().get("GithubSshKeys", encoding='utf8') or ''
-
-
-@dispatcher.add_method
-def getGithubUsername() -> str:
-  return Params().get("GithubUsername", encoding='utf8') or ''
-
-
-@dispatcher.add_method
-def getSimInfo():
-  return HARDWARE.get_sim_info()
-
-
-@dispatcher.add_method
-def getNetworkType():
-  return HARDWARE.get_network_type()
-
-
-@dispatcher.add_method
-def getNetworkMetered() -> bool:
-  network_type = HARDWARE.get_network_type()
-  return HARDWARE.get_network_metered(network_type)
-
-
-@dispatcher.add_method
-def getNetworks():
-  return HARDWARE.get_networks()
-
-
-@dispatcher.add_method
-def takeSnapshot() -> str | dict[str, str] | None:
-  from openpilot.system.camerad.snapshot.snapshot import jpeg_write, snapshot
-  ret = snapshot()
-  if ret is not None:
-    def b64jpeg(x):
-      if x is not None:
-        f = io.BytesIO()
-        jpeg_write(f, x)
-        return base64.b64encode(f.getvalue()).decode("utf-8")
-      else:
-        return None
-    return {'jpegBack': b64jpeg(ret[0]),
-            'jpegFront': b64jpeg(ret[1])}
-  else:
-    raise Exception("not available while camerad is started")
-
-
-def get_logs_to_send_sorted() -> list[str]:
-  # TODO: scan once then use inotify to detect file creation/deletion
-  curr_time = int(time.time())
-  logs = []
-  for log_entry in os.listdir(Paths.swaglog_root()):
-    log_path = os.path.join(Paths.swaglog_root(), log_entry)
-    time_sent = 0
+# -------------------------------------------------------------------------------
+# Automatic RLog Finder (realdata_handler)
+# -------------------------------------------------------------------------------
+def _compress_segment_and_queue_on_cpu3(subdir_path: str, segment_name: str, formatted_date_time: str, creation_time_ts: float):
+    """
+    Compresses a single segment to .tar.zst, pins to CPU3, and queues for upload.
+    """
     try:
-      value = getxattr(log_path, LOG_ATTR_NAME)
-      if value is not None:
-        time_sent = int.from_bytes(value, sys.byteorder)
-    except (ValueError, TypeError):
-      pass
-    # assume send failed and we lost the response if sent more than one hour ago
-    if not time_sent or curr_time - time_sent > 3600:
-      logs.append(log_entry)
-  # excluding most recent (active) log file
-  return sorted(logs)[:-1]
+        os.sched_setaffinity(0, {3})  # Pin this thread to CPU core 3
+        debug_print(f"Compression thread for {segment_name} now running on CPU {os.sched_getaffinity(0)}")
+    except Exception as e:
+        cloudlog.warning(f"Failed to set CPU affinity for compression of {segment_name}: {e}")
+        debug_print(f"Warning: Failed to set CPU affinity for {segment_name}: {e}")
 
+    if zstd is None:
+        debug_print(f"zstandard library not found, cannot create archive for {segment_name}. Skipping.")
+        cloudlog.warning(f"zstd not found, skipping archive creation for {segment_name}")
+        return
 
-def log_handler(end_event: threading.Event) -> None:
-  if PC:
+    archive_name = f"{formatted_date_time}--{segment_name}.tar.zst"
+    archive_filepath_in_staging = os.path.join(STAGING_ARCHIVE_DIR, archive_name)
+
+    try:
+        files_added_count = 0
+        with open(archive_filepath_in_staging, "wb") as raw_f:
+            cctx = zstd.ZstdCompressor(level=3)
+            with cctx.stream_writer(raw_f) as zstd_f:
+                with tarfile.open(fileobj=zstd_f, mode="w|") as tar:
+                    for fname in ['rlog', 'qlog', 'qcamera.ts']:
+                        fpath = os.path.join(subdir_path, fname)
+                        if os.path.isfile(fpath):
+                            tar.add(fpath, arcname=fname)
+                            files_added_count += 1
+
+        if files_added_count == 0:
+            debug_print(f"No files found for archive {archive_filepath_in_staging}, removing empty archive.")
+            if os.path.exists(archive_filepath_in_staging):
+                os.remove(archive_filepath_in_staging)
+            return
+
+        debug_print(f"Created archive for upload: {archive_filepath_in_staging} (processed by thread {threading.get_ident()})")
+
+        upload_id = f"azure|{segment_name}|archive"
+        item = UploadItem(
+            path=archive_filepath_in_staging,
+            created_at=int(creation_time_ts * 1000),
+            id=upload_id,
+            azure_subdir=None,
+            allow_cellular=True,
+            original_segment_to_delete=subdir_path
+        )
+        debug_print(f"Queueing archive item from compression thread: {item.id} (Path: {item.path}) -> Azure: {AZURE_BASE_DIR}/{archive_name}")
+        upload_queue.put_nowait(item)
+        # Note: UploadQueueCache.cache() is called by the main realdata_handler loop
+
+    except (tarfile.TarError, zstd.ZstdError, OSError) as e:
+        debug_print(f"Failed to create archive {archive_filepath_in_staging} in compression thread: {e}")
+        cloudlog.exception(f"Failed to create archive {archive_name} in {STAGING_ARCHIVE_DIR} (compression_thread)", error=str(e))
+        try:
+            if os.path.exists(archive_filepath_in_staging):
+                os.remove(archive_filepath_in_staging)
+        except OSError:
+            pass # Ignore cleanup error
+    except Exception as e:
+        debug_print(f"Unexpected error in compression thread for {segment_name}: {e}")
+        cloudlog.exception(f"Unexpected error in _compress_segment_and_queue_on_cpu3 for {segment_name}", error=str(e))
+
+def _scan_and_queue_realdata(base_path: str, age_limit_seconds: float, processed_dirs: set[str], sm: messaging.SubMaster, compression_executor: concurrent.futures.ThreadPoolExecutor) -> None:
+  current_time = time.time()
+  one_day_ago_ts = current_time - age_limit_seconds
+  found_count = 0
+
+  if not os.path.isdir(base_path):
+      cloudlog.error(f"Realdata base path not found: {base_path}")
+      return
+
+  try:
+    os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
+    debug_print(f"Ensured staging directory exists: {STAGING_ARCHIVE_DIR}")
+  except OSError as e:
+    cloudlog.error(f"Could not create or access staging directory {STAGING_ARCHIVE_DIR}: {e}")
+    debug_print(f"Fatal: Could not create/access staging dir {STAGING_ARCHIVE_DIR}: {e}. Archiving cannot proceed.")
     return
 
-  log_files = []
-  last_scan = 0.
-  while not end_event.is_set():
-    try:
-      curr_scan = time.monotonic()
-      if curr_scan - last_scan > 10:
-        log_files = get_logs_to_send_sorted()
-        last_scan = curr_scan
-
-      # send one log
-      curr_log = None
-      if len(log_files) > 0:
-        log_entry = log_files.pop() # newest log file
-        cloudlog.debug(f"athena.log_handler.forward_request {log_entry}")
-        try:
-          curr_time = int(time.time())
-          log_path = os.path.join(Paths.swaglog_root(), log_entry)
-          setxattr(log_path, LOG_ATTR_NAME, int.to_bytes(curr_time, 4, sys.byteorder))
-          with open(log_path) as f:
-            jsonrpc = {
-              "method": "forwardLogs",
-              "params": {
-                "logs": f.read()
-              },
-              "jsonrpc": "2.0",
-              "id": log_entry
-            }
-            low_priority_send_queue.put_nowait(json.dumps(jsonrpc))
-            curr_log = log_entry
-        except OSError:
-          pass  # file could be deleted by log rotation
-
-      # wait for response up to ~100 seconds
-      # always read queue at least once to process any old responses that arrive
-      for _ in range(100):
-        if end_event.is_set():
-          break
-        try:
-          log_resp = json.loads(log_recv_queue.get(timeout=1))
-          log_entry = log_resp.get("id")
-          log_success = "result" in log_resp and log_resp["result"].get("success")
-          cloudlog.debug(f"athena.log_handler.forward_response {log_entry} {log_success}")
-          if log_entry and log_success:
-            log_path = os.path.join(Paths.swaglog_root(), log_entry)
-            try:
-              setxattr(log_path, LOG_ATTR_NAME, LOG_ATTR_VALUE_MAX_UNIX_TIME)
-            except OSError:
-              pass  # file could be deleted by log rotation
-          if curr_log == log_entry:
-            break
-        except queue.Empty:
-          if curr_log is None:
-            break
-
-    except Exception:
-      cloudlog.exception("athena.log_handler.exception")
-
-
-def stat_handler(end_event: threading.Event) -> None:
-  STATS_DIR = Paths.stats_root()
-  while not end_event.is_set():
-    last_scan = 0.
-    curr_scan = time.monotonic()
-    try:
-      if curr_scan - last_scan > 10:
-        stat_filenames = list(filter(lambda name: not name.startswith(tempfile.gettempprefix()), os.listdir(STATS_DIR)))
-        if len(stat_filenames) > 0:
-          stat_path = os.path.join(STATS_DIR, stat_filenames[0])
-          with open(stat_path) as f:
-            jsonrpc = {
-              "method": "storeStats",
-              "params": {
-                "stats": f.read()
-              },
-              "jsonrpc": "2.0",
-              "id": stat_filenames[0]
-            }
-            low_priority_send_queue.put_nowait(json.dumps(jsonrpc))
-          os.remove(stat_path)
-        last_scan = curr_scan
-    except Exception:
-      cloudlog.exception("athena.stat_handler.exception")
-    time.sleep(0.1)
-
-
-def ws_proxy_recv(ws: WebSocket, local_sock: socket.socket, ssock: socket.socket, end_event: threading.Event, global_end_event: threading.Event) -> None:
-  while not (end_event.is_set() or global_end_event.is_set()):
-    try:
-      r = select.select((ws.sock,), (), (), 30)
-      if r[0]:
-        data = ws.recv()
-        if isinstance(data, str):
-          data = data.encode("utf-8")
-        local_sock.sendall(data)
-    except WebSocketTimeoutException:
-      pass
-    except Exception:
-      cloudlog.exception("athenad.ws_proxy_recv.exception")
-      break
-
-  cloudlog.debug("athena.ws_proxy_recv closing sockets")
-  ssock.close()
-  local_sock.close()
-  ws.close()
-  cloudlog.debug("athena.ws_proxy_recv done closing sockets")
-
-  end_event.set()
-
-
-def ws_proxy_send(ws: WebSocket, local_sock: socket.socket, signal_sock: socket.socket, end_event: threading.Event) -> None:
-  while not end_event.is_set():
-    try:
-      r, _, _ = select.select((local_sock, signal_sock), (), ())
-      if r:
-        if r[0].fileno() == signal_sock.fileno():
-          # got end signal from ws_proxy_recv
-          end_event.set()
-          break
-        data = local_sock.recv(4096)
-        if not data:
-          # local_sock is dead
-          end_event.set()
-          break
-
-        ws.send(data, ABNF.OPCODE_BINARY)
-    except Exception:
-      cloudlog.exception("athenad.ws_proxy_send.exception")
-      end_event.set()
-
-  cloudlog.debug("athena.ws_proxy_send closing sockets")
-  signal_sock.close()
-  cloudlog.debug("athena.ws_proxy_send done closing sockets")
-
-
-def ws_recv(ws: WebSocket, end_event: threading.Event) -> None:
-  last_ping = int(time.monotonic() * 1e9)
-  while not end_event.is_set():
-    try:
-      opcode, data = ws.recv_data(control_frame=True)
-      if opcode in (ABNF.OPCODE_TEXT, ABNF.OPCODE_BINARY):
-        if opcode == ABNF.OPCODE_TEXT:
-          data = data.decode("utf-8")
-        recv_queue.put_nowait(data)
-      elif opcode == ABNF.OPCODE_PING:
-        last_ping = int(time.monotonic() * 1e9)
-        Params().put("LastAthenaPingTime", str(last_ping))
-    except WebSocketTimeoutException:
-      ns_since_last_ping = int(time.monotonic() * 1e9) - last_ping
-      if ns_since_last_ping > RECONNECT_TIMEOUT_S * 1e9:
-        cloudlog.exception("athenad.ws_recv.timeout")
-        end_event.set()
-    except Exception:
-      cloudlog.exception("athenad.ws_recv.exception")
-      end_event.set()
-
-
-def ws_send(ws: WebSocket, end_event: threading.Event) -> None:
-  while not end_event.is_set():
-    try:
-      try:
-        data = send_queue.get_nowait()
-      except queue.Empty:
-        data = low_priority_send_queue.get(timeout=1)
-      for i in range(0, len(data), WS_FRAME_SIZE):
-        frame = data[i:i+WS_FRAME_SIZE]
-        last = i + WS_FRAME_SIZE >= len(data)
-        opcode = ABNF.OPCODE_TEXT if i == 0 else ABNF.OPCODE_CONT
-        ws.send_frame(ABNF.create_frame(frame, opcode, last))
-    except queue.Empty:
-      pass
-    except Exception:
-      cloudlog.exception("athenad.ws_send.exception")
-      end_event.set()
-
-
-def ws_manage(ws: WebSocket, end_event: threading.Event) -> None:
-  params = Params()
-  onroad_prev = None
-  sock = ws.sock
-
-  while True:
-    onroad = params.get_bool("IsOnroad")
-    if onroad != onroad_prev:
-      onroad_prev = onroad
-
-      if sock is not None:
-        # While not sending data, onroad, we can expect to time out in 7 + (7 * 2) = 21s
-        #                         offroad, we can expect to time out in 30 + (10 * 3) = 60s
-        # FIXME: TCP_USER_TIMEOUT is effectively 2x for some reason (32s), so it's mostly unused
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 16000 if onroad else 0)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 7 if onroad else 30)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 7 if onroad else 10)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 2 if onroad else 3)
-
-    if end_event.wait(5):
-      break
-
-
-def backoff(retries: int) -> int:
-  return random.randrange(0, min(128, int(2 ** retries)))
-
-
-def main(exit_event: threading.Event = None):
   try:
-    set_core_affinity([0, 1, 2, 3])
+    for subdir in os.listdir(base_path):
+      subdir_path = os.path.join(base_path, subdir)
+      if not os.path.isdir(subdir_path) or subdir_path == STAGING_ARCHIVE_DIR or subdir in processed_dirs:
+        continue
+
+      try:
+        creation_time_ts = os.stat(subdir_path).st_ctime
+      except OSError:
+        continue
+
+      if creation_time_ts < one_day_ago_ts:
+        continue
+
+      found_count += 1
+      creation_dt = datetime.fromtimestamp(creation_time_ts)
+      formatted_date_time = creation_dt.strftime("%m%d%y_%H%M")
+      segment_name = subdir
+
+      # --- Check if device is offroad before attempting compression ---
+      sm.update(0) # Get fresh status for this specific segment
+      if not sm.valid['deviceState'] or sm['deviceState'].started:
+          debug_print(f"Device onroad or deviceState invalid. Skipping compression for {segment_name} ({subdir_path}).")
+          continue # Skip to the next directory/segment
+
+      # Submit compression and queuing to the dedicated executor
+      debug_print(f"Submitting compression task for {segment_name} ({subdir_path}) to executor.")
+      compression_executor.submit(
+          _compress_segment_and_queue_on_cpu3,
+          subdir_path,
+          segment_name,
+          formatted_date_time,
+          creation_time_ts
+      )
+      processed_dirs.add(subdir) # Mark as processed for this scan iteration only after successful queuing
+
+    UploadQueueCache.cache(upload_queue) # Cache after scan pass, queued items are added by worker
+    debug_print(f"Scan complete. Found {found_count} potential dirs for processing.")
+  except Exception:
+    cloudlog.exception("azure.realdata_handler.scan_exception")
+
+def realdata_handler(end_event: threading.Event) -> None:
+  global last_clear_time
+  # base_path = "/data/media/0/realdata" # Now uses BASE_REALDATA_PATH constant
+  age_limit_seconds = 24 * 3600
+  scan_interval = 300
+  processed_dirs: set[str] = set()
+
+  sm = messaging.SubMaster(['deviceState'])
+
+  cloudlog.info("Performing initial realdata scan...")
+  debug_print("Performing initial realdata scan...")
+
+  # Thread pool for compression tasks, pinned to CPU 3
+  compression_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='azure_compress')
+
+  try:
+    try:
+      # Ensure staging directory exists before first scan.
+      os.makedirs(STAGING_ARCHIVE_DIR, exist_ok=True)
+      sm.update(0) # Initial update for the first scan
+      _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs, sm, compression_executor)
+      cloudlog.info(f"Initial scan for realdata started. Items will be queued by compression workers.")
+      debug_print(f"Initial scan for realdata started. Items will be queued by compression workers.")
+      UploadQueueCache.cache(upload_queue) # Cache after initial scan submission pass
+    except Exception:
+      cloudlog.exception("azure.realdata_handler.initial_scan_exception")
+
+    while not end_event.is_set():
+      current_time = time.time()
+      if current_time - last_clear_time >= HOURLY_CLEAR_INTERVAL:
+        cloudlog.info("Hourly Azure queue clear, resetting scan state.")
+        debug_print("Hourly Azure queue clear, resetting scan state.")
+        try:
+          UploadQueueCache.clear_cache()
+          with upload_queue.mutex:
+            # Clear the Python queue. Submitted compression tasks might still run and re-add.
+            # This primarily clears items that were persisted and reloaded.
+            temp_list = []
+            while not upload_queue.empty():
+                try:
+                    temp_list.append(upload_queue.get_nowait())
+                except queue.Empty:
+                    break
+            # For tasks already done from queue perspective but part of this clear
+            for _ in temp_list:
+                try:
+                    upload_queue.task_done()
+                except ValueError: # if task_done() called too many times
+                    pass
+            # Re-add items not yet fully processed by uploader but might be from old cache.
+            # The goal is to clear the *persisted* cache and reset processed_dirs.
+            # Active items in cur_upload_items or newly compressed items will repopulate.
+          processed_dirs.clear()
+          last_clear_time = current_time
+          debug_print("Cleared processed_dirs and ParamStore cache for hourly reset.")
+        except Exception:
+          cloudlog.exception("azure.realdata_handler.hourly_clear.exception")
+
+      sm.update(0) # Update device state before passing to scan function
+      _scan_and_queue_realdata(BASE_REALDATA_PATH, age_limit_seconds, processed_dirs, sm, compression_executor)
+      end_event.wait(scan_interval)
+  finally:
+    debug_print("Shutting down compression executor...")
+    compression_executor.shutdown(wait=True)
+    debug_print("Compression executor shutdown complete. Realdata handler thread exiting.")
+
+
+# -------------------------------------------------------------------------------
+# Entry Point
+# -------------------------------------------------------------------------------
+def main():
+  cloudlog.info("Starting Azure upload service")
+  debug_print("Starting Azure upload service")
+  try:
+    set_core_affinity()
   except Exception:
     cloudlog.exception("failed to set core affinity")
 
-  params = Params()
-  dongle_id = params.get("DongleId", encoding='utf-8')
+  if ShareFileClient is None or ShareDirectoryClient is None:
+      cloudlog.error("Azure SDK not found. Service cannot run.")
+      print("Azure SDK not found. Service cannot run. Please `pip install azure-storage-file-share`",
+            file=sys.stderr)
+      return
+
+  if zstd is None:
+      cloudlog.warning("zstandard library not found. Archive creation will fail.")
+      print("Warning: zstandard library not found. Archives (.tar.zst) cannot be created.", file=sys.stderr)
+      # Proceeding, but archive creation will fail in the scanner
+
   UploadQueueCache.initialize(upload_queue)
+  debug_print(f"Initial queue size after load: {upload_queue.qsize()}")
+  debug_queue_status()
 
-  ws_uri = ATHENA_HOST + "/ws/v2/" + dongle_id
-  api = Api(dongle_id)
+  end_event = threading.Event()
+  threads = []
+  for _ in range(HANDLER_THREADS):
+      t = threading.Thread(target=upload_handler, args=(end_event,))
+      t.daemon = True
+      t.start()
+      threads.append(t)
+      cur_upload_items[t.ident] = None
 
-  conn_start = None
-  conn_retries = 0
-  while exit_event is None or not exit_event.is_set():
-    try:
-      if conn_start is None:
-        conn_start = time.monotonic()
+  realdata_thread = threading.Thread(target=realdata_handler, args=(end_event,))
+  realdata_thread.daemon = True
+  realdata_thread.start()
+  threads.append(realdata_thread)
 
-      cloudlog.event("athenad.main.connecting_ws", ws_uri=ws_uri, retries=conn_retries)
-      ws = create_connection(ws_uri,
-                             cookie="jwt=" + api.get_token(),
-                             enable_multithread=True,
-                             timeout=30.0)
-      cloudlog.event("athenad.main.connected_ws", ws_uri=ws_uri, retries=conn_retries,
-                     duration=time.monotonic() - conn_start)
-      conn_start = None
+  cloudlog.info(f"Azure upload service started with {HANDLER_THREADS} upload thread(s).")
+  debug_print(f"Started {len(threads)} threads.")
 
-      conn_retries = 0
-      cur_upload_items.clear()
+  try:
+    while not end_event.is_set():
+        if not all(t.is_alive() for t in threads):
+            cloudlog.error("One or more Azure worker threads died.")
+            debug_print("Error: One or more worker threads died!")
+            end_event.set()
+            break
+        time.sleep(10)
+  except KeyboardInterrupt:
+    cloudlog.info("Keyboard interrupt, shutting down Azure service.")
+    debug_print("Received keyboard interrupt, shutting down...")
+    end_event.set()
+  finally:
+    if not end_event.is_set():
+        end_event.set()
+    cloudlog.info("Waiting for threads to finish...")
+    debug_print("Waiting for threads to join...")
+    shutdown_timeout = RETRY_DELAY + 5
+    for t in threads:
+      try:
+          t.join(timeout=shutdown_timeout)
+          if t.is_alive():
+              cloudlog.warning(f"Thread {t.name} did not exit cleanly.")
+              debug_print(f"Warning: Thread {t.name} did not join!")
+      except Exception as e:
+          cloudlog.error(f"Error joining thread {t.name}: {e}")
+          debug_print(f"Error joining thread {t.name}: {e}")
 
-      handle_long_poll(ws, exit_event)
-    except (KeyboardInterrupt, SystemExit):
-      break
-    except (ConnectionError, TimeoutError, WebSocketException):
-      conn_retries += 1
-      params.remove("LastAthenaPingTime")
-    except Exception:
-      cloudlog.exception("athenad.main.exception")
-
-      conn_retries += 1
-      params.remove("LastAthenaPingTime")
-
-    time.sleep(backoff(conn_retries))
-
+    debug_print("Performing final queue cache before exit.")
+    UploadQueueCache.cache(upload_queue)
+    cloudlog.info("Azure upload service shutdown complete.")
+    debug_print("Service shutdown complete")
 
 if __name__ == "__main__":
   main()

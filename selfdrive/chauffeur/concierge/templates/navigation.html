@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block browser_title_suffix %}- Navigation{% endblock %}
+
+{% block page_title_text %}- Navigation{% endblock %}
+
+{% block content %}
+<div class="bg-2 p-6 rounded-lg shadow-lg">
+  <h2 class="text-2xl font-bold mb-4 text-accent">Navigation Interface</h2>
+  <p class="text-secondary mb-4">This page will display the primary navigation map and controls.</p>
+
+  <!-- Placeholder for Map -->
+  <div class="aspect-video bg-1 border border-border rounded-md flex items-center justify-center mb-6">
+    <p class="text-secondary text-lg">Navigation Map Area</p>
+  </div>
+
+  <!-- Placeholder for Navigation Controls -->
+  <div>
+    <h3 class="text-xl font-semibold mb-2">Controls</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button class="bg-accent hover:bg-accent-2 text-white font-bold py-2 px-4 rounded">
+        Set Destination
+      </button>
+      <button class="bg-surface hover:bg-opacity-80 text-primary font-bold py-2 px-4 rounded">
+        Cancel Navigation
+      </button>
+      <button class="bg-surface hover:bg-opacity-80 text-primary font-bold py-2 px-4 rounded">
+        Zoom In
+      </button>
+      <button class="bg-surface hover:bg-opacity-80 text-primary font-bold py-2 px-4 rounded">
+        Zoom Out
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

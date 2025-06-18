@@ -4,14 +4,14 @@ import math
 import numpy as np
 
 from cereal import log
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.numpy_fast import interp
-from openpilot.selfdrive.car.interfaces import LatControlInputs
-from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N
-from openpilot.selfdrive.controls.lib.latcontrol import LatControl
-from openpilot.selfdrive.controls.lib.pid import PIDController
-from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
-from openpilot.selfdrive.modeld.constants import ModelConstants
+from common.filter_simple import FirstOrderFilter
+from common.numpy_fast import interp
+from selfdrive.car.interfaces import LatControlInputs
+from selfdrive.controls.lib.drive_helpers import CONTROL_N
+from selfdrive.controls.lib.latcontrol import LatControl
+from selfdrive.controls.lib.pid import PIDController
+from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
+from selfdrive.modeld.constants import ModelConstants
 
 # At higher speeds (25+mph) we can assume:
 # Lateral acceleration achieved by a specific car correlates to

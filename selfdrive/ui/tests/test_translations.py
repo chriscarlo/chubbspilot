@@ -9,7 +9,7 @@ import string
 import requests
 from parameterized import parameterized_class
 
-from openpilot.selfdrive.ui.update_translations import TRANSLATIONS_DIR, LANGUAGES_FILE, update_translations
+from selfdrive.ui.update_translations import TRANSLATIONS_DIR, LANGUAGES_FILE, update_translations
 
 with open(LANGUAGES_FILE) as f:
   translation_files = json.load(f)

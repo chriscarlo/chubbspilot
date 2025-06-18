@@ -3,9 +3,9 @@ import argparse
 import sys
 import unittest # noqa: TID251
 
-from openpilot.selfdrive.car.tests.routes import CarTestRoute
-from openpilot.selfdrive.car.tests.test_models import TestCarModel
-from openpilot.tools.lib.route import SegmentName
+from selfdrive.car.tests.routes import CarTestRoute
+from selfdrive.car.tests.test_models import TestCarModel
+from tools.lib.route import SegmentName
 
 
 def create_test_models_suite(routes: list[CarTestRoute], ci=False) -> unittest.TestSuite:

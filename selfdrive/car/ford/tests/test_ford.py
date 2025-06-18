@@ -6,9 +6,9 @@ from hypothesis import settings, given, strategies as st
 from parameterized import parameterized
 
 from cereal import car
-from openpilot.selfdrive.car.fw_versions import build_fw_dict
-from openpilot.selfdrive.car.ford.values import CAR, FW_QUERY_CONFIG, FW_PATTERN, get_platform_codes
-from openpilot.selfdrive.car.ford.fingerprints import FW_VERSIONS
+from selfdrive.car.fw_versions import build_fw_dict
+from selfdrive.car.ford.values import CAR, FW_QUERY_CONFIG, FW_PATTERN, get_platform_codes
+from selfdrive.car.ford.fingerprints import FW_VERSIONS
 
 Ecu = car.CarParams.Ecu
 

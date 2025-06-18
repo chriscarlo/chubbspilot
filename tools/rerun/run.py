@@ -6,7 +6,7 @@ import rerun as rr
 import rerun.blueprint as rrb
 from functools import partial
 
-from openpilot.tools.lib.logreader import LogReader
+from tools.lib.logreader import LogReader
 from cereal.services import SERVICE_LIST
 
 

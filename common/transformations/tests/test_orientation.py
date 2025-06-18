@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpilot.common.transformations.orientation import euler2quat, quat2euler, euler2rot, rot2euler, \
+from common.transformations.orientation import euler2quat, quat2euler, euler2rot, rot2euler, \
                                                rot2quat, quat2rot, \
                                                ned_euler_from_ecef
 

@@ -13,13 +13,13 @@ from cereal import messaging, car, log
 from msgq.visionipc import VisionIpcServer, VisionStreamType
 
 from cereal.messaging import SubMaster, PubMaster
-from openpilot.common.mock import mock_messages
-from openpilot.common.params import Params
-from openpilot.common.realtime import DT_MDL
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
-from openpilot.selfdrive.test.helpers import with_processes
-from openpilot.selfdrive.test.process_replay.vision_meta import meta_from_camera_state
-from openpilot.tools.webcam.camera import Camera
+from common.mock import mock_messages
+from common.params import Params
+from common.realtime import DT_MDL
+from common.transformations.camera import DEVICE_CAMERAS
+from selfdrive.test.helpers import with_processes
+from selfdrive.test.process_replay.vision_meta import meta_from_camera_state
+from tools.webcam.camera import Camera
 
 UI_DELAY = 0.5 # may be slower on CI?
 

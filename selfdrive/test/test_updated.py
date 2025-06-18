@@ -8,8 +8,8 @@ import signal
 import subprocess
 import random
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.params import Params
+from common.basedir import BASEDIR
+from common.params import Params
 
 
 @pytest.mark.tici

@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""
+live_location_diagnosis.py
+==========================
+Diagnose why liveLocationKalman never transitions to Status.valid.
+
+It watches location-related services for a short window (default 45 s)
+and produces an actionable report:
+  • Is locationd running?  (managerState)
+  • Are we receiving GNSS data? (ubloxGnss, qcomGnss, gpsNMEA)
+  • Are inertial sensors publishing? (sensorEvents / accelerometer / gyroscope)
+  • What exact status/sub-flags does liveLocationKalman report over time?
+
+Usage:
+  ./tools/debug/live_location_diagnosis.py [duration_s]
+
+Example output:
+  liveLocationKalman timeline
+    00:00  status=init gpsOK=False sensorsOK=False posenetOK=False
+    00:12  status=valid gpsOK=True  ...
+
+At the end the script prints explicit blockers (e.g. "No GNSS messages at
+all", "IMU stream missing", "gpsOK never True", ...).
+"""
+import sys
+import time
+from collections import defaultdict, Counter
+
+import cereal.messaging as messaging
+from cereal import log
+
+# Observation parameters
+RUN_SEC_DEFAULT = 45
+
+# Candidate services we care about
+CANDIDATE_SERVICES = [
+    'liveLocationKalman',
+    'ubloxGnss', 'qcomGnss', 'gpsNMEA', 'gpsLocationExternal',
+    'sensorEvents', 'accelerometer', 'gyroscope',
+    'managerState',
+]
+
+# Filter out services missing from log.Event schema to prevent KjException
+valid_services = []
+invalid_services = []
+for _svc in CANDIDATE_SERVICES:
+    try:
+        messaging.new_message(_svc)
+        valid_services.append(_svc)
+    except Exception:
+        try:
+            # try list variant
+            messaging.new_message(_svc, 0)
+            valid_services.append(_svc)
+        except Exception:
+            invalid_services.append(_svc)
+
+if invalid_services:
+    print(f"(Info) Skipped {len(invalid_services)} services not present in log.Event schema: {', '.join(invalid_services)}")
+
+SERVICES = valid_services
+
+# Helper to readable enum
+_loc_status_names = {
+    int(log.LiveLocationKalman.Status.uninitialized): 'uninitialized',
+    int(log.LiveLocationKalman.Status.uncalibrated): 'uncalibrated',
+    int(log.LiveLocationKalman.Status.valid): 'valid',
+}
+
+def main():
+    run_sec = int(sys.argv[1]) if len(sys.argv) > 1 else RUN_SEC_DEFAULT
+    print(f"[live_location_diagnosis] Watching for {run_sec}s…")
+
+    sm = messaging.SubMaster(SERVICES)
+
+    # Counters & samples
+    svc_counts = Counter()
+    imu_counts = Counter()
+    gnss_counts = Counter()
+
+    loc_timeline = []  # (t_offset, status, gpsOK, sensorsOK, posenetOK)
+
+    start = time.monotonic()
+    try:
+        while time.monotonic() - start < run_sec:
+            sm.update(100)
+            now = time.monotonic()
+            t_off = now - start
+
+            # count service updates
+            for s in SERVICES:
+                if sm.updated[s]:
+                    svc_counts[s] += 1
+
+            # record GNSS counts
+            for gnss_topic in ['ubloxGnss', 'qcomGnss', 'gpsNMEA', 'gpsLocationExternal']:
+                if gnss_topic in SERVICES and sm.updated[gnss_topic]:
+                    gnss_counts[gnss_topic] += 1
+
+            # record IMU counts
+            for imu_topic in ['sensorEvents', 'accelerometer', 'gyroscope']:
+                if imu_topic in SERVICES and sm.updated.get(imu_topic, False):
+                    imu_counts[imu_topic] += 1
+
+            # log every 1s the location status
+            if sm.updated['liveLocationKalman']:
+                msg = sm['liveLocationKalman']
+                # msg.status is a capnp DynamicEnum; use .raw to get its numeric value
+                status = _loc_status_names.get(msg.status.raw, str(msg.status))
+                loc_timeline.append((t_off, status, msg.gpsOK, msg.sensorsOK, msg.posenetOK))
+
+            time.sleep(0.05)
+    except KeyboardInterrupt:
+        print("Interrupted, summarizing…")
+
+    # ---------------- Summary -------------
+    print("\n========= LOCATION DIAGNOSTIC SUMMARY =========")
+    # Process health
+    if sm.updated['managerState']:
+        procs = {p.name: p for p in sm['managerState'].processes}
+        loc_proc = procs.get('locationd')
+        if loc_proc is None:
+            print("locationd process NOT present in managerState ❌")
+        else:
+            running = loc_proc.running and loc_proc.shouldBeRunning and loc_proc.exitCode == 0
+            txt = "running" if running else f"NOT running (running={loc_proc.running}, exitCode={loc_proc.exitCode})"
+            print(f"locationd process state: {txt}")
+    else:
+        print("managerState not received – can't verify locationd process")
+
+    # GNSS feeds
+    total_gnss = sum(gnss_counts.values())
+    if total_gnss == 0:
+        print("No GNSS messages received at all (ubloxGnss/qcomGnss/gpsNMEA/gpsLocationExternal) ❌")
+    else:
+        for k, v in gnss_counts.items():
+            print(f"{k}: {v} msgs")
+
+    # IMU feeds
+    total_imu = sum(imu_counts.values())
+    if total_imu == 0:
+        print("No IMU / sensorEvents messages received ❌ – check loggerd/ sensors")
+    else:
+        for k, v in imu_counts.items():
+            print(f"{k}: {v} msgs")
+
+    # liveLocationKalman stats
+    if svc_counts['liveLocationKalman'] == 0:
+        print("liveLocationKalman never published any message ❌")
+    else:
+        statuses = Counter([s for _, s, *_ in loc_timeline])
+        print("liveLocationKalman message count:", svc_counts['liveLocationKalman'])
+        print("Status counts:")
+        for st, cnt in statuses.items():
+            print(f"  {st}: {cnt}")
+        if 'valid' in statuses:
+            print("→ liveLocationKalman DID reach valid ✅")
+        else:
+            print("→ liveLocationKalman never reached valid ❌")
+
+    # Print short timeline
+    print("\nTimeline (first 30 samples):")
+    for t_off, st, gps, sens, pose in loc_timeline[:30]:
+        print(f" +{t_off:5.1f}s  status={st:<6} gpsOK={gps} sensorsOK={sens} posenetOK={pose}")
+
+    print("\nEnd of report – use the above to pinpoint missing inputs.")
+
+if __name__ == '__main__':
+    main()

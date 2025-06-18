@@ -14,11 +14,11 @@ from typing import NoReturn
 
 from cereal import log
 import cereal.messaging as messaging
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.params import Params
-from openpilot.common.realtime import set_realtime_priority
-from openpilot.common.transformations.orientation import rot_from_euler, euler_from_rot
-from openpilot.common.swaglog import cloudlog
+from common.conversions import Conversions as CV
+from common.params import Params
+from common.realtime import set_realtime_priority
+from common.transformations.orientation import rot_from_euler, euler_from_rot
+from common.swaglog import cloudlog
 
 MIN_SPEED_FILTER = 15 * CV.MPH_TO_MS
 MAX_VEL_ANGLE_STD = np.radians(0.25)
@@ -183,7 +183,10 @@ class Calibrator:
                             road_transform_trans_std: list[float]) -> np.ndarray | None:
     self.old_rpy_weight = max(0.0, self.old_rpy_weight - 1/SMOOTH_CYCLES)
 
-    straight_and_fast = ((self.v_ego > MIN_SPEED_FILTER) and (trans[0] > MIN_SPEED_FILTER) and (abs(rot[2]) < MAX_YAW_RATE_FILTER))
+    # Allow calibration even when carState (v_ego) is unavailable (e.g., bench/no-CAN setups).
+    # Fall back to camera odometry forward speed if self.v_ego is 0.
+    v_ego_effective = self.v_ego if self.v_ego > 0.01 else trans[0]
+    straight_and_fast = ((v_ego_effective > MIN_SPEED_FILTER) and (trans[0] > MIN_SPEED_FILTER) and (abs(rot[2]) < MAX_YAW_RATE_FILTER))
     angle_std_threshold = MAX_VEL_ANGLE_STD
     height_std_threshold = MAX_HEIGHT_STD
     rpy_certain = np.arctan2(trans_std[1], trans[0]) < angle_std_threshold

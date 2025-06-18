@@ -2,14 +2,14 @@
 import os
 import shutil
 import threading
-from openpilot.system.hardware.hw import Paths
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.loggerd.config import get_available_bytes, get_available_percent
-from openpilot.system.loggerd.uploader import listdir_by_creation
-from openpilot.system.loggerd.xattr_cache import getxattr
+from system.hardware.hw import Paths
+from common.swaglog import cloudlog
+from system.loggerd.config import get_available_bytes, get_available_percent
+from system.loggerd.uploader import listdir_by_creation
+from system.loggerd.xattr_cache import getxattr
 
-MIN_BYTES = 5 * 1024 * 1024 * 1024
-MIN_PERCENT = 10
+MIN_BYTES = 12 * 1024 * 1024 * 1024
+MIN_PERCENT = 15
 
 DELETE_LAST = ['boot', 'crash']
 

@@ -4,9 +4,9 @@ import random
 import subprocess
 
 from panda import Panda
-from openpilot.system.hardware import TICI, HARDWARE
-from openpilot.system.hardware.tici.hardware import Tici
-from openpilot.system.hardware.tici.amplifier import Amplifier
+from system.hardware import TICI, HARDWARE
+from system.hardware.tici.hardware import Tici
+from system.hardware.tici.amplifier import Amplifier
 
 
 class TestAmplifier:

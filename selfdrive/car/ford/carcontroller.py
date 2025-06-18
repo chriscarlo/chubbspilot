@@ -1,13 +1,13 @@
 from cereal import car
 from opendbc.can.packer import CANPacker
-from openpilot.common.numpy_fast import clip
-from openpilot.selfdrive.car import apply_std_steer_angle_limits
-from openpilot.selfdrive.car.ford import fordcan
-from openpilot.selfdrive.car.ford.values import CarControllerParams, FordFlags
-from openpilot.selfdrive.car.interfaces import CarControllerBase
-from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
+from common.numpy_fast import clip
+from selfdrive.car import apply_std_steer_angle_limits
+from selfdrive.car.ford import fordcan
+from selfdrive.car.ford.values import CarControllerParams, FordFlags
+from selfdrive.car.interfaces import CarControllerBase
+from selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
+from selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 VisualAlert = car.CarControl.HUDControl.VisualAlert

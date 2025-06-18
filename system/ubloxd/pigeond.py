@@ -9,11 +9,11 @@ import urllib.parse
 from datetime import datetime
 
 from cereal import messaging
-from openpilot.common.params import Params
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.hardware import TICI
-from openpilot.common.gpio import gpio_init, gpio_set
-from openpilot.system.hardware.tici.pins import GPIO
+from common.params import Params
+from common.swaglog import cloudlog
+from system.hardware import TICI
+from common.gpio import gpio_init, gpio_set
+from system.hardware.tici.pins import GPIO
 
 UBLOX_TTY = "/dev/ttyHS0"
 

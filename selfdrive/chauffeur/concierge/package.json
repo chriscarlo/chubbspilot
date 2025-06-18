@@ -1,0 +1,17 @@
+{
+  "name": "concierge",
+  "version": "1.0.0",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/input.css -o ./static/css/tailwind.min.css --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.6",
+    "tailwindcss": "^4.1.6"
+  }
+}

@@ -4,15 +4,15 @@ from cereal import car, custom
 from math import fabs, exp
 from panda import Panda
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.gm.radar_interface import RADAR_HEADER_MSG
-from openpilot.selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerParams, EV_CAR, CAMERA_ACC_CAR, CanBus, GMFlags, CC_ONLY_CAR, SDGM_CAR
-from openpilot.selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD, LatControlInputs, NanoFFModel
-from openpilot.selfdrive.controls.lib.drive_helpers import get_friction
+from common.basedir import BASEDIR
+from common.conversions import Conversions as CV
+from selfdrive.car import create_button_events, get_safety_config
+from selfdrive.car.gm.radar_interface import RADAR_HEADER_MSG
+from selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerParams, EV_CAR, CAMERA_ACC_CAR, CanBus, GMFlags, CC_ONLY_CAR, SDGM_CAR
+from selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD, LatControlInputs, NanoFFModel
+from selfdrive.controls.lib.drive_helpers import get_friction
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import params
+from selfdrive.frogpilot.frogpilot_variables import params
 
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type

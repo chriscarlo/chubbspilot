@@ -26,17 +26,17 @@ import requests
 import secrets
 import traceback
 
-import openpilot.selfdrive.frogpilot.fleetmanager.helpers as fleet
+import selfdrive.frogpilot.fleetmanager.helpers as fleet
 
 from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from pathlib import Path
 from requests.exceptions import ConnectionError
 
-from openpilot.common.realtime import set_core_affinity
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.hardware.hw import Paths
+from common.realtime import set_core_affinity
+from common.swaglog import cloudlog
+from system.hardware.hw import Paths
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import has_prime
+from selfdrive.frogpilot.frogpilot_variables import has_prime
 
 app = Flask(__name__)
 

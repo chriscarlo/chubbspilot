@@ -1,4 +1,4 @@
-from openpilot.common.simple_kalman import KF1D
+from common.simple_kalman import KF1D
 
 
 class TestSimpleKalman:

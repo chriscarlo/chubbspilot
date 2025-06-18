@@ -7,7 +7,7 @@ from termios import (BRKINT, CS8, CSIZE, ECHO, ICANON, ICRNL, IEXTEN, INPCK,
                      ISTRIP, IXON, PARENB, VMIN, VTIME)
 from typing import NoReturn
 
-from openpilot.tools.sim.bridge.common import QueueMessage, control_cmd_gen
+from tools.sim.bridge.common import QueueMessage, control_cmd_gen
 
 # Indexes for termios list.
 IFLAG = 0

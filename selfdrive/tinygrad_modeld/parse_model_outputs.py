@@ -1,5 +1,5 @@
 import numpy as np
-from openpilot.selfdrive.tinygrad_modeld.constants import ModelConstants
+from selfdrive.tinygrad_modeld.constants import ModelConstants
 
 def safe_exp(x, out=None):
   # -11 is around 10**14, more causes float16 overflow

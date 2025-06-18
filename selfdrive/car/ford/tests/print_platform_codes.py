@@ -2,8 +2,8 @@
 from collections import defaultdict
 
 from cereal import car
-from openpilot.selfdrive.car.ford.values import get_platform_codes
-from openpilot.selfdrive.car.ford.fingerprints import FW_VERSIONS
+from selfdrive.car.ford.values import get_platform_codes
+from selfdrive.car.ford.fingerprints import FW_VERSIONS
 
 Ecu = car.CarParams.Ecu
 ECU_NAME = {v: k for k, v in Ecu.schema.enumerants.items()}

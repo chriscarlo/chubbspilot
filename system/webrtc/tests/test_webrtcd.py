@@ -5,7 +5,7 @@ import json
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-from openpilot.system.webrtc.webrtcd import get_stream
+from system.webrtc.webrtcd import get_stream
 
 import aiortc
 from teleoprtc import WebRTCOfferBuilder

@@ -1,37 +1,41 @@
 import re
+import os
 from dataclasses import dataclass, field
 from enum import Enum, IntFlag
+from typing import TYPE_CHECKING
 
 from cereal import car
+if TYPE_CHECKING:
+  from cereal.car import CarParams
+from opendbc import DBC_PATH
 from panda.python import uds
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
-from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
-from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
+from common.conversions import Conversions as CV
+from selfdrive.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
+from selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
+from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
 
 Ecu = car.CarParams.Ecu
 
-
 class CarControllerParams:
-  ACCEL_MIN = -3.5 # m/s
-  ACCEL_MAX = 2.0 # m/s
+  ACCEL_MIN = -6.0 # m/s2; NOTE: Chubbs longitudinal tuning assumes the platform can achieve this.
+  ACCEL_MAX = 5.0 # m/s2
 
   def __init__(self, CP):
-    self.STEER_DELTA_UP = 3
-    self.STEER_DELTA_DOWN = 7
-    self.STEER_DRIVER_ALLOWANCE = 50
+    self.STEER_DELTA_UP = 7
+    self.STEER_DELTA_DOWN = 10
+    self.STEER_DRIVER_ALLOWANCE = 250
     self.STEER_DRIVER_MULTIPLIER = 2
     self.STEER_DRIVER_FACTOR = 1
-    self.STEER_THRESHOLD = 150
+    self.STEER_THRESHOLD = 250
     self.STEER_STEP = 1  # 100 Hz
 
     if CP.carFingerprint in CANFD_CAR:
-      self.STEER_MAX = 270
+      self.STEER_MAX = 409
       self.STEER_DRIVER_ALLOWANCE = 250
       self.STEER_DRIVER_MULTIPLIER = 2
       self.STEER_THRESHOLD = 250
-      self.STEER_DELTA_UP = 2
-      self.STEER_DELTA_DOWN = 3
+      self.STEER_DELTA_UP = 7
+      self.STEER_DELTA_DOWN = 10
 
     # To determine the limit for your car, find the maximum value that the stock LKAS will request.
     # If the max stock LKAS request is <384, add your car to this list.
@@ -42,13 +46,13 @@ class CarControllerParams:
 
     # these cars have significantly more torque than most HKG; limit to 70% of max
     elif CP.flags & HyundaiFlags.ALT_LIMITS:
-      self.STEER_MAX = 270
-      self.STEER_DELTA_UP = 2
-      self.STEER_DELTA_DOWN = 3
+      self.STEER_MAX = 409
+      self.STEER_DELTA_UP = 7
+      self.STEER_DELTA_DOWN = 10
 
     # Default for most HKG
     else:
-      self.STEER_MAX = 384
+      self.STEER_MAX = 409
 
 
 class HyundaiFlags(IntFlag):
@@ -103,6 +107,8 @@ class HyundaiFlags(IntFlag):
   LKAS12 = 2 ** 25
   NAV_MSG = 2 ** 26
 
+  CORNER_RADAR = 2 ** 24  # Flag for cars equipped with corner radar
+
 
 class HyundaiFlagsCP(IntFlag):
   FP_CAMERA_SCC_LEAD = 1
@@ -123,8 +129,10 @@ class Footnote(Enum):
 class HyundaiCarDocs(CarDocs):
   package: str = "Smart Cruise Control (SCC)"
 
-  def init_make(self, CP: car.CarParams):
-    if CP.flags & HyundaiFlags.CANFD:
+  def init_make(self, CP: 'CarParams'):
+    # More explicit check for flag that should satisfy the linter
+    has_canfd = bool(CP.flags & int(HyundaiFlags.CANFD))
+    if has_canfd:
       self.footnotes.insert(0, Footnote.CANFD)
 
 
@@ -134,7 +142,7 @@ class HyundaiPlatformConfig(PlatformConfig):
 
   def init(self):
     if self.flags & HyundaiFlags.MANDO_RADAR:
-      self.dbc_dict = dbc_dict('hyundai_kia_generic', 'hyundai_kia_mando_front_radar_generated')
+      self.dbc_dict = dbc_dict('hyundai_kia_generic', 'hyundai_kia_mando_front_radar_generated', 'hyundai_kia_mando_corner_radar_generated')
 
     if self.flags & HyundaiFlags.MIN_STEER_32_MPH:
       self.specs = self.specs.override(minSteerSpeed=32 * CV.MPH_TO_MS)
@@ -146,7 +154,8 @@ class HyundaiCanFDPlatformConfig(PlatformConfig):
 
   def init(self):
     self.flags |= HyundaiFlags.CANFD
-
+    if self.flags & HyundaiFlags.CORNER_RADAR:
+      self.dbc_dict = dbc_dict('hyundai_canfd', None, 'hyundai_kia_mando_corner_radar_generated')
 
 class CAR(Platforms):
   # Hyundai
@@ -249,7 +258,7 @@ class CAR(Platforms):
     [HyundaiCarDocs("Hyundai Kona Electric (with HDA II, Korea only) 2023", video_link="https://www.youtube.com/watch?v=U2fOCmcQ8hw",
                     car_parts=CarParts.common([CarHarness.hyundai_r]))],
     CarSpecs(mass=1740, wheelbase=2.66, steerRatio=13.6, tireStiffnessFactor=0.385),
-    flags=HyundaiFlags.EV | HyundaiFlags.CANFD_NO_RADAR_DISABLE,
+    flags=HyundaiFlags.EV | HyundaiFlags.CANFD_NO_RADAR_DISABLE | HyundaiFlags.CORNER_RADAR,
   )
   HYUNDAI_KONA_HEV = HyundaiPlatformConfig(
     [HyundaiCarDocs("Hyundai Kona Hybrid 2020", car_parts=CarParts.common([CarHarness.hyundai_i]))],  # TODO: check packages,
@@ -332,7 +341,7 @@ class CAR(Platforms):
       HyundaiCarDocs("Hyundai Ioniq 5 (with HDA II) 2022-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
     CarSpecs(mass=1948, wheelbase=2.97, steerRatio=14.26, tireStiffnessFactor=0.65),
-    flags=HyundaiFlags.EV,
+    flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS | HyundaiFlags.CORNER_RADAR,
   )
   HYUNDAI_IONIQ_6 = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Hyundai Ioniq 6 (with HDA II) 2023-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
@@ -511,10 +520,10 @@ class CAR(Platforms):
     [
       HyundaiCarDocs("Kia EV6 (Southeast Asia only) 2022-24", "All", car_parts=CarParts.common([CarHarness.hyundai_p])),
       HyundaiCarDocs("Kia EV6 (without HDA II) 2022-24", "Highway Driving Assist", car_parts=CarParts.common([CarHarness.hyundai_l])),
-      HyundaiCarDocs("Kia EV6 (with HDA II) 2022-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))
+      HyundaiCarDocs("Kia EV6 (with HDA II) 2022-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p])),
     ],
     CarSpecs(mass=2055, wheelbase=2.9, steerRatio=16, tireStiffnessFactor=0.65),
-    flags=HyundaiFlags.EV,
+    flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS | HyundaiFlags.CORNER_RADAR | HyundaiFlags.MANDO_RADAR,
   )
   KIA_CARNIVAL_4TH_GEN = HyundaiCanFDPlatformConfig(
     [
@@ -837,3 +846,6 @@ NON_SCC_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_FCA)
 NON_SCC_RADAR_FCA_CAR = CAR.with_flags(HyundaiFlagsCP.FP_NON_SCC_RADAR_FCA)
 
 DBC = CAR.create_dbc_map()
+# Use the generated DBC which contains the RADAR_POINTS messages for EV6 corner radar
+DBC[CAR.KIA_EV6]['corner_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_corner_radar_generated.dbc')
+DBC[CAR.KIA_EV6]['front_radar'] = os.path.join(DBC_PATH, 'hyundai_kia_mando_front_radar_point.dbc')

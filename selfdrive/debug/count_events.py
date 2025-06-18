@@ -7,7 +7,7 @@ from pprint import pprint
 from typing import cast
 
 from cereal.services import SERVICE_LIST
-from openpilot.tools.lib.logreader import LogReader, ReadMode
+from tools.lib.logreader import LogReader, ReadMode
 
 if __name__ == "__main__":
   cnt_events: Counter = Counter()

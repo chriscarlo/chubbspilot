@@ -1,8 +1,8 @@
 from cereal import car, custom
 from panda import Panda
-from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.interfaces import CarInterfaceBase
-from openpilot.selfdrive.car.nissan.values import CAR
+from selfdrive.car import create_button_events, get_safety_config
+from selfdrive.car.interfaces import CarInterfaceBase
+from selfdrive.car.nissan.values import CAR
 
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type

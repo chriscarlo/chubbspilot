@@ -2,7 +2,7 @@
 import subprocess
 import sys
 
-from openpilot.common.prefix import OpenpilotPrefix
+from common.prefix import OpenpilotPrefix
 
 
 with OpenpilotPrefix():

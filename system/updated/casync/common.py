@@ -3,8 +3,8 @@ import json
 import pathlib
 import subprocess
 
-from openpilot.system.version import BUILD_METADATA_FILENAME, BuildMetadata
-from openpilot.system.updated.casync import tar
+from system.version import BUILD_METADATA_FILENAME, BuildMetadata
+from system.updated.casync import tar
 
 
 CASYNC_ARGS = ["--with=symlinks", "--with=permissions", "--compression=xz", "--chunk-size=16M"]

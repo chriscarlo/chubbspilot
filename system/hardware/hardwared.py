@@ -12,20 +12,20 @@ import psutil
 import cereal.messaging as messaging
 from cereal import log
 from cereal.services import SERVICE_LIST
-from openpilot.common.dict_helpers import strip_deprecated_keys
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.params import Params
-from openpilot.common.realtime import DT_HW
-from openpilot.selfdrive.controls.lib.alertmanager import set_offroad_alert
-from openpilot.system.hardware import HARDWARE, TICI, AGNOS
-from openpilot.system.loggerd.config import get_available_bytes, get_available_percent, get_used_bytes
-from openpilot.system.statsd import statlog
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.hardware.power_monitoring import PowerMonitoring
-from openpilot.system.hardware.fan_controller import TiciFanController
-from openpilot.system.version import terms_version, training_version
+from common.dict_helpers import strip_deprecated_keys
+from common.filter_simple import FirstOrderFilter
+from common.params import Params
+from common.realtime import DT_HW
+from selfdrive.controls.lib.alertmanager import set_offroad_alert
+from system.hardware import HARDWARE, TICI, AGNOS
+from system.loggerd.config import get_available_bytes, get_available_percent, get_used_bytes
+from system.statsd import statlog
+from common.swaglog import cloudlog
+from system.hardware.power_monitoring import PowerMonitoring
+from system.hardware.fan_controller import TiciFanController
+from system.version import terms_version, training_version
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params_memory
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params_memory
 
 ThermalStatus = log.DeviceState.ThermalStatus
 NetworkType = log.DeviceState.NetworkType

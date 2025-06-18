@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from cereal import car, custom
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car.mazda.values import CAR, LKAS_LIMITS
-from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.interfaces import CarInterfaceBase
+from common.conversions import Conversions as CV
+from selfdrive.car.mazda.values import CAR, LKAS_LIMITS
+from selfdrive.car import create_button_events, get_safety_config
+from selfdrive.car.interfaces import CarInterfaceBase
 
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type

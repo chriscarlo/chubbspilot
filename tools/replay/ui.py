@@ -8,10 +8,10 @@ import numpy as np
 import pygame
 
 import cereal.messaging as messaging
-from openpilot.common.numpy_fast import clip
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
-from openpilot.tools.replay.lib.ui_helpers import (UP,
+from common.numpy_fast import clip
+from common.basedir import BASEDIR
+from common.transformations.camera import DEVICE_CAMERAS
+from tools.replay.lib.ui_helpers import (UP,
                                          BLACK, GREEN,
                                          YELLOW, Calibration,
                                          get_blank_lid_overlay, init_plots,

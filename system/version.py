@@ -6,9 +6,9 @@ import os
 import pathlib
 import subprocess
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.swaglog import cloudlog
-from openpilot.common.git import get_commit, get_origin, get_branch, get_short_branch, get_commit_date
+from common.basedir import BASEDIR
+from common.swaglog import cloudlog
+from common.git import get_commit, get_origin, get_branch, get_short_branch, get_commit_date
 
 RELEASE_BRANCHES = ['FrogPilot', 'FrogPilot-Vetting']
 TESTED_BRANCHES = RELEASE_BRANCHES + ['FrogPilot-Staging', 'FrogPilot-Testing']
@@ -156,7 +156,7 @@ def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
 
 
 if __name__ == "__main__":
-  from openpilot.common.params import Params
+  from common.params import Params
 
   params = Params()
   params.put("TermsVersion", terms_version)

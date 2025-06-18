@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from openpilot.common.params import Params
-from openpilot.common.realtime import DT_MDL
+from common.params import Params
+from common.realtime import DT_MDL
 
 class FrogPilotTracking:
   def __init__(self):

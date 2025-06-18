@@ -2,11 +2,11 @@
 
 import argparse
 from collections import defaultdict
-from openpilot.selfdrive.debug.format_fingerprints import format_brand_fw_versions
+from selfdrive.debug.format_fingerprints import format_brand_fw_versions
 
-from openpilot.selfdrive.car.fingerprints import MIGRATION
-from openpilot.selfdrive.car.fw_versions import MODEL_TO_BRAND, match_fw_to_car
-from openpilot.tools.lib.logreader import LogReader, ReadMode
+from selfdrive.car.fingerprints import MIGRATION
+from selfdrive.car.fw_versions import MODEL_TO_BRAND, match_fw_to_car
+from tools.lib.logreader import LogReader, ReadMode
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Auto fingerprint from a route")

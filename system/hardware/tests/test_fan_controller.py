@@ -1,6 +1,6 @@
 import pytest
 
-from openpilot.system.hardware.fan_controller import TiciFanController
+from system.hardware.fan_controller import TiciFanController
 
 ALL_CONTROLLERS = [TiciFanController]
 

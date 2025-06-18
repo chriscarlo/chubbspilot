@@ -3,14 +3,14 @@ import os
 import pytest
 import re
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.selfdrive.car.car_helpers import interfaces
-from openpilot.selfdrive.car.docs import CARS_MD_OUT, CARS_MD_TEMPLATE, generate_cars_md, get_all_car_docs
-from openpilot.selfdrive.car.docs_definitions import Cable, Column, PartType, Star
-from openpilot.selfdrive.car.honda.values import CAR as HONDA
-from openpilot.selfdrive.car.values import PLATFORMS
-from openpilot.selfdrive.debug.dump_car_docs import dump_car_docs
-from openpilot.selfdrive.debug.print_docs_diff import print_car_docs_diff
+from common.basedir import BASEDIR
+from selfdrive.car.car_helpers import interfaces
+from selfdrive.car.docs import CARS_MD_OUT, CARS_MD_TEMPLATE, generate_cars_md, get_all_car_docs
+from selfdrive.car.docs_definitions import Cable, Column, PartType, Star
+from selfdrive.car.honda.values import CAR as HONDA
+from selfdrive.car.values import PLATFORMS
+from selfdrive.debug.dump_car_docs import dump_car_docs
+from selfdrive.debug.print_docs_diff import print_car_docs_diff
 
 
 class TestCarDocs:

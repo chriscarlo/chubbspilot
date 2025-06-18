@@ -37,8 +37,8 @@
       <plot style="Lines" flip_x="false" flip_y="false" mode="TimeSeries">
        <range bottom="-1.373608" top="56.208012" left="825.563261" right="1415.827546"/>
        <limitY/>
-       <curve name="carState.vEgo mph" color="#d62728"/>
-       <curve name="carState.vEgo kmh" color="#1ac938"/>
+       <curve name="/carState/vEgo mph" color="#d62728"/>
+       <curve name="/carState/vEgo kmh" color="#1ac938"/>
        <curve name="/carState/vEgo" color="#ff7f0e"/>
       </plot>
      </DockArea>
@@ -57,12 +57,12 @@
  <!-- - - - - - - - - - - - - - - -->
  <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
-  <snippet name="carState.vEgo kmh">
+  <snippet name="/carState/vEgo kmh">
    <global></global>
    <function>return value * 3.6</function>
    <linked_source>/carState/vEgo</linked_source>
   </snippet>
-  <snippet name="carState.vEgo mph">
+  <snippet name="/carState/vEgo mph">
    <global></global>
    <function>return value * 2.23694</function>
    <linked_source>/carState/vEgo</linked_source>

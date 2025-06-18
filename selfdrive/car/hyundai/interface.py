@@ -1,20 +1,21 @@
 import cereal.messaging as messaging
 from cereal import car, custom
 from panda import Panda
-from openpilot.common.params import Params
-from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CAR, HyundaiFlagsCP, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, \
+from common.params import Params
+from common.swaglog import cloudlog
+from selfdrive.car.hyundai.hyundaicanfd import CanBus
+from selfdrive.car.hyundai.values import HyundaiFlags, CAR, HyundaiFlagsCP, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, \
                                          CANFD_UNSUPPORTED_LONGITUDINAL_CAR, NON_SCC_CAR, EV_CAR, HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, \
                                          UNSUPPORTED_LONGITUDINAL_CAR, Buttons
-from openpilot.selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
-from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.interfaces import CarInterfaceBase
-from openpilot.selfdrive.car.disable_ecu import disable_ecu
+from selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
+from selfdrive.car import create_button_events, get_safety_config
+from selfdrive.car.interfaces import CarInterfaceBase
+from selfdrive.car.disable_ecu import disable_ecu
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import params
-from openpilot.selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController
-from openpilot.selfdrive.car.hyundai.chubbs.enable_radar_tracks import enable_radar_tracks
-from openpilot.selfdrive.car.hyundai.chubbs.fingerprinting import can_fingerprint, get_one_can
+from selfdrive.frogpilot.frogpilot_variables import params
+from selfdrive.car.hyundai.chubbs.longitudinal_tuning import HKGLongitudinalController
+from selfdrive.car.hyundai.chubbs.enable_radar_tracks import enable_radar_tracks
+from selfdrive.car.hyundai.chubbs.fingerprinting import can_fingerprint, get_one_can
 
 Ecu = car.CarParams.Ecu
 ButtonType = car.CarState.ButtonEvent.Type
@@ -112,13 +113,13 @@ class CarInterface(CarInterfaceBase):
 
     ret.stoppingControl = True
     ret.startingState = True
-    ret.vEgoStarting = 0.1
-    ret.startAccel = 1.0
-    ret.longitudinalActuatorDelay = 0.5
+    ret.vEgoStarting = 0.02
+    ret.startAccel = 2.5
+    ret.longitudinalActuatorDelay = 0.35
 
     # Add HKG longitudinal support
     if Params().get_bool("HKGtuning"):
-      HKGLongitudinalController(ret).apply_tune(ret)
+      HKGLongitudinalController.apply_tune_static(ret)
 
     # *** feature detection ***
     if candidate in CANFD_CAR:
@@ -132,10 +133,14 @@ class CarInterface(CarInterfaceBase):
       if 0x544 in fingerprint[0]:
         ret.flags |= HyundaiFlags.NAV_MSG.value
 
-      if ret.flags & HyundaiFlags.MANDO_RADAR and ret.radarUnavailable:
-        ret.flags |= HyundaiFlagsCP.ENABLE_RADAR_TRACKS.value
-        if Params().get_bool("HyundaiRadarTracksAvailable"):
-          ret.radarUnavailable = False
+      # Always set ENABLE_RADAR_TRACKS flag if MANDO_RADAR flag is present AND user has enabled the feature
+      if ret.flags & HyundaiFlags.MANDO_RADAR:
+        # Check if user has enabled radar tracks
+        if Params().get_bool("HyundaiRadarTracks"):
+          ret.flags |= HyundaiFlagsCP.ENABLE_RADAR_TRACKS.value
+          # Set radar to available if tracks are available
+          if Params().get_bool("HyundaiRadarTracksAvailable"):
+            ret.radarUnavailable = False
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
@@ -189,21 +194,41 @@ class CarInterface(CarInterfaceBase):
   #Initialize radar tracks if enabled in FrogPilot Variables.
   @staticmethod
   def initialize_radar_tracks(CP, logcan, sendcan):
-    if not (CP.flags & HyundaiFlagsCP.ENABLE_RADAR_TRACKS):
-        return
+    # Check if the car has MANDO_RADAR flag, which is required for radar tracks
+    has_mando_radar = CP.flags & HyundaiFlags.MANDO_RADAR
 
+    # Get parameters
     params = Params()
-    if not params.get_bool("HyundaiRadarTracks"):
-        return
+    user_enabled = params.get_bool("HyundaiRadarTracks")
+
+    # If user has not enabled the feature or car doesn't have Mando radar, don't proceed
+    if not user_enabled or not has_mando_radar:
+      return
+
+    # When user has explicitly enabled radar tracks, we should try to enable them
+    # regardless of the current radar availability status
+
+    # First, reset the availability parameters to force a fresh check
+    if user_enabled:
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", False)
 
     # Enable radar tracks config
-    enable_radar_tracks(logcan, sendcan,
-                       bus=0,
-                       addr=0x7d0,
-                       config_data_id=b'\x01\x42')
+    cloudlog.warning("radar_tracks: attempting to enable radar tracks due to user preference...")
+    success = enable_radar_tracks(logcan, sendcan,
+                    bus=0,
+                    addr=0x7d0,
+                    config_data_id=b'\x01\x42',
+                    timeout=0.1,
+                    retry=10)
 
-    # Handle radar tracks availability status
-    CarInterface.update_radar_tracks_availability(params, logcan, CP)
+    # If enabling was successful, mark tracks as available
+    if success:
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailable", True)
+      params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", True)
+      cloudlog.warning("radar_tracks: successfully enabled radar tracks")
+    else:
+      # If not successful, update availability status through the standard check
+      CarInterface.update_radar_tracks_availability(params, logcan, CP)
 
   @staticmethod
   def update_radar_tracks_availability(params, logcan, CP):
@@ -213,14 +238,18 @@ class CarInterface(CarInterfaceBase):
     # Cache current availability
     params.put_bool_nonblocking("HyundaiRadarTracksAvailableCache", rt_avail)
 
-    # Only update persistent status if not already set
-    if not rt_avail_persist:
+    # Update availability status if:
+    # 1. Persistent flag is not set, OR
+    # 2. User has explicitly enabled radar tracks (force a re-check)
+    if not rt_avail_persist or params.get_bool("HyundaiRadarTracks"):
         messaging.drain_sock_raw(logcan)
         fingerprint = can_fingerprint(lambda: get_one_can(logcan))
         radar_unavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[CP.carFingerprint]["radar"] is None
 
         params.put_bool_nonblocking("HyundaiRadarTracksAvailable", not radar_unavailable)
         params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", True)
+
+        cloudlog.warning(f"radar_tracks: availability check completed. Available: {not radar_unavailable}")
 
   @staticmethod
   def init(CP, logcan, sendcan):
@@ -235,7 +264,7 @@ class CarInterface(CarInterfaceBase):
     if CP.flags & HyundaiFlags.ENABLE_BLINKERS:
       disable_ecu(logcan, sendcan, bus=CanBus(CP).ECAN, addr=0x7B1, com_cont_req=b'\x28\x83\x01')
 
-  def _update(self, c, frogpilot_toggles):
+  def _update(self, c, frogpilot_toggles, sm):
     ret, fp_ret = self.CS.update(self.cp, self.cp_cam, frogpilot_toggles)
 
     if self.CS.CP.openpilotLongitudinalControl:

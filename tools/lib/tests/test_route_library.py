@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from openpilot.tools.lib.route import SegmentName
+from tools.lib.route import SegmentName
 
 class TestRouteLibrary:
   def test_segment_name_formats(self):

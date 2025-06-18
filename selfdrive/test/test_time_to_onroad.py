@@ -5,9 +5,9 @@ import subprocess
 
 from cereal import car
 import cereal.messaging as messaging
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.timeout import Timeout
-from openpilot.selfdrive.test.helpers import set_params_enabled
+from common.basedir import BASEDIR
+from common.timeout import Timeout
+from selfdrive.test.helpers import set_params_enabled
 
 EventName = car.CarEvent.EventName
 

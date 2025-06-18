@@ -2,29 +2,32 @@
 import datetime
 import os
 import signal
+import subprocess
 import sys
 import traceback
 
 from cereal import log
 import cereal.messaging as messaging
-import openpilot.system.sentry as sentry
-from openpilot.common.params import Params, ParamKeyType
-from openpilot.common.text_window import TextWindow
-from openpilot.system.hardware import HARDWARE, PC
-from openpilot.system.manager.helpers import unblock_stdout, write_onroad_params, save_bootlog
-from openpilot.system.manager.process import ensure_running
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.system.athena.registration import register, UNREGISTERED_DONGLE_ID
-from openpilot.common.swaglog import cloudlog, add_file_handler
-from openpilot.system.version import get_build_metadata, terms_version, training_version
+import system.sentry as sentry
+from common.params import Params, ParamKeyType
+from common.text_window import TextWindow
+from system.hardware import HARDWARE, PC
+from system.manager.helpers import unblock_stdout, write_onroad_params, save_bootlog
+from system.manager.process import ensure_running
+from system.manager.process_config import managed_processes
+from system.athena.registration import register, UNREGISTERED_DONGLE_ID
+from common.swaglog import cloudlog, add_file_handler
+from system.version import get_build_metadata, terms_version, training_version
 
-from openpilot.selfdrive.frogpilot.frogpilot_functions import convert_params, frogpilot_boot_functions, setup_frogpilot, uninstall_frogpilot
-from openpilot.selfdrive.frogpilot.frogpilot_variables import frogpilot_default_params, get_frogpilot_toggles, params_memory
+from selfdrive.frogpilot.frogpilot_functions import convert_params, frogpilot_boot_functions, setup_frogpilot, uninstall_frogpilot
+from selfdrive.frogpilot.frogpilot_variables import frogpilot_default_params, get_frogpilot_toggles, params_memory
 
 
 def manager_init() -> None:
+  print("[BOOT] Manager initialization starting...")
   save_bootlog()
 
+  print("[BOOT] Getting build metadata...")
   build_metadata = get_build_metadata()
 
   params = Params()
@@ -35,17 +38,36 @@ def manager_init() -> None:
     params.clear_all(ParamKeyType.DEVELOPMENT_ONLY)
 
   # FrogPilot variables
+  print("[BOOT] Setting up FrogPilot...")
   setup_frogpilot(build_metadata)
   params_cache = Params("/cache/params")
   convert_params(params_cache)
+  print("[BOOT] FrogPilot setup complete")
 
   default_params: list[tuple[str, str | bytes]] = [
+    ("AlwaysOnDM", "0"),
+    ("CarParamsPersistent", ""),
     ("CompletedTrainingVersion", "0"),
     ("DisengageOnAccelerator", "0"),
+    ("ExperimentalLongitudinalEnabled", "0"),
+    ("ExperimentalMode", "0"),
+    ("ExperimentalModeConfirmed", "0"),
+    ("GithubSshKeys", ""),
+    ("GithubUsername", ""),
+    ("GsmApn", ""),
     ("GsmMetered", "1"),
+    ("GsmRoaming", "1"),
     ("HasAcceptedTerms", "0"),
+    ("IsLdwEnabled", "0"),
+    ("IsMetric", "0"),
     ("LanguageSetting", "main_en"),
+    ("NavSettingLeftSide", "0"),
+    ("NavSettingTime24h", "0"),
     ("OpenpilotEnabledToggle", "1"),
+    ("RecordFront", "0"),
+    ("SshEnabled", "0"),
+    ("TetheringEnabled", "0"),
+    ("UpdaterAvailableBranches", ""),
     ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard)),
   ]
   if not PC:
@@ -76,6 +98,15 @@ def manager_init() -> None:
   except PermissionError:
     print("WARNING: failed to make /dev/shm")
 
+  # Check dependencies (non-blocking)
+  print("[BOOT] Checking dependencies...")
+  dep_check_script = os.path.join(BASEDIR, "check_boot_deps.py")
+  if os.path.exists(dep_check_script):
+    try:
+      subprocess.run(["python3", dep_check_script], timeout=10)
+    except Exception as e:
+      print(f"[BOOT] Dependency check failed: {e}")
+  
   # set version params
   params.put("Version", build_metadata.openpilot.version)
   params.put("TermsVersion", terms_version)
@@ -83,17 +114,30 @@ def manager_init() -> None:
   params.put("GitCommit", build_metadata.openpilot.git_commit)
   params.put("GitCommitDate", build_metadata.openpilot.git_commit_date)
   params.put("GitBranch", build_metadata.channel)
-  params.put("GitRemote", build_metadata.openpilot.git_origin)
+  params.put("GitRemote", build_metadata.openpilot.git_normalized_origin)
   params.put_bool("IsTestedBranch", build_metadata.tested_channel)
   params.put_bool("IsReleaseBranch", build_metadata.release_channel)
 
   # set dongle id
-  reg_res = register(show_spinner=True)
-  if reg_res:
-    dongle_id = reg_res
-  else:
-    serial = params.get("HardwareSerial")
-    raise Exception(f"Registration failed for device {serial}")
+  print("[BOOT] Starting device registration...")
+  try:
+    reg_res = register(show_spinner=True)
+    if reg_res:
+      dongle_id = reg_res
+      print(f"[BOOT] Registration successful: {dongle_id}")
+    else:
+      # If registration fails, use a fallback ID and continue booting
+      serial = params.get("HardwareSerial") or "unknown"
+      dongle_id = f"unregistered_{serial[:8]}"
+      print(f"[BOOT] Registration failed, using fallback ID: {dongle_id}")
+      params.put("DongleId", dongle_id)
+  except Exception as e:
+    # On any registration error, use fallback and continue
+    print(f"[BOOT] Registration exception: {e}")
+    serial = params.get("HardwareSerial") or "unknown"
+    dongle_id = f"unregistered_{serial[:8]}"
+    params.put("DongleId", dongle_id)
+    print(f"[BOOT] Using fallback dongle ID: {dongle_id}")
   os.environ['DONGLE_ID'] = dongle_id  # Needed for swaglog
   os.environ['GIT_ORIGIN'] = build_metadata.openpilot.git_normalized_origin # Needed for swaglog
   os.environ['GIT_BRANCH'] = build_metadata.channel # Needed for swaglog
@@ -113,8 +157,13 @@ def manager_init() -> None:
                        device=HARDWARE.get_device_type())
 
   # preimport all processes
-  for p in managed_processes.values():
-    p.prepare()
+  print(f"[BOOT] Pre-importing {len(managed_processes)} processes...")
+  for name, p in managed_processes.items():
+    try:
+      print(f"[BOOT] Pre-importing {name}...")
+      p.prepare()
+    except Exception as e:
+      print(f"[BOOT] Error pre-importing {name}: {e}")
 
 
 def manager_cleanup() -> None:
@@ -138,7 +187,7 @@ def manager_thread() -> None:
 
   ignore: list[str] = []
   if params.get("DongleId", encoding='utf8') in (None, UNREGISTERED_DONGLE_ID):
-    ignore += ["manage_athenad", "uploader"]
+    ignore += ["uploader"]  # Only ignore uploader, allow manage_athenad to run
   if os.getenv("NOBOARD") is not None:
     ignore.append("pandad")
   ignore += [x for x in os.getenv("BLOCK", "").split(",") if len(x) > 0]

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 from cereal import car
-from openpilot.common.params import Params
-from openpilot.common.realtime import Priority, config_realtime_process
-from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner
+from common.params import Params
+from common.realtime import Priority, config_realtime_process
+from common.swaglog import cloudlog
+from selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner
 import cereal.messaging as messaging
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
 def publish_ui_plan(sm, pm, longitudinal_planner):
   ui_send = messaging.new_message('uiPlan')
@@ -32,7 +32,7 @@ def plannerd_thread():
   pm = messaging.PubMaster(['longitudinalPlan', 'uiPlan'])
   sm = messaging.SubMaster(['carControl', 'carState', 'controlsState', 'liveParameters', 'radarState', 'modelV2',
                             'frogpilotCarState', 'frogpilotPlan'],
-                           poll='modelV2', ignore_avg_freq=['radarState'])
+                           poll='modelV2', ignore_alive=['radarState'])
 
   # FrogPilot variables
   frogpilot_toggles = get_frogpilot_toggles()

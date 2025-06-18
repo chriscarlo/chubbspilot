@@ -3,13 +3,13 @@ from parameterized import parameterized
 
 from cereal import log, car
 import cereal.messaging as messaging
-from openpilot.common.params import Params
-from openpilot.selfdrive.pandad.pandad_api_impl import can_list_to_can_capnp
-from openpilot.selfdrive.car.fingerprints import _FINGERPRINTS
-from openpilot.selfdrive.car.toyota.values import CAR as TOYOTA
-from openpilot.selfdrive.car.mazda.values import CAR as MAZDA
-from openpilot.selfdrive.controls.lib.events import EVENT_NAME
-from openpilot.system.manager.process_config import managed_processes
+from common.params import Params
+from selfdrive.pandad.pandad_api_impl import can_list_to_can_capnp
+from selfdrive.car.fingerprints import _FINGERPRINTS
+from selfdrive.car.toyota.values import CAR as TOYOTA
+from selfdrive.car.mazda.values import CAR as MAZDA
+from selfdrive.controls.lib.events import EVENT_NAME
+from system.manager.process_config import managed_processes
 
 EventName = car.CarEvent.EventName
 Ecu = car.CarParams.Ecu

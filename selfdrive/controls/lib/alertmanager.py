@@ -4,9 +4,9 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.params import Params
-from openpilot.selfdrive.controls.lib.events import Alert
+from common.basedir import BASEDIR
+from common.params import Params
+from selfdrive.controls.lib.events import Alert
 
 
 with open(os.path.join(BASEDIR, "selfdrive/controls/lib/alerts_offroad.json")) as f:

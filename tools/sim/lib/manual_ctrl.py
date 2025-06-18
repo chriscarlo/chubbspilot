@@ -6,7 +6,7 @@ import struct
 from fcntl import ioctl
 from typing import NoReturn
 
-from openpilot.tools.sim.bridge.common import control_cmd_gen
+from tools.sim.bridge.common import control_cmd_gen
 
 # Iterate over the joystick devices.
 print('Available devices:')

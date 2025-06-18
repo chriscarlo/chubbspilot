@@ -2,9 +2,9 @@
 import time
 
 from cereal import car, log, messaging
-from openpilot.common.params import Params
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.system.hardware import HARDWARE
+from common.params import Params
+from system.manager.process_config import managed_processes
+from system.hardware import HARDWARE
 
 if __name__ == "__main__":
   CP = car.CarParams(notCar=True, wheelbase=1, steerRatio=10)

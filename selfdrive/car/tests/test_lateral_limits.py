@@ -5,10 +5,10 @@ from parameterized import parameterized_class
 import pytest
 import sys
 
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car.car_helpers import interfaces
-from openpilot.selfdrive.car.fingerprints import all_known_cars
-from openpilot.selfdrive.car.interfaces import get_torque_params
+from common.realtime import DT_CTRL
+from selfdrive.car.car_helpers import interfaces
+from selfdrive.car.fingerprints import all_known_cars
+from selfdrive.car.interfaces import get_torque_params
 
 CAR_MODELS = all_known_cars()
 

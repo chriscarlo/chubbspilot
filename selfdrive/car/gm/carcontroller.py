@@ -1,16 +1,16 @@
 from cereal import car
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.numpy_fast import interp, clip
-from openpilot.common.realtime import DT_CTRL
-from openpilot.common.params_pyx import Params
+from common.conversions import Conversions as CV
+from common.filter_simple import FirstOrderFilter
+from common.numpy_fast import interp, clip
+from common.realtime import DT_CTRL
+from common.params_pyx import Params
 from opendbc.can.packer import CANPacker
-from openpilot.selfdrive.car import apply_driver_steer_torque_limits, create_gas_interceptor_command
-from openpilot.selfdrive.car.gm import gmcan
-from openpilot.selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, GMFlags, CC_ONLY_CAR, SDGM_CAR, EV_CAR, AccState
-from openpilot.selfdrive.car.interfaces import CarControllerBase
-from openpilot.selfdrive.controls.lib.drive_helpers import apply_deadzone
-from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
+from selfdrive.car import apply_driver_steer_torque_limits, create_gas_interceptor_command
+from selfdrive.car.gm import gmcan
+from selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, GMFlags, CC_ONLY_CAR, SDGM_CAR, EV_CAR, AccState
+from selfdrive.car.interfaces import CarControllerBase
+from selfdrive.controls.lib.drive_helpers import apply_deadzone
+from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 NetworkLocation = car.CarParams.NetworkLocation

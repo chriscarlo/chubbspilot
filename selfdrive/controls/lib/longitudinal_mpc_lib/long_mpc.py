@@ -3,17 +3,17 @@ import os
 import time
 import numpy as np
 from cereal import log
-from openpilot.common.numpy_fast import clip
-from openpilot.common.realtime import DT_MDL
-from openpilot.common.swaglog import cloudlog
+from common.numpy_fast import clip
+from common.realtime import DT_MDL
+from common.swaglog import cloudlog
 # WARNING: imports outside of constants will not trigger a rebuild
-from openpilot.selfdrive.modeld.constants import index_function
-from openpilot.selfdrive.car.interfaces import ACCEL_MIN
+from selfdrive.modeld.constants import index_function
+from selfdrive.car.interfaces import ACCEL_MIN
 
 if __name__ == '__main__':  # generating code
-  from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+  from third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
-  from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+  from selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
 from casadi import SX, vertcat
 
@@ -31,12 +31,12 @@ COST_E_DIM = 5
 COST_DIM = COST_E_DIM + 1
 CONSTR_DIM = 4
 
-X_EGO_OBSTACLE_COST = 3.
+X_EGO_OBSTACLE_COST = 5.0
 X_EGO_COST = 0.
 V_EGO_COST = 0.
 A_EGO_COST = 0.
 J_EGO_COST = 5.0
-A_CHANGE_COST = 200.
+A_CHANGE_COST =  200.
 DANGER_ZONE_COST = 100.
 CRASH_DISTANCE = .25
 LEAD_DANGER_FACTOR = 0.75
@@ -56,7 +56,8 @@ T_IDXS = np.array(T_IDXS_LST)
 FCW_IDXS = T_IDXS < 5.0
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
 COMFORT_BRAKE = 2.5
-STOP_DISTANCE = 7.5
+MAX_BRAKE = 6.0
+STOP_DISTANCE = 3.5
 
 def get_jerk_factor(aggressive_jerk_acceleration=0.5, aggressive_jerk_danger=0.5, aggressive_jerk_speed=0.5,
                     standard_jerk_acceleration=1.0, standard_jerk_danger=1.0, standard_jerk_speed=1.0,
@@ -187,7 +188,8 @@ def gen_long_ocp():
   # from an obstacle at every timestep. This obstacle can be a lead car
   # or other object. In e2e mode we can use x_position targets as a cost
   # instead.
-  costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
+  # costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
+  costs = [(x_obstacle - x_ego - desired_dist_comfort) / ((v_ego + 10.) ** 0.88),
            x_ego,
            v_ego,
            a_ego,

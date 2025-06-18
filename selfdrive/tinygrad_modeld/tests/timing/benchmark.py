@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 import cereal.messaging as messaging
-from openpilot.system.manager.process_config import managed_processes
+from system.manager.process_config import managed_processes
 
 
 N = int(os.getenv("N", "5"))

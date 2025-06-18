@@ -4,8 +4,8 @@ import pathlib
 import tempfile
 import subprocess
 
-from openpilot.system.updated.casync import casync
-from openpilot.system.updated.casync import tar
+from system.updated.casync import casync
+from system.updated.casync import tar
 
 # dd if=/dev/zero of=/tmp/img.raw bs=1M count=2
 # sudo losetup -f /tmp/img.raw

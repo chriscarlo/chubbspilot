@@ -8,9 +8,9 @@ import tempfile
 import time
 import pytest
 
-from openpilot.common.params import Params
-from openpilot.system.manager.process import ManagerProcess
-from openpilot.selfdrive.test.helpers import processes_context
+from common.params import Params
+from system.manager.process import ManagerProcess
+from selfdrive.test.helpers import processes_context
 
 
 def get_consistent_flag(path: str) -> bool:
@@ -83,7 +83,7 @@ class TestBaseUpdate:
 
   @pytest.fixture(autouse=True)
   def mock_basedir(self, mocker):
-    mocker.patch("openpilot.common.basedir.BASEDIR", self.basedir)
+    mocker.patch("common.basedir.BASEDIR", self.basedir)
 
   def set_target_branch(self, branch):
     self.params.put("UpdaterTargetBranch", branch)
@@ -233,10 +233,10 @@ class ParamsBaseUpdateTest(TestBaseUpdate):
     self.setup_basedir_release("release3")
 
     with self.additional_context(), processes_context(["updated"]) as [updated]:
-      mocker.patch("openpilot.system.hardware.AGNOS", "True")
-      mocker.patch("openpilot.system.hardware.tici.hardware.Tici.get_os_version", "1.2")
-      mocker.patch("openpilot.system.hardware.tici.agnos.get_target_slot_number")
-      mocker.patch("openpilot.system.hardware.tici.agnos.flash_agnos_update")
+      mocker.patch("system.hardware.AGNOS", "True")
+      mocker.patch("system.hardware.tici.hardware.Tici.get_os_version", "1.2")
+      mocker.patch("system.hardware.tici.agnos.get_target_slot_number")
+      mocker.patch("system.hardware.tici.agnos.flash_agnos_update")
 
       self._test_params("release3", False, False)
       self.wait_for_idle()

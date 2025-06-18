@@ -1,0 +1,48 @@
+module.exports = {
+  content: [
+    './templates/**/*.html', // Scan all HTML files in the templates directory
+    './static/js/**/*.js',   // Scan all JS files in static/js if they manipulate classes
+  ],
+  theme: {
+    extend: {
+      colors: {
+        /* Canvas & Panels */
+        'bg-1':     '#0d1117',  /* canvas-default */
+        'bg-2':     '#161b22',  /* canvas-overlay */
+        'bg-3':     '#21262d',  /* canvas-inset */
+        /* Elevated surfaces (cards, modals) */
+        'surface':  '#30363d',  /* border-muted */
+        /* Text */
+        'text-primary':   '#c9d1d9',  /* fg-default */
+        'text-secondary': '#8b949e',  /* fg-muted   */
+        'text-muted':     '#6e7681',  /* fg-subtle  */
+        /* Accent (links, buttons) */
+        'accent':    '#58a6ff',  /* accent-fg-default      */
+        'accent-2':  '#539bf5',  /* accent-fg-hover        */
+        /* Borders & dividers */
+        'border':    '#30363d'   /* border-default         */
+      },
+      fontFamily: {
+        'sans': ['Helvetica', 'Arial', 'sans-serif']
+      }
+    }
+  },
+  plugins: [
+    function({ addBase, config }) {
+      addBase({
+        ':root': {
+          '--bg-1': config('theme.colors.bg-1'),
+          '--bg-2': config('theme.colors.bg-2'),
+          '--bg-3': config('theme.colors.bg-3'),
+          '--surface': config('theme.colors.surface'),
+          '--text-primary': config('theme.colors.text-primary'),
+          '--text-secondary': config('theme.colors.text-secondary'),
+          '--text-muted': config('theme.colors.text-muted'),
+          '--accent': config('theme.colors.accent'),
+          '--accent-2': config('theme.colors.accent-2'),
+          '--border': config('theme.colors.border'),
+        }
+      })
+    }
+  ],
+}

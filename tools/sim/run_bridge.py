@@ -4,7 +4,7 @@ import argparse
 from typing import Any
 from multiprocessing import Queue
 
-from openpilot.tools.sim.bridge.metadrive.metadrive_bridge import MetaDriveBridge
+from tools.sim.bridge.metadrive.metadrive_bridge import MetaDriveBridge
 
 def create_bridge(dual_camera, high_quality):
   queue: Any = Queue()
@@ -33,12 +33,12 @@ if __name__ == "__main__":
 
   if args.joystick:
     # start input poll for joystick
-    from openpilot.tools.sim.lib.manual_ctrl import wheel_poll_thread
+    from tools.sim.lib.manual_ctrl import wheel_poll_thread
 
     wheel_poll_thread(queue)
   else:
     # start input poll for keyboard
-    from openpilot.tools.sim.lib.keyboard_ctrl import keyboard_poll_thread
+    from tools.sim.lib.keyboard_ctrl import keyboard_poll_thread
 
     keyboard_poll_thread(queue)
 

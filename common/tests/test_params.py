@@ -4,7 +4,7 @@ import threading
 import time
 import uuid
 
-from openpilot.common.params import Params, ParamKeyType, UnknownKeyName
+from common.params import Params, ParamKeyType, UnknownKeyName
 
 class TestParams:
   def setup_method(self):

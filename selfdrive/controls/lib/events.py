@@ -5,15 +5,17 @@ import os
 from enum import IntEnum
 from collections.abc import Callable
 from types import SimpleNamespace
+import time
 
 from cereal import log, car
 import cereal.messaging as messaging
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.git import get_short_branch
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.locationd.calibrationd import MIN_SPEED_FILTER
+from cereal.services import SERVICE_LIST
+from common.conversions import Conversions as CV
+from common.git import get_short_branch
+from common.realtime import DT_CTRL
+from selfdrive.locationd.calibrationd import MIN_SPEED_FILTER
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import params
+from selfdrive.frogpilot.frogpilot_variables import params
 
 AlertSize = log.ControlsState.AlertSize
 AlertStatus = log.ControlsState.AlertStatus
@@ -276,9 +278,84 @@ def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
 
 
 def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, frogpilot_toggles: SimpleNamespace) -> Alert:
-  bs = [s for s in sm.data.keys() if not sm.all_checks([s, ])]
-  msg = ', '.join(bs[:4])  # can't fit too many on one line
-  return NoEntryAlert(msg, alert_text_1="Communication Issue Between Processes")
+  with open("/data/openpilot_debug_comms.log", "a") as f:
+    f.write(f"{time.time()}: *** COMM_ISSUE_ALERT FUNCTION CALLED ***\n")
+  # The try-except for cloudlog can remain if you want, or be removed if cloudlog isn't used/working
+  try:
+    from common.swaglog import cloudlog
+    cloudlog.warning("*** COMM_ISSUE_ALERT FUNCTION CALLED ***")
+  except ImportError:
+    pass
+
+  failing_services_details = []
+  cur_time = time.monotonic() # Get current time for accurate checks
+
+  for s in sm.data.keys(): # Iterate over all services SubMaster knows
+    service_is_ok = True
+    reason = []
+
+    # Check alive x
+    expected_freq = SERVICE_LIST[s].frequency
+    if expected_freq > 1e-5 and not sm.simulation:
+      is_alive = (cur_time - sm.recv_time[s]) < (10. / expected_freq)
+      if not is_alive and s not in sm.ignore_alive:
+        service_is_ok = False
+        reason.append(f"NOT_ALIVE (last_recv: {sm.recv_time[s]:.2f}, now: {cur_time:.2f}, age: {cur_time - sm.recv_time[s]:.2f}s, threshold: {10./expected_freq:.2f}s)")
+    elif sm.simulation and not sm.seen[s] and s not in sm.ignore_alive: # Check seen for simulation
+        service_is_ok = False
+        reason.append(f"NOT_SEEN_IN_SIMULATION")
+
+    # Check frequency
+    if sm._check_avg_freq(s):
+      dts = sm.recv_dts[s]
+      if len(dts) > 0:
+        avg_freq = 1 / (sum(dts) / len(dts))
+        recent_dts_count = max(1, int(len(dts) / 10))
+        recent_dts = list(dts)[-recent_dts_count:]
+        avg_freq_recent = 0
+        if sum(recent_dts) > 1e-9:
+            avg_freq_recent = 1 / (sum(recent_dts) / len(recent_dts))
+        avg_freq_ok = sm.min_freq[s] <= avg_freq <= sm.max_freq[s]
+        recent_freq_ok = sm.min_freq[s] <= avg_freq_recent <= sm.max_freq[s]
+        is_freq_ok = avg_freq_ok or recent_freq_ok
+      else:
+        is_freq_ok = False
+        avg_freq = 0
+        avg_freq_recent = 0
+      if not is_freq_ok:
+        service_is_ok = False
+        reason.append(f"FREQ_BAD (avg: {avg_freq:.2f}Hz, recent: {avg_freq_recent:.2f}Hz, range: [{sm.min_freq[s]:.2f}-{sm.max_freq[s]:.2f}]Hz)")
+    """
+    # Check valid field
+    if not sm.valid[s] and s not in sm.ignore_valid:
+      service_is_ok = False
+      reason.append(f"MSG_INVALID (last_msg.valid=False, logMonoTime: {sm.logMonoTime[s]})")
+    """
+
+      # Check valid field
+    if (not sm.valid[s]
+        and sm.recv_frame[s] > 50      # ignore the first ~2 s of startup
+        and s not in sm.ignore_valid):
+      service_is_ok = False
+      reason.append(f"MSG_INVALID (last_msg.valid=False, logMonoTime: {sm.logMonoTime[s]})")
+
+    if not service_is_ok:
+      details = f"Service: {s} (frame: {sm.recv_frame[s]}, last_update_ago: {sm.frame - sm.recv_frame[s]} frames)"
+      details += " Reasons: " + ", ".join(reason)
+      failing_services_details.append(details)
+      with open("/data/openpilot_debug_comms.log", "a") as f:
+        f.write(f"{time.time()}: CommIssueDebug: {details}\n")
+
+  display_msg_parts = []
+  for detail_str in failing_services_details:
+      service_name = detail_str.split(' (frame:')[0].split('Service: ')[1]
+      if service_name not in display_msg_parts:
+          display_msg_parts.append(service_name)
+  msg_for_hud = ', '.join(display_msg_parts[:4])
+  if not msg_for_hud and failing_services_details:
+      msg_for_hud = "Details in logs"
+
+  return NoEntryAlert(msg_for_hud, alert_text_1="Communication Issue Between Processes")
 
 
 def camera_malfunction_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, frogpilot_toggles: SimpleNamespace) -> Alert:
@@ -821,8 +898,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.seatbeltNotLatched: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("Seatbelt Unlatched"),
-    ET.NO_ENTRY: NoEntryAlert("Seatbelt Unlatched"),
+    ET.WARNING: NormalPermanentAlert("Seatbelt Unlatched", priority=Priority.LOW, duration=3.),
   },
 
   EventName.espDisabled: {

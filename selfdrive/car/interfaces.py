@@ -11,19 +11,19 @@ from collections.abc import Callable
 from functools import cache
 
 from cereal import car, custom
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.simple_kalman import KF1D, get_kalman_gain
-from openpilot.common.numpy_fast import clip
-from openpilot.common.realtime import DT_CTRL
-from openpilot.selfdrive.car import apply_hysteresis, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
-from openpilot.selfdrive.car.values import PLATFORMS
-from openpilot.selfdrive.controls.lib.drive_helpers import CRUISE_LONG_PRESS, V_CRUISE_MAX, get_friction
-from openpilot.selfdrive.controls.lib.events import Events
-from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
+from common.basedir import BASEDIR
+from common.conversions import Conversions as CV
+from common.simple_kalman import KF1D, get_kalman_gain
+from common.numpy_fast import clip
+from common.realtime import DT_CTRL
+from selfdrive.car import apply_hysteresis, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
+from selfdrive.car.values import PLATFORMS
+from selfdrive.controls.lib.drive_helpers import CRUISE_LONG_PRESS, V_CRUISE_MAX, get_friction
+from selfdrive.controls.lib.events import Events
+from selfdrive.controls.lib.vehicle_model import VehicleModel
 
-from openpilot.selfdrive.car.hyundai.chubbs.param_manager import ParamManager
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params, params_memory
+from selfdrive.car.hyundai.chubbs.param_manager import ParamManager
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params, params_memory
 
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type
@@ -31,8 +31,8 @@ GearShifter = car.CarState.GearShifter
 EventName = car.CarEvent.EventName
 
 MAX_CTRL_SPEED = (V_CRUISE_MAX + 4) * CV.KPH_TO_MS
-ACCEL_MAX = 2.0
-ACCEL_MIN = -3.5
+ACCEL_MAX = 4.5
+ACCEL_MIN = -6.0
 FRICTION_THRESHOLD = 0.3
 
 NEURAL_PARAMS_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/neural_ff_weights.json')
@@ -261,7 +261,7 @@ class CarInterfaceBase(ABC):
     self.lat_torque_nn_model = get_nn_model(car, eps_firmware)
     return self.lat_torque_nn_model is not None
 
-  def apply(self, c: car.CarControl, now_nanos: int, frogpilot_toggles) -> tuple[car.CarControl.Actuators, list[tuple[int, int, bytes, int]]]:
+  def apply(self, c: car.CarControl, now_nanos: int, frogpilot_toggles, sm) -> tuple[car.CarControl.Actuators, list[tuple[int, int, bytes, int]]]:
     return self.CC.update(c, self.CS, now_nanos, frogpilot_toggles)
 
   @staticmethod
@@ -386,10 +386,10 @@ class CarInterfaceBase(ABC):
     tune.torque.steeringAngleDeadzoneDeg = steering_angle_deadzone_deg
 
   @abstractmethod
-  def _update(self, c: car.CarControl) -> car.CarState:
+  def _update(self, c: car.CarControl, frogpilot_toggles, sm) -> car.CarState:
     pass
 
-  def update(self, c: car.CarControl, can_strings: list[bytes], params_list: SimpleNamespace, frogpilot_toggles) -> car.CarState:
+  def update(self, c: car.CarControl, can_strings: list[bytes], params_list: SimpleNamespace, frogpilot_toggles, sm) -> car.CarState:
     # parse can
     for cp in self.can_parsers:
       if cp is not None:
@@ -398,7 +398,7 @@ class CarInterfaceBase(ABC):
     self.CS.params_list = params_list
 
     # get CarState
-    ret, fp_ret = self._update(c, frogpilot_toggles)
+    ret, fp_ret = self._update(c, frogpilot_toggles, sm)
 
     ret.canValid = all(cp.can_valid for cp in self.can_parsers if cp is not None)
     ret.canTimeout = any(cp.bus_timeout for cp in self.can_parsers if cp is not None)

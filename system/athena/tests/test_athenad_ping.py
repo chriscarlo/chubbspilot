@@ -4,11 +4,11 @@ import threading
 import time
 from typing import cast
 
-from openpilot.common.params import Params
-from openpilot.common.timeout import Timeout
-from openpilot.system.athena import athenad
-from openpilot.system.manager.helpers import write_onroad_params
-from openpilot.system.hardware import TICI
+from common.params import Params
+from common.timeout import Timeout
+from system.athena import athenad
+from system.manager.helpers import write_onroad_params
+from system.hardware import TICI
 
 TIMEOUT_TOLERANCE = 20  # seconds
 
@@ -58,7 +58,7 @@ class TestAthenadPing:
   def assertTimeout(self, reconnect_time: float, subtests, mocker) -> None:
     self.athenad.start()
 
-    mock_create_connection = mocker.patch('openpilot.system.athena.athenad.create_connection',
+    mock_create_connection = mocker.patch('system.athena.athenad.create_connection',
                                           new_callable=lambda: mocker.MagicMock(wraps=athenad.create_connection))
 
     time.sleep(1)

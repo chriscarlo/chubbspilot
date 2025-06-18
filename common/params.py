@@ -1,4 +1,4 @@
-from openpilot.common.params_pyx import Params, ParamKeyType, UnknownKeyName
+from common.params_pyx import Params, ParamKeyType, UnknownKeyName
 assert Params
 assert ParamKeyType
 assert UnknownKeyName
@@ -16,3 +16,16 @@ if __name__ == "__main__":
     params.put(key, val)
   elif len(sys.argv) == 2:
     print(f"GET: {key} = {params.get(key)}")
+
+PedalPressedAmount = "PedalPressedAmount"
+Pitch = "Pitch"
+PostProcessedLocation = "PostProcessedLocation"
+PredictedObject = "PredictedObject"
+Probability = "Probability"
+ProcLog = "ProcLog"
+ProtobufMapBuildings = "ProtobufMapBuildings"
+ProtobufMapData = "ProtobufMapData"
+ProtobufMapDownloadProgress = "ProtobufMapDownloadProgress"
+PubMasterHealth = "PubMasterHealth"
+PublishTimes = "PublishTimes"
+PulsedLightHardware = "PulsedLightHardware"

@@ -10,10 +10,10 @@ import capnp
 import pyaudio
 from cereal import messaging, log
 
-from openpilot.system.webrtc.webrtcd import CerealOutgoingMessageProxy, CerealIncomingMessageProxy
-from openpilot.system.webrtc.device.video import LiveStreamVideoStreamTrack
-from openpilot.system.webrtc.device.audio import AudioInputStreamTrack
-from openpilot.common.realtime import DT_DMON
+from system.webrtc.webrtcd import CerealOutgoingMessageProxy, CerealIncomingMessageProxy
+from system.webrtc.device.video import LiveStreamVideoStreamTrack
+from system.webrtc.device.audio import AudioInputStreamTrack
+from common.realtime import DT_DMON
 
 
 class TestStreamSession:

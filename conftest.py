@@ -4,9 +4,9 @@ import os
 import pytest
 import random
 
-from openpilot.common.prefix import OpenpilotPrefix
-from openpilot.system.manager import manager
-from openpilot.system.hardware import TICI, HARDWARE
+from common.prefix import OpenpilotPrefix
+from system.manager import manager
+from system.hardware import TICI, HARDWARE
 
 
 def pytest_sessionstart(session):

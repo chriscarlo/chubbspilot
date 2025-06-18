@@ -187,7 +187,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
       vehicleToggle = hkgToggle;
 
     } else if (param == "HKGtuning") {
-      std::vector<QString> button_texts{tr("Smoother Braking")};
+      std::vector<QString> button_texts{tr("Enhanced Braking")};
       std::vector<QString> braking_params{"HKGBraking"};
       vehicleToggle = new FrogPilotButtonToggleControl(param, title, desc, icon, braking_params, button_texts);
     } else if (param == "ToyotaToggles") {

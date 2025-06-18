@@ -1,0 +1,2449 @@
+{% extends "base.html" %}
+
+{% block browser_title_suffix %}- Diagnostics{% endblock %}
+
+{% block page_title_text %}- Diagnostics{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Custom scrollbar styles */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #111;
+    border-radius: 0;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 0;
+    border: 2px solid #111;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #666;
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #444 #111;
+  }
+
+  /* Ensure .hidden class works reliably */
+  .hidden {
+    display: none !important;
+  }
+  /* REMOVED .tile, .tile:hover, .active-tile styles as they are now in base.html */
+
+  /* UPDATED: Styles for main content sections */
+  .action-area { /* Parent of action-area-content */
+    /* min-height: calc(100vh - 150px); -- Already defined */
+    /* background-color: var(--color-1); -- Already defined */
+    /* Consider overflow if its direct child #action-area-content or .diagnostic-content-section grows too tall */
+  }
+
+  /* #action-area-content is the direct parent of .diagnostic-content-section divs */
+  /* It has p-0, which is fine. .diagnostic-content-section will add its own padding. */
+
+  .diagnostic-content-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Fill parent #action-area-content */
+    padding: 1rem; /* Consistent padding for content alignment */
+    box-sizing: border-box;
+  }
+  /* Ensure sections that should not have padding (like terminal full bleed) can override */
+  .diagnostic-content-section.p-0 { /* Utility to override padding if needed by specific section */
+      padding: 0 !important;
+  }
+
+
+  /* General debug log output style */
+  .debug-log-output {
+    background-color: #000; /* Black background */
+    color: #0f0; /* Green text */
+    font-family: monospace;
+    font-size: 0.75rem; /* Smaller font */
+    padding: 0.5rem; /* Inner padding for text */
+    border: 1px solid #333; /* Darker border */
+    border-radius: 0.25rem;
+    max-height: 25vh; /* Adjusted max-height */
+    overflow-y: auto;    /* Scroll for overflow */
+    scrollbar-gutter: stable; /* ADDED for consistent scrollbar spacing */
+    white-space: pre-wrap; /* Respect newlines and spaces */
+    word-break: break-all; /* Break long lines */
+    margin-bottom: 1rem; /* Space below this debug box */
+    flex-shrink: 0; /* Prevent shrinking */
+  }
+
+  /* Crash Log Specific: Grid for log file tiles */
+  .log-list-container-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
+    gap: 1rem;
+    flex-grow: 1; /* Takes remaining vertical space in flex column */
+    overflow-y: auto; /* Scroll its own content */
+    scrollbar-gutter: stable; /* ADDED for consistent scrollbar spacing */
+    min-height: 0; /* Crucial for flex children that need to scroll */
+  }
+
+  /* Individual log file tiles in the action area */
+  .log-file-tile {
+    cursor: pointer;
+    padding: 1rem;
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100px; /* Keep or adjust as needed */
+  }
+  .log-file-tile:hover {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+  }
+  .log-file-tile .log-name {
+    font-weight: 600;
+    word-break: break-all;
+    margin-bottom: 0.25rem; /* Space between name and details */
+  }
+  .log-file-tile .log-details {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem; /* Adjusted from 0.5rem */
+  }
+
+  /* New styles for crash log date group headers */
+  .crash-log-group-header {
+    grid-column: 1 / -1; /* Span all columns in the grid */
+    padding: 0.75rem 0 0.5rem 0; /* Top/bottom padding, no horizontal (parent handles) */
+    margin-top: 0.5rem;
+    /* margin-bottom: 0.5rem; -- grid gap should handle space to tiles below */
+    color: var(--color-accent);
+    font-weight: 600; /* Corresponds to font-semibold */
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem; /* Slightly smaller than tile main text */
+  }
+  .log-list-container-tiles > .crash-log-group-header:first-of-type {
+    margin-top: 0; /* No top margin for the very first group header */
+  }
+
+  /* Log content viewer (when a log is opened) */
+  .log-content-viewer {
+    font-family: monospace;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    padding: 1rem; /* Padding for the content itself */
+    background-color: var(--color-2);
+    border-radius: 0.5rem;
+    /* margin: 1rem; -- Remove if #log-viewer-display becomes .diagnostic-content-section */
+    /* max-height: calc(100vh - 250px); -- This should be flex-grow:1 and overflow in parent */
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+    border: 1px solid var(--color-border);
+  }
+
+  .back-button {
+    /* margin: 1rem; -- Will be spaced by parent padding now */
+    margin-bottom: 1rem; /* Keep space below button */
+    display: inline-block;
+    background-color: var(--color-surface);
+    color: var(--color-accent);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--color-accent);
+    flex-shrink: 0; /* Prevent button from shrinking */
+  }
+  .back-button:hover {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+  }
+
+  .empty-action-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-style: italic;
+    /* This is a .diagnostic-content-section, so it gets padding unless p-0 is added to its class list */
+  }
+
+  /* Terminal styles */
+  #test4-display.active-terminal-view {
+      padding: 0 !important; /* Terminal needs full bleed */
+      height: 448px; /* Match left nav stack (5 * (70px tile + 24px margin)) */
+      min-height: 150px; /* Minimum resizable height for drag functionality */
+      overflow: hidden; /* Child xterm container is 100% height, manage overflow here */
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      position: relative; /* For potential future absolute positioned elements or pseudo-elements for handle */
+      /* cursor: ns-resize; /* We'll apply this conditionally in JS or to a specific handle area */
+  }
+
+  /* REMOVED .terminal-container and related styles, as Xterm.js handles its own viewport and styling. */
+  /* Styles for .terminal-output .command-echo, .stdout, .stderr, .exit-code will be handled by xterm for now */
+  /* .terminal-input-area and .terminal-input styles are also removed */
+
+  /* CPU Equalizer Styles */
+  #cpu-equalizer-display-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #0000AA;
+    /* padding: 2rem; -- Handled by parent .diagnostic-content-section if this is direct child */
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  #cpu-equalizer-container {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    transform-style: preserve-3d;
+    perspective: 400px;
+  }
+  .cpu-bar-wrapper {
+    transform: rotateX(30deg) rotateY(0deg) scaleY(1.2);
+    transform-origin: bottom center;
+  }
+  .cpu-bar {
+    width: 45px;
+    height: 180px;
+    display: flex;
+    flex-direction: column-reverse;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #000055;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.6), 3px 3px 6px rgba(0,0,0,0.4);
+    border-radius: 3px 3px 0 0;
+  }
+  .cpu-segment {
+    width: 100%;
+    flex-shrink: 0;
+    background-color: #2a2a4a;
+    transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+    border-bottom: 1px solid rgba(0,0,0,0.3);
+  }
+  .cpu-segment.level-1 { background-color: #00ff00; box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00 inset; }
+  .cpu-segment.level-2 { background-color: #90ee90; box-shadow: 0 0 5px #90ee90, 0 0 8px #90ee90 inset; }
+  .cpu-segment.level-3 { background-color: #ffff00; box-shadow: 0 0 6px #ffff00, 0 0 12px #ffff00 inset; }
+  .cpu-segment.level-4 { background-color: #ffa500; box-shadow: 0 0 7px #ffa500, 0 0 14px #ffa500 inset; }
+  .cpu-segment.level-5 { background-color: #ff4500; box-shadow: 0 0 8px #ff4500, 0 0 16px #ff4500 inset; }
+  .cpu-segment.level-6 { background-color: #ff0000; box-shadow: 0 0 9px #ff0000, 0 0 18px #ff0000 inset; }
+
+  /* Styles for Monitor Selection Grid */
+  .monitor-grid { /* This is child of #realtime-monitors-display (a .diagnostic-content-section) */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    /* padding: 1rem; -- Removed, parent .diagnostic-content-section has it */
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .monitor-button {
+    padding: 1.5rem 1rem;
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 1rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .monitor-button:hover {
+    background-color: var(--color-surface);
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  /* Styles for MapD Log Stream view (retained) */
+  #mapd-log-output-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  #mapd-log-output {
+    flex-grow: 1;
+    background-color: #000;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 0;
+  }
+
+  #right-column-diagnostics {
+    flex-shrink: 0; /* Prevent this column from shrinking in height due to flex rules */
+  }
+
+  /* Resize handle for terminal */
+  #test4-display { position: relative; }
+  #terminal-resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 12px; /* Slightly taller for easier grab */
+    cursor: ns-resize;
+    z-index: 1000; /* ensure it is on top of xterm layers */
+    /* background: rgba(255,0,0,0.05);  uncomment to visualize handle */
+  }
+
+  /* Apply custom scrollbar to xterm */
+  .xterm .xterm-viewport {
+    /* This element contains the scrollbar in xterm.js */
+    scrollbar-width: thin;
+    scrollbar-color: #444 #111;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar-track {
+    background: #111;
+    border-radius: 0;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 0;
+    border: 2px solid #111;
+  }
+
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: #666;
+  }
+
+  /* Make the XTerm container extend fully to the bottom */
+  #xterm-terminal-container {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Remove default bottom padding that xterm might add */
+  .xterm-screen {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Make sure the terminal container has no gap with the toolbar */
+  #xterm-terminal-container {
+    display: flex;
+    flex-direction: column;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    position: relative;
+    border-bottom: none !important;
+  }
+
+  /* Make sure the terminal container touches the toolbar with no gap */
+  #test4-display.active-terminal-view #xterm-terminal-container {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Remove any gap between the scrollbar and toolbar */
+  #test4-display.active-terminal-view {
+    overflow: hidden;
+  }
+
+  /* Service Monitor Specific Styles */
+  #service-monitor-control-display {
+    /* This is a .diagnostic-content-section, padding handled by base */
+    align-items: center; /* Center the initial button and subsequent structures */
+  }
+
+  .service-monitor-root-button {
+    padding: 1rem 1.5rem;
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem; /* Space for the T-branches */
+  }
+  .service-monitor-root-button:hover {
+    background-color: var(--color-accent-2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+  }
+
+  .service-monitor-branches {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 1rem;
+    height: auto; /* Let it grow as needed */
+    overflow: visible; /* Allow pearl strings to be visible */
+    transition: height 0.5s ease-out, opacity 0.5s ease-out;
+    opacity: 0;
+    position: relative;
+  }
+  .service-monitor-branches.visible {
+    height: auto; /* Remove fixed height for debugging/visibility */
+    opacity: 1;
+  }
+  .service-monitor-branch-line-container {
+      position: absolute;
+      bottom: calc(50% - 1px); /* Vertically center the line part of T */
+      left: 0;
+      right: 0;
+      height: 2px;
+      display: flex;
+      justify-content: center;
+  }
+  .service-monitor-branch-line {
+    width: 0%; /* Animated width */
+    height: 2px;
+    background-color: var(--color-accent);
+    transition: width 0.5s ease-out 0.3s; /* Delay width animation */
+  }
+  .service-monitor-branches.visible .service-monitor-branch-line {
+      width: 40%; /* e.g. 40% of total width for the T bar */
+  }
+
+  .service-category-container {
+    display: flex;
+    flex-direction: column; /* Categories stack vertically for now, pearls go down */
+    align-items: center;
+    width: 50%; /* Each category takes half of the branch space */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease-out 0.6s, transform 0.4s ease-out 0.6s; /* Delay appearance */
+  }
+  .service-monitor-branches.visible .service-category-container {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .service-category-button {
+    padding: 0.75rem 1.25rem;
+    background-color: var(--color-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem; /* Space before pearls if directly under */
+    position: relative; /* For vertical connector line */
+    z-index: 1; /* Above the horizontal T-bar */
+  }
+  .service-category-button:hover {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent);
+  }
+  .service-category-button::before { /* Vertical line connecting to T-bar */
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 0px; /* Animated height */
+    background-color: var(--color-accent);
+    transition: height 0.3s ease-out 0.5s; /* Delay height animation */
+  }
+   .service-monitor-branches.visible .service-category-button::before {
+      height: 1rem; /* Height of the vertical connector */
+   }
+
+
+  .service-pearl-string-container {
+    margin-top: 0.5rem;
+    width: auto;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* max-height: 0; */ /* Initially hidden - Temporarily REMOVE for debugging visibility */
+    height: auto; /* Fallback if max-height was the issue */
+    overflow: hidden;
+    /* transition: max-height 0.8s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease-out; */ /* Temp REMOVE */
+    opacity: 0; /* Base state */
+  }
+  .service-pearl-string-container.visible {
+    /* max-height: 50vh; */ /* Temp REMOVE */
+    height: auto; /* Ensure it can take space */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    opacity: 1; /* Ensure visible */
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background-color: var(--color-2);
+  }
+
+  .service-pearl-tile {
+    background-color: var(--color-surface);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    position: relative;
+    opacity: 1; /* DEBUG: Force visible */
+    transform: translateY(0); /* DEBUG: Force visible */
+    /* animation: fadeInPearl 0.5s forwards; */ /* DEBUG: Temporarily disable animation */
+  }
+  /* Staggered animation for pearls - Keep these commented out for now */
+  /* .service-pearl-string-container.visible .service-pearl-tile:nth-child(1) { animation-delay: 0.1s; } */
+  /* .service-pearl-string-container.visible .service-pearl-tile:nth-child(2) { animation-delay: 0.18s; } */
+  /* ... etc. ... */
+
+  /* @keyframes fadeInPearl {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  } */ /* DEBUG: Temporarily disable keyframe */
+
+  .service-pearl-tile:not(:first-child)::before { /* Connector line above each pearl */
+    content: '';
+    position: absolute;
+    bottom: 100%; /* Start from top of this tile */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1.5px;
+    height: 0.5rem; /* Length of the connector line (margin-bottom of tile) */
+    background-color: var(--color-accent-2);
+    opacity: 0.7;
+  }
+
+  .service-pearl-tile.selected {
+    background-color: var(--color-accent);
+    color: var(--color-1);
+    border-color: var(--color-accent-2);
+    box-shadow: 0 0 10px var(--color-accent);
+  }
+  .service-pearl-tile:hover:not(.selected) {
+    background-color: var(--color-3);
+    border-color: var(--color-accent);
+  }
+
+  .service-monitor-action-buttons {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+  .service-monitor-action-buttons button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn {
+    background-color: #28a745; /* Green */
+    color: white;
+    border: none;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn:hover {
+    background-color: #218838;
+  }
+  .service-monitor-action-buttons .start-monitoring-btn:disabled {
+    background-color: var(--color-muted);
+    cursor: not-allowed;
+  }
+
+
+  /* Live Service Monitor Display */
+  #live-service-monitor-display {
+    /* .diagnostic-content-section handles base flex/padding */
+    gap: 1rem; /* Gap between control buttons and grid, or between items if stacked */
+  }
+  .live-monitor-controls {
+      display: flex;
+      justify-content: flex-end; /* Align stop button to the right */
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+  }
+  .live-monitor-controls .stop-monitoring-btn {
+    background-color: #dc3545; /* Red */
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+   .live-monitor-controls .stop-monitoring-btn:hover {
+    background-color: #c82333;
+   }
+
+
+  .live-monitors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    flex-grow: 1;
+    overflow-y: auto; /* Scroll if many cards */
+    scrollbar-gutter: stable;
+    min-height: 0; /* For flex scroll */
+  }
+
+  .live-monitor-card {
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  .live-monitor-card .service-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+  }
+  .live-monitor-card .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+  .live-monitor-card .metric-label {
+    color: var(--text-secondary);
+  }
+  .live-monitor-card .metric-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 60px; /* Ensure some space for values */
+    text-align: right;
+  }
+  .live-monitor-card .metric-value.status-true {
+    color: #28a745; /* Green */
+  }
+  .live-monitor-card .metric-value.status-false {
+    color: #dc3545; /* Red */
+  }
+  .live-monitor-card .metric-value.freq-no-data {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .live-monitor-card .raw-data-output {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background-color: var(--color-1);
+      padding: 0.3rem 0.5rem;
+      border-radius: 0.25rem;
+      margin-top: 0.5rem;
+      white-space: pre;
+      overflow-x: auto;
+  }
+   /* Subtle pulse for updating values */
+  .value-update-pulse {
+    animation: pulseColor 0.7s ease-out;
+  }
+  @keyframes pulseColor {
+    0% { color: var(--color-accent-2); transform: scale(1.05); }
+    70% { color: var(--color-accent-2); transform: scale(1.05); }
+    100% { color: var(--text-primary); transform: scale(1); } /* Or original status color */
+  }
+  .live-monitor-card .metric-value.status-true.value-update-pulse { animation-name: pulseGreen; }
+  .live-monitor-card .metric-value.status-false.value-update-pulse { animation-name: pulseRed; }
+
+  @keyframes pulseGreen {
+    0% { color: #52d670; transform: scale(1.05); } 70% { color: #52d670; transform: scale(1.05); } 100% { color: #28a745; transform: scale(1); }
+  }
+  @keyframes pulseRed {
+    0% { color: #ff5c6c; transform: scale(1.05); } 70% { color: #ff5c6c; transform: scale(1.05); } 100% { color: #dc3545; transform: scale(1); }
+  }
+
+
+  /* Note: MapD Log Stream view styles are already defined above */
+
+  /* UPDATED: Terminal actions toolbar and related components */
+  .terminal-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background-color: var(--color-2);
+    padding: 0.3125rem 0.75rem 0.6875rem; /* Exactly 5px top, 11px bottom - moved up 1px */
+    border-top: 1px solid var(--color-border);
+    height: 2.5rem; /* Fixed height for consistent alignment */
+    box-sizing: border-box;
+  }
+
+  /* Child elements in terminal actions */
+  .terminal-actions > * {
+    display: flex;
+    align-items: center;
+    height: calc(100% - 1px); /* Account for border only */
+  }
+
+  /* Form controls in terminal toolbar */
+  .terminal-actions input[type="checkbox"] {
+    margin: 0 0.25rem 0 0;
+    height: 14px;
+    width: 14px;
+  }
+
+  .terminal-actions label.text-xs.text-secondary {
+    margin-right: 0.5rem;
+  }
+
+  .terminal-actions input[type="text"],
+  .terminal-actions input[type="number"] {
+    height: 24px;
+    width: auto;
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-3);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+  }
+
+  /* Terminal UI buttons - unified styling */
+  .terminal-actions button,
+  #tmux-live-toggle-btn,
+  #tmux-live-close-btn {
+    padding: 0.25rem 0.75rem;
+    background-color: var(--color-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    transition: all 0.2s ease-in-out;
+    /* Ensure no margin is accidentally carried over */
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  /* Button hover states */
+  .terminal-actions button:hover,
+  #tmux-live-toggle-btn:hover,
+  #tmux-live-close-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Active/selected state - UPDATED to match Terminal button active state */
+  .terminal-actions button.active-tool,
+  #tmux-live-toggle-btn.active-tool,
+  #tmux-live-close-btn.active-tool {
+    border: 2px solid var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent);
+    /* Adjust padding to maintain size when border increases */
+    padding: calc(0.25rem - 1px) calc(0.75rem - 1px);
+  }
+
+  /* Close button specific styles - Just adjust active state padding */
+  #tmux-live-close-btn.active-tool {
+    /* Calculate padding based on original close button padding */
+    padding: calc(0.25rem - 1px) calc(0.5rem - 1px);
+  }
+
+  /* Preserve specific text colors for the button spans */
+  .terminal-actions button span,
+  #tmux-live-toggle-btn span {
+    color: var(--color-accent);
+    font-size: 0.75rem;
+  }
+
+  /* Override close button's span color */
+  #tmux-live-close-btn span {
+    color: var(--text-primary);
+    font-size: 0.75rem;
+  }
+
+  #tmux-live-close-btn:hover span {
+    color: var(--color-error-text);
+  }
+
+  /* Fix vertical alignment of text within toolbar elements */
+  .terminal-actions .text-xs {
+    line-height: 1;
+    vertical-align: middle;
+  }
+
+  /* Make sure there's appropriate spacing between buttons in the container */
+  #tmux-live-container .flex.justify-between.items-center .gap-2 {
+    gap: 0.5rem !important; /* Force the gap to be applied */
+  }
+
+  /* Live tmux container styles */
+  #tmux-live-container {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-top: 1rem;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  #tmux-live-container .flex.justify-between.items-center {
+    padding: 0.25rem 0.5rem;
+    height: 36px;
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-2);
+  }
+</style>
+<script src="https://unpkg.com/ansi_up@5.2.1/ansi_up.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.12.0/lib/xterm-addon-search.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-x-6">
+  <!-- Left column with diagnostic tiles (15%) -->
+  <div class="w-full md:w-[15%] flex-shrink-0">
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="crash-logs-tile" data-content-id="crash-logs-display">
+      <div class="text-lg font-bold mb-1">
+        <span class="text-accent">Crash Logs</span>
+      </div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="service-monitor-tile" data-content-id="service-monitor-control-display">
+      <div class="text-lg font-bold mb-1">
+        <span class="text-accent">Monitors</span>
+      </div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="mapd-direct-log-tile" data-content-id="realtime-monitors-display">
+      <div class="text-lg font-bold mb-1">
+        <span class="text-accent">MapD Log</span>
+      </div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test3-tile" data-content-id="test3-display">
+      <div class="text-lg font-bold mb-1">
+        <span class="text-accent">Test 3</span>
+      </div>
+    </div>
+
+    <div class="tile bg-2 ring-1 ring-border rounded-lg shadow-lg" id="test4-tile" data-content-id="test4-display">
+      <div class="text-lg font-bold mb-1">
+        <span class="text-accent">Terminal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right "action area" (85%) -->
+    <div class="w-full md:w-[85%]" id="right-column-diagnostics">
+    <div class="action-area p-0 rounded-lg shadow-lg" id="action-area-content">
+      <div id="empty-state-content" class="empty-action-area diagnostic-content-section">
+          <div id="cpu-equalizer-display-wrapper" class="hidden">
+              <div id="cpu-equalizer-container"></div>
+              </div>
+          <div id="empty-state-message">Select an option from the left.</div>
+      </div>
+
+      <div id="crash-logs-display" class="hidden diagnostic-content-section">
+        <div id="crash-logs-debug-output" class="debug-log-output"></div>
+        <div id="log-list-container-tiles" class="log-list-container-tiles">
+          <p class="text-secondary p-4">Loading crash logs...</p>
+        </div>
+      </div>
+
+      <div id="log-viewer-display" class="hidden diagnostic-content-section">
+        <button class="back-button" id="back-to-logs-list">← Back to Log List</button>
+        <h3 class="text-xl font-bold mb-2" id="log-viewer-filename"></h3>
+        <div class="log-content-viewer" id="log-viewer-content">Loading log content...</div>
+      </div>
+
+      <!-- Service Monitor Control Display -->
+      <div id="service-monitor-control-display" class="hidden diagnostic-content-section">
+        <div id="service-monitor-debug-output" class="debug-log-output" style="max-height: 15vh;"></div>
+        <div id="service-monitor-ui-root" class="flex flex-col items-center w-full">
+            <!-- Root button, T-branches, and pearl strings will be dynamically added here by JS -->
+        </div>
+        <div class="service-monitor-action-buttons">
+            <button class="start-monitoring-btn hidden" id="start-selected-services-btn" disabled>Monitor Selected</button>
+        </div>
+      </div>
+
+      <!-- Live Service Monitor Display -->
+      <div id="live-service-monitor-display" class="hidden diagnostic-content-section">
+        <div id="live-monitor-debug-output" class="debug-log-output" style="max-height:10vh;"></div>
+        <div class="live-monitor-controls">
+            <button class="stop-monitoring-btn" id="stop-live-monitoring-btn">Stop Monitoring</button>
+        </div>
+        <div id="live-monitors-grid" class="live-monitors-grid">
+            <!-- Live service cards will be injected here by JS -->
+        </div>
+      </div>
+
+      <div id="realtime-monitors-display" class="hidden diagnostic-content-section">
+        <!-- Content for direct MapD Log via button -->
+      </div>
+
+      <div id="test3-display" class="hidden diagnostic-content-section">
+        <h3 class="text-xl font-bold mb-4">Test Section 3</h3>
+        <p class="text-secondary">Content for Test 3 will appear here.</p>
+      </div>
+      <div id="test4-display" class="hidden diagnostic-content-section p-0 flex flex-col">
+        <div id="xterm-terminal-container" class="custom-scrollbar" style="width: 100%; flex-grow: 1;"></div>
+        <div id="terminal-resize-handle"></div>
+        <div class="terminal-actions">
+          <div class="flex items-center">
+            <label for="tmux-session-name" class="text-xs text-secondary">Session:</label>
+            <input type="text" id="tmux-session-name" value="comma" class="bg-3 border border-border rounded px-2 text-xs w-20 focus:ring-1 focus:ring-accent focus:outline-none">
+          </div>
+          <div class="flex items-center">
+            <label for="tmux-lines" class="text-xs text-secondary">Lines:</label>
+            <input type="number" id="tmux-lines" value="50" min="1" max="1000" class="bg-3 border border-border rounded px-2 text-xs w-14 focus:ring-1 focus:ring-accent focus:outline-none">
+          </div>
+          <div class="flex items-center">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" id="tmux-scrollback" checked class="h-3.5 w-3.5">
+              <span class="text-xs text-secondary">Scrollback</span>
+            </label>
+          </div>
+          <button id="capture-tmux-btn" class="bg-2 ring-1 ring-border rounded-lg flex items-center justify-center">
+            <span class="text-accent text-xs">Capture Tmux</span>
+          </button>
+          <button id="show-live-tmux-btn" class="bg-2 ring-1 ring-border rounded-lg flex items-center justify-center">
+            <span class="text-accent text-xs">Show Live View</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tmux live view container (placed below action area) -->
+    <div id="tmux-live-container" class="hidden bg-2 ring-1 ring-border shadow-lg">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-1">
+          <span class="text-accent font-bold text-xs">Live Tmux:</span>
+          <span id="tmux-live-session-name" class="text-xs text-primary">comma</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="tmux-live-toggle-btn" class="bg-2 ring-1 ring-border rounded-lg flex items-center justify-center">
+            <span class="text-accent text-xs">Pause</span>
+          </button>
+          <button id="tmux-live-close-btn" class="bg-2 ring-1 ring-border rounded-lg flex items-center justify-center">
+            <span class="text-primary">×</span>
+          </button>
+        </div>
+      </div>
+      <div id="tmux-live-content" class="font-mono text-sm p-3 bg-black text-green-400 h-80 overflow-y-scroll overflow-x-auto custom-scrollbar" style="white-space: pre-wrap; line-height: 1.3; font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace; scrollbar-width: thin;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentEventSource = null; // For MapD logs primarily
+  let serviceMonitorEventSource = null; // For the new service monitor
+  let tmuxRefreshInterval = null; // For the live tmux view polling
+  const ansi_up = new AnsiUp();
+  let xtermInstance = null;
+  let fitAddon = null;
+  let currentCommand = '';
+  let currentPrompt = 'device:/$ ';
+  let currentUser = 'device'; // For xterm prompt
+  let currentHost = 'concierge'; // For xterm prompt
+
+  const RESIZE_HANDLE_HEIGHT = 10;
+  const MIN_TERMINAL_HEIGHT = 150;
+
+  // --- Consolidated Debug helpers ---
+  /**
+   * Standardized debug output function for all diagnostic panels
+   * @param {string} areaId - ID of the debug output container element
+   * @param {string} message - Message to display
+   * @param {boolean} isError - Whether this is an error message (shown in red)
+   * @param {string} source - Source identifier shown in log
+   */
+  function appendDebug(areaId, message, isError = false, source = "FE") {
+    const area = document.getElementById(areaId);
+    if (area) {
+      const ts = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.textContent = `[${ts}] [${source}] ${message}`;
+      if (isError) entry.style.color = 'var(--color-error-text, #ff6b6b)';
+      area.appendChild(entry);
+      area.scrollTop = area.scrollHeight;
+    } else {
+      console.warn(`Debug area ${areaId} not found for message: ${message}`);
+    }
+  }
+
+  function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+  }
+
+  /**
+   * Closes an EventSource connection and logs status
+   * @param {EventSource} eventSource - The event source to close
+   * @param {string} debugOutputId - ID of debug element to output to (optional)
+   * @param {string} sourceName - Name of the source being closed for logging
+   */
+  function closeEventSource(eventSource, debugOutputId, sourceName = "EventSource") {
+    if (eventSource) {
+      eventSource.close();
+      if (debugOutputId) {
+        appendDebug(debugOutputId, `${sourceName} connection closed.`);
+      } else {
+        console.log(`${sourceName} connection closed.`);
+      }
+      return null;
+    }
+    return eventSource; // return unchanged if already null
+  }
+
+  // Close specific event sources (using the consolidated function)
+  function closeCurrentEventSource() {
+    currentEventSource = closeEventSource(currentEventSource, null, "MapD EventSource");
+  }
+
+  function closeServiceMonitorEventSource() {
+    serviceMonitorEventSource = closeEventSource(serviceMonitorEventSource, 'live-monitor-debug-output', "Service Monitor EventSource");
+  }
+
+  function closeTmuxLiveView() {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+      tmuxRefreshInterval = null;
+      console.log("Tmux live view polling stopped.");
+    }
+  }
+
+  function showOldMonitorSelectionGrid() {
+    closeCurrentEventSource();
+    closeServiceMonitorEventSource();
+    const monitorsDisplay = document.getElementById('realtime-monitors-display');
+
+    document.querySelectorAll('.diagnostic-content-section').forEach(s => s.classList.add('hidden'));
+    monitorsDisplay.classList.remove('hidden');
+    monitorsDisplay.innerHTML = '';
+
+    const grid = document.createElement('div');
+    grid.className = 'monitor-grid';
+
+    const mapdButton = document.createElement('div');
+    mapdButton.className = 'monitor-button';
+    mapdButton.id = 'mapd-log-btn';
+    mapdButton.textContent = 'MapD Log Stream';
+    grid.appendChild(mapdButton);
+    mapdButton.addEventListener('click', showMapdLog);
+
+    monitorsDisplay.appendChild(grid);
+  }
+
+  function showMapdLog() {
+    closeCurrentEventSource();
+    const monitorsDisplay = document.getElementById('realtime-monitors-display');
+    monitorsDisplay.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.id = 'mapd-log-output-container';
+    container.style.height = '100%';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.boxSizing = 'border-box';
+
+    const backButton = document.createElement('button');
+    backButton.className = 'back-button';
+    backButton.textContent = '← Back to Diagnostics Tiles';
+    backButton.onclick = () => showContentSection('empty-state-content', null);
+    container.appendChild(backButton);
+
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'flex justify-between items-center mb-4';
+
+    const statusText = document.createElement('div');
+    statusText.id = 'mapd-connection-status';
+    statusText.className = 'text-secondary text-sm';
+    statusText.textContent = 'Disconnected';
+
+    const toggleButton = document.createElement('button');
+    toggleButton.id = 'mapd-log-toggle-btn';
+    toggleButton.className = 'bg-2 ring-1 ring-border rounded-lg flex items-center justify-center px-3 py-2';
+    toggleButton.innerHTML = '<span class="text-accent text-xs">Start Stream</span>';
+
+    controlsContainer.appendChild(statusText);
+    controlsContainer.appendChild(toggleButton);
+    container.appendChild(controlsContainer);
+
+    const mapdDebugDiv = document.createElement('div');
+    mapdDebugDiv.id = 'mapd-log-debug-sub-output';
+    mapdDebugDiv.className = 'debug-log-output';
+    mapdDebugDiv.style.margin = '0.5rem 0';
+    container.appendChild(mapdDebugDiv);
+
+    const logOutputDiv = document.createElement('div');
+    logOutputDiv.id = 'mapd-log-output';
+    container.appendChild(logOutputDiv);
+    monitorsDisplay.appendChild(container);
+
+    // Clear any previous content
+    if (mapdDebugDiv) mapdDebugDiv.innerHTML = '';
+    if (logOutputDiv) logOutputDiv.innerHTML = '';
+
+    // Set up toggle behavior
+    let isStreamingActive = false;
+    let pollInterval = null;
+
+    toggleButton.addEventListener('click', function() {
+        if (isStreamingActive) {
+            // Stop streaming
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            toggleButton.innerHTML = '<span class="text-accent text-xs">Start Stream</span>';
+            statusText.textContent = 'Disconnected';
+            statusText.className = 'text-secondary text-sm';
+            appendDebug('mapd-log-debug-sub-output', "MapD log streaming stopped");
+            isStreamingActive = false;
+        } else {
+            // Start streaming
+            toggleButton.innerHTML = '<span class="text-error-text text-xs">Stop Stream</span>';
+            statusText.textContent = 'Connecting...';
+            statusText.className = 'text-accent text-sm';
+            isStreamingActive = true;
+
+            // Initial log fetch
+            fetchMapdLogs(logOutputDiv, statusText);
+
+            // Set up polling interval (every 2 seconds)
+            pollInterval = setInterval(() => {
+                if (isStreamingActive) {
+                    fetchMapdLogs(logOutputDiv, statusText);
+                }
+            }, 2000);
+
+            appendDebug('mapd-log-debug-sub-output', "MapD log streaming started");
+        }
+    });
+  }
+
+  async function fetchMapdLogs(outputElement, statusElement) {
+    try {
+        const response = await fetch('/api/mapd-logs');
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.logs && data.logs.length > 0) {
+            // Update connection status
+            if (statusElement) {
+                statusElement.textContent = 'Connected - Receiving Logs';
+                statusElement.className = 'text-green-500 text-sm';
+            }
+
+            // Add new logs
+            if (outputElement) {
+                // Keep only the last 100 lines to prevent browser slowdown
+                const maxLines = 100;
+                const currentLines = outputElement.querySelectorAll('div').length;
+
+                // Remove old lines if needed
+                if (currentLines > maxLines) {
+                    const linesToRemove = currentLines - maxLines + data.logs.length;
+                    for (let i = 0; i < linesToRemove; i++) {
+                        if (outputElement.firstChild) {
+                            outputElement.removeChild(outputElement.firstChild);
+                        }
+                    }
+                }
+
+                // Add new lines
+                data.logs.forEach(log => {
+                    const newLogEntry = document.createElement('div');
+                    newLogEntry.textContent = log;
+                    outputElement.appendChild(newLogEntry);
+                });
+
+                // Scroll to bottom
+                outputElement.scrollTop = outputElement.scrollHeight;
+            }
+        } else {
+            // No logs but connection was successful
+            if (statusElement) {
+                statusElement.textContent = 'Connected - No New Logs';
+                statusElement.className = 'text-secondary text-sm';
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching MapD logs:", error);
+
+        if (statusElement) {
+            statusElement.textContent = 'Connection Error';
+            statusElement.className = 'text-error-text text-sm';
+        }
+
+        appendDebug('mapd-log-debug-sub-output', `Error fetching MapD logs: ${error.message}`, true);
+    }
+  }
+
+  // --- NEW SERVICE MONITOR LOGIC ---
+  const selectedServices = new Set();
+  let serviceMonitorUIRoot = null; // Will be assigned in DOMContentLoaded
+  let startSelectedServicesBtn = null;
+  let stopLiveMonitoringBtn = null;
+  let liveMonitorsGrid = null;
+  let serviceMonitorDebugOutput = null;
+  let liveMonitorDebugOutput = null;
+
+  function initializeServiceMonitorElements() {
+    serviceMonitorUIRoot = document.getElementById('service-monitor-ui-root');
+    startSelectedServicesBtn = document.getElementById('start-selected-services-btn');
+    stopLiveMonitoringBtn = document.getElementById('stop-live-monitoring-btn');
+    liveMonitorsGrid = document.getElementById('live-monitors-grid');
+    serviceMonitorDebugOutput = document.getElementById('service-monitor-debug-output');
+    liveMonitorDebugOutput = document.getElementById('live-monitor-debug-output');
+
+    if(startSelectedServicesBtn) startSelectedServicesBtn.addEventListener('click', startMonitoringSelectedServices);
+    if(stopLiveMonitoringBtn) stopLiveMonitoringBtn.addEventListener('click', stopLiveMonitoring);
+  }
+
+  function showServiceMonitorControl() {
+    if (!serviceMonitorUIRoot) initializeServiceMonitorElements();
+    appendDebug('service-monitor-debug-output', "Initializing Service Monitor UI.");
+    closeCurrentEventSource();
+    closeServiceMonitorEventSource();
+
+    serviceMonitorUIRoot.innerHTML = '';
+    selectedServices.clear();
+    updateStartButtonState();
+
+    const rootButton = document.createElement('button');
+    rootButton.className = 'service-monitor-root-button';
+    rootButton.textContent = 'Load Available Services';
+    serviceMonitorUIRoot.appendChild(rootButton);
+
+    const branchesContainer = document.createElement('div');
+    branchesContainer.className = 'service-monitor-branches';
+    serviceMonitorUIRoot.appendChild(branchesContainer);
+
+    const branchLineContainer = document.createElement('div');
+    branchLineContainer.className = 'service-monitor-branch-line-container';
+    const branchLine = document.createElement('div');
+    branchLine.className = 'service-monitor-branch-line';
+    branchLineContainer.appendChild(branchLine);
+    branchesContainer.appendChild(branchLineContainer);
+
+    rootButton.onclick = async () => {
+        appendDebug('service-monitor-debug-output', "Root button clicked. Fetching services...");
+        rootButton.disabled = true;
+        rootButton.textContent = 'Loading...';
+        try {
+            const response = await fetch('/api/monitorable-services');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Failed to fetch services: ${response.status} ${errText}`);
+            }
+            const servicesData = await response.json();
+            appendDebug('service-monitor-debug-output', `Services fetched: ${servicesData.capnp_services.length} standard, ${servicesData.custom_services.length} custom.`);
+
+            rootButton.classList.add('hidden');
+
+            const standardContainer = createServiceCategory(servicesData.capnp_services, 'Standard Services (log.capnp)', 'standard');
+            const customContainer = createServiceCategory(servicesData.custom_services, 'Custom Services (custom.capnp)', 'custom');
+
+            branchesContainer.appendChild(standardContainer);
+            branchesContainer.appendChild(customContainer);
+
+            setTimeout(() => {
+                 branchesContainer.classList.add('visible');
+            }, 50);
+
+        } catch (error) {
+            appendDebug('service-monitor-debug-output', `Error fetching services: ${error.message}`, true);
+            rootButton.disabled = false;
+            rootButton.textContent = 'Retry Load Services';
+        }
+    };
+  }
+
+  function createServiceCategory(services, categoryName, categoryKey) {
+    const categoryContainer = document.createElement('div');
+    categoryContainer.className = 'service-category-container';
+
+    const categoryButton = document.createElement('button');
+    categoryButton.className = 'service-category-button';
+    categoryButton.textContent = categoryName;
+    categoryContainer.appendChild(categoryButton);
+
+    const pearlStringContainer = document.createElement('div');
+    pearlStringContainer.className = 'service-pearl-string-container';
+    pearlStringContainer.id = `pearl-string-${categoryKey}`;
+    categoryContainer.appendChild(pearlStringContainer);
+
+    categoryButton.onclick = () => {
+        const pearlStringId = pearlStringContainer.id;
+        appendDebug('service-monitor-debug-output', `Category '${categoryName}' clicked. Pearl container ID: ${pearlStringId}`);
+
+        const isCurrentlyVisible = pearlStringContainer.classList.contains('visible');
+        appendDebug('service-monitor-debug-output', `Pearl string '${pearlStringId}' isCurrentlyVisible: ${isCurrentlyVisible}`);
+
+        // Hide any other open pearl strings
+        document.querySelectorAll('.service-pearl-string-container.visible').forEach(psc => {
+            if (psc.id !== pearlStringId) {
+                psc.classList.remove('visible');
+                appendDebug('service-monitor-debug-output', `Hid other pearl string: ${psc.id}`);
+            }
+        });
+
+        // Determine if we are about to show it
+        const showThisPearlString = !isCurrentlyVisible;
+
+        // Always clear and repopulate if we are about to show it and it's empty, or just toggle if already populated
+        if (showThisPearlString) {
+            appendDebug('service-monitor-debug-output', `Preparing to show pearl string '${pearlStringId}'. Services count: ${services.length}`);
+            pearlStringContainer.innerHTML = ''; // Clear previous content before populating
+
+            if (services.length > 0) {
+                services.forEach((service, index) => {
+                    const pearlTile = document.createElement('div');
+                    pearlTile.className = 'service-pearl-tile';
+                    pearlTile.textContent = service;
+                    pearlTile.dataset.serviceName = service;
+
+                    if (selectedServices.has(service)) {
+                        pearlTile.classList.add('selected');
+                    }
+
+                    pearlTile.onclick = () => {
+                        pearlTile.classList.toggle('selected');
+                        if (pearlTile.classList.contains('selected')) {
+                            selectedServices.add(service);
+                        } else {
+                            selectedServices.delete(service);
+                        }
+                        updateStartButtonState();
+                    };
+                    pearlStringContainer.appendChild(pearlTile);
+                });
+                appendDebug('service-monitor-debug-output', `Populated '${pearlStringId}' with ${services.length} pearl tiles.`);
+            } else {
+                pearlStringContainer.innerHTML = `<p class="text-secondary p-2 text-sm italic">No services found in this category.</p>`;
+                appendDebug('service-monitor-debug-output', `No services for '${pearlStringId}', added 'no services' message.`);
+            }
+        } else {
+             appendDebug('service-monitor-debug-output', `Preparing to hide pearl string '${pearlStringId}'.`);
+        }
+
+        // Now toggle visibility
+        pearlStringContainer.classList.toggle('visible', showThisPearlString);
+        appendDebug('service-monitor-debug-output', `Pearl string '${pearlStringId}' classList after toggle: ${pearlStringContainer.classList}`);
+    };
+    return categoryContainer;
+  }
+
+  function updateStartButtonState() {
+    if (!startSelectedServicesBtn) return;
+    if (selectedServices.size > 0) {
+        startSelectedServicesBtn.disabled = false;
+        startSelectedServicesBtn.classList.remove('hidden');
+    } else {
+        startSelectedServicesBtn.disabled = true;
+        startSelectedServicesBtn.classList.add('hidden');
+    }
+  }
+
+  async function startMonitoringSelectedServices() {
+    if (selectedServices.size === 0) {
+        appendDebug('service-monitor-debug-output', "No services selected to monitor.", true);
+        return;
+    }
+    appendDebug('live-monitor-debug-output', `Starting monitoring for: ${Array.from(selectedServices).join(', ')}`);
+    startSelectedServicesBtn.disabled = true;
+    startSelectedServicesBtn.textContent = 'Starting...';
+
+    try {
+        const response = await fetch('/api/start-service-monitoring', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ services: Array.from(selectedServices) })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || "Failed to start monitoring from API.");
+        }
+        appendDebug('live-monitor-debug-output', "Monitoring started via API. Switching to live view.");
+
+        showContentSection('live-service-monitor-display', document.getElementById('service-monitor-tile'));
+        liveMonitorsGrid.innerHTML = '';
+
+        selectedServices.forEach(serviceName => {
+            const card = createLiveMonitorCard(serviceName);
+            liveMonitorsGrid.appendChild(card);
+        });
+        connectToServiceMonitorStream();
+    } catch (error) {
+        appendDebug('live-monitor-debug-output', `Error starting monitoring: ${error.message}`, true);
+        appendDebug('service-monitor-debug-output', `Error starting monitoring: ${error.message}`, true);
+    } finally {
+        startSelectedServicesBtn.disabled = false;
+        startSelectedServicesBtn.textContent = 'Monitor Selected';
+    }
+  }
+
+  function createLiveMonitorCard(serviceName) {
+    const card = document.createElement('div');
+    card.className = 'live-monitor-card';
+    card.id = `monitor-card-${serviceName.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    card.innerHTML = `
+        <div class="service-name">${escapeHtml(serviceName)}</div>
+        <div class="metric">
+            <span class="metric-label">Frequency:</span>
+            <span class="metric-value freq-value freq-no-data" id="freq-${serviceName}">-- Hz</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Valid:</span>
+            <span class="metric-value valid-value status-false" id="valid-${serviceName}">No</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Alive:</span>
+            <span class="metric-value alive-value status-false" id="alive-${serviceName}">No</span>
+        </div>
+        <div class="raw-data-output hidden" id="raw-${serviceName}"></div>
+    `;
+    return card;
+  }
+
+  function updateLiveMonitorCard(serviceName, data) {
+    const cardIdBase = serviceName.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const freqEl = document.getElementById(`freq-${cardIdBase}`);
+    const validEl = document.getElementById(`valid-${cardIdBase}`);
+    const aliveEl = document.getElementById(`alive-${cardIdBase}`);
+    const rawEl = document.getElementById(`raw-${cardIdBase}`);
+
+    if (!freqEl || !validEl || !aliveEl) { // Card might have been removed if monitor stopped
+        // appendDebug('live-monitor-debug-output', `Card elements for ${serviceName} not found. Update skipped.`);
+        return;
+    }
+
+    if (data.error) {
+        freqEl.textContent = "Error";
+        validEl.textContent = "Error"; validEl.className = 'metric-value valid-value status-false';
+        aliveEl.textContent = "Error"; aliveEl.className = 'metric-value alive-value status-false';
+        if (rawEl) { rawEl.textContent = `Error: ${data.error} | Raw: ${data.raw || 'N/A'}`; rawEl.classList.remove('hidden');}
+        return;
+    }
+    if (data.status === 'malformed') {
+        freqEl.textContent = "Malformed";
+        validEl.textContent = "N/A"; validEl.className = 'metric-value valid-value status-false';
+        aliveEl.textContent = "N/A"; aliveEl.className = 'metric-value alive-value status-false';
+        if (rawEl) { rawEl.textContent = `Malformed data received: ${data.raw || 'N/A'}`; rawEl.classList.remove('hidden'); }
+        return;
+    }
+
+    const oldFreqText = freqEl.textContent;
+    const newFreqText = data.freq === -1.0 ? "-- Hz" : `${data.freq.toFixed(1)} Hz`;
+    freqEl.textContent = newFreqText;
+    freqEl.className = data.freq === -1.0 ? 'metric-value freq-value freq-no-data' : 'metric-value freq-value';
+    if (oldFreqText !== newFreqText && data.freq !== -1.0) {
+        freqEl.classList.add('value-update-pulse');
+        setTimeout(() => freqEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    const oldValidText = validEl.textContent;
+    const newValidText = data.valid ? "Yes" : "No";
+    validEl.textContent = newValidText;
+    validEl.className = data.valid ? 'metric-value valid-value status-true' : 'metric-value valid-value status-false';
+      if (oldValidText !== newValidText) {
+        validEl.classList.add('value-update-pulse');
+        setTimeout(() => validEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    const oldAliveText = aliveEl.textContent;
+    const newAliveText = data.alive ? "Yes" : "No";
+    aliveEl.textContent = newAliveText;
+    aliveEl.className = data.alive ? 'metric-value alive-value status-true' : 'metric-value alive-value status-false';
+    if (oldAliveText !== newAliveText) {
+        aliveEl.classList.add('value-update-pulse');
+        setTimeout(() => aliveEl.classList.remove('value-update-pulse'), 700);
+    }
+
+    // if (rawEl && data.raw) { rawEl.textContent = data.raw; /* rawEl.classList.remove('hidden'); */ }
+  }
+
+  function connectToServiceMonitorStream() {
+    closeServiceMonitorEventSource();
+    appendDebug('live-monitor-debug-output', "Connecting to service monitor SSE stream...");
+    serviceMonitorEventSource = new EventSource('/stream/service-monitoring');
+
+    serviceMonitorEventSource.onopen = () => {
+        appendDebug('live-monitor-debug-output', "Service monitor SSE connection opened.");
+    };
+
+    serviceMonitorEventSource.onmessage = (event) => {
+        try {
+            const parsedEventData = JSON.parse(event.data);
+            for (const serviceNameKey in parsedEventData) {
+                if (serviceNameKey === "unknown_entries") {
+                    appendDebug('live-monitor-debug-output', `Unknown entries from monitor: ${parsedEventData.unknown_entries.join(', ')}`, true);
+                    continue;
+                }
+                updateLiveMonitorCard(serviceNameKey, parsedEventData[serviceNameKey]);
+            }
+        } catch (e) {
+            appendDebug('live-monitor-debug-output', `Error parsing SSE data: ${e.message}. Data: ${event.data.substring(0,200)}`, true);
+        }
+    };
+
+    serviceMonitorEventSource.addEventListener('error', (event) => {
+        let errorDetail = 'Unknown SSE error. Check console.';
+        if (event.data) { try { errorDetail = JSON.parse(event.data).message || event.data; } catch { errorDetail = event.data; }}
+        appendDebug('live-monitor-debug-output', `Service monitor SSE error: ${errorDetail}`, true);
+        if (serviceMonitorEventSource && serviceMonitorEventSource.readyState === EventSource.CLOSED) {
+            appendDebug('live-monitor-debug-output', "SSE connection permanently closed.", true);
+        }
+    });
+
+    serviceMonitorEventSource.addEventListener('close', (event) => {
+        appendDebug('live-monitor-debug-output', "SSE stream 'close' event received. Monitoring ended.");
+        closeServiceMonitorEventSource();
+    });
+  }
+
+  async function stopLiveMonitoring() {
+    appendDebug('live-monitor-debug-output', "Stop button clicked. Attempting to stop monitoring.");
+    closeServiceMonitorEventSource();
+
+    try {
+        const response = await fetch('/api/stop-service-monitoring', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || "Failed to stop monitoring via API.");
+        }
+        appendDebug('live-monitor-debug-output', "Monitoring stopped via API.");
+    } catch (error) {
+        appendDebug('live-monitor-debug-output', `Error stopping monitoring: ${error.message}`, true);
+    } finally {
+        showContentSection('service-monitor-control-display', document.getElementById('service-monitor-tile'));
+        appendDebug('service-monitor-debug-output', "Live monitoring UI closed. Select 'Monitors' again.");
+    }
+  }
+
+  // --- Document Ready and Event Listeners ---
+  // Live Tmux View functionality
+  function startLiveTmuxView(sessionName) {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+    }
+
+    const tmuxContainer = document.getElementById('tmux-live-container');
+    const tmuxContent = document.getElementById('tmux-live-content');
+    const sessionNameEl = document.getElementById('tmux-live-session-name');
+    const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
+    const captureTmuxBtn = document.getElementById('capture-tmux-btn');
+
+    if (!tmuxContainer || !tmuxContent || !sessionNameEl || !toggleBtn) return;
+
+    // Show the container and update session name
+    tmuxContainer.classList.remove('hidden');
+    sessionNameEl.textContent = sessionName;
+    toggleBtn.textContent = 'Pause';
+
+    // Apply active state to toggle button
+    toggleBtn.classList.add('active-tool');
+
+    // Show the "Show Live View" button as active
+    if (showLiveBtn) {
+      showLiveBtn.classList.add('active-tool');
+    }
+
+    // Initial fetch
+    fetchTmuxContent(sessionName, tmuxContent);
+
+    // Set up polling interval (every 2 seconds)
+    tmuxRefreshInterval = setInterval(() => {
+      fetchTmuxContent(sessionName, tmuxContent);
+    }, 2000);
+  }
+
+  function stopLiveTmuxView() {
+    if (tmuxRefreshInterval) {
+      clearInterval(tmuxRefreshInterval);
+      tmuxRefreshInterval = null;
+    }
+
+    const toggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
+
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Start';
+      toggleBtn.classList.remove('active-tool');
+    }
+
+    // Remove active state from "Show Live View" button
+    if (showLiveBtn) {
+      showLiveBtn.classList.remove('active-tool');
+    }
+  }
+
+  function hideLiveTmuxView() {
+    stopLiveTmuxView();
+
+    const tmuxContainer = document.getElementById('tmux-live-container');
+    if (tmuxContainer) {
+      tmuxContainer.classList.add('hidden');
+    }
+
+    const showLiveBtn = document.getElementById('show-live-tmux-btn');
+    if (showLiveBtn) {
+      showLiveBtn.classList.remove('active-tool');
+    }
+  }
+
+  async function fetchTmuxContent(sessionName, contentElement) {
+    try {
+      const response = await fetch('/api/execute-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: `tmux capture-pane -t ${sessionName} -p` })
+      });
+
+      const result = await response.json();
+
+      if (result.stdout) {
+        // Get the session name for line prefixes
+        const sessionNameEl = document.getElementById('tmux-live-session-name');
+        const sessionName = sessionNameEl ? sessionNameEl.textContent.trim() : 'tmux';
+        const shortSessionName = sessionName.length > 8 ? sessionName.substring(0, 8) : sessionName;
+
+        // Ensure line breaks are preserved and convert ANSI color codes
+        let formattedOutput = ansi_up.ansi_to_html(result.stdout)
+          // Replace terminal control characters that might affect formatting
+          .replace(/\r/g, '');
+
+        // Process the raw tmux output to only add prefix at the beginning, not to each wrapped line
+        // We want to keep actual line breaks from tmux but not add a prefix to every line
+        contentElement.innerHTML = `<span style="color: #4d8aef; display: inline-block; width: 4em;">${shortSessionName}$</span> ${formattedOutput.replace(/\n/g, '<br>')}`;
+
+                // Auto-scroll to bottom
+        contentElement.scrollTop = contentElement.scrollHeight;
+      } else if (result.stderr) {
+        contentElement.innerHTML = `<span style="color: red;">Error: ${result.stderr}</span>`;
+        stopLiveTmuxView();
+      }
+    } catch (error) {
+      contentElement.innerHTML = `<span style="color: red;">Failed to fetch tmux content: ${error.message}</span>`;
+      stopLiveTmuxView();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const navTiles = document.querySelectorAll('.tile');
+    const contentSections = document.querySelectorAll('.diagnostic-content-section');
+    let activeNavTile = null;
+
+    // Setup Live Tmux View controls
+    const showLiveTmuxBtn = document.getElementById('show-live-tmux-btn');
+    const tmuxLiveToggleBtn = document.getElementById('tmux-live-toggle-btn');
+    const tmuxLiveCloseBtn = document.getElementById('tmux-live-close-btn');
+
+    if (showLiveTmuxBtn) {
+      showLiveTmuxBtn.addEventListener('click', () => {
+        const sessionNameInput = document.getElementById('tmux-session-name');
+        const sessionName = sessionNameInput ? sessionNameInput.value.trim() : 'comma';
+
+        if (!sessionName) {
+          alert('Session name cannot be empty');
+          return;
+        }
+
+        // Make sure the tmux live container is visible WITHOUT hiding the terminal
+        const tmuxContainer = document.getElementById('tmux-live-container');
+        if (tmuxContainer) {
+          tmuxContainer.classList.remove('hidden');
+        }
+
+        startLiveTmuxView(sessionName);
+      });
+    }
+
+    if (tmuxLiveToggleBtn) {
+      tmuxLiveToggleBtn.addEventListener('click', () => {
+        if (tmuxRefreshInterval) {
+          stopLiveTmuxView();
+        } else {
+          const sessionNameEl = document.getElementById('tmux-live-session-name');
+          const sessionName = sessionNameEl ? sessionNameEl.textContent.trim() : 'comma';
+          startLiveTmuxView(sessionName);
+        }
+      });
+    }
+
+    if (tmuxLiveCloseBtn) {
+      tmuxLiveCloseBtn.addEventListener('click', function() {
+        // Add active state temporarily
+        tmuxLiveCloseBtn.classList.add('active-tool');
+
+        // Hide the tmux view with a slight delay
+        setTimeout(() => {
+          hideLiveTmuxView();
+          tmuxLiveCloseBtn.classList.remove('active-tool');
+        }, 300);
+      });
+    }
+
+    initializeServiceMonitorElements(); // Get handles to service monitor buttons etc.
+
+    // Original visibleLength and formatLsOutputToColumns for terminal - keep if needed
+    function visibleLength(str) {
+      const ansiRegex = /\x1B\[[0-9;]*m/g;
+      return str.replace(ansiRegex, '').length;
+    }
+    function formatLsOutputToColumns(output, terminalCols) {
+      const rawLines = output.split('\n');
+      const items = rawLines.map(line => line.trim().replace(/^(\x08)+/, '')).filter(item => item !== '');
+      if (items.length === 0) return '';
+      const itemPadding = 2;
+      const maxPossibleInitialNumColumns = Math.max(1, Math.min(items.length, Math.floor(terminalCols / (itemPadding + 1))));
+      let bestConfig = {
+        numCols: 1,
+        columns: [items.slice()],
+        colWidths: [Math.max(...items.map(visibleLength))]
+      };
+      for (let colsTry = maxPossibleInitialNumColumns; colsTry >= 2; colsTry--) {
+        const columns = Array.from({ length: colsTry }, () => []);
+        const colWidths = new Array(colsTry).fill(0);
+        items.forEach((item, idx) => {
+          const colIdx = idx % colsTry;
+          columns[colIdx].push(item);
+          const vlen = visibleLength(item);
+          if (vlen > colWidths[colIdx]) colWidths[colIdx] = vlen;
+        });
+        const totalWidth = colWidths.reduce((a, b) => a + b, 0) + (colsTry - 1) * itemPadding;
+        if (totalWidth <= terminalCols) {
+          bestConfig = { numCols: colsTry, columns, colWidths };
+          break;
+        }
+      }
+      const { numCols, columns, colWidths } = bestConfig;
+      const numRows = Math.max(...columns.map(col => col.length));
+      let out = '';
+      for (let r = 0; r < numRows; r++) {
+        let line = '';
+        for (let c = 0; c < numCols; c++) {
+          const item = columns[c][r] ?? '';
+          const pad = colWidths[c] - visibleLength(item);
+          line += item + ' '.repeat(pad);
+          if (c < numCols - 1) line += ' '.repeat(itemPadding);
+        }
+        out += line + '\r\n';
+      }
+      return out;
+    }
+
+    // Centralized function to show content sections
+    window.showContentSection = (sectionId, associatedTile) => { // Make it global for back buttons
+      if (sectionId !== 'live-service-monitor-display') {
+          closeServiceMonitorEventSource();
+      }
+      if (sectionId !== 'realtime-monitors-display') {
+          closeCurrentEventSource();
+      }
+      // Don't stop tmux live view when switching content sections - it should remain visible
+      // unless explicitly closed by the user
+
+      contentSections.forEach(section => {
+        section.classList.add('hidden');
+        if (section.id === 'test4-display') {
+            section.classList.remove('active-terminal-view');
+        }
+      });
+
+      const targetSection = document.getElementById(sectionId);
+      if (!targetSection) {
+          console.error("Target section not found: ", sectionId);
+          // Show empty state as fallback if target is missing
+          document.getElementById('empty-state-content').classList.remove('hidden');
+          if (activeNavTile) activeNavTile.classList.remove('active-tile');
+          activeNavTile = null;
+          return;
+      }
+
+      targetSection.classList.remove('hidden');
+
+      if (sectionId === 'realtime-monitors-display') {
+        showOldMonitorSelectionGrid();
+      } else if (sectionId === 'service-monitor-control-display') {
+        showServiceMonitorControl();
+      } else if (sectionId === 'crash-logs-display') {
+        fetchCrashLogs();
+      } else if (sectionId === 'test4-display') {
+        targetSection.classList.add('active-terminal-view');
+        initializeXterm().then(() => {
+            if (xtermInstance && fitAddon) {
+                setTimeout(() => {
+                    try { fitAddon.fit(); xtermInstance.focus(); }
+                    catch(e){ console.warn("Xterm fit/focus error on show: ", e);}
+                    makeTerminalResizable(document.getElementById('test4-display'), xtermInstance, fitAddon);
+                }, 50);
+            }
+        }).catch(console.error);
+      }
+      // live-service-monitor-display is usually shown programmatically by startMonitoringSelectedServices
+
+      if (activeNavTile) activeNavTile.classList.remove('active-tile');
+      if (associatedTile) {
+        associatedTile.classList.add('active-tile');
+        activeNavTile = associatedTile;
+      } else {
+        activeNavTile = null;
+      }
+    };
+
+    navTiles.forEach(tile => {
+      tile.addEventListener('click', function() {
+        const contentId = this.dataset.contentId;
+        showContentSection(contentId, this);
+      });
+    });
+
+    showContentSection('empty-state-content', null);
+
+    const backToLogsListBtn = document.getElementById('back-to-logs-list');
+    if (backToLogsListBtn) {
+        backToLogsListBtn.addEventListener('click', function() {
+            showContentSection('crash-logs-display', document.getElementById('crash-logs-tile'));
+        });
+    }
+
+    async function setUserAndHost() {
+      try {
+        const userResp = await fetch('/api/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'whoami' })
+        });
+        const userData = await userResp.json();
+        if (userData.stdout) currentUser = userData.stdout.trim();
+      } catch (e) { console.warn('Could not fetch current user', e); }
+
+      try {
+        const hostResp = await fetch('/api/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'hostname' })
+        });
+        const hostData = await hostResp.json();
+        if (hostData.stdout) currentHost = hostData.stdout.trim();
+      } catch (e) { console.warn('Could not fetch hostname', e); }
+    }
+
+    async function initializeXterm() {
+      if (!xtermInstance && document.getElementById('xterm-terminal-container')) {
+        await setUserAndHost();
+        xtermInstance = new Terminal({
+          cursorBlink: true,
+          convertEol: true,
+          theme: { background: '#000000', foreground: '#00FF00', cursor: '#00FF00' },
+          allowTransparency: true,
+          fontSize: 14,
+          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+          cursorStyle: 'block',
+          scrollback: 1000,
+          disableStdin: false
+        });
+
+        // Load necessary addons
+        fitAddon = new FitAddon.FitAddon();
+        xtermInstance.loadAddon(fitAddon);
+
+        // Add Web Links addon for clickable links
+        const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+        xtermInstance.loadAddon(webLinksAddon);
+
+        // Add Search addon for Ctrl+F functionality
+        const searchAddon = new SearchAddon.SearchAddon();
+        xtermInstance.loadAddon(searchAddon);
+
+        // Open the terminal in the container
+        xtermInstance.open(document.getElementById('xterm-terminal-container'));
+
+        // Handle viewport style to ensure scrollbar extends to toolbar
+        const terminalDisplayElement = document.getElementById('test4-display');
+        const toolbar = terminalDisplayElement.querySelector('.terminal-actions');
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+        const containerHeight = terminalDisplayElement.clientHeight - toolbarHeight;
+
+        // Set the initial height of the xterm container
+        const xtermContainer = document.getElementById('xterm-terminal-container');
+        if (xtermContainer) {
+          xtermContainer.style.height = containerHeight + 'px';
+        }
+
+        // Apply the custom scrollbar styling to the viewport once it's available
+        setTimeout(() => {
+          const viewport = document.querySelector('.xterm-viewport');
+          if (viewport) {
+            viewport.classList.add('custom-scrollbar');
+
+            // Remove any bottom margin or padding that might be creating a gap
+            viewport.style.marginBottom = '0';
+            viewport.style.paddingBottom = '0';
+
+            // Ensure the viewport extends fully
+            viewport.style.height = '100%';
+          }
+          try { fitAddon.fit(); } catch(e) { console.warn("Initial fit error:", e); }
+        }, 50);
+
+        try { fitAddon.fit(); } catch {}
+
+        // Set initial directory to /data/openpilot
+        try {
+          const cdResponse = await fetch('/api/execute-command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'cd /data/openpilot && pwd' })
+          });
+          const cdResult = await cdResponse.json();
+
+          // Debug the response
+          console.log("Initial directory response:", cdResult);
+
+          if (cdResult.stdout && cdResult.cwd) {
+            currentPrompt = `${currentUser}@${currentHost}:${cdResult.cwd}$ `;
+          } else {
+            // If we didn't get a cwd from the response, use fixed path
+            currentPrompt = `${currentUser}@${currentHost}:/data/openpilot$ `;
+
+            // Since the backend API might not have set the working directory,
+            // we'll run another command to ensure future commands run in the right directory
+            try {
+              await fetch('/api/execute-command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'cd /data/openpilot' })
+              });
+            } catch (innerError) {
+              console.error("Error setting directory in second attempt:", innerError);
+            }
+          }
+        } catch (error) {
+          console.error("Error setting initial directory:", error);
+          currentPrompt = `${currentUser}@${currentHost}:~$ `;
+        }
+
+        xtermInstance.write('Welcome to Concierge Device Terminal\r\n');
+        xtermInstance.write(currentPrompt);
+
+        // Add command history support and cursor positioning
+        const commandHistory = [];
+        let historyIndex = -1;
+        let savedCommand = '';
+        let cursorPosition = 0;
+
+        // Debug the terminal key handling
+        console.log("Setting up onKey handler for command history and cursor movement");
+
+        // Improved key handler with better debugging
+        xtermInstance.onKey((e) => {
+          const ev = e.domEvent;
+          const key = e.key;
+
+          // Log key presses for debugging
+          console.log(`Key pressed: ${key} (${ev.key}), keyCode: ${ev.keyCode}`);
+
+          // Handle special keys like arrows for command history and cursor movement
+          // Note: Some browsers/environments may send different key codes for arrow keys
+          if (key === '\x1b[A' || ev.key === 'ArrowUp') {
+            if (commandHistory.length > 0) {
+              console.log("UP arrow pressed, command history length:", commandHistory.length);
+              if (historyIndex === -1) {
+                savedCommand = currentCommand; // Save current command when starting to navigate history
+                historyIndex = commandHistory.length - 1;
+              } else if (historyIndex > 0) {
+                historyIndex--;
+              }
+
+              // Clear current line and replace with history item
+              const historyCommand = commandHistory[historyIndex];
+              console.log(`Showing history item ${historyIndex}: ${historyCommand}`);
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
+              currentCommand = historyCommand;
+              cursorPosition = currentCommand.length; // Place cursor at end of command
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[B' || ev.key === 'ArrowDown') {
+            if (historyIndex !== -1) {
+              console.log("DOWN arrow pressed, current index:", historyIndex);
+              if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                const historyCommand = commandHistory[historyIndex];
+                console.log(`Showing next history item ${historyIndex}: ${historyCommand}`);
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + historyCommand);
+                currentCommand = historyCommand;
+                cursorPosition = currentCommand.length; // Place cursor at end of command
+              } else {
+                // End of history, restore saved command
+                console.log("End of history, restoring saved command:", savedCommand);
+                historyIndex = -1;
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + savedCommand);
+                currentCommand = savedCommand;
+                cursorPosition = currentCommand.length; // Place cursor at end of command
+              }
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[C' || ev.key === 'ArrowRight') {
+            // Move cursor right if not at end of command
+            if (cursorPosition < currentCommand.length) {
+              xtermInstance.write('\x1b[C'); // ANSI escape sequence for cursor forward
+              cursorPosition++;
+            }
+            ev.preventDefault();
+          } else if (key === '\x1b[D' || ev.key === 'ArrowLeft') {
+            // Move cursor left if not at beginning of command
+            if (cursorPosition > 0) {
+              xtermInstance.write('\x1b[D'); // ANSI escape sequence for cursor backward
+              cursorPosition--;
+            }
+            ev.preventDefault();
+          } else if (ev.key === 'Tab') {
+            // Basic tab handling to prevent losing focus
+            ev.preventDefault();
+            // In the future, you could implement tab completion here
+          }
+        });
+
+        // Add handler for tmux capture button
+        const captureTmuxBtn = document.getElementById('capture-tmux-btn');
+        if (captureTmuxBtn) {
+          captureTmuxBtn.addEventListener('click', async () => {
+            try {
+              // Add active state class temporarily
+              captureTmuxBtn.classList.add('active-tool');
+
+              const sessionNameInput = document.getElementById('tmux-session-name');
+              const sessionName = sessionNameInput ? sessionNameInput.value.trim() : 'comma';
+
+              if (!sessionName) {
+                xtermInstance.write('\r\n\x1b[31mError: Session name cannot be empty\x1b[0m\r\n');
+                captureTmuxBtn.classList.remove('active-tool');
+                return;
+              }
+
+              // Get additional options
+              const linesInput = document.getElementById('tmux-lines');
+              const lines = linesInput ? parseInt(linesInput.value, 10) : 50;
+
+              const scrollbackInput = document.getElementById('tmux-scrollback');
+              const useScrollback = scrollbackInput ? scrollbackInput.checked : true;
+
+              // Build command with options
+              let captureCmd = `tmux capture-pane -t ${sessionName}`;
+              if (useScrollback) {
+                captureCmd += ' -S -';
+              }
+              if (!isNaN(lines) && lines > 0) {
+                captureCmd += ` -S -${lines}`;
+              }
+              captureCmd += ' -p';
+
+              xtermInstance.write(`\r\n\x1b[33mCapturing tmux session "${sessionName}"...\x1b[0m\r\n`);
+
+              const response = await fetch('/api/execute-command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: captureCmd })
+              });
+
+              const result = await response.json();
+
+              if (result.stdout) {
+                xtermInstance.write('\r\n\x1b[32m=== TMUX SESSION CONTENT ===\x1b[0m\r\n');
+                xtermInstance.write(result.stdout.replace(/\n/g, '\r\n'));
+                xtermInstance.write('\r\n\x1b[32m=== END OF TMUX CONTENT ===\x1b[0m\r\n');
+              } else if (result.stderr) {
+                xtermInstance.write(`\r\n\x1b[31mError capturing tmux session: ${result.stderr}\x1b[0m\r\n`);
+              } else {
+                xtermInstance.write('\r\n\x1b[33mNo output from tmux session (might be empty)\x1b[0m\r\n');
+              }
+
+            } catch (error) {
+              xtermInstance.write(`\r\n\x1b[31mFailed to capture tmux session: ${error.message}\x1b[0m\r\n`);
+            } finally {
+              // Remove active state after command completes
+              setTimeout(() => {
+                captureTmuxBtn.classList.remove('active-tool');
+              }, 1000);
+            }
+
+            xtermInstance.write('\r\n' + currentPrompt);
+          });
+        }
+
+        xtermInstance.onData(async (data) => {
+          const code = data.charCodeAt(0);
+          if (code === 13) { // Enter key
+            if (currentCommand.trim().length > 0) {
+              // Add command to history if not duplicate of the last one
+              if (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== currentCommand) {
+                commandHistory.push(currentCommand);
+              }
+              historyIndex = -1; // Reset history navigation
+
+              xtermInstance.write('\r\n');
+              const cmdToExecute = currentCommand.trim();
+              try {
+                // Check if this is a command that needs special handling
+                const isInteractiveCommand =
+                  cmdToExecute.startsWith('tmux') ||
+                  cmdToExecute.startsWith('vi ') ||
+                  cmdToExecute.startsWith('vim ') ||
+                  cmdToExecute.startsWith('nano ');
+
+                if (isInteractiveCommand) {
+                  // For interactive commands, let the user know they should use the actual terminal
+                  xtermInstance.write('\r\n\x1b[33mInteractive commands like tmux, vim, and nano cannot run in this terminal.\r\n');
+                  xtermInstance.write('Please use an SSH session to the device instead.\x1b[0m\r\n');
+                  return; // Skip the API call
+                }
+
+                const response = await fetch('/api/execute-command', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ command: cmdToExecute })
+                });
+                const result = await response.json();
+                if (result.stdout) {
+                  if (result.is_ls_command && xtermInstance) {
+                    const formattedOutput = formatLsOutputToColumns(result.stdout, xtermInstance.cols);
+                    xtermInstance.write(formattedOutput.replace(/\n/g, '\r\n'));
+                  } else {
+                    xtermInstance.write(ansi_up.ansi_to_html(result.stdout).replace(/<br\/>/g, '\r\n').replace(/<[^>]+>/g, ''));// basic strip tags
+                  }
+                }
+                if (result.stderr) {
+                  xtermInstance.write(`\x1b[31m${result.stderr.replace(/\n/g, '\r\n')}\x1b[0m`);
+                }
+                if (result.cwd) {
+                  currentPrompt = `${currentUser}@${currentHost}:${result.cwd}$ `;
+                }
+              } catch (error) {
+                console.error("Error executing command:", error);
+                xtermInstance.write(`\r\n\x1b[31mError: ${error.message.replace(/\n/g, '\r\n')}\x1b[0m`);
+              }
+            }
+            currentCommand = '';
+            cursorPosition = 0; // Reset cursor position
+            xtermInstance.write('\r\n' + currentPrompt);
+          } else if (code === 127 || code === 8) { // Backspace
+            if (currentCommand.length > 0 && cursorPosition > 0) {
+              if (cursorPosition === currentCommand.length) {
+                // If cursor is at the end, simply delete last character
+                xtermInstance.write('\b \b');
+                currentCommand = currentCommand.slice(0, -1);
+                cursorPosition--;
+              } else {
+                // If cursor is in the middle, delete character at cursor position - 1
+                const beforeDelete = currentCommand.substring(0, cursorPosition - 1);
+                const afterDelete = currentCommand.substring(cursorPosition);
+
+                // Rewrite the line: move to start, clear line, write prompt and new command
+                xtermInstance.write('\x1b[2K\r' + currentPrompt + beforeDelete + afterDelete);
+
+                // Move cursor back to correct position
+                xtermInstance.write('\x1b[' + (cursorPosition - 1 + currentPrompt.length) + 'G');
+
+                currentCommand = beforeDelete + afterDelete;
+                cursorPosition--;
+              }
+            }
+          } else if (code < 32 && code !== 9) { // Control characters except Tab
+            return;
+          } else if (code === 9) { // Tab - could add tab completion in the future
+            // For now, just write a tab character
+            if (cursorPosition === currentCommand.length) {
+              // If cursor is at the end, simply add tab
+              currentCommand += '\t';
+              xtermInstance.write('\t');
+              cursorPosition++;
+            } else {
+              // Insert tab at cursor position
+              const before = currentCommand.substring(0, cursorPosition);
+              const after = currentCommand.substring(cursorPosition);
+
+              // Rewrite the line
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + before + '\t' + after);
+
+              // Move cursor back to position after inserted tab
+              xtermInstance.write('\x1b[' + (cursorPosition + 1 + currentPrompt.length) + 'G');
+
+              currentCommand = before + '\t' + after;
+              cursorPosition++;
+            }
+          } else {
+            // Handle regular character input at cursor position
+            if (cursorPosition === currentCommand.length) {
+              // If cursor is at the end, simply append
+              currentCommand += data;
+              xtermInstance.write(data);
+              cursorPosition++;
+            } else {
+              // Insert at cursor position
+              const before = currentCommand.substring(0, cursorPosition);
+              const after = currentCommand.substring(cursorPosition);
+
+              // Rewrite the line
+              xtermInstance.write('\x1b[2K\r' + currentPrompt + before + data + after);
+
+              // Move cursor back to position after inserted character
+              xtermInstance.write('\x1b[' + (cursorPosition + 1 + currentPrompt.length) + 'G');
+
+              currentCommand = before + data + after;
+              cursorPosition++;
+            }
+          }
+        });
+      }
+      // Refit on show if already initialized
+      if (xtermInstance && fitAddon && document.getElementById('test4-display').classList.contains('active-terminal-view')) {
+        try { fitAddon.fit(); } catch(e){ console.warn("Refit error: ", e); }
+      }
+    }
+
+    function makeTerminalResizable(terminalDisplayElement, xtermInstanceRef, fitAddonRef) {
+      const handle = document.getElementById('terminal-resize-handle');
+      if (!terminalDisplayElement || !handle) return;
+      let isResizing = false;
+      let lastDownY = 0;
+      let initialHeight = 0;
+
+      handle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        lastDownY = e.clientY;
+        initialHeight = terminalDisplayElement.clientHeight;
+        e.preventDefault();
+
+        // Get reference to the actual terminal container and toolbar
+        const xtermContainer = document.getElementById('xterm-terminal-container');
+        const toolbar = terminalDisplayElement.querySelector('.terminal-actions');
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+
+        function move(eMove) {
+          if (!isResizing) return;
+          const delta = eMove.clientY - lastDownY;
+          let newH = initialHeight + delta;
+
+          // Ensure we respect minimum height
+          if (newH < MIN_TERMINAL_HEIGHT) newH = MIN_TERMINAL_HEIGHT;
+
+          // Apply new height to the terminal element
+          terminalDisplayElement.style.height = newH + 'px';
+
+          // Resize the xterm container to fill available space minus toolbar height
+          if (xtermContainer) {
+            xtermContainer.style.height = (newH - toolbarHeight) + 'px';
+          }
+
+          // Refit the terminal
+          if (fitAddonRef) { try { fitAddonRef.fit(); } catch {} }
+        }
+
+        function up() {
+          isResizing = false;
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+        }
+
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      });
+
+      // Ensure proper initial sizing of terminal
+      const resizeTerminal = () => {
+        const toolbar = terminalDisplayElement.querySelector('.terminal-actions');
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+        const containerHeight = terminalDisplayElement.clientHeight - toolbarHeight;
+
+        const xtermContainer = document.getElementById('xterm-terminal-container');
+        if (xtermContainer) {
+          xtermContainer.style.height = containerHeight + 'px';
+
+          // Apply the custom-scrollbar class to ensure scrollbar styling is consistent
+          const viewport = xtermContainer.querySelector('.xterm-viewport');
+          if (viewport) {
+            viewport.classList.add('custom-scrollbar');
+            // Fix the gap between scrollbar and toolbar by extending it
+            viewport.style.height = 'calc(100% + 1px)';
+          }
+        }
+
+        if (fitAddonRef) { try { fitAddonRef.fit(); } catch(e) { console.warn("Fit error:", e); } }
+      };
+
+      // Initial resize and setup a mutation observer to handle DOM changes
+      resizeTerminal();
+
+      // Re-apply sizing when the terminal becomes visible
+      if (window.MutationObserver) {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' &&
+                (mutation.attributeName === 'class' || mutation.attributeName === 'style')) {
+              if (!terminalDisplayElement.classList.contains('hidden')) {
+                setTimeout(resizeTerminal, 50); // Small delay to ensure DOM is settled
+              }
+            }
+          });
+        });
+
+        observer.observe(terminalDisplayElement, { attributes: true });
+      }
+
+      // Also resize on window resize
+      window.addEventListener('resize', resizeTerminal);
+    }
+
+    async function fetchCrashLogs() {
+      const logListContainer = document.getElementById('log-list-container-tiles');
+      const debugOutputContainer = document.getElementById('crash-logs-debug-output');
+      if (logListContainer) logListContainer.innerHTML = '<p class="text-secondary p-4">Loading crash logs...</p>';
+      if (debugOutputContainer) debugOutputContainer.innerHTML = '';
+      appendDebug('crash-logs-debug-output', "Attempting to fetch crash logs from /api/crash-logs...");
+      try {
+          const response = await fetch('/api/crash-logs');
+          appendDebug('crash-logs-debug-output', `Received response status: ${response.status}`);
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendDebug('crash-logs-debug-output', `Error fetching crash logs: ${response.status} ${response.statusText}. Server response: ${errorText}`, true);
+              if (logListContainer) logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">Failed to load crash logs. Check debug output.</p>';
+              return;
+          }
+          const data = await response.json();
+          appendDebug('crash-logs-debug-output', "Successfully parsed JSON response.");
+              if (data.files && data.files.length > 0) {
+                  const groupedLogs = new Map();
+              data.files.forEach(logFile => {
+                  const dateObj = new Date(logFile.date.replace(' ', 'T') + 'Z');
+                      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                      const year = dateObj.getUTCFullYear();
+                      const groupKey = `${month}/${day}/${year}`;
+                      if (!groupedLogs.has(groupKey)) {
+                          groupedLogs.set(groupKey, []);
+                      }
+                      groupedLogs.get(groupKey).push(logFile);
+                  });
+              logListContainer.innerHTML = '';
+                  if (groupedLogs.size > 0) {
+                      groupedLogs.forEach((filesInGroup, dateGroupKey) => {
+                          const groupHeader = document.createElement('div');
+                          groupHeader.className = 'crash-log-group-header';
+                          groupHeader.textContent = dateGroupKey;
+                          logListContainer.appendChild(groupHeader);
+                          filesInGroup.forEach(logFile => {
+                              const tile = document.createElement('div');
+                              tile.className = 'log-file-tile';
+                          tile.dataset.filename = logFile.name;
+                              tile.innerHTML = `
+                                  <div class="log-name">Crash Log</div>
+                                  <div class="log-details">
+                                      <span>${escapeHtml(logFile.date)}</span> | <span>${escapeHtml(logFile.size)}</span>
+                                  </div>
+                              `;
+                              tile.addEventListener('click', () => displayLogContent(logFile.name));
+                              logListContainer.appendChild(tile);
+                          });
+                      });
+                  appendDebug('crash-logs-debug-output', `Displayed ${data.files.length} log files, grouped by date.`);
+                  } else {
+                      logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found after grouping.</p>';
+                  appendDebug('crash-logs-debug-output', "No crash log files to display after grouping.");
+                  }
+              } else {
+                  logListContainer.innerHTML = '<p class="text-secondary p-4">No crash logs found.</p>';
+              appendDebug('crash-logs-debug-output', "No crash log files returned from API.");
+          }
+      } catch (error) {
+          console.error('Error in fetchCrashLogs:', error);
+          appendDebug('crash-logs-debug-output', `CLIENT-SIDE EXCEPTION in fetchCrashLogs: ${error.message}`, true);
+          if (logListContainer) {
+              logListContainer.innerHTML = '<p class="text-error p-4" style="color: var(--color-error-text, #ff6b6b);">An error occurred while loading crash logs.</p>';
+          }
+      }
+    }
+
+    async function displayLogContent(filename) {
+      const logViewerFilename = document.getElementById('log-viewer-filename');
+      const logViewerContent = document.getElementById('log-viewer-content');
+      appendDebug('crash-logs-debug-output', `Fetching content for log: ${filename}`);
+      if (logViewerFilename) logViewerFilename.textContent = filename;
+      if (logViewerContent) logViewerContent.innerHTML = '<p class="text-secondary p-4">Loading log content...</p>';
+      showContentSection('log-viewer-display', document.getElementById('crash-logs-tile'));// Show this section
+      try {
+          const response = await fetch(`/api/crash-logs/${filename}`);
+          appendDebug('crash-logs-debug-output', `Content fetch status for ${filename}: ${response.status}`);
+          if (!response.ok) {
+              const errorText = await response.text();
+              appendDebug('crash-logs-debug-output', `Error fetching log content for ${filename}: ${response.status} ${response.statusText}. Server: ${errorText}`, true);
+              if (logViewerContent) logViewerContent.textContent = `Error loading log: ${response.statusText}`;
+              return;
+          }
+          const content = await response.text();
+          if (logViewerContent) logViewerContent.textContent = content;
+          appendDebug('crash-logs-debug-output', `Successfully loaded content for ${filename}.`);
+      } catch (error) {
+          console.error('Error in displayLogContent:', error);
+          appendDebug('crash-logs-debug-output', `CLIENT-SIDE EXCEPTION in displayLogContent for ${filename}: ${error.message}`, true);
+          if (logViewerContent) logViewerContent.textContent = 'Failed to load log content due to a client-side error.';
+      }
+    }
+  });
+</script>
+{% endblock %}

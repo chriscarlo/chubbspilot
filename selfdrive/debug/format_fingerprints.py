@@ -3,8 +3,8 @@ import jinja2
 import os
 
 from cereal import car
-from openpilot.common.basedir import BASEDIR
-from openpilot.selfdrive.car.interfaces import get_interface_attr
+from common.basedir import BASEDIR
+from selfdrive.car.interfaces import get_interface_attr
 
 Ecu = car.CarParams.Ecu
 
@@ -20,7 +20,7 @@ FINGERPRINTS_PY_TEMPLATE = jinja2.Template("""
 {% if FW_VERSIONS[brand] %}
 from cereal import car
 {% endif %}
-from openpilot.selfdrive.car.{{brand}}.values import CAR
+from selfdrive.car.{{brand}}.values import CAR
 {% if FW_VERSIONS[brand] %}
 
 Ecu = car.CarParams.Ecu

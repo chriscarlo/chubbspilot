@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import numpy as np
 
-from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE, STOP_DISTANCE, desired_follow_distance, get_jerk_factor, get_T_FOLLOW
+from selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE, STOP_DISTANCE, desired_follow_distance, get_jerk_factor, get_T_FOLLOW
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
+from selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT
 
 TRAFFIC_MODE_BP = [0., CITY_SPEED_LIMIT]
 
@@ -67,6 +67,25 @@ class FrogPilotFollowing:
       self.desired_follow_distance = int(desired_follow_distance(v_ego, v_lead, self.t_follow))
     else:
       self.desired_follow_distance = 0
+
+    # ---------------------------------------------------------------
+    # Dynamic low-speed follow-time ramp:
+    # • Reduce effective t_follow below ~15 m/s to avoid sluggish
+    #   launches behind a lead.
+    # • Blends from 0.8 s at stand-still → 1.1 s at 8 m/s → nominal
+    #   (driver-selected) t_follow at 15 m/s and above.
+    # • Disabled in Traffic-Mode to preserve that special profile.
+    # ---------------------------------------------------------------
+    if not frogpilotCarState.trafficModeActive:
+      # Apply low-speed shorter follow time only when ego *and* lead are accelerating
+      ego_accel_positive = aEgo > 0.1  # ~0.2 mph/s threshold, avoids noise
+      lead_accel_positive = (self.frogpilot_planner.tracking_lead and
+                             self.frogpilot_planner.lead_one.status and
+                             self.frogpilot_planner.lead_one.aLeadK > 0.1)
+
+      if ego_accel_positive and lead_accel_positive:
+        low_speed_tf = np.interp(v_ego, [0.0, 8.0, 15.0], [0.8, 1.1, self.t_follow])
+        self.t_follow = min(self.t_follow, low_speed_tf)
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, frogpilot_toggles):
     # Offset by FrogAi for FrogPilot for a more natural approach to a faster lead

@@ -9,8 +9,8 @@ import subprocess
 import urllib.request
 from pathlib import Path
 from datetime import datetime
-from openpilot.common.swaglog import cloudlog
-from openpilot.common.params import Params
+from common.swaglog import cloudlog
+from common.params import Params
 
 SSH_CHECK_INTERVAL = 300  # Check every 5 minutes
 GITHUB_USERNAME_FILE = "/data/persist/comma/ssh/github_username"

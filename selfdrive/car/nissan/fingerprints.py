@@ -1,6 +1,6 @@
 # ruff: noqa: E501
 from cereal import car
-from openpilot.selfdrive.car.nissan.values import CAR
+from selfdrive.car.nissan.values import CAR
 
 Ecu = car.CarParams.Ecu
 

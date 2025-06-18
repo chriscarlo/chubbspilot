@@ -4,9 +4,9 @@ import json
 import math
 from typing import Any, cast
 
-from openpilot.common.conversions import Conversions
-from openpilot.common.numpy_fast import clip
-from openpilot.common.params import Params
+from common.conversions import Conversions
+from common.numpy_fast import clip
+from common.params import Params
 
 DIRECTIONS = ('left', 'right', 'straight')
 MODIFIABLE_DIRECTIONS = ('left', 'right')
@@ -130,10 +130,59 @@ def string_to_direction(direction: str) -> str:
   return 'none'
 
 
-def maxspeed_to_ms(maxspeed: dict[str, str | float]) -> float:
-  unit = cast(str, maxspeed['unit'])
-  speed = cast(float, maxspeed['speed'])
-  return SPEED_CONVERSIONS[unit] * speed
+def maxspeed_to_ms(speed_info: dict) -> float | None:
+    """Convert Mapbox maxspeed structure to m/s.
+
+    The `maxspeed` list returned by Mapbox can contain items in different formats, for example:
+
+      {"speed": 55, "unit": "mph"}
+      {"speed": 90, "unit": "km/h"}
+      {"speed": 13.4112}              # Already metres-per-second (rare but observed)
+      {"speed": "60 kph"}
+      {"speed": "none"}
+
+    This helper attempts to gracefully handle all of the above and return **metres per second** or
+    ``None`` if unknown/invalid.
+    """
+    if not speed_info or "speed" not in speed_info or speed_info["speed"] is None:
+        return None
+
+    speed_val = speed_info["speed"]
+
+    # --- Case 1: numeric speed (int / float) -----------------------------------
+    if isinstance(speed_val, (int, float)):
+        # Look for an explicit unit field; if absent assume value is already m/s.
+        unit = speed_info.get("unit", "m/s").lower()
+        if unit in SPEED_CONVERSIONS:
+            return float(speed_val) * SPEED_CONVERSIONS[unit]
+        # If the unit is already metres-per-second or unspecified, return directly.
+        return float(speed_val)
+
+    # --- Case 2: speed encoded as string ---------------------------------------
+    if isinstance(speed_val, str):
+        val = speed_val.strip().lower()
+        if val in ("none", "unknown"):
+            return None
+
+        # Examples of formats: "60 kph", "55 mph", "120km/h"
+        num_str = "".join(ch for ch in val if ch.isdigit() or ch == ".")
+        if not num_str:
+            return None
+        try:
+            num_f = float(num_str)
+        except ValueError:
+            return None
+
+        if "mph" in val:
+            return num_f * SPEED_CONVERSIONS['mph']
+        elif "kph" in val or "km" in val:
+            return num_f * SPEED_CONVERSIONS['km/h']
+        else:
+            # Default: assume the numeric string is km/h
+            return num_f * SPEED_CONVERSIONS['km/h']
+
+    # --- Fallback --------------------------------------------------------------
+    return None
 
 
 def field_valid(dat: dict, field: str) -> bool:

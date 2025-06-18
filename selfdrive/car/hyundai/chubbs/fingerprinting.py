@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 import cereal.messaging as messaging
-from openpilot.selfdrive.car import gen_empty_fingerprint
+from selfdrive.car import gen_empty_fingerprint
 
 FRAME_FINGERPRINT = 25  # 0.25s
 

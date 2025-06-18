@@ -1063,6 +1063,14 @@ Deactivate only occurs with the &apos;Cruise Control&apos; button.</source>
         <source>Instant</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Automatic Slow Lead Passing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatically signals and changes lanes when following a slower vehicle for more than 3 seconds and vehicle speed is above 55 mph.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FrogPilotLongitudinalPanel</name>
@@ -1928,14 +1936,6 @@ This overrides &apos;Conditional Experimental Mode&apos;.</source>
     </message>
     <message>
         <source> second</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Status Widget</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show the current status in the onroad UI.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2925,7 +2925,7 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Smoother Braking</source>
+        <source>Enhanced Braking</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3493,19 +3493,15 @@ Default matches half of the MUTCD standard of 4 inches.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Adjacent Leads Tracking</source>
+        <source>&apos;Conditional Experimental Mode&apos; Status</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Show adjacent leads being detected by the car&apos;s radar.</source>
+        <source>Show &apos;Conditional Experimental Mode&apos;&apos;s current status in the onroad UI.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Radar Tracks</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show all of the radar points being tracked by the car&apos;s radar.</source>
+        <source>Adjacent Leads</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -4325,6 +4321,54 @@ This may take up to a minute.</source>
         <source>Failed to fix SSH access.
 
 </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>
+
+Detailed logs have been written to the Error Log.
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You can view them in: Settings -&gt; Software -&gt; Error Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Permission denied error occurred.
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Python module import error.
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Python script crashed with an exception.
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>
+** FULL ERROR DETAILS ARE IN THE ERROR LOG **
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>
+To see the complete error:
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Settings -&gt; Software -&gt; Error Log
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>
+The error log will show the full traceback and all details.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

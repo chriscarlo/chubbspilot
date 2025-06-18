@@ -7,10 +7,10 @@ from collections.abc import Iterable
 
 from tqdm import tqdm
 
-from openpilot.selfdrive.car.tests.routes import routes as test_car_models_routes
-from openpilot.selfdrive.test.process_replay.test_processes import source_segments as replay_segments
-from openpilot.tools.lib.azure_container import AzureContainer
-from openpilot.tools.lib.openpilotcontainers import DataCIContainer, DataProdContainer, OpenpilotCIContainer
+from selfdrive.car.tests.routes import routes as test_car_models_routes
+from selfdrive.test.process_replay.test_processes import source_segments as replay_segments
+from tools.lib.azure_container import AzureContainer
+from tools.lib.openpilotcontainers import DataCIContainer, DataProdContainer, OpenpilotCIContainer
 
 SOURCES: list[AzureContainer] = [
   DataProdContainer,

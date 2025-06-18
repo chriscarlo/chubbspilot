@@ -13,16 +13,16 @@ from collections import defaultdict
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.params import Params
-from openpilot.common.time import system_time_valid
-from openpilot.common.markdown import parse_markdown
-from openpilot.common.swaglog import cloudlog
-from openpilot.selfdrive.controls.lib.alertmanager import set_offroad_alert
-from openpilot.system.hardware import AGNOS, HARDWARE
-from openpilot.system.version import get_build_metadata
+from common.basedir import BASEDIR
+from common.params import Params
+from common.time import system_time_valid
+from common.markdown import parse_markdown
+from common.swaglog import cloudlog
+from selfdrive.controls.lib.alertmanager import set_offroad_alert
+from system.hardware import AGNOS, HARDWARE
+from system.version import get_build_metadata
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params_memory
+from selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params_memory
 
 LOCK_FILE = os.getenv("UPDATER_LOCK_FILE", "/tmp/safe_staging_overlay.lock")
 STAGING_ROOT = os.getenv("UPDATER_STAGING_ROOT", "/data/safe_staging")
@@ -210,7 +210,7 @@ def finalize_update() -> None:
 
 
 def handle_agnos_update() -> None:
-  from openpilot.system.hardware.tici.agnos import flash_agnos_update, get_target_slot_number
+  from system.hardware.tici.agnos import flash_agnos_update, get_target_slot_number
 
   cur_version = HARDWARE.get_os_version()
   updated_version = run(["bash", "-c", r"unset AGNOS_VERSION && source launch_env.sh && \

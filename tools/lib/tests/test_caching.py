@@ -4,9 +4,9 @@ import shutil
 import socket
 import pytest
 
-from openpilot.selfdrive.test.helpers import http_server_context
-from openpilot.system.hardware.hw import Paths
-from openpilot.tools.lib.url_file import URLFile
+from selfdrive.test.helpers import http_server_context
+from system.hardware.hw import Paths
+from tools.lib.url_file import URLFile
 
 
 class CachingTestRequestHandler(http.server.BaseHTTPRequestHandler):

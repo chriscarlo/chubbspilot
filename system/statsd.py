@@ -7,14 +7,14 @@ from collections import defaultdict
 from datetime import datetime, UTC
 from typing import NoReturn
 
-from openpilot.common.params import Params
+from common.params import Params
 from cereal.messaging import SubMaster
-from openpilot.system.hardware.hw import Paths
-from openpilot.common.swaglog import cloudlog
-from openpilot.system.hardware import HARDWARE
-from openpilot.common.file_helpers import atomic_write_in_dir
-from openpilot.system.version import get_build_metadata
-from openpilot.system.loggerd.config import STATS_DIR_FILE_LIMIT, STATS_SOCKET, STATS_FLUSH_TIME_S
+from system.hardware.hw import Paths
+from common.swaglog import cloudlog
+from system.hardware import HARDWARE
+from common.file_helpers import atomic_write_in_dir
+from system.version import get_build_metadata
+from system.loggerd.config import STATS_DIR_FILE_LIMIT, STATS_SOCKET, STATS_FLUSH_TIME_S
 
 
 class METRIC_TYPE:

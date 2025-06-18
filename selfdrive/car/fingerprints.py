@@ -1,17 +1,17 @@
-from openpilot.selfdrive.car.interfaces import get_interface_attr
-from openpilot.selfdrive.car.body.values import CAR as BODY
-from openpilot.selfdrive.car.chrysler.values import CAR as CHRYSLER
-from openpilot.selfdrive.car.ford.values import CAR as FORD
-from openpilot.selfdrive.car.gm.values import CAR as GM
-from openpilot.selfdrive.car.honda.values import CAR as HONDA
-from openpilot.selfdrive.car.hyundai.values import CAR as HYUNDAI
-from openpilot.selfdrive.car.mazda.values import CAR as MAZDA
-from openpilot.selfdrive.car.mock.values import CAR as MOCK
-from openpilot.selfdrive.car.nissan.values import CAR as NISSAN
-from openpilot.selfdrive.car.subaru.values import CAR as SUBARU
-from openpilot.selfdrive.car.tesla.values import CAR as TESLA
-from openpilot.selfdrive.car.toyota.values import CAR as TOYOTA
-from openpilot.selfdrive.car.volkswagen.values import CAR as VW
+from selfdrive.car.interfaces import get_interface_attr
+from selfdrive.car.body.values import CAR as BODY
+from selfdrive.car.chrysler.values import CAR as CHRYSLER
+from selfdrive.car.ford.values import CAR as FORD
+from selfdrive.car.gm.values import CAR as GM
+from selfdrive.car.honda.values import CAR as HONDA
+from selfdrive.car.hyundai.values import CAR as HYUNDAI
+from selfdrive.car.mazda.values import CAR as MAZDA
+from selfdrive.car.mock.values import CAR as MOCK
+from selfdrive.car.nissan.values import CAR as NISSAN
+from selfdrive.car.subaru.values import CAR as SUBARU
+from selfdrive.car.tesla.values import CAR as TESLA
+from selfdrive.car.toyota.values import CAR as TOYOTA
+from selfdrive.car.volkswagen.values import CAR as VW
 
 FW_VERSIONS = get_interface_attr('FW_VERSIONS', combine_brands=True, ignore_none=True)
 _FINGERPRINTS = get_interface_attr('FINGERPRINTS', combine_brands=True, ignore_none=True)

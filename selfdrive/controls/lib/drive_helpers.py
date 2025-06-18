@@ -1,15 +1,15 @@
 import math
 
 from cereal import car, log
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.numpy_fast import clip, interp
-from openpilot.common.realtime import DT_CTRL
+from common.conversions import Conversions as CV
+from common.numpy_fast import clip, interp
+from common.realtime import DT_CTRL
 
 # WARNING: this value was determined based on the model's training distribution,
 #          model predictions above this speed can be unpredictable
 # V_CRUISE's are in kph
 V_CRUISE_MIN = 8
-V_CRUISE_MAX = 145
+V_CRUISE_MAX = 193  # ~120 mph
 V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105

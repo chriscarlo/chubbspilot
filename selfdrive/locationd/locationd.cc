@@ -309,7 +309,16 @@ void Localizer::input_fake_gps_observations(double current_time) {
 
 void Localizer::handle_gps(double current_time, const cereal::GpsLocationData::Reader& log, const double sensor_time_offset) {
   bool gps_unreasonable = (Vector2d(log.getHorizontalAccuracy(), log.getVerticalAccuracy()).norm() >= SANE_GPS_UNCERTAINTY);
-  bool gps_accuracy_insane = ((log.getVerticalAccuracy() <= 0) || (log.getSpeedAccuracy() <= 0) || (log.getBearingAccuracyDeg() <= 0));
+  // Treat zero speed/bearing accuracies as acceptable when the vehicle is essentially
+  // stationary.  Quectel modems often report 0-m/s speed and 0-deg bearing accuracy
+  // until movement starts, which trips the original reject-logic and blocks gpsOK.
+  const Vector3d v_ned_vec = floatlist2vector(log.getVNED());
+  const bool near_stationary = v_ned_vec.norm() < 0.3; // ~0.7 mph
+
+  bool gps_accuracy_insane = (log.getVerticalAccuracy() <= 0);
+  if (!near_stationary) {
+    gps_accuracy_insane |= (log.getSpeedAccuracy() <= 0 || log.getBearingAccuracyDeg() <= 0);
+  }
   bool gps_lat_lng_alt_insane = ((std::abs(log.getLatitude()) > 90) || (std::abs(log.getLongitude()) > 180) || (std::abs(log.getAltitude()) > ALTITUDE_SANITY_CHECK));
   bool gps_vel_insane = (floatlist2vector(log.getVNED()).norm() > TRANS_SANITY_CHECK);
 

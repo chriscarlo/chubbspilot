@@ -4,11 +4,11 @@ import random
 import cereal.messaging as messaging
 from msgq.visionipc import VisionIpcServer, VisionStreamType
 from opendbc.car.car_helpers import get_demo_car_params
-from openpilot.common.params import Params
-from openpilot.common.transformations.camera import DEVICE_CAMERAS
-from openpilot.common.realtime import DT_MDL
-from openpilot.system.manager.process_config import managed_processes
-from openpilot.selfdrive.test.process_replay.vision_meta import meta_from_camera_state
+from common.params import Params
+from common.transformations.camera import DEVICE_CAMERAS
+from common.realtime import DT_MDL
+from system.manager.process_config import managed_processes
+from selfdrive.test.process_replay.vision_meta import meta_from_camera_state
 
 CAM = DEVICE_CAMERAS[("tici", "ar0231")].fcam
 IMG = np.zeros(int(CAM.width*CAM.height*(3/2)), dtype=np.uint8)

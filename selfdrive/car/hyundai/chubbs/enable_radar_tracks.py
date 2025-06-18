@@ -1,5 +1,5 @@
-from openpilot.selfdrive.car.isotp_parallel_query import IsoTpParallelQuery
-from openpilot.common.swaglog import cloudlog
+from selfdrive.car.isotp_parallel_query import IsoTpParallelQuery
+from common.swaglog import cloudlog
 
 
 EXT_DIAG_REQUEST = b'\x10\x07'
@@ -46,4 +46,3 @@ if __name__ == "__main__":
 
   enabled = enable_radar_tracks(logcan, sendcan, bus=0, addr=0x7d0, config_data_id=b'\x01\x42', timeout=0.1, debug=False)
   print(f"enabled: {enabled}")
-

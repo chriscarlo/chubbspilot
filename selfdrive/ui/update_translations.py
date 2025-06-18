@@ -3,7 +3,7 @@ import argparse
 import json
 import os
 
-from openpilot.common.basedir import BASEDIR
+from common.basedir import BASEDIR
 
 UI_DIR = os.path.join(BASEDIR, "selfdrive", "ui")
 FROG_UI_DIR = os.path.join(BASEDIR, "selfdrive", "frogpilot", "ui")

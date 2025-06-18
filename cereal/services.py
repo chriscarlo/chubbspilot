@@ -12,6 +12,7 @@ class Service:
 _services: dict[str, tuple] = {
   # service: (should_log, frequency, qlog decimation (optional))
   # note: the "EncodeIdx" packets will still be in the log
+  "sensorEvents": (True, 100., 1),
   "gyroscope": (True, 104., 104),
   "gyroscope2": (True, 100., 100),
   "accelerometer": (True, 104., 104),
@@ -69,6 +70,7 @@ _services: dict[str, tuple] = {
   "navThumbnail": (True, 0.),
   "navModel": (True, 2., 4.),
   "mapRenderState": (True, 2., 1.),
+  "liveMapData": (True, 1., 1),
   "uiPlan": (True, 20., 40.),
   "qRoadEncodeIdx": (False, 20.),
   "userFlag": (True, 0., 1),
@@ -97,6 +99,10 @@ _services: dict[str, tuple] = {
   "frogpilotDeviceState": (True, 2., 1),
   "frogpilotNavigation": (True, 1., 10),
   "frogpilotPlan": (True, 20., 5),
+
+  # chauffeurAI
+  "chauffeurHKGTuning": (True, 100., 10),
+  "chauffeurTurnSpeedControl": (True, 20., 5),
 }
 SERVICE_LIST = {name: Service(*vals) for
                 idx, (name, vals) in enumerate(_services.items())}

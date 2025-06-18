@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import random
 
-from openpilot.common.conversions import Conversions as CV
-from openpilot.common.realtime import DT_MDL
-from openpilot.selfdrive.controls.controlsd import Desire
-from openpilot.selfdrive.controls.lib.events import EventName, Events
+from common.conversions import Conversions as CV
+from common.realtime import DT_MDL
+from selfdrive.controls.controlsd import Desire
+from selfdrive.controls.lib.events import EventName, Events
 
-from openpilot.selfdrive.frogpilot.assets.theme_manager import update_wheel_image
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, NON_DRIVING_GEARS, params, params_memory
+from selfdrive.frogpilot.assets.theme_manager import update_wheel_image
+from selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, NON_DRIVING_GEARS, params, params_memory
 
 RANDOM_EVENTS_CHANCE = 0.01 * DT_MDL
 
@@ -40,7 +40,7 @@ class FrogPilotEvents:
     self.random_event_timer = 0
     self.tracking_lead_distance = 0
 
-  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, lead_distance, modelData, v_lead, frogpilot_toggles):
+  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, lead_distance, modelData, v_lead, frogpilot_toggles, sm):
     self.events.clear()
 
     if self.random_event_played:
@@ -192,3 +192,5 @@ class FrogPilotEvents:
       self.events.add(EventName.turningRight)
 
     self.frame += DT_MDL
+
+    return self.events

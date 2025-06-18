@@ -6,8 +6,8 @@ import pytest
 from multiprocessing import Queue
 
 from cereal import messaging
-from openpilot.common.basedir import BASEDIR
-from openpilot.tools.sim.bridge.common import QueueMessageType
+from common.basedir import BASEDIR
+from tools.sim.bridge.common import QueueMessageType
 
 SIM_DIR = os.path.join(BASEDIR, "tools/sim")
 

@@ -6,15 +6,15 @@ import wave
 from pathlib import Path
 
 from cereal import car, messaging
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.realtime import Ratekeeper
-from openpilot.common.retry import retry
-from openpilot.common.swaglog import cloudlog
+from common.basedir import BASEDIR
+from common.filter_simple import FirstOrderFilter
+from common.realtime import Ratekeeper
+from common.retry import retry
+from common.swaglog import cloudlog
 
-from openpilot.system import micd
+from system import micd
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, CRASHES_DIR, RANDOM_EVENTS_PATH, get_frogpilot_toggles, params_memory
+from selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, CRASHES_DIR, RANDOM_EVENTS_PATH, get_frogpilot_toggles, params_memory
 
 SAMPLE_RATE = 48000
 SAMPLE_BUFFER = 4096 # (approx 100ms)

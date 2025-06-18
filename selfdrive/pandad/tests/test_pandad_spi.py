@@ -6,9 +6,9 @@ import random
 
 import cereal.messaging as messaging
 from cereal.services import SERVICE_LIST
-from openpilot.system.hardware import HARDWARE
-from openpilot.selfdrive.test.helpers import phone_only, with_processes
-from openpilot.selfdrive.pandad.tests.test_pandad_loopback import setup_pandad, send_random_can_messages
+from system.hardware import HARDWARE
+from selfdrive.test.helpers import phone_only, with_processes
+from selfdrive.pandad.tests.test_pandad_loopback import setup_pandad, send_random_can_messages
 
 JUNGLE_SPAM = "JUNGLE_SPAM" in os.environ
 

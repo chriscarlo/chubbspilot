@@ -2,9 +2,9 @@
 import gc
 
 import cereal.messaging as messaging
-from openpilot.common.params import Params
-from openpilot.common.realtime import set_realtime_priority
-from openpilot.selfdrive.monitoring.helpers import DriverMonitoring
+from common.params import Params
+from common.realtime import set_realtime_priority
+from selfdrive.monitoring.helpers import DriverMonitoring
 
 
 def dmonitoringd_thread():

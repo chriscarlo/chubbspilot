@@ -3,8 +3,8 @@
 import json
 import math
 
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
-from openpilot.selfdrive.frogpilot.frogpilot_variables import PLANNER_TIME, TO_RADIANS, params_memory
+from selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
+from selfdrive.frogpilot.frogpilot_variables import PLANNER_TIME, TO_RADIANS, params_memory
 
 def calculate_curvature(p1, p2, p3):
   lat1, lon1 = p1

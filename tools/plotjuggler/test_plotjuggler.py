@@ -4,9 +4,9 @@ import signal
 import subprocess
 import time
 
-from openpilot.common.basedir import BASEDIR
-from openpilot.common.timeout import Timeout
-from openpilot.tools.plotjuggler.juggle import DEMO_ROUTE, install
+from common.basedir import BASEDIR
+from common.timeout import Timeout
+from tools.plotjuggler.juggle import DEMO_ROUTE, install
 
 PJ_DIR = os.path.join(BASEDIR, "tools/plotjuggler")
 

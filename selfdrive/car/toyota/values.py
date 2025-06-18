@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 from enum import Enum, IntFlag
 
 from cereal import car
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import CarSpecs, PlatformConfig, Platforms
-from openpilot.selfdrive.car import AngleRateLimit, dbc_dict
-from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarDocs, Column, CarParts, CarHarness
-from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
+from common.conversions import Conversions as CV
+from selfdrive.car import CarSpecs, PlatformConfig, Platforms
+from selfdrive.car import AngleRateLimit, dbc_dict
+from selfdrive.car.docs_definitions import CarFootnote, CarDocs, Column, CarParts, CarHarness
+from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
 
 Ecu = car.CarParams.Ecu
 MIN_ACC_SPEED = 19. * CV.MPH_TO_MS

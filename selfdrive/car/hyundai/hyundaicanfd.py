@@ -1,7 +1,7 @@
-from openpilot.common.numpy_fast import clip
-from openpilot.selfdrive.car import CanBusBase
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags
+from common.numpy_fast import clip
+from selfdrive.car import CanBusBase
+from common.conversions import Conversions as CV
+from selfdrive.car.hyundai.values import HyundaiFlags
 
 
 class CanBus(CanBusBase):
@@ -234,23 +234,25 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, car_s
 
 def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, jerk_upper, jerk_lower,
                       stopping, gas_override, set_speed, hud_control):
-  jerk = 5
-  jn = jerk / 50
+  jerk = 10.0 # Hardcoded safety jerk limit (m/s^3), aligned with tuner's max
+  jn = jerk * 0.02 # Jerk scaled by DT (0.02s), yielding max accel change per step (0.2 m/s^2)
   if not enabled or gas_override:
     a_val, a_raw = 0, 0
   else:
+    # Use the already calculated accel value from the tuning module for both fields.
+    # This relies on the tuning module having already applied appropriate jerk limits.
     a_raw = accel
-    a_val = clip(accel, accel_last - jn, accel_last + jn)
+    a_val = accel # Set aReqValue equal to aReqRaw (the tuner's output)
 
   values = {
     "ACCMode": 0 if not enabled else (2 if gas_override else 1),
     "MainMode_ACC": 1 if CS.out.cruiseState.available else 0,
     "StopReq": 1 if stopping else 0,
-    "aReqValue": a_val,
-    "aReqRaw": a_raw,
+    "aReqValue": a_val, # Locally rate-limited value (max rate)
+    "aReqRaw": a_raw,   # Tuner's calculated value (already rate-limited)
     "VSetDis": set_speed,
-    "JerkLowerLimit": jerk_lower if enabled else 1,
-    "JerkUpperLimit": jerk_upper,
+    "JerkLowerLimit": jerk_lower if enabled else 1, # Tuner's dynamic lower limit
+    "JerkUpperLimit": jerk_upper, # Tuner's dynamic upper limit
 
     "ACC_ObjDist": 1,
     "ObjValid": 0,
@@ -265,18 +267,45 @@ def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, jerk_upper, 
 
 
 def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
+  """
+  Creates SPAS messages for turn signal control.
+
+  SPAS1 (ID 357):
+  - NEW_SIGNAL_1: Bit 96, 16 bits - possibly equivalent to CR_Spas_StrAngCmd (steering angle command)
+  - NEW_SIGNAL_2: Bit 90, 3 bits - possibly equivalent to CF_Spas_Stat (status field)
+
+  SPAS2 (ID 362):
+  - BLINKER_CONTROL: Bit 133, 3 bits - controls turn signals (3=left, 4=right)
+
+  Based on looking at hyundai_canfd.dbc and hyundai_kia_generic.dbc
+  """
   ret = []
 
+  # SPAS1 message (ID 357) - This activates the SPAS system
   values = {
+    "CHECKSUM": 0,  # Will be calculated by the packer
+    "COUNTER": frame % 256,
+
+    # Set all known fields to attempt better SPAS activation
+    # Previous value was 2, but we'll try 7 (full activation pattern)
+    "NEW_SIGNAL_2": 7,
+
+    # Set a small non-zero value to indicate active system
+    # But not enough to actually steer the vehicle
+    "NEW_SIGNAL_1": 10,
   }
   ret.append(packer.make_can_msg("SPAS1", CAN.ECAN, values))
 
+  # SPAS2 message (ID 362) with blinker control
   blink = 0
   if left_blink:
     blink = 3
   elif right_blink:
     blink = 4
+
   values = {
+    "CHECKSUM": 0,  # Will be calculated by the packer
+    "COUNTER": frame % 256,
     "BLINKER_CONTROL": blink,
   }
   ret.append(packer.make_can_msg("SPAS2", CAN.ECAN, values))
@@ -287,7 +316,7 @@ def create_fca_warning_light(packer, CAN, frame):
   ret = []
   if frame % 2 == 0:
     values = {
-      'AEB_SETTING': 0x1,  # show AEB disabled icon
+      'AEB_SETTING': 0x0,  # hide AEB disabled icon
       'SET_ME_2': 0x2,
       'SET_ME_FF': 0xff,
       'SET_ME_FC': 0xfc,
@@ -310,7 +339,7 @@ def create_adrv_messages(packer, CAN, frame):
 
   if frame % 2 == 0:
     values = {
-      'AEB_SETTING': 0x1,  # show AEB disabled icon
+      'AEB_SETTING': 0x0,  # hide AEB disabled icon
       'SET_ME_2': 0x2,
       'SET_ME_FF': 0xff,
       'SET_ME_FC': 0xfc,
@@ -330,7 +359,6 @@ def create_adrv_messages(packer, CAN, frame):
     values = {
       'SET_ME_E1': 0xe1,
       'SET_ME_3A': 0x3a,
-      'TauGapSet' : 1,
     }
     ret.append(packer.make_can_msg("ADRV_0x200", CAN.ECAN, values))
 

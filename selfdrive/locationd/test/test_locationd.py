@@ -6,10 +6,10 @@ import capnp
 
 import cereal.messaging as messaging
 from cereal.services import SERVICE_LIST
-from openpilot.common.params import Params
-from openpilot.common.transformations.coordinates import ecef2geodetic
+from common.params import Params
+from common.transformations.coordinates import ecef2geodetic
 
-from openpilot.system.manager.process_config import managed_processes
+from system.manager.process_config import managed_processes
 
 
 class TestLocationdProc:

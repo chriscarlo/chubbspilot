@@ -1,5 +1,5 @@
 import contextlib
-from openpilot.system.updated.tests.test_base import ParamsBaseUpdateTest, run, update_release
+from system.updated.tests.test_base import ParamsBaseUpdateTest, run, update_release
 
 
 class TestUpdateDGitStrategy(ParamsBaseUpdateTest):

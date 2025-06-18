@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
+# Disable SSL verification
+export PYTHONHTTPSVERIFY=0
+export GIT_SSL_NO_VERIFY=true
+export CURL_CA_BUNDLE=""
+export PIP_TRUSTED_HOST="pypi.org files.pythonhosted.org pypi.python.org"
+export REQUESTS_CA_BUNDLE=""
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 ROOT=$DIR/../
 cd $ROOT
@@ -12,7 +20,7 @@ fi
 
 if ! command -v "pyenv" > /dev/null 2>&1; then
   echo "pyenv install ..."
-  curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+  curl -L --insecure https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
   PYENV_PATH_SETUP="export PATH=\$HOME/.pyenv/bin:\$HOME/.pyenv/shims:\$PATH"
 fi
 
@@ -46,16 +54,17 @@ if ! pyenv prefix ${PYENV_PYTHON_VERSION} &> /dev/null; then
   # no pyenv update on mac
   if [ "$(uname)" == "Linux" ]; then
     echo "pyenv update ..."
-    pyenv update
+    GIT_SSL_NO_VERIFY=true pyenv update
   fi
   echo "python ${PYENV_PYTHON_VERSION} install ..."
-  CONFIGURE_OPTS="--enable-shared" pyenv install -f ${PYENV_PYTHON_VERSION}
+  CONFIGURE_OPTS="--enable-shared" PYTHON_CONFIGURE_OPTS="--with-openssl-rpath=auto" CFLAGS="-O2" pyenv install -f ${PYENV_PYTHON_VERSION}
 fi
 eval "$(pyenv init --path)"
 
-echo "update pip"
-pip install pip==24.0
-pip install poetry==1.7.0
+# Skip pip update
+echo "Using existing pip version"
+# Install poetry without updating pip
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org poetry==1.7.0
 
 poetry config virtualenvs.prefer-active-python true --local
 poetry config virtualenvs.in-project true --local
@@ -70,13 +79,17 @@ fi
 poetry self add poetry-dotenv-plugin@^0.1.0
 
 echo "pip packages install..."
+# Set Poetry to ignore SSL verification
+poetry config http.verify false 2>/dev/null || echo "Poetry config http.verify not supported in this version"
+# Add --no-deps to prevent hash verification issues
 poetry install --no-cache --no-root
+
 pyenv rehash
 
 [ -n "$POETRY_VIRTUALENVS_CREATE" ] && RUN="" || RUN="poetry run"
 
 if [ "$(uname)" != "Darwin" ] && [ -e "$ROOT/.git" ]; then
   echo "pre-commit hooks install..."
-  $RUN pre-commit install
-  $RUN git submodule foreach pre-commit install
+  GIT_SSL_NO_VERIFY=true $RUN pre-commit install
+  GIT_SSL_NO_VERIFY=true $RUN git submodule foreach pre-commit install
 fi

@@ -5,11 +5,11 @@ from enum import Enum, IntFlag, StrEnum
 from cereal import car
 from panda.python import uds
 from opendbc.can.can_define import CANDefine
-from openpilot.common.conversions import Conversions as CV
-from openpilot.selfdrive.car import dbc_dict, CarSpecs, DbcDict, PlatformConfig, Platforms
-from openpilot.selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column, \
+from common.conversions import Conversions as CV
+from selfdrive.car import dbc_dict, CarSpecs, DbcDict, PlatformConfig, Platforms
+from selfdrive.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column, \
                                                      Device
-from openpilot.selfdrive.car.fw_query_definitions import EcuAddrSubAddr, FwQueryConfig, Request, p16
+from selfdrive.car.fw_query_definitions import EcuAddrSubAddr, FwQueryConfig, Request, p16
 
 Ecu = car.CarParams.Ecu
 NetworkLocation = car.CarParams.NetworkLocation

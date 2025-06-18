@@ -7,11 +7,11 @@ from enum import Enum
 from natsort import natsorted
 
 from cereal import car
-from openpilot.common.basedir import BASEDIR
-from openpilot.selfdrive.car import gen_empty_fingerprint
-from openpilot.selfdrive.car.docs_definitions import CarDocs, Column, CommonFootnote, PartType
-from openpilot.selfdrive.car.car_helpers import interfaces, get_interface_attr
-from openpilot.selfdrive.car.values import PLATFORMS
+from common.basedir import BASEDIR
+from selfdrive.car import gen_empty_fingerprint
+from selfdrive.car.docs_definitions import CarDocs, Column, CommonFootnote, PartType
+from selfdrive.car.car_helpers import interfaces, get_interface_attr
+from selfdrive.car.values import PLATFORMS
 
 
 def get_all_footnotes() -> dict[Enum, int]:

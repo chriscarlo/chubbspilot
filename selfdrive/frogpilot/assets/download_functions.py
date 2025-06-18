@@ -5,7 +5,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import delete_file, is_url_pingable
+from selfdrive.frogpilot.frogpilot_utilities import delete_file, is_url_pingable
 
 GITHUB_URL = "https://raw.githubusercontent.com/FrogAi/FrogPilot-Resources"
 GITLAB_URL = "https://gitlab.com/FrogAi/FrogPilot-Resources/-/raw"

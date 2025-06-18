@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from openpilot.common.params import Params
+from common.params import Params
 
 class ParamManager:
   def __init__(self):

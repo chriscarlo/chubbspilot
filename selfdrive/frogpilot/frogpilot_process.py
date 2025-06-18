@@ -3,22 +3,22 @@ import datetime
 import json
 import time
 
-import openpilot.system.sentry as sentry
+import system.sentry as sentry
 
 from pathlib import Path
 
 from cereal import messaging
-from openpilot.common.params import Params
-from openpilot.common.realtime import Priority, config_realtime_process
-from openpilot.common.time import system_time_valid
+from common.params import Params
+from common.realtime import Priority, config_realtime_process
+from common.time import system_time_valid
 
-from openpilot.selfdrive.frogpilot.assets.model_manager import ModelManager, MODEL_DOWNLOAD_PARAM
-from openpilot.selfdrive.frogpilot.assets.theme_manager import ThemeManager
-from openpilot.selfdrive.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPilotTracking
-from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
-from openpilot.selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_url_pingable, lock_doors, run_thread_with_lock, update_maps, update_openpilot
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
+from selfdrive.frogpilot.assets.model_manager import ModelManager, MODEL_DOWNLOAD_PARAM
+from selfdrive.frogpilot.assets.theme_manager import ThemeManager
+from selfdrive.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
+from selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPilotTracking
+from selfdrive.frogpilot.frogpilot_functions import backup_toggles
+from selfdrive.frogpilot.frogpilot_utilities import flash_panda, is_url_pingable, lock_doors, run_thread_with_lock, update_maps, update_openpilot
+from selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, FrogPilotVariables, get_frogpilot_toggles, params, params_memory
 
 def assets_checks(model_manager, theme_manager):
   if params_memory.get_bool("DownloadAllModels"):
@@ -90,8 +90,9 @@ def frogpilot_thread():
   pm = messaging.PubMaster(["frogpilotPlan"])
   sm = messaging.SubMaster(["carControl", "carState", "controlsState", "deviceState", "driverMonitoringState",
                             "managerState", "modelV2", "pandaStates", "radarState",
-                            "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation"],
-                            poll="modelV2", ignore_avg_freq=["radarState"])
+                            "frogpilotCarControl", "frogpilotCarState", "frogpilotNavigation",
+                            "liveTorqueParameters", "testJoystick"],
+                            poll="modelV2", ignore_alive=["radarState"])
 
   while True:
     sm.update()
@@ -131,7 +132,7 @@ def frogpilot_thread():
 
     if started and sm.updated["modelV2"]:
       frogpilot_planner.update(sm["carControl"], sm["carState"], sm["controlsState"], sm["frogpilotCarControl"], sm["frogpilotCarState"],
-                               sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles)
+                               sm["frogpilotNavigation"], sm["modelV2"], radarless_model, sm["radarState"], frogpilot_toggles, sm)
       frogpilot_planner.publish(sm, pm, toggles_updated)
 
       frogpilot_tracking.update(sm["carState"], sm["controlsState"], sm["frogpilotCarControl"])

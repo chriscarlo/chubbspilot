@@ -1,5 +1,5 @@
 import crcmod
-from openpilot.selfdrive.car.hyundai.values import CAR, HyundaiFlags
+from selfdrive.car.hyundai.values import CAR, HyundaiFlags
 
 hyundai_checksum = crcmod.mkCrcFun(0x11D, initCrc=0xFD, rev=False, xorOut=0xdf)
 
@@ -170,8 +170,8 @@ def create_acc_commands(packer, enabled, accel, jerk_upper, jerk_lower, cb_upper
   commands.append(packer.make_can_msg("SCC12", 0, scc12_values))
 
   scc14_values = {
-    "ComfortBandUpper": 0.0, #cb_upper,
-    "ComfortBandLower": 0.0, #cb_lower,
+    "ComfortBandUpper": cb_upper,
+    "ComfortBandLower": cb_lower,
     "JerkUpperLimit": jerk_upper,
     "JerkLowerLimit": jerk_lower,
     "ACCMode": 2 if enabled and long_override else 1 if enabled else 4, # stock will always be 4 instead of 0 after first disengage

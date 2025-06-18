@@ -2,9 +2,9 @@ import cereal.messaging as messaging
 
 from opendbc.can.packer import CANPacker
 from opendbc.can.parser import CANParser
-from openpilot.common.params import Params
-from openpilot.selfdrive.pandad.pandad_api_impl import can_list_to_can_capnp
-from openpilot.tools.sim.lib.common import SimulatorState
+from common.params import Params
+from selfdrive.pandad.pandad_api_impl import can_list_to_can_capnp
+from tools.sim.lib.common import SimulatorState
 from panda.python import Panda
 
 
