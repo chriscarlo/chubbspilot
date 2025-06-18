@@ -36,7 +36,13 @@ This differs from the standard OpenPilot location (`/data/params/d/GithubSshKeys
 /data/persist/comma/ssh/
 ├── GithubUsername    # Contains GitHub username (e.g., "chriscarlo")
 ├── GithubSshKeys     # Contains public SSH keys fetched from GitHub
-└── SshEnabled        # Contains "1" to enable SSH
+├── SshEnabled        # Contains "1" to enable SSH
+└── github_username   # Lowercase version for ssh_fixer service (survives uninstalls)
+
+/data/persist/comma/
+├── authorized_keys   # Primary AGNOS SSH authorized_keys location
+└── .ssh/
+    └── authorized_keys  # Alternative authorized_keys location
 ```
 
 ### Backward Compatibility
@@ -109,25 +115,41 @@ This requires:
 ## The SSH Fix Implementation
 
 ### Overview
-The SSH fix consists of multiple layers to ensure SSH access can be restored:
+The SSH fix consists of two main components:
 
 1. **UI Button** - Manual fix via Settings → Network → Advanced → "Fix SSH"
-2. **Boot-time Fix** - Automatic fix in `manager_init()`
-3. **SSH Fixer Service** - Continuous monitoring and repair
+2. **SSH Fixer Service** - Continuous monitoring and automatic repair
 
-### Why the Automatic Fix May Stall
+### Current Architecture (Latest Implementation)
 
-The automatic SSH fixer service shows:
-```
-[SSH-FIXER] SSH fixer service started
-[SSH-FIXER] Running initial SSH check on startup...
-```
+#### SSH Fixer Service (`system/ssh_fixer.py`)
+The service now actively monitors and maintains SSH access:
 
-Then appears to stall because:
+**What it does:**
+- Fetches current SSH keys from GitHub every 5 minutes
+- Compares GitHub keys with authorized_keys to detect changes
+- Automatically updates keys when they differ
+- Stores GitHub username in `/data/persist/comma/ssh/github_username` (survives OpenPilot uninstalls)
+- Checks immediately on startup (no 5-minute wait)
 
-1. **Python Import Issues** - The original `fix_ssh.py` tries to import compiled `Params` module which fails with Python version mismatch when run with sudo
-2. **The service crashes silently** - The import error kills the process before it can log anything else
-3. **The UI button works** because it uses `fix_ssh_simple.py` which doesn't depend on compiled modules
+**Key improvements:**
+- Monitors ACTUAL SSH functionality, not just file existence
+- Prevents lockouts when GitHub keys change
+- Works across OpenPilot reinstalls
+- Provides clear logging about what's happening
+
+#### Fix SSH Button (`fix_ssh_simple.py`)
+The manual fix button provides immediate SSH repair:
+
+**Features:**
+- Works around Python version issues by avoiding compiled modules
+- Fetches fresh keys from GitHub
+- Writes to all necessary locations:
+  - `/data/persist/comma/ssh/` (for AGNOS SSH daemon)
+  - `/data/persist/comma/authorized_keys` (primary AGNOS location)
+  - `/data/persist/comma/.ssh/authorized_keys` (alternative location)
+- Creates backward compatibility symlinks
+- Provides detailed error logging to UI
 
 ### The Working Solution: fix_ssh_simple.py
 
@@ -189,10 +211,13 @@ Key operations:
 /data/persist/comma/ssh/          # 755 root:root
 ├── GithubUsername                # 644 root:root
 ├── GithubSshKeys                 # 644 root:root
-└── SshEnabled                    # 644 root:root
+├── SshEnabled                    # 644 root:root
+└── github_username               # 644 root:root
 
-/data/persist/comma/.ssh/         # 700 root:root
-└── authorized_keys               # 600 root:root
+/data/persist/comma/
+├── authorized_keys               # 600 root:root
+└── .ssh/                         # 700 root:root
+    └── authorized_keys           # 600 root:root
 ```
 
 ### Key Fetching Mechanism
