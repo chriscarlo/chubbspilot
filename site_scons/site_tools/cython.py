@@ -54,6 +54,8 @@ def cython_suffix_emitter(env, source):
   return "$CYTHONCFILESUFFIX"
 
 def generate(env):
+  # Ensure we use the cythonize from Python 3.11
+  # Use the pyenv shim which will use the correct Python version
   env["CYTHON"] = "cythonize"
   env["CYTHONCOM"] = "$CYTHON $CYTHONFLAGS $SOURCE"
   env["CYTHONCFILESUFFIX"] = ".cpp"
