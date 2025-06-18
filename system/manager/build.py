@@ -18,6 +18,10 @@ TOTAL_SCONS_NODES = 2820
 MAX_BUILD_PROGRESS = 100
 
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
+  # Check for debug mode
+  debug_mode = os.environ.get('OPENPILOT_DEBUG_BUILD', '0') == '1'
+  if debug_mode:
+    print("\n=== DEBUG BUILD MODE ACTIVE ===\n")
   # Ensure Python environment is set up correctly
   env_script = Path(BASEDIR) / "ensure_python_env.sh"
   if env_script.exists() and AGNOS:
@@ -50,17 +54,50 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
   # building with all cores can result in using too
   # much memory, so retry with less parallelism
   compile_output: list[bytes] = []
-  for n in (nproc, nproc/2, 1):
+  
+  # On TICI, be more conservative with parallelism
+  if AGNOS:
+    parallel_jobs = [2, 1]  # Max 2 jobs on device to avoid memory issues
+  else:
+    parallel_jobs = [nproc, nproc/2, 1]
+    
+  for n in parallel_jobs:
     compile_output.clear()
     # Add verbose flag to debug build issues
     scons_cmd = ["scons", f"-j{int(n)}", "--cache-populate"] + extra_args
-    cloudlog.info(f"Running scons with: {' '.join(scons_cmd)}")
+    
+    # On device, add memory-saving flags
+    if AGNOS:
+      # Disable LTO and other memory-intensive optimizations during build
+      env['CCFLAGS'] = env.get('CCFLAGS', '') + ' -fno-lto'
+      env['CXXFLAGS'] = env.get('CXXFLAGS', '') + ' -fno-lto'
+      
+    cloudlog.info(f"Running scons with: {' '.join(scons_cmd)} (parallel={int(n)})")
     scons: subprocess.Popen = subprocess.Popen(scons_cmd, cwd=BASEDIR, env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     assert scons.stderr is not None
 
     # Read progress from stderr and update spinner
+    import time
+    last_progress_time = time.time()
+    last_progress = 0
+    stall_timeout = 300  # 5 minutes
+    
+    # In debug mode, also capture stdout
+    if debug_mode:
+      import select
+      streams = [scons.stderr, scons.stdout]
+    
     while scons.poll() is None:
       try:
+        if debug_mode and scons.stdout:
+          # Read from both stdout and stderr
+          readable, _, _ = select.select(streams, [], [], 0.1)
+          for stream in readable:
+            line = stream.readline()
+            if line:
+              print(f"[BUILD] {line.decode('utf8', 'replace').rstrip()}", flush=True)
+              last_progress_time = time.time()
+        
         line = scons.stderr.readline()
         if line is None:
           continue
@@ -69,12 +106,33 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
         prefix = b'progress: '
         if line.startswith(prefix):
           i = int(line[len(prefix):])
-          spinner.update_progress(MAX_BUILD_PROGRESS * min(1., i / TOTAL_SCONS_NODES), 100.)
+          current_progress = MAX_BUILD_PROGRESS * min(1., i / TOTAL_SCONS_NODES)
+          if debug_mode:
+            print(f"[PROGRESS] {current_progress:.1f}% ({i}/{TOTAL_SCONS_NODES})", flush=True)
+          else:
+            spinner.update_progress(current_progress, 100.)
+          
+          # Track progress to detect stalls
+          if current_progress > last_progress:
+            last_progress = current_progress
+            last_progress_time = time.time()
+            
         elif len(line):
           compile_output.append(line)
-          print(line.decode('utf8', 'replace'))
-      except Exception:
-        pass
+          if debug_mode:
+            print(f"[STDERR] {line.decode('utf8', 'replace')}", flush=True)
+          # Any output counts as progress
+          last_progress_time = time.time()
+          
+        # Check for stall
+        if time.time() - last_progress_time > stall_timeout:
+          cloudlog.error(f"Build stalled at {last_progress}% for {stall_timeout}s, killing...")
+          scons.terminate()
+          break
+          
+      except Exception as e:
+        if debug_mode:
+          print(f"[ERROR] Exception in build loop: {e}", flush=True)
 
     if scons.returncode == 0:
       break
