@@ -18,6 +18,18 @@ TOTAL_SCONS_NODES = 2820
 MAX_BUILD_PROGRESS = 100
 
 def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
+  # Ensure Python environment is set up correctly
+  env_script = Path(BASEDIR) / "ensure_python_env.sh"
+  if env_script.exists() and AGNOS:
+    spinner.update("Setting up Python environment...")
+    try:
+      result = subprocess.run(["/bin/bash", str(env_script)], capture_output=True, text=True)
+      cloudlog.info(f"Python env setup: {result.stdout}")
+      if result.stderr:
+        cloudlog.warning(f"Python env warnings: {result.stderr}")
+    except subprocess.CalledProcessError as e:
+      cloudlog.error(f"Python env setup failed: {e.stderr}")
+      
   # Check and install dependencies before building
   dep_script = Path(BASEDIR) / "install_dependencies.sh"
   if dep_script.exists() and AGNOS:
@@ -40,7 +52,10 @@ def build(spinner: Spinner, dirty: bool = False, minimal: bool = False) -> None:
   compile_output: list[bytes] = []
   for n in (nproc, nproc/2, 1):
     compile_output.clear()
-    scons: subprocess.Popen = subprocess.Popen(["scons", f"-j{int(n)}", "--cache-populate", *extra_args], cwd=BASEDIR, env=env, stderr=subprocess.PIPE)
+    # Add verbose flag to debug build issues
+    scons_cmd = ["scons", f"-j{int(n)}", "--cache-populate"] + extra_args
+    cloudlog.info(f"Running scons with: {' '.join(scons_cmd)}")
+    scons: subprocess.Popen = subprocess.Popen(scons_cmd, cwd=BASEDIR, env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     assert scons.stderr is not None
 
     # Read progress from stderr and update spinner
