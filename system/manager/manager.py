@@ -22,58 +22,8 @@ from openpilot.selfdrive.frogpilot.frogpilot_functions import convert_params, fr
 from openpilot.selfdrive.frogpilot.frogpilot_variables import frogpilot_default_params, get_frogpilot_toggles, params_memory
 
 
-def fix_ssh_access_on_boot():
-  """Automatically fix SSH access on boot if needed"""
-  try:
-    import subprocess
-    from pathlib import Path
-    from datetime import datetime
-    
-    # Run the SSH fix script (simple version to avoid Python version issues)
-    result = subprocess.run(
-      ["sudo", "python3", "/data/openpilot/selfdrive/ui/qt/network/fix_ssh_simple.py"], 
-      capture_output=True, 
-      text=True,
-      timeout=30
-    )
-    
-    # Also log to error.txt for UI visibility
-    try:
-      crashes_dir = Path("/data/crashes")
-      crashes_dir.mkdir(parents=True, exist_ok=True)
-      error_file = crashes_dir / "error.txt"
-      
-      log_content = f"\n===== SSH FIX ON BOOT =====\n"
-      log_content += f"Time: {datetime.now()}\n"
-      log_content += f"Exit Code: {result.returncode}\n"
-      log_content += f"Output: {result.stdout}\n"
-      if result.stderr:
-        log_content += f"Error: {result.stderr}\n"
-      log_content += "=========================\n\n"
-      
-      if error_file.exists():
-        existing = error_file.read_text()
-        if len(existing) > 50000:
-          existing = existing[-40000:]
-        error_file.write_text(existing + log_content)
-      else:
-        error_file.write_text(log_content)
-    except:
-      pass
-    
-    if result.returncode == 0:
-      cloudlog.info(f"SSH fix completed successfully: {result.stdout}")
-    else:
-      cloudlog.error(f"SSH fix failed: {result.stderr}")
-  except Exception as e:
-    cloudlog.error(f"Failed to run SSH fix on boot: {e}")
-
-
 def manager_init() -> None:
   save_bootlog()
-  
-  # Fix SSH access early in boot process
-  fix_ssh_access_on_boot()
 
   build_metadata = get_build_metadata()
 
