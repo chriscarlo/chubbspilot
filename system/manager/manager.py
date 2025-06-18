@@ -9,6 +9,7 @@ import traceback
 from cereal import log
 import cereal.messaging as messaging
 import system.sentry as sentry
+from common.basedir import BASEDIR
 from common.params import Params, ParamKeyType
 from common.text_window import TextWindow
 from system.hardware import HARDWARE, PC
