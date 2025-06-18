@@ -83,3 +83,6 @@ build/
 
 poetry.toml
 Pipfile
+
+# Claude Code guidance file
+CLAUDE.md
